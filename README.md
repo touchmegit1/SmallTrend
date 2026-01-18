@@ -110,7 +110,7 @@ Các hàm tiện ích:
 - `formatDate.js` - Format ngày tháng
 - `validation.js` - Validate data
 
-## 🔧 Công Nghệ Sử Dụng
+## Công Nghệ Sử Dụng
 
 ### Frontend
 - **React 18** - UI library
