@@ -1,13 +1,13 @@
-package com.be;
+package com.smalltrend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class BeApplication {
+public class SmallTrendApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(BeApplication.class, args);
+		SpringApplication.run(SmallTrendApplication.class, args);
 	}
 
 }

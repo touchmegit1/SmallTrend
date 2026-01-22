@@ -1,7 +1,9 @@
-# Compiled class file
+HELP.md
+
+# Compiled class files
 *.class
 
-# Log file
+# Log files
 *.log
 
 # BlueJ files
@@ -10,7 +12,7 @@
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
-# Package Files #
+# Package Files
 *.jar
 *.war
 *.nar
@@ -19,37 +21,86 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# Virtual machine crash logs
 hs_err_pid*
+replay_pid*
 
 # Maven
 target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# Eclipse
-.classpath
-.project
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
 .settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Security - NEVER COMMIT THESE
+*.env
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+application-*.properties
+application-*.yml
+application-*.yaml
+**/secrets/
+**/keys/
+**/*.key
+**/*.pem
+**/*.p12
+**/*.jks
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Spring Boot
+.spring-boot-devtools.properties
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
 .springBeans
 .sts4-cache
-bin/
 
-# IntelliJ IDEA
-.idea/
-*.iml
+
+### IntelliJ IDEA ###
+.idea
 *.iws
+*.iml
 *.ipr
-
-# NetBeans
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-
-# VS Code
-.vscode/
-
-# Environment Variables
-.env
