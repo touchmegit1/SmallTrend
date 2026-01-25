@@ -67,7 +67,8 @@ cd backend
 # Chạy ứng dụng Spring Boot
 mvn spring-boot:run
 ```
-Backend sẽ khởi động tại `http://localhost:8081`.
+
+Backend sẽ khởi động tại `http://localhost:8088`.
 
 ### Chạy Frontend
 

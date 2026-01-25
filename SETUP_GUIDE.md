@@ -70,7 +70,8 @@ cd SmallTrend
     -   Tìm file `SmallTrendApplication.java` trong `backend/src/main/java/com/smalltrend`.
     -   Chuột phải vào file và chọn `Run 'SmallTrendApplication'`.
 
-Backend sẽ khởi động. Lần đầu tiên chạy, Flyway sẽ tự động tạo các bảng trong database. Nếu thành công, bạn sẽ thấy log báo `Tomcat started on port(s): 8081`.
+Backend sẽ khởi động. Lần đầu tiên chạy, Flyway sẽ tự động tạo các bảng trong database. Nếu thành công, bạn sẽ thấy log
+báo `Tomcat started on port(s): 8088`.
 
 ---
 
@@ -93,7 +94,7 @@ Backend sẽ khởi động. Lần đầu tiên chạy, Flyway sẽ tự động
 1.  Trong thư mục `frontend`, tạo một file mới tên là `.env`.
 2.  Thêm vào nội dung sau để kết nối với backend:
     ```
-    VITE_API_BASE_URL=http://localhost:8081
+    VITE_API_BASE_URL=http://localhost:8088
     ```
 
 ### Bước 3.3: Chạy Frontend
@@ -109,13 +110,13 @@ Trang web sẽ được mở tại `http://localhost:5173`.
 ## 4. Khắc phục các lỗi thường gặp
 
 <details>
-  <summary><strong>Lỗi: `Port 8080 (hoặc 8081) was already in use`</strong></summary>
+  <summary><strong>Lỗi: `Port 8088 was already in use`</strong></summary>
   
   - **Nguyên nhân**: Một chương trình khác đang chiếm cổng mà ứng dụng của bạn muốn sử dụng.
   - **Giải pháp**:
     1.  **Tìm và dừng tiến trình**:
         -   Mở PowerShell (với quyền Admin).
-        -   Tìm PID của tiến trình: `netstat -ano | findstr :<PORT_NUMBER>` (ví dụ: `findstr :8081`).
+        - Tìm PID của tiến trình: `netstat -ano | findstr :<PORT_NUMBER>` (ví dụ: `findstr :8088`).
         -   Dừng tiến trình: `taskkill /PID <PID> /F`.
     2.  **Đổi cổng**: Mở file `application.properties` và thay đổi giá trị `server.port`.
 </details>
@@ -172,7 +173,7 @@ Hệ thống đã tạo sẵn một người dùng `admin` khi khởi tạo. B�
 Mở terminal và chạy lệnh sau:
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" -d "{\"username\": \"admin\", \"password\": \"password\"}"
+curl -X POST http://localhost:8088/api/auth/login -H "Content-Type: application/json" -d "{\"username\": \"admin\", \"password\": \"password\"}"
 ```
 
 **Kết quả mong đợi:**
@@ -181,7 +182,14 @@ Bạn sẽ nhận lại một đối tượng JSON chứa token:
 
 ```json
 {
-    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTcxNjYxOTk4MywiZXhwIjoxNzE2NjI3MTgzfQ.xxxxxxxx"
+  "token": "eyJhbGciOiJIUz...",
+  "type": "Bearer",
+  "id": 1,
+  "username": "admin",
+  "email": "admin@example.com",
+  "roles": [
+    "ADMIN"
+  ]
 }
 ```
 
@@ -197,7 +205,7 @@ Bây giờ, bạn có thể sử dụng token vừa nhận được để truy c
 Thay thế `<your_jwt_token>` bằng chuỗi token bạn nhận được ở bước trên.
 
 ```bash
-curl -X GET http://localhost:8081/api/test/admin -H "Authorization: Bearer <your_jwt_token>"
+curl -X GET http://localhost:8088/api/test/admin -H "Authorization: Bearer <your_jwt_token>"
 ```
 
 **Kết quả mong đợi:**
