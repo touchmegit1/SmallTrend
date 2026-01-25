@@ -3,7 +3,7 @@
 ## 1. Giới thiệu dự án
 **SmallTrend** là ứng dụng web quản lý toàn diện cho một cửa hàng bán lẻ/tiện lợi quy mô vừa và nhỏ. Hệ thống được thiết kế để hoạt động ổn định, tốc độ xử lý nhanh và giao diện thân thiện.
 
-**Nhóm phát triển**: SE1961 - Group 4
+**Nhóm phát triển**: SE1992 - Group 5
 
 ## 2. Công nghệ sử dụng
 *   **Frontend**: React (Vite), Tailwind CSS v4, Lucide React Symbols.
@@ -93,7 +93,9 @@ SmallTrend/
 
 ### Module 5: HR & Shift (Nhân sự & Ca)
 *   **Người phụ trách**: Kiên
+
 *   **Chức năng**:
+    *   Quản lý người dùng và quyền hạn, mức lương cơ bản (nếu có)
     *   Hồ sơ nhân viên & Phân quyền.
     *   Thiết lập Ca làm việc & Phân ca.
     *   Chấm công & Tính lương cơ bản.
@@ -102,7 +104,7 @@ SmallTrend/
 *   **Người phụ trách**: Huy Anh
 *   **Chức năng**:
     *   Nhật ký hoạt động.
-    *   Hệ thống báo cáo tổng hợp.
+    *   Hệ thống báo cáo tổng hợp. (Tạo và quản lý các ticket yêu cầu và báo cáo)
     *   Tích hợp AI dự báo.
 
 ## 5. Hướng dẫn chạy dự án
