@@ -172,7 +172,7 @@ Hệ thống đã tạo sẵn một người dùng `admin` khi khởi tạo. B�
 Mở terminal và chạy lệnh sau:
 
 ```bash
-curl -X POST http://localhost:8081/api/auth/login -H "Content-Type: application/json" -d "{\"username\": \"admin\", \"password\": \"password\"}"
+curl -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" -d "{\"username\": \"admin\", \"password\": \"password\"}"
 ```
 
 **Kết quả mong đợi:**
