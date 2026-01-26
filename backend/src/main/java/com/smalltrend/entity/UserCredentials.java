@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class UserCredentials {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,4 +25,33 @@ public class UserCredentials {
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
+
+    // Token Management
+    @Column(name = "access_token", length = 500)
+    private String accessToken;
+
+    @Column(name = "refresh_token", length = 500)
+    private String refreshToken;
+
+    @Column(name = "token_issued_at")
+    private LocalDateTime tokenIssuedAt;
+
+    @Column(name = "token_expires_at")
+    private LocalDateTime tokenExpiresAt;
+
+    @Column(name = "refresh_token_expires_at")
+    private LocalDateTime refreshTokenExpiresAt;
+
+    // Session Info
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
+
+    @Column(name = "last_ip_address", length = 45)
+    private String lastIpAddress;
+
+    @Column(name = "device_info", length = 255)
+    private String deviceInfo;
+
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 }

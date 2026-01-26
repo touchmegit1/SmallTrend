@@ -1,5 +1,6 @@
 package com.smalltrend.config;
 
+import com.smalltrend.service.TokenService;
 import com.smalltrend.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,10 +21,12 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     private final UserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
+    private final TokenService tokenService;
 
-    public JwtRequestFilter(UserDetailsService userDetailsService, JwtUtil jwtUtil) {
+    public JwtRequestFilter(UserDetailsService userDetailsService, JwtUtil jwtUtil, TokenService tokenService) {
         this.userDetailsService = userDetailsService;
         this.jwtUtil = jwtUtil;
+        this.tokenService = tokenService;
     }
 
     @Override
@@ -45,13 +48,16 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            // Verify token exists and is valid in database
+            if (tokenService.isTokenValid(jwt)) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-            if (jwtUtil.validateToken(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                if (jwtUtil.validateToken(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                }
             }
         }
         chain.doFilter(request, response);

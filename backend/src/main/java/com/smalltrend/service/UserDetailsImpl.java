@@ -23,13 +23,16 @@ public class UserDetailsImpl implements UserDetails {
 
     private Collection<? extends GrantedAuthority> authorities;
 
+    private Users user;
+
     public UserDetailsImpl(Long id, String username, String email, String password,
-                           Collection<? extends GrantedAuthority> authorities) {
+                           Collection<? extends GrantedAuthority> authorities, Users user) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
         this.authorities = authorities;
+        this.user = user;
     }
 
     public static UserDetailsImpl build(Users user) {
@@ -42,7 +45,12 @@ public class UserDetailsImpl implements UserDetails {
                 user.getUsername(),
                 user.getEmail(),
                 user.getPassword(),
-                authorities);
+                authorities,
+                user);
+    }
+
+    public Users getUser() {
+        return user;
     }
 
     @Override
