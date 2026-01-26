@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class UserDetailsImpl implements UserDetails {
+
     private static final long serialVersionUID = 1L;
 
     private Long id;
@@ -26,7 +27,7 @@ public class UserDetailsImpl implements UserDetails {
     private Users user;
 
     public UserDetailsImpl(Long id, String username, String email, String password,
-                           Collection<? extends GrantedAuthority> authorities, Users user) {
+            Collection<? extends GrantedAuthority> authorities, Users user) {
         this.id = id;
         this.username = username;
         this.email = email;
@@ -91,8 +92,6 @@ public class UserDetailsImpl implements UserDetails {
         return true;
     }
 
-
-
     @Override
     public boolean isEnabled() {
         return true;
@@ -100,10 +99,12 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null || getClass() != o.getClass())
+        }
+        if (o == null || getClass() != o.getClass()) {
             return false;
+        }
         UserDetailsImpl user = (UserDetailsImpl) o;
         return Objects.equals(id, user.id);
     }

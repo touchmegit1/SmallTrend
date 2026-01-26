@@ -43,7 +43,7 @@ public class AuthController {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        
+
         // Generate access token and refresh token
         String accessToken = jwtUtil.generateToken(userDetails);
         String refreshToken = UUID.randomUUID().toString();

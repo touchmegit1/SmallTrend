@@ -26,30 +26,30 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        
+
         // Nếu token hết hạn (401) và chưa retry
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
-            
+
             try {
                 const refreshToken = localStorage.getItem('refreshToken');
-                
+
                 if (!refreshToken) {
                     throw new Error('No refresh token available');
                 }
-                
+
                 // Gọi API refresh token
                 const { data } = await axios.post('http://localhost:8088/api/auth/refresh', {
                     refreshToken
                 });
-                
+
                 // Lưu access token mới
                 localStorage.setItem('token', data.token);
-                
+
                 // Retry request ban đầu với token mới
                 originalRequest.headers['Authorization'] = `Bearer ${data.token}`;
                 return api(originalRequest);
-                
+
             } catch (refreshError) {
                 // Refresh token thất bại -> logout
                 localStorage.removeItem('token');
@@ -59,7 +59,7 @@ api.interceptors.response.use(
                 return Promise.reject(refreshError);
             }
         }
-        
+
         return Promise.reject(error);
     }
 );
