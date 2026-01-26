@@ -1,12 +1,16 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "product_batches")
+@Table(name = "inventory_batches")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,26 +20,19 @@ public class ProductBatch {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String batchCode;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "variant_id", nullable = false)
+    private ProductVariant variant;
 
-    private int quantity; // Current quantity in this batch
+    @Column(name = "batch_number")
+    private String batchNumber;
+
+    @Column(name = "mfg_date")
+    private LocalDate mfgDate;
 
     @Column(name = "expiry_date")
     private LocalDate expiryDate;
 
-    @Column(name = "received_date")
-    private LocalDate receivedDate;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
+    @Column(name = "cost_price")
+    private BigDecimal costPrice;
 }

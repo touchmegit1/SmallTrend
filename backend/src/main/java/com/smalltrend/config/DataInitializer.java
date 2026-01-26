@@ -2,13 +2,13 @@ package com.smalltrend.config;
 
 import com.smalltrend.entity.*;
 import com.smalltrend.repository.*;
-import lombok.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -61,7 +61,7 @@ public class DataInitializer implements CommandLineRunner {
             );
 
             for (String p : perms) {
-                if (!permissionRepository.findByName(p).isPresent()) {
+                if (permissionRepository.findByName(p).isEmpty()) {
                     permissionRepository.save(Permission.builder().name(p).description(p + " permission").build());
                 }
             }
@@ -103,43 +103,31 @@ public class DataInitializer implements CommandLineRunner {
                 brandRepository.saveAll(Arrays.asList(brand1, brand2));
                 System.out.println("✅ Seeded Brands");
 
-                TaxRate vat8 = TaxRate.builder().name("VAT 8%").rate(0.08).build();
-                TaxRate vat10 = TaxRate.builder().name("VAT 10%").rate(0.10).build();
+                TaxRate vat8 = TaxRate.builder().name("VAT 8%").rate(0.08).isActive(true).build();
+                TaxRate vat10 = TaxRate.builder().name("VAT 10%").rate(0.10).isActive(true).build();
                 taxRateRepository.saveAll(Arrays.asList(vat8, vat10));
                 System.out.println("✅ Seeded Tax Rates");
 
                 Product p1 = Product.builder()
-                        .sku("SAMSUNG-TV-55")
                         .name("Samsung TV 55 Inch")
                         .description("Smart TV 4K")
                         .category(cat1)
                         .brand(brand1)
-                        .purchasePrice(new BigDecimal("8000000"))
-                        .retailPrice(new BigDecimal("12000000"))
-                        .wholesalePrice(new BigDecimal("10000000"))
-                        .stockQuantity(10)
                         .unit("Piece")
-                        .isActive(true)
                         .build();
 
                 Product p2 = Product.builder()
-                        .sku("VINA-MILK-1L")
                         .name("Fresh Milk 1L")
                         .description("Fresh Milk without sugar")
                         .category(cat2)
                         .brand(brand2)
-                        .purchasePrice(new BigDecimal("25000"))
-                        .retailPrice(new BigDecimal("35000"))
-                        .wholesalePrice(new BigDecimal("30000"))
-                        .stockQuantity(100)
                         .unit("Bottle")
-                        .isActive(true)
                         .build();
 
                 productRepository.saveAll(Arrays.asList(p1, p2));
                 System.out.println("✅ Seeded Products");
 
-                Customer cust1 = Customer.builder().name("Nguyen Van A").phone("0901234567").email("vana@example.com").loyaltyPoints(100).build();
+                Customer cust1 = Customer.builder().name("Nguyen Van A").phone("0901234567").loyaltyPoints(100).build();
                 customerRepository.save(cust1);
                 System.out.println("✅ Seeded Customers");
 
@@ -148,8 +136,8 @@ public class DataInitializer implements CommandLineRunner {
                 System.out.println("✅ Seeded Locations");
 
                 // Seed Shifts
-                shiftRepository.save(Shift.builder().name("Morning Shift").description("6AM - 2PM").build());
-                shiftRepository.save(Shift.builder().name("Evening Shift").description("2PM - 10PM").build());
+                shiftRepository.save(Shift.builder().name("Morning Shift").shiftType("Full-time").build());
+                shiftRepository.save(Shift.builder().name("Evening Shift").shiftType("Full-time").build());
                 System.out.println("✅ Seeded Shifts");
             }
         } catch (Exception e) {

@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 
 @Entity
@@ -20,14 +24,11 @@ public class PurchaseOrderItem {
     private PurchaseOrder purchaseOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "variant_id", nullable = false)
+    private ProductVariant variant;
 
     private int quantity;
 
-    @Column(name = "unit_cost")
-    private BigDecimal unitCost; // Cost per item
-
-    @Column(name = "total_cost")
-    private BigDecimal totalCost;
+    @Column(name = "unit_price")
+    private BigDecimal unitPrice;
 }

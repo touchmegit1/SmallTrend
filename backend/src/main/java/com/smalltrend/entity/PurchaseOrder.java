@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -18,25 +22,21 @@ public class PurchaseOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String poNumber;
+    @Column(name = "order_date")
+    private LocalDateTime orderDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id")
-    private Supplier supplier;
+    @Column(name = "supplier_name_text")
+    private String supplierNameText;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "creator_id")
-    private Users createdBy;
+    @Column(length = 50)
+    private String status;
 
     @Column(name = "total_amount")
     private BigDecimal totalAmount;
 
-    @Enumerated(EnumType.STRING)
-    private OrderStatus status; // PENDING, COMPLETED (Received)
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "received_by")
+    private Users receivedBy;
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -44,6 +44,6 @@ public class PurchaseOrder {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        orderDate = LocalDateTime.now();
     }
 }

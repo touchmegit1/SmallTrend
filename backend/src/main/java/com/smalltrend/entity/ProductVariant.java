@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 
 @Entity
@@ -27,15 +31,7 @@ public class ProductVariant {
     @Column(name = "sell_price")
     private BigDecimal sellPrice;
 
-    @Column(name = "cost_price") // Adding cost price for variant specific
-    private BigDecimal costPrice;
-
     @Column(name = "is_active")
     @Builder.Default
     private boolean isActive = true;
-
-    // Attributes like color, size can be stored as JSON or separate columns if specific
-    // For simplicity, we assume variants might be identified by name in Product or separate attributes
-    private String size;
-    private String color;
 }

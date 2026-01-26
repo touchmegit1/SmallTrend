@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,26 +19,27 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private Users user;
+
     @Column(nullable = false)
-    private String action; // CREATE, UPDATE, DELETE, LOGIN
+    private String action; // CREATE, UPDATE, DELETE
 
     @Column(name = "entity_name")
-    private String entityName; // Product, Order, User
+    private String entityName;
 
     @Column(name = "entity_id")
-    private String entityId;
+    private Long entityId;
 
-    @Column(name = "details", length = 1000)
-    private String details; // JSON or text details
+    @Column(name = "changes", columnDefinition = "TEXT")
+    private String changes;
 
-    @Column(name = "performed_by")
-    private String performedBy; // Username
-
-    @Column(name = "performed_at")
-    private LocalDateTime performedAt;
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        performedAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
     }
 }

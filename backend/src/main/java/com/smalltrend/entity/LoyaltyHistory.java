@@ -1,8 +1,10 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "loyalty_history")
@@ -28,12 +30,4 @@ public class LoyaltyHistory {
 
     @Column(name = "points_used")
     private int pointsUsed;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
 }

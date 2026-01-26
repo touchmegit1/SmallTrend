@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalTime;
 
 @Entity
@@ -18,11 +22,12 @@ public class Shift {
     @Column(nullable = false)
     private String name; // Morning, Afternoon, Night
 
+    @Column(name = "shift_type")
+    private String shiftType;
+
     @Column(name = "start_time")
     private LocalTime startTime;
 
     @Column(name = "end_time")
     private LocalTime endTime;
-
-    private String description;
 }
