@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-@Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
