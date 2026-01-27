@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDate;
 
 @Entity
@@ -11,20 +15,19 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class ShiftAssignment {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private Users user;
+    private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "shift_id", nullable = false)
     private Shift shift;
 
-    @Column(name = "assigned_date")
     private LocalDate assignedDate;
-
-    private String status; // Scheduled, Completed, Absent
+    private String status;
 }

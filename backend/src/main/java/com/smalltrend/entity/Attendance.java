@@ -15,17 +15,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Attendance {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "assignment_id", nullable = false)
     private ShiftAssignment assignment;
 
-    @Column(name = "check_in")
     private LocalDateTime checkIn;
-
-    @Column(name = "check_out")
     private LocalDateTime checkOut;
 }

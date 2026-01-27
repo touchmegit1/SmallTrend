@@ -15,19 +15,13 @@ import java.time.LocalTime;
 @AllArgsConstructor
 @Builder
 public class Shift {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false)
-    private String name; // Morning, Afternoon, Night
-
-    @Column(name = "shift_type")
+    private String name;
     private String shiftType;
-
-    @Column(name = "start_time")
     private LocalTime startTime;
-
-    @Column(name = "end_time")
     private LocalTime endTime;
 }

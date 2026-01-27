@@ -1,7 +1,12 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "tax_rates")
@@ -10,17 +15,12 @@ import jakarta.persistence.*;
 @AllArgsConstructor
 @Builder
 public class TaxRate {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false)
-    private String name; // e.g. VAT 8%, VAT 10%
-
-    @Column(nullable = false)
-    private double rate; // 0.08, 0.10
-
-    @Column(name = "is_active")
-    @Builder.Default
-    private boolean isActive = true;
+    private String name;
+    private BigDecimal rate;
+    private boolean isActive;
 }

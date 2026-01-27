@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 
 @Entity
@@ -11,20 +15,15 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class PromotionCondition {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "promotion_id", nullable = false)
     private Promotion promotion;
 
-    @Column(name = "min_order_value")
     private BigDecimal minOrderValue;
-
-    // Can add product specific conditions
-    // @ManyToOne Product product;
-
-    @Column(name = "discount_percent")
-    private Double discountPercent; // Specific override
+    private BigDecimal discountPercent;
 }

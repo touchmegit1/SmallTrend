@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -12,29 +16,21 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class PriceHistory {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "variant_id", nullable = false)
     private ProductVariant variant;
 
-    @Column(name = "old_price")
     private BigDecimal oldPrice;
-
-    @Column(name = "new_price")
     private BigDecimal newPrice;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "changed_by")
-    private Users changedBy;
+    private User changedBy;
 
-    @Column(name = "applied_at")
     private LocalDateTime appliedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        appliedAt = LocalDateTime.now();
-    }
 }

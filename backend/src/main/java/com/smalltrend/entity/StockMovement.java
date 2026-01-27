@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "stock_movements")
 @Data
@@ -15,32 +13,23 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class StockMovement {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "variant_id", nullable = false)
     private ProductVariant variant;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "from_bin_id")
     private ShelfBin fromBin;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "to_bin_id")
     private ShelfBin toBin;
 
-    private int quantity;
-
-    @Column(length = 50)
+    private Integer quantity;
     private String type;
-
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
 }

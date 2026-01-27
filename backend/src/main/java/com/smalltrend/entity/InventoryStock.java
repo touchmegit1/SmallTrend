@@ -1,7 +1,10 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "inventory_stock")
@@ -10,21 +13,22 @@ import jakarta.persistence.*;
 @AllArgsConstructor
 @Builder
 public class InventoryStock {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "variant_id", nullable = false)
     private ProductVariant variant;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bin_id")
+    @ManyToOne
+    @JoinColumn(name = "bin_id", nullable = false)
     private ShelfBin bin;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "batch_id")
-    private ProductBatch batch;
+    @ManyToOne
+    @JoinColumn(name = "batch_id", nullable = false)
+    private InventoryBatch batch;
 
-    private int quantity;
+    private Integer quantity;
 }

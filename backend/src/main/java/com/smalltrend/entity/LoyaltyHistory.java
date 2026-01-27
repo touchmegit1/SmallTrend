@@ -13,21 +13,19 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class LoyaltyHistory {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
-    private Order order;
+    @ManyToOne
+    @JoinColumn(name = "order_id", nullable = false)
+    private SalesOrder order;
 
-    @Column(name = "points_earned")
-    private int pointsEarned;
-
-    @Column(name = "points_used")
-    private int pointsUsed;
+    private Integer pointsEarned;
+    private Integer pointsUsed;
 }

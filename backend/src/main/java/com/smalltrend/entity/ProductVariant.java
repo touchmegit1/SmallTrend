@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Table(name = "products_variants")
@@ -15,23 +16,24 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class ProductVariant {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false, unique = true)
-    private String sku; // Unique SKU for variant
-
+    private String sku;
     private String barcode;
-
-    @Column(name = "sell_price")
+    private String imageUrl;
     private BigDecimal sellPrice;
+    private boolean isActive;
 
-    @Column(name = "is_active")
-    @Builder.Default
-    private boolean isActive = true;
+    @OneToMany(mappedBy = "variant")
+    private List<PriceHistory> priceHistories;
+
+    @OneToMany(mappedBy = "variant")
+    private List<InventoryBatch> inventoryBatches;
 }

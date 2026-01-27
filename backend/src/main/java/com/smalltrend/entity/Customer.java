@@ -13,17 +13,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Customer {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false)
     private String name;
-
-    @Column(unique = true)
     private String phone;
-
-    @Column(name = "loyalty_points")
-    @Builder.Default
-    private int loyaltyPoints = 0;
+    private Integer loyaltyPoints;
 }

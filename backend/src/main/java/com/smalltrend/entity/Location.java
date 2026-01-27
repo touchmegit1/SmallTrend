@@ -1,7 +1,12 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Entity
 @Table(name = "locations")
@@ -10,12 +15,14 @@ import jakarta.persistence.*;
 @AllArgsConstructor
 @Builder
 public class Location {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false, unique = true)
     private String name;
+    private String type;
 
-    private String type; // Warehouse, Store, etc.
+    @OneToMany(mappedBy = "location")
+    private List<ShelfBin> shelfBins;
 }

@@ -1,7 +1,11 @@
 package com.smalltrend.entity;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDate;
 
 @Entity
@@ -11,20 +15,18 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class Report {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false)
-    private String type; // DAILY_SALES, INVENTORY, etc.
-
-    @Column(name = "report_date")
+    private String type;
     private LocalDate reportDate;
 
-    @Column(columnDefinition = "TEXT")
-    private String data; // JSON string of report data
+    @Column(columnDefinition = "jsonb")
+    private String data;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "created_by")
-    private Users createdBy;
+    private User createdBy;
 }

@@ -15,20 +15,19 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class PurchaseOrderItem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "purchase_order_id", nullable = false)
     private PurchaseOrder purchaseOrder;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "variant_id", nullable = false)
     private ProductVariant variant;
 
-    private int quantity;
-
-    @Column(name = "unit_price")
+    private Integer quantity;
     private BigDecimal unitPrice;
 }

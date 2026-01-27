@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "promotions")
@@ -15,20 +16,16 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class Promotion {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false)
     private String name;
-
-    @Column(name = "start_date")
     private LocalDate startDate;
-
-    @Column(name = "end_date")
     private LocalDate endDate;
+    private boolean isActive;
 
-    @Column(name = "is_active")
-    @Builder.Default
-    private boolean isActive = true;
+    @OneToMany(mappedBy = "promotion")
+    private List<PromotionCondition> conditions;
 }
