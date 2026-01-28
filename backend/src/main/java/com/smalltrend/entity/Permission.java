@@ -9,12 +9,12 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Entity
-@Table(name = "roles")
+@Table(name = "permissions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Role {
+public class Permission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,9 +23,6 @@ public class Role {
     private String name;
     private String description;
 
-    @OneToMany(mappedBy = "role")
+    @OneToMany(mappedBy = "permission")
     private List<RolePermission> rolePermissions;
-
-    @OneToMany(mappedBy = "role")
-    private List<User> users;
 }

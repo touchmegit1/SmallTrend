@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "salary_payouts")
+@Table(name = "salary_payout")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,15 +22,13 @@ public class SalaryPayout {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "config_id", nullable = false)
-    private SalaryConfig config;
-
-    private Integer month;
-    private Integer year;
-    private BigDecimal totalPayout;
-    private LocalDate paymentDate;
+    private LocalDate payPeriodStart;
+    private LocalDate payPeriodEnd;
+    private BigDecimal baseAmount;
+    private BigDecimal overtimeAmount;
+    private BigDecimal totalAmount;
+    private LocalDate payDate;
 }

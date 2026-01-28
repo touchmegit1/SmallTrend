@@ -22,8 +22,8 @@ public class PriceHistory {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "variant_id", nullable = false)
-    private ProductVariant variant;
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
 
     private BigDecimal oldPrice;
     private BigDecimal newPrice;

@@ -30,7 +30,7 @@ public class SalesOrderItem {
 
     @ManyToOne
     @JoinColumn(name = "batch_id", nullable = false)
-    private InventoryBatch batch;
+    private ProductBatch batch;
 
     private Integer quantity;
     private BigDecimal unitPrice;

@@ -15,21 +15,17 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class AuditLog {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-
+    
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
-
+    
     private String action;
     private String entityName;
     private Integer entityId;
-
-    @Column(columnDefinition = "jsonb")
-    private String changes;
-
-    private LocalDateTime createdAt;
+    private LocalDateTime timestamp;
+    private String details;
 }

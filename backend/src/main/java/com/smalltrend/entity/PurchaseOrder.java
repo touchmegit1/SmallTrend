@@ -23,9 +23,12 @@ public class PurchaseOrder {
     private Integer id;
 
     private LocalDate orderDate;
-    private String supplierNameText;
     private String status;
     private BigDecimal totalAmount;
+
+    @ManyToOne
+    @JoinColumn(name = "supplier_id")
+    private Supplier supplier;
 
     @ManyToOne
     @JoinColumn(name = "received_by")

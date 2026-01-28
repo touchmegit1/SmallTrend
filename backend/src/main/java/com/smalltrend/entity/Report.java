@@ -23,7 +23,7 @@ public class Report {
     private String type;
     private LocalDate reportDate;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(length = 65535)
     private String data;
 
     @ManyToOne

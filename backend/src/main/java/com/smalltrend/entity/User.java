@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 @Data
@@ -28,6 +30,18 @@ public class User {
     @JoinColumn(name = "role_id")
     private Role role;
 
-    @Column(name = "search_vector", columnDefinition = "tsvector")
-    private String searchVector;
+    @OneToMany(mappedBy = "user")
+    private List<Attendance> attendances;
+
+    @OneToMany(mappedBy = "user")
+    private List<ShiftAssignment> shiftAssignments;
+
+    @OneToOne(mappedBy = "user")
+    private UserCredential userCredential;
+
+    @OneToOne(mappedBy = "user")
+    private SalaryConfig salaryConfig;
+
+    @OneToMany(mappedBy = "user")
+    private List<SalaryPayout> salaryPayouts;
 }

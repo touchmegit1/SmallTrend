@@ -15,15 +15,22 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class Product {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     private String name;
-    private String brand;
-    private String category;
     private String imageUrl;
     private String description;
+
+    @ManyToOne
+    @JoinColumn(name = "brand_id")
+    private Brand brand;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     @ManyToOne
     @JoinColumn(name = "tax_rate_id")
@@ -31,4 +38,7 @@ public class Product {
 
     @OneToMany(mappedBy = "product")
     private List<ProductVariant> variants;
+
+    @OneToMany(mappedBy = "product")
+    private List<PriceHistory> priceHistories;
 }

@@ -6,7 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "attendance")
@@ -21,9 +22,11 @@ public class Attendance {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "assignment_id", nullable = false)
-    private ShiftAssignment assignment;
+    @JoinColumn(name = "user_id")
+    private User user;
 
-    private LocalDateTime checkIn;
-    private LocalDateTime checkOut;
+    private LocalDate date;
+    private LocalTime timeIn;
+    private LocalTime timeOut;
+    private String status;
 }

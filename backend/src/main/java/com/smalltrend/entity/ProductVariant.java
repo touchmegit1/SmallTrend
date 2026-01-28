@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Entity
-@Table(name = "products_variants")
+@Table(name = "product_variants")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,8 +32,8 @@ public class ProductVariant {
     private boolean isActive;
 
     @OneToMany(mappedBy = "variant")
-    private List<PriceHistory> priceHistories;
+    private List<ProductBatch> productBatches;
 
     @OneToMany(mappedBy = "variant")
-    private List<InventoryBatch> inventoryBatches;
+    private List<InventoryStock> inventoryStocks;
 }

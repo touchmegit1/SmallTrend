@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
-
 @Entity
 @Table(name = "shift_assignments")
 @Data
@@ -21,13 +19,12 @@ public class ShiftAssignment {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne
-    @JoinColumn(name = "shift_id", nullable = false)
+    @JoinColumn(name = "shift_id")
     private Shift shift;
 
-    private LocalDate assignedDate;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
     private String status;
 }

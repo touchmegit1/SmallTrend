@@ -6,26 +6,23 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Entity
-@Table(name = "roles")
+@Table(name = "role_permissions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Role {
+public class RolePermission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private String name;
-    private String description;
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
 
-    @OneToMany(mappedBy = "role")
-    private List<RolePermission> rolePermissions;
-
-    @OneToMany(mappedBy = "role")
-    private List<User> users;
+    @ManyToOne
+    @JoinColumn(name = "permission_id")
+    private Permission permission;
 }

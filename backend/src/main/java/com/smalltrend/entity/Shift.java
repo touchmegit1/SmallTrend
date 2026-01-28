@@ -6,7 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Entity
 @Table(name = "shifts")
@@ -21,7 +23,10 @@ public class Shift {
     private Integer id;
 
     private String name;
-    private String shiftType;
     private LocalTime startTime;
     private LocalTime endTime;
+    private LocalDate date;
+
+    @OneToMany(mappedBy = "shift")
+    private List<ShiftAssignment> shiftAssignments;
 }

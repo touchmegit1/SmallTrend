@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "salary_configs")
+@Table(name = "salary_config")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,9 +21,10 @@ public class SalaryConfig {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "role_id", nullable = false)
-    private Role role;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     private BigDecimal baseSalary;
     private BigDecimal hourlyRate;
+    private BigDecimal overtimeRate;
 }

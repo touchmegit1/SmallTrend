@@ -8,14 +8,15 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
-@Table(name = "inventory_batches")
+@Table(name = "product_batches")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class InventoryBatch {
+public class ProductBatch {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,4 +30,7 @@ public class InventoryBatch {
     private LocalDate mfgDate;
     private LocalDate expiryDate;
     private BigDecimal costPrice;
+    
+    @OneToMany(mappedBy = "batch")
+    private List<InventoryStock> inventoryStocks;
 }
