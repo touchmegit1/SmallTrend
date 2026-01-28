@@ -51,7 +51,7 @@ const Dashboard = () => {
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-96 flex flex-col">
                     <h3 className="text-lg font-bold text-slate-800 mb-4">Recent Invoices</h3>
                     <div className="space-y-4">
-                        {[1, 2, 3, 4, 5].map(i => (
+                        {[1, 2, 3, 4].map(i => (
                             <div key={i} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-100">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-xs">UD</div>
