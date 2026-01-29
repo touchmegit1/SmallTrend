@@ -4,6 +4,95 @@ Hệ thống POS (Point of Sale) hiện đại giúp quản lý toàn diện cá
 
 ---
 
+---
+
+## 🚀 Quick Start - Chạy Dự Án Nhanh Chóng
+
+### Yêu cầu hệ thống
+- **Java 17** hoặc cao hơn ([Download JDK](https://www.oracle.com/java/technologies/downloads/#java17))
+- **MySQL 8.0** ([Download MySQL](https://dev.mysql.com/downloads/))
+- **Node.js 18+** cho Frontend ([Download Node.js](https://nodejs.org/))
+
+### 🎯 Maven Wrapper - Không Cần Cài Maven!
+
+**Maven Wrapper** là tool tự động giúp bạn:
+- ✅ **Không cần cài Maven** trên máy
+- ✅ **Tự động download** đúng version Maven khi chạy lần đầu
+- ✅ **Cross-platform**: Chạy trên Windows, Mac, Linux
+- ✅ **Đảm bảo version** giống nhau trong team
+
+**Files quan trọng:**
+- `mvnw` - Script cho Linux/Mac
+- `mvnw.cmd` - Script cho Windows
+- `.mvn/wrapper/` - Chứa cấu hình Maven Wrapper
+
+### 📦 Setup Backend (3 bước đơn giản)
+
+#### Bước 1: Tạo Database
+```sql
+CREATE DATABASE smalltrend CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+#### Bước 2: Cấu hình Database
+Mở file `backend/src/main/resources/application.properties`:
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/smalltrend
+spring.datasource.username=root
+spring.datasource.password=YOUR_PASSWORD_HERE
+```
+
+#### Bước 3: Chạy Backend
+```bash
+# Windows
+cd backend
+.\mvnw spring-boot:run
+
+# Linux/Mac
+cd backend
+./mvnw spring-boot:run
+```
+
+✅ **Backend chạy tại:** `http://localhost:8081`
+
+### 📱 Setup Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+✅ **Frontend chạy tại:** `http://localhost:5173`
+
+### 🎉 Các Cách Chạy Backend
+
+#### Cách 1: Maven Wrapper (Khuyên dùng)
+```bash
+cd backend
+.\mvnw spring-boot:run          # Windows
+./mvnw spring-boot:run          # Linux/Mac
+```
+
+#### Cách 2: Script run.cmd (Windows)
+```bash
+backend\run.cmd
+```
+
+#### Cách 3: Build JAR và chạy
+```bash
+cd backend
+.\mvnw clean package
+java -jar target/backend-0.0.1-SNAPSHOT.jar
+```
+
+### ✅ Kiểm tra Backend hoạt động
+
+Mở trình duyệt:
+- **Health Check**: http://localhost:8081/actuator/health
+- **API Endpoint**: http://localhost:8081/api/
+
+---
+
 ## 🛠 Công nghệ sử dụng
 
 ### Backend (Java Spring Boot)
@@ -12,8 +101,7 @@ Hệ thống POS (Point of Sale) hiện đại giúp quản lý toàn diện cá
 -   **Spring Security + JWT**: Xác thực và phân quyền
 -   **Spring Data JPA**: ORM (Object-Relational Mapping)
 -   **MySQL 8.0**: Cơ sở dữ liệu
--   **Flyway**: Migration và quản lý version database
--   **Maven**: Quản lý dependencies
+-   **Maven Wrapper**: Build tool (không cần cài Maven)
 
 ### Frontend (React)
 -   **React 18**: Thư viện UI
@@ -857,6 +945,287 @@ Authorization: Bearer {token_từ_login}
    - ❌ KHÔNG commit `.env`, `application-local.properties`
    - ❌ KHÔNG commit `target/`, `node_modules/`
    - ✅ Chỉ commit file `.example`
+
+---
+
+---
+
+## 🔧 Xử lý lỗi thường gặp
+
+### ❌ "Table doesn't exist"
+**Nguyên nhân:** Database chưa có tables  
+**Giải pháp:** Hibernate tự động tạo schema khi chạy lần đầu (đã được config sẵn)
+
+### ❌ "Connection refused"
+**Nguyên nhân:** MySQL chưa chạy  
+**Giải pháp:**
+```bash
+# Windows
+net start MySQL80
+
+# Linux/Mac
+sudo systemctl start mysql
+```
+
+### ❌ "Failed to execute goal"
+**Nguyên nhân:** Port 8081 đã được sử dụng  
+**Giải pháp:** Tắt ứng dụng đang dùng port đó hoặc đổi port trong `application.properties`
+
+### ⚠️ Security Warning
+- Password được generate mỗi lần chạy (hiển thị trong console)
+- Chỉ dùng cho development
+- Production cần configure JWT authentication đầy đủ
+
+---
+
+## �️ Database Migration với Flyway
+
+### Trạng thái hiện tại
+- ✅ **Flyway đã BẬT** trong `application.properties`
+- ✅ **Auto-migration enabled** - Database tự động migrate khi khởi động
+- ✅ **Migration files** nằm trong `backend/src/main/resources/db/migration/`
+- ✅ **Không cần chạy lệnh thủ công** - Mọi thứ tự động
+
+### Cách hoạt động
+
+#### 🚀 Lần đầu chạy (Database trống)
+```bash
+cd backend
+.\mvnw spring-boot:run
+```
+**Flyway sẽ tự động:**
+1. Tạo bảng `flyway_schema_history` để track migrations
+2. Chạy `V1__create_schema.sql` → Tạo 25 tables
+3. Chạy `V2__seed_basic_data.sql` → Thêm data mẫu
+4. Chạy `V3__seed_sample_data.sql` → Thêm dữ liệu demo
+5. Application khởi động thành công ✅
+
+#### 🔄 Lần sau chạy
+```bash
+.\mvnw spring-boot:run
+```
+**Flyway kiểm tra:**
+- ✅ Migrations nào đã chạy? (xem trong `flyway_schema_history`)
+- ✅ Có migration mới không? → Tự động chạy
+- ✅ Không có gì mới → Bỏ qua, chạy app ngay
+
+### Migration Files (Đã có sẵn)
+
+```
+backend/src/main/resources/db/migration/
+├── V1__create_schema.sql      ✅ Tạo 25 tables
+├── V2__seed_basic_data.sql    ✅ Data cơ bản (roles, settings...)
+├── V3__seed_sample_data.sql   ✅ Data mẫu để test
+└── V4__cleanup_and_reset.sql  ⚠️ Dùng khi reset database
+```
+
+### Thêm Migration mới
+
+#### Ví dụ 1: Thêm cột mới
+```sql
+-- File: V5__add_user_avatar.sql
+ALTER TABLE users 
+ADD COLUMN avatar_url VARCHAR(500);
+
+ALTER TABLE users 
+ADD COLUMN last_login_at DATETIME;
+```
+
+#### Ví dụ 2: Tạo bảng mới
+```sql
+-- File: V6__create_discount_tiers.sql
+CREATE TABLE discount_tiers (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    min_amount DECIMAL(15,2),
+    discount_percent DECIMAL(5,2),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Ví dụ 3: Seed data mới
+```sql
+-- File: V7__add_premium_products.sql
+INSERT INTO products (name, barcode, price, category_id) VALUES
+('iPhone 15 Pro', '0123456789012', 29999000, 5),
+('MacBook Air M3', '0123456789013', 34999000, 5);
+```
+
+**Quy tắc đặt tên:**
+- Format: `V{version}__{description}.sql`
+- Version: Số tăng dần (V5, V6, V7...)
+- Dùng `__` (2 dấu gạch dưới) giữa version và description
+- Description: dùng snake_case, ngắn gọn
+
+### Kiểm tra trạng thái migrations
+
+```bash
+cd backend
+
+# Xem migrations đã chạy
+.\mvnw flyway:info
+
+# Output mẫu:
++-----------+---------+---------------------+------+---------------------+----------+
+| Category  | Version | Description         | Type | Installed On        | State    |
++-----------+---------+---------------------+------+---------------------+----------+
+| Versioned | 1       | create schema       | SQL  | 2025-01-29 10:15:30 | Success  |
+| Versioned | 2       | seed basic data     | SQL  | 2025-01-29 10:15:31 | Success  |
+| Versioned | 3       | seed sample data    | SQL  | 2025-01-29 10:15:32 | Success  |
+| Versioned | 5       | add user avatar     | SQL  |                     | Pending  |
++-----------+---------+---------------------+------+---------------------+----------+
+```
+
+### Xử lý lỗi Migration
+
+#### ❌ Lỗi: "Migration checksum mismatch"
+**Nguyên nhân:** Sửa file migration đã chạy  
+**Giải pháp:**
+```bash
+# Sửa checksum trong database
+.\mvnw flyway:repair
+
+# Hoặc xóa database và tạo lại
+mysql -u root -p
+DROP DATABASE smalltrend;
+CREATE DATABASE smalltrend;
+exit
+
+# Chạy lại
+.\mvnw spring-boot:run
+```
+
+#### ❌ Lỗi: "Failed migration"
+**Nguyên nhân:** Lỗi SQL trong migration file  
+**Giải pháp:**
+```bash
+# 1. Xem lỗi trong console log
+# 2. Fix file migration
+# 3. Repair
+.\mvnw flyway:repair
+
+# 4. Chạy lại
+.\mvnw spring-boot:run
+```
+
+#### ⚠️ Reset hoàn toàn Database
+```bash
+# Xóa tất cả data (NGUY HIỂM!)
+.\mvnw flyway:clean
+
+# Chạy lại tất cả migrations
+.\mvnw spring-boot:run
+```
+
+### Config Flyway (Hiện tại)
+
+Trong `backend/src/main/resources/application.properties`:
+```properties
+# Flyway Configuration (Auto-migration enabled)
+spring.flyway.enabled=true                    # ✅ Bật Flyway
+spring.flyway.baseline-on-migrate=true        # ✅ Cho phép migrate trên DB có sẵn
+spring.flyway.baseline-version=0              # Version baseline
+spring.flyway.locations=classpath:db/migration # Folder chứa migrations
+spring.flyway.validate-on-migrate=false       # Không validate checksum (dev mode)
+spring.flyway.clean-disabled=true             # Không cho phép clean từ code
+spring.flyway.out-of-order=true               # Cho phép chạy migration cũ hơn
+```
+
+### Tắt Flyway (Nếu cần)
+
+Nếu muốn dùng Hibernate auto-DDL thay vì Flyway:
+
+**Bước 1:** Tắt Flyway trong `application.properties`:
+```properties
+spring.flyway.enabled=false
+```
+
+**Bước 2:** Bật Hibernate auto-create:
+```properties
+spring.jpa.hibernate.ddl-auto=update  # hoặc create-drop
+```
+
+**⚠️ Lưu ý:** Không khuyến khích trong production!
+
+### Khi nào dùng Flyway?
+
+#### ✅ Nên dùng khi:
+- Deploy lên production
+- Làm việc team > 3 người
+- Cần track lịch sử thay đổi database
+- Có nhiều môi trường (dev/staging/prod)
+- Muốn rollback database
+
+#### ❌ Không cần khi:
+- Development cá nhân
+- Prototype/Demo nhanh
+- Database thay đổi liên tục
+- Team nhỏ < 3 người
+
+### Maven Wrapper - Chạy Flyway commands
+
+```bash
+# Xem thông tin migrations
+.\mvnw flyway:info
+
+# Sửa lỗi migration
+.\mvnw flyway:repair
+
+# Validate migrations
+.\mvnw flyway:validate
+
+# Clean database (NGUY HIỂM!)
+.\mvnw flyway:clean
+
+# Migrate thủ công
+.\mvnw flyway:migrate
+```
+
+### Best Practices
+
+1. **Không sửa migrations đã chạy** → Tạo migration mới để sửa
+2. **Backup database trước khi migrate** quan trọng
+3. **Test migrations trên dev trước** rồi mới lên production
+4. **Commit migrations cùng code** để đồng bộ
+5. **Đặt tên file rõ ràng** để dễ hiểu
+
+---
+
+## �👥 Team Development
+
+### Setup cho người mới
+1. Clone repository:
+   ```bash
+   git clone [repo-url]
+   cd SmallTrend
+   ```
+
+2. Tạo database MySQL
+   ```sql
+   CREATE DATABASE smalltrend;
+   ```
+
+3. Copy file config:
+   ```bash
+   cd backend/src/main/resources
+   cp application.properties.example application.properties
+   # Sửa username/password MySQL trong file này
+   ```
+
+4. Chạy backend:
+   ```bash
+   cd backend
+   .\mvnw spring-boot:run
+   ```
+
+5. Chạy frontend (terminal khác):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+✅ **Xong!** Không cần setup phức tạp, Maven Wrapper lo hết.
 
 ---
 
