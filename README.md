@@ -1,97 +1,878 @@
-# SmallTrend - Hệ Thống Quản Lý Bán Hàng (POS)
+# 🏪 SmallTrend - Hệ thống quản lý cửa hàng tạp hóa tiện lợi
 
-![Java](https://img.shields.io/badge/Java-17-blue)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen)
-![React](https://img.shields.io/badge/React-18-blue)
-![Vite](https://img.shields.io/badge/Vite-5.2.0-yellowgreen)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-orange)
-
-**SmallTrend** là một giải pháp phần mềm quản lý bán hàng (POS) toàn diện, được thiết kế đặc biệt cho các cửa hàng bán lẻ quy mô vừa và nhỏ. Hệ thống tập trung vào hiệu suất, tính ổn định và trải nghiệm người dùng thân thiện.
-
-**Nhóm phát triển**: SE1992 - Group 5
+Hệ thống POS (Point of Sale) hiện đại giúp quản lý toàn diện các hoạt động của cửa hàng tạp hóa/siêu thị mini, từ bán hàng, quản lý kho, nhân sự, khách hàng đến báo cáo thống kê.
 
 ---
 
-## 🚀 Công nghệ sử dụng
+## 🛠 Công nghệ sử dụng
 
-<details>
-  <summary><strong>Backend (Spring Boot)</strong></summary>
-  
-  - **Framework**: Spring Boot 3.2.5
-  - **Ngôn ngữ**: Java 17
-  - **Database**: MySQL 8.0
-  - **Migration**: Flyway
-  - **Bảo mật**: Spring Security, JWT (JSON Web Tokens)
-  - **Build Tool**: Apache Maven
-  - **API Docs**: OpenAPI (Swagger)
-</details>
+### Backend (Java Spring Boot)
+-   **Spring Boot 3.2.5**: Framework chính
+-   **Java 17**: Ngôn ngữ lập trình
+-   **Spring Security + JWT**: Xác thực và phân quyền
+-   **Spring Data JPA**: ORM (Object-Relational Mapping)
+-   **MySQL 8.0**: Cơ sở dữ liệu
+-   **Flyway**: Migration và quản lý version database
+-   **Maven**: Quản lý dependencies
 
-<details>
-  <summary><strong>Frontend (React)</strong></summary>
-  
-  - **Framework**: React 18 (sử dụng Vite)
-  - **Styling**: Tailwind CSS
-  - **UI Components**: Shadcn UI, Radix UI
-  - **Icons**: Lucide React
-  - **Quản lý state**: Zustand, React Context
-  - **Build Tool**: Node.js, npm
-</details>
+### Frontend (React)
+-   **React 18**: Thư viện UI
+-   **Vite 5.2.0**: Build tool nhanh
+-   **React Router DOM**: Routing
+-   **Axios**: HTTP client
+-   **Tailwind CSS**: Utility-first CSS framework
+-   **Shadcn/ui & Radix UI**: Component library
+-   **Lucide React**: Icon library
 
 ---
 
-## 🌟 Các Module Chức Năng Chính
+## 🎯 Các Module Chức Năng Chính
 
-Dự án được chia thành các module nghiệp vụ chính, mỗi module có một người phụ trách riêng:
+### 1. **Quản lý Bán hàng (POS - Point of Sale)**
+-   Giao diện bán hàng nhanh tại quầy thu ngân
+-   Scan barcode sản phẩm
+-   Tính toán tự động: tổng tiền, thuế VAT, giảm giá
+-   In hóa đơn
+-   Thanh toán đa phương thức: Tiền mặt, Thẻ, Ví điện tử
 
--   **POS (Bán hàng)**: Giao diện bán hàng, xử lý thanh toán, in hóa đơn.
--   **Inventory (Quản lý kho)**: Nhập/xuất/kiểm kê kho, quản lý lô và hạn sử dụng.
--   **Product (Sản phẩm & Giá)**: Quản lý sản phẩm, danh mục, thương hiệu và các bảng giá.
--   **CRM & Promotion (Khách hàng & Khuyến mãi)**: Quản lý thông tin khách hàng, tích điểm, tạo và áp dụng khuyến mãi.
--   **HR & Shift (Nhân sự & Ca làm việc)**: Quản lý nhân viên, phân quyền, chấm công và tính lương.
--   **Reports & AI (Báo cáo & Trí tuệ nhân tạo)**: Thống kê, báo cáo kinh doanh và tích hợp AI để dự báo.
+### 2. **Quản lý Sản phẩm**
+-   Thêm/sửa/xóa sản phẩm
+-   Quản lý variants (biến thể): kích thước, màu sắc, đóng gói
+-   Barcode và SKU
+-   Phân loại theo danh mục và thương hiệu
+-   Quản lý giá và giá vốn
+-   Upload hình ảnh sản phẩm
+
+### 3. **Quản lý Kho (Inventory)**
+-   Nhập kho từ nhà cung cấp
+-   Xuất kho khi bán hàng (tự động)
+-   Kiểm kho định kỳ
+-   Cảnh báo sản phẩm sắp hết hàng
+-   Lịch sử nhập/xuất kho
+-   Quản lý vị trí kho
+
+### 4. **Quản lý Khách hàng**
+-   Thông tin khách hàng: tên, SĐT, email, địa chỉ
+-   Chương trình tích điểm thành viên
+-   Phân loại khách hàng: VIP, thường, mới
+-   Lịch sử mua hàng
+-   Khuyến mãi riêng cho khách hàng thân thiết
+
+### 5. **Quản lý Khuyến mãi**
+-   Tạo mã giảm giá
+-   Giảm theo %  hoặc số tiền cố định
+-   Áp dụng cho sản phẩm hoặc đơn hàng
+-   Thời gian hiệu lực
+-   Điều kiện áp dụng
+
+### 6. **Quản lý Nhân viên & Ca làm việc**
+-   Thông tin nhân viên
+-   Phân quyền: Admin, Quản lý, Thu ngân, Kho
+-   Chấm công vào/ra
+-   Quản lý ca làm việc
+-   Lịch sử thao tác (Audit log)
+
+### 7. **Quản lý Nhà cung cấp**
+-   Thông tin nhà cung cấp
+-   Lịch sử nhập hàng
+-   Công nợ phải trả
+
+### 8. **Báo cáo & Thống kê**
+-   Doanh thu theo ngày/tháng/năm
+-   Sản phẩm bán chạy
+-   Lợi nhuận
+-   Tồn kho hiện tại
+-   Chi phí vận hành
 
 ---
 
-## 🏁 Bắt đầu nhanh (Quick Start)
+## 🏗️ KIẾN TRÚC HỆ THỐNG
 
-Để khởi chạy dự án, vui lòng làm theo hướng dẫn chi tiết trong file **[SETUP_GUIDE.md](SETUP_GUIDE.md)**.
+### 🔵 Kiến trúc Backend (Spring Boot - 3 Layers)
 
-Dưới đây là các lệnh cơ bản để chạy dự án sau khi đã hoàn tất cài đặt:
-
-### Chạy Backend
-
-```bash
-# Di chuyển vào thư mục backend
-cd backend
-
-# Chạy ứng dụng Spring Boot
-mvn spring-boot:run
+```
+backend/
+├── src/main/
+│   ├── java/com/smalltrend/
+│   │   ├── SmallTrendApplication.java    # 🚀 Entry Point
+│   │   │
+│   │   ├── config/                        # ⚙️ CONFIGURATION
+│   │   │   ├── AppConfig.java            # Bean definitions
+│   │   │   └── SecurityConfig.java       # Spring Security + JWT
+│   │   │
+│   │   ├── entity/                        # 🗄️ DATABASE ENTITIES (25 tables)
+│   │   │   ├── User.java                 # Người dùng
+│   │   │   ├── Product.java              # Sản phẩm (sữa, nước ngọt, snack...)
+│   │   │   ├── InventoryStock.java       # Tồn kho
+│   │   │   ├── SalesOrder.java           # Đơn hàng
+│   │   │   └── ...
+│   │   │
+│   │   ├── repository/                    # 💾 DATA ACCESS LAYER
+│   │   │   ├── UserRepository.java       # CRUD cho User
+│   │   │   ├── ProductRepository.java    # CRUD + custom queries
+│   │   │   └── ...
+│   │   │
+│   │   ├── service/                       # 🧠 BUSINESS LOGIC
+│   │   │   ├── UserService.java          # Logic user, phân quyền
+│   │   │   ├── ProductService.java       # Logic sản phẩm
+│   │   │   └── ...
+│   │   │
+│   │   ├── controller/                    # 🌐 REST API
+│   │   │   ├── AuthController.java       # POST /api/auth/login
+│   │   │   ├── ProductController.java    # GET/POST/PUT/DELETE /api/products
+│   │   │   └── ...
+│   │   │
+│   │   ├── dto/                           # 📦 DATA TRANSFER OBJECTS
+│   │   │   ├── request/                  # Request DTOs
+│   │   │   └── response/                 # Response DTOs
+│   │   │
+│   │   └── exception/                     # ⚠️ EXCEPTION HANDLING
+│   │       └── GlobalExceptionHandler.java
+│   │
+│   └── resources/
+│       ├── application.properties         # Config (xem .example)
+│       └── db/migration/                  # Flyway SQL scripts
+│           └── V1__create_schema.sql     # Tạo 25 tables
 ```
 
-Backend sẽ khởi động tại `http://localhost:8088`.
+**Luồng xử lý:**
+```
+HTTP Request → Controller → Service → Repository → Database
+                   ↓            ↓          ↓
+              Validate     Business    Query DB
+                           Logic
+                   ↓            ↓          ↓
+HTTP Response ← DTO Response ← Entity ← Database
+```
 
-### Chạy Frontend
+---
+
+### 🔴 Kiến trúc Frontend (React - Đơn giản)
+
+```
+frontend/src/
+├── pages/                           # 📄 PAGES (Mỗi trang = 1 route)
+│   ├── Auth/Login.jsx              # Trang đăng nhập
+│   ├── Dashboard/Dashboard.jsx     # Trang dashboard
+│   └── ...
+│
+├── components/                      # 🧩 COMPONENTS TÁI SỬ DỤNG
+│   ├── common/                     # Components chung
+│   │   └── ProtectedRoute.jsx     # Bảo vệ route cần đăng nhập
+│   └── layout/                     # Layout
+│       ├── Header.jsx
+│       ├── Sidebar.jsx
+│       └── MainLayout.jsx
+│
+├── services/                        # 🌐 API CALLS
+│   ├── authService.js              # login(), logout()
+│   ├── shiftService.js             # API shift
+│   └── ...
+│
+├── context/                         # ⚡ GLOBAL STATE
+│   └── AuthContext.jsx             # user, token, login/logout
+│
+├── config/                          # ⚙️ CONFIG
+│   └── axiosConfig.js              # Axios với JWT interceptor
+│
+├── App.jsx                          # Root component
+├── main.jsx                         # Entry point
+└── index.css                        # Tailwind CSS
+```
+
+**Luồng data:**
+```
+User → Component → Service (API) → Backend → Response → Context → Re-render
+```
+
+---
+
+## 🗄️ DATABASE SCHEMA (25 Tables)
+
+### 📊 ER Diagram Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    SMALLTREND POS DATABASE                       │
+│                     (Cửa hàng tạp hóa)                          │
+└─────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   users      │────▶│    roles     │     │  customers   │
+│              │     │              │     │              │
+│ - id         │     │ - id         │     │ - id         │
+│ - username   │     │ - name       │     │ - name       │
+│ - password   │     │ - permissions│     │ - phone      │
+│ - role_id    │     └──────────────┘     │ - points     │
+└───────┬──────┘                          └──────────────┘
+        │                                          │
+        │                                          │
+        ▼                                          ▼
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│ sales_orders │────▶│ order_items  │────▶│  products    │
+│              │     │              │     │              │
+│ - id         │     │ - order_id   │     │ - id         │
+│ - user_id    │     │ - product_id │     │ - name       │
+│ - customer_id│     │ - variant_id │     │ - barcode    │
+│ - total      │     │ - quantity   │     │ - category_id│
+│ - paid_amount│     │ - price      │     │ - brand_id   │
+│ - created_at │     └──────────────┘     └───────┬──────┘
+└──────────────┘              │                    │
+                              │                    │
+                              ▼                    ▼
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   payments   │     │   variants   │     │  categories  │
+│              │     │              │     │              │
+│ - id         │     │ - id         │     │ - id         │
+│ - order_id   │     │ - product_id │     │ - name       │
+│ - method     │     │ - sku        │     │ - parent_id  │
+│ - amount     │     │ - price      │     └──────────────┘
+└──────────────┘     └──────────────┘
+                              │
+                              ▼
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│ inventory_   │────▶│ inventory_   │     │   brands     │
+│  stocks      │     │ transactions │     │              │
+│              │     │              │     │ - id         │
+│ - variant_id │     │ - variant_id │     │ - name       │
+│ - quantity   │     │ - type       │     │ - country    │
+│ - location   │     │ - quantity   │     └──────────────┘
+└──────────────┘     │ - reason     │
+                     └──────────────┘
+
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│ promotions   │────▶│ promotion_   │     │  suppliers   │
+│              │     │  products    │     │              │
+│ - id         │     │              │     │ - id         │
+│ - code       │     │ - promo_id   │     │ - name       │
+│ - type       │     │ - product_id │     │ - contact    │
+│ - value      │     └──────────────┘     │ - address    │
+│ - start_date │                          └──────────────┘
+│ - end_date   │
+└──────────────┘
+
+... + 13 tables khác (shifts, attendance, expenses, daily_reports, 
+audit_logs, notifications, settings, price_histories, 
+loyalty_transactions, return_orders)
+```
+
+### 📋 Danh sách 25 Tables Chi Tiết
+
+| # | Tên Bảng | Mô tả | Ví dụ Data |
+|---|----------|-------|------------|
+| 1 | **roles** | Vai trò người dùng | Admin, Cashier, Manager |
+| 2 | **users** | Tài khoản người dùng | admin, cashier01 |
+| 3 | **customers** | Khách hàng thân thiết | Trần Văn A - 0912345678 - 1500 điểm |
+| 4 | **categories** | Danh mục sản phẩm | Đồ uống, Thực phẩm, Gia vị |
+| 5 | **brands** | Thương hiệu | Vinamilk, Coca-Cola, Oishi, OMO |
+| 6 | **suppliers** | Nhà cung cấp | Vinamilk, TH True Milk |
+| 7 | **products** | Sản phẩm chính | Coca-Cola 330ml, Sữa Vinamilk 1L |
+| 8 | **variants** | Biến thể sản phẩm | Coca 330ml Can, 1.5L Bottle |
+| 9 | **inventory_stocks** | Tồn kho hiện tại | Variant_ID: 1, Kho A, SL: 500 |
+| 10 | **inventory_transactions** | Lịch sử nhập/xuất kho | Nhập 100 thùng Coca ngày 15/1 |
+| 11 | **sales_orders** | Đơn hàng bán | Order #00123 - Tổng: 150.000đ |
+| 12 | **order_items** | Chi tiết từng món trong đơn | 2x Coca @ 10.000đ |
+| 13 | **payments** | Thanh toán | Tiền mặt 200.000đ |
+| 14 | **promotions** | Khuyến mãi | Giảm 10% đồ uống |
+| 15 | **promotion_products** | Sản phẩm được KM | Promotion #1 → Product #5 |
+| 16 | **shifts** | Ca làm việc | Ca sáng 7:00-12:00 |
+| 17 | **attendance** | Chấm công | Check-in 7:05 |
+| 18 | **expenses** | Chi phí vận hành | Tiền điện 500k |
+| 19 | **daily_reports** | Báo cáo hàng ngày | Doanh thu 2.5M |
+| 20 | **audit_logs** | Lịch sử thao tác | Admin xóa sản phẩm #10 |
+| 21 | **notifications** | Thông báo hệ thống | "Sản phẩm X sắp hết" |
+| 22 | **settings** | Cấu hình hệ thống | TAX_RATE = 0.1 |
+| 23 | **price_histories** | Lịch sử giá | Coca 9k → 10k |
+| 24 | **loyalty_transactions** | Tích điểm | +15 điểm cho đơn 150k |
+| 25 | **return_orders** | Đơn trả hàng | Trả 2 chai sữa hỏng |
+
+### 🔑 Quan Hệ Foreign Keys
+
+```sql
+-- User & Role
+users.role_id → roles.id
+
+-- Product Structure
+products.category_id → categories.id
+products.brand_id → brands.id
+products.supplier_id → suppliers.id
+variants.product_id → products.id
+
+-- Inventory
+inventory_stocks.variant_id → variants.id
+inventory_transactions.variant_id → variants.id
+
+-- Sales Order
+sales_orders.user_id → users.id
+sales_orders.customer_id → customers.id
+order_items.order_id → sales_orders.id
+order_items.product_id → products.id
+order_items.variant_id → variants.id
+payments.order_id → sales_orders.id
+
+-- Promotions
+promotion_products.promotion_id → promotions.id
+promotion_products.product_id → products.id
+```
+
+---
+
+## 🔄 DATA FLOW & USE CASES
+
+### 🛒 Use Case 1: Bán Hàng Tại Quầy (POS)
+
+**Luồng xử lý:**
+```
+1. Cashier scan barcode/search sản phẩm
+   → GET /api/products?barcode=123456
+
+2. Thêm vào giỏ hàng (CartContext)
+
+3. Áp dụng khuyến mãi
+   → POST /api/promotions/apply
+
+4. Thanh toán
+   → POST /api/orders
+   Body: {
+     customerId: 5,
+     items: [{ variantId: 1, quantity: 2, price: 10000 }],
+     payments: [{ method: "CASH", amount: 30000 }]
+   }
+
+5. Backend:
+   - Tạo sales_order
+   - Tạo order_items
+   - Tạo payments
+   - Trừ inventory_stocks
+   - Cộng loyalty_points
+
+6. In hóa đơn
+   → GET /api/orders/{id}/receipt
+```
+
+---
+
+### 📦 Use Case 2: Nhập Kho
+
+**Luồng xử lý:**
+```
+1. Staff chọn sản phẩm và số lượng
+
+2. Submit phiếu nhập
+   → POST /api/inventory/inbound
+   Body: {
+     supplierId: 2,
+     items: [{ variantId: 1, quantity: 100, cost: 8000 }]
+   }
+
+3. Backend:
+   - Tạo inventory_transactions (type: INBOUND)
+   - Cộng inventory_stocks.quantity
+   - Cập nhật average_cost
+```
+
+---
+
+### 📊 Use Case 3: Báo Cáo Doanh Thu
+
+**API:**
+```http
+GET /api/reports/revenue?from=2025-01-01&to=2025-01-31
+```
+
+**SQL Query:**
+```sql
+SELECT 
+    DATE(created_at) as date,
+    COUNT(*) as total_orders,
+    SUM(total_amount) as revenue,
+    SUM(discount) as total_discount
+FROM sales_orders
+WHERE created_at BETWEEN ? AND ?
+  AND status = 'COMPLETED'
+GROUP BY DATE(created_at)
+```
+
+---
+
+## 📚 API DOCUMENTATION
+
+### 🔐 Authentication
+
+#### Đăng nhập
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password"
+}
+```
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "type": "Bearer",
+  "username": "admin",
+  "roles": ["ROLE_ADMIN"]
+}
+```
+
+---
+
+### 🛍️ Products
+
+#### Lấy danh sách sản phẩm (có phân trang)
+```http
+GET /api/products?page=0&size=20&search=coca
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "Coca-Cola 330ml",
+      "barcode": "8934588012345",
+      "sku": "COCA-330ML",
+      "category": { "id": 2, "name": "Đồ uống" },
+      "brand": { "id": 2, "name": "Coca-Cola" },
+      "variants": [
+        {
+          "id": 1,
+          "name": "Lon 330ml",
+          "price": 10000,
+          "stock": 500
+        }
+      ]
+    }
+  ],
+  "totalElements": 150,
+  "totalPages": 8
+}
+```
+
+---
+
+#### Tạo sản phẩm mới
+```http
+POST /api/products
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "Sữa tươi Vinamilk 1L",
+  "barcode": "8934588123456",
+  "sku": "VINAMILK-1L",
+  "categoryId": 1,
+  "brandId": 1,
+  "variants": [
+    {
+      "name": "Hộp 1L",
+      "sku": "VINAMILK-1L-BOX",
+      "price": 28000,
+      "cost": 24000,
+      "initialStock": 100
+    }
+  ]
+}
+```
+
+---
+
+### 🛒 Orders
+
+#### Tạo đơn hàng
+```http
+POST /api/orders
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "customerId": 5,
+  "items": [
+    { "variantId": 1, "quantity": 2, "price": 10000 },
+    { "variantId": 3, "quantity": 1, "price": 28000 }
+  ],
+  "promotionCode": "GIAM10",
+  "payments": [
+    { "method": "CASH", "amount": 50000 }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "id": 12345,
+  "orderNumber": "ORD-20250115-12345",
+  "subtotal": 48000,
+  "discount": 4800,
+  "tax": 4320,
+  "total": 47520,
+  "paidAmount": 50000,
+  "changeAmount": 2480
+}
+```
+
+---
+
+### 📦 Inventory
+
+#### Nhập kho
+```http
+POST /api/inventory/inbound
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "supplierId": 2,
+  "items": [
+    { "variantId": 1, "quantity": 100, "cost": 8000 }
+  ],
+  "notes": "Nhập đợt 15/1/2025"
+}
+```
+
+---
+
+#### Kiểm tra tồn kho thấp
+```http
+GET /api/inventory/stocks?lowStockOnly=true&threshold=10
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "lowStockItems": [
+    {
+      "variantId": 15,
+      "productName": "Snack Oishi 50g",
+      "currentStock": 8,
+      "threshold": 10,
+      "status": "LOW_STOCK"
+    }
+  ]
+}
+```
+
+---
+
+### 👥 Customers
+
+#### Tìm khách hàng theo SĐT
+```http
+GET /api/customers/search?phone=0912345678
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "id": 5,
+  "name": "Trần Văn A",
+  "phone": "0912345678",
+  "loyaltyPoints": 1547,
+  "tier": "GOLD",
+  "totalPurchases": 2450000
+}
+```
+
+---
+
+### 📊 Reports
+
+#### Báo cáo doanh thu theo ngày
+```http
+GET /api/reports/revenue/daily?from=2025-01-01&to=2025-01-15
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "date": "2025-01-15",
+      "totalOrders": 45,
+      "revenue": 2750000,
+      "discount": 275000,
+      "netRevenue": 2475000
+    }
+  ],
+  "summary": {
+    "totalRevenue": 35000000,
+    "totalOrders": 650
+  }
+}
+```
+
+---
+
+### ⚠️ Error Responses
+
+Tất cả API trả error theo format:
+
+```json
+{
+  "timestamp": "2025-01-15T14:30:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Số lượng sản phẩm không đủ trong kho",
+  "path": "/api/orders"
+}
+```
+
+**HTTP Status Codes:**
+- `200 OK`: Thành công
+- `201 Created`: Tạo mới thành công
+- `400 Bad Request`: Dữ liệu không hợp lệ
+- `401 Unauthorized`: Chưa đăng nhập
+- `403 Forbidden`: Không có quyền
+- `404 Not Found`: Không tìm thấy
+- `500 Internal Server Error`: Lỗi server
+
+---
+
+## 📋 Mục lục
+
+- [Công nghệ sử dụng](#-công-nghệ-sử-dụng)
+- [Các Module Chức Năng](#-các-module-chức-năng-chính)
+- [Kiến trúc hệ thống](#️-kiến-trúc-hệ-thống)
+- [Database Schema](#️-database-schema-25-tables)
+- [Data Flow & Use Cases](#-data-flow--use-cases)
+- [API Documentation](#-api-documentation)
+- [Yêu cầu phần mềm](#-yêu-cầu-phần-mềm-prerequisites)
+- [Hướng dẫn Cài đặt](#-hướng-dẫn-cài-đặt)
+- [Test API](#-test-api-với-postman)
+- [Quy tắc đóng góp](#-quy-tắc-đóng-góp)
+
+---
+
+## 📦 Yêu cầu phần mềm (Prerequisites)
+
+| Công cụ | Phiên bản | Ghi chú |
+|---------|-----------|---------|
+| **JDK** | **17** | Bắt buộc |
+| **Maven** | 3.8+ | Build tool |
+| **Node.js** | 20.x LTS | Frontend |
+| **MySQL** | 8.0+ | Database |
+| **Git** | Latest | Version control |
+
+---
+
+## 🚀 Hướng dẫn Cài đặt
+
+### 1. Cài đặt Backend (Spring Boot)
+
+#### Bước 1.1: Clone dự án
 
 ```bash
-# Di chuyển vào thư mục frontend
+git clone <your-repository-url>
+cd SmallTrend
+```
+
+#### Bước 1.2: Cấu hình Database MySQL
+
+**Tạo Database:**
+
+```sql
+CREATE DATABASE smalltrend_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+**Cấu hình kết nối:**
+
+Copy file template và điền thông tin:
+
+```bash
+cd backend/src/main/resources
+cp application.properties.example application-local.properties
+```
+
+Mở `application-local.properties` và cập nhật:
+- `spring.datasource.username` = MySQL username của bạn
+- `spring.datasource.password` = MySQL password của bạn
+- `jwt.secret` = Tạo secret key mới (256 bits)
+
+#### Bước 1.3: Cấu hình JDK 17 trong IntelliJ
+
+1. Mở dự án (`File` > `Open...`)
+2. `File` > `Project Structure` (Ctrl+Alt+Shift+S)
+3. **Project**: Chọn **SDK = JDK 17**, **Language level = 17**
+4. **Modules** > **Dependencies**: **Module SDK = Project SDK (17)**
+5. Nhấn `OK`
+
+#### Bước 1.4: Build và Chạy Backend
+
+1. Maven: `View` > `Tool Windows` > `Maven` → `Reload All Maven Projects`
+2. Chạy: Chuột phải `SmallTrendApplication.java` → `Run`
+
+Backend khởi động tại `http://localhost:8080`
+
+---
+
+### 2. Cài đặt Frontend (React)
+
+#### Bước 2.1: Cài đặt Dependencies
+
+```bash
 cd frontend
-
-# Cài đặt các dependencies
 npm install
+```
 
-# Khởi chạy development server
+#### Bước 2.2: Cấu hình Environment
+
+Copy file template:
+
+```bash
+cp .env.example .env
+```
+
+Mở `.env` và điền thông tin (xem hướng dẫn trong `.env.example`)
+
+#### Bước 2.3: Chạy Frontend
+
+```bash
 npm run dev
 ```
-Frontend sẽ có sẵn tại `http://localhost:5173`.
+
+Frontend chạy tại `http://localhost:5173`
+
+---
+
+### 3. Khắc phục lỗi thường gặp
+
+<details>
+<summary><strong>❌ Lỗi: Port already in use</strong></summary>
+
+**Windows:**
+```powershell
+# Tìm process đang dùng port 8080
+netstat -ano | findstr :8080
+
+# Kill process (thay <PID> bằng số tìm được)
+taskkill /PID <PID> /F
+```
+
+Hoặc đổi port trong `application.properties`:
+```properties
+server.port=8081
+```
+</details>
+
+<details>
+<summary><strong>❌ Lỗi: Access denied for user 'root'@'localhost'</strong></summary>
+
+Sai username/password MySQL. Kiểm tra lại `application-local.properties`:
+```properties
+spring.datasource.username=YOUR_USERNAME
+spring.datasource.password=YOUR_PASSWORD
+```
+</details>
+
+<details>
+<summary><strong>❌ Lỗi: Unknown database 'smalltrend_db'</strong></summary>
+
+Chưa tạo database. Chạy:
+```sql
+CREATE DATABASE smalltrend_db CHARACTER SET utf8mb4;
+```
+</details>
+
+<details>
+<summary><strong>❌ Lỗi: Maven build failed - Java version</strong></summary>
+
+Sai JDK version. Kiểm tra:
+```bash
+java -version  # Phải là 17.x.x
+mvn -version   # Java version phải là 17
+```
+
+Nếu sai: IntelliJ → `File` > `Project Structure` → Chọn JDK 17
+</details>
+
+---
+
+## 🧪 Test API với Postman
+
+### 1. Import Collection
+
+Tạo collection mới trong Postman với các request sau:
+
+### 2. Test Login
+
+```http
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password"
+}
+```
+
+Lưu token từ response để dùng cho các request khác.
+
+### 3. Test Protected Endpoint
+
+```http
+GET http://localhost:8080/api/products
+Authorization: Bearer {token_từ_login}
+```
+
+### 4. Các mã lỗi thường gặp
+
+| HTTP Code | Ý nghĩa | Nguyên nhân |
+|-----------|---------|-------------|
+| **200** | OK | Thành công |
+| **401** | Unauthorized | Token không hợp lệ/hết hạn |
+| **403** | Forbidden | Không có quyền |
+| **404** | Not Found | API không tồn tại |
+| **400** | Bad Request | Dữ liệu sai định dạng |
 
 ---
 
 ## 🤝 Quy tắc đóng góp
 
-Để đảm bảo chất lượng code và sự ổn định của dự án, tất cả các thành viên cần tuân thủ các quy tắc sau:
+1. **Branching**: Dùng Git Flow. Tạo branch từ `develop`:
+   ```bash
+   git checkout -b feature/ten-tinh-nang
+   ```
 
-1.  **Branching Model**: Sử dụng Git Flow. Tạo branch mới từ `develop` cho mỗi tính năng (`feature/ten-tinh-nang`).
-2.  **Commit Message**: Viết commit message rõ ràng theo chuẩn (ví dụ: `feat: Add login functionality`).
-3.  **Pull Request**: Tạo Pull Request (PR) vào nhánh `develop` để review code. PR phải được ít nhất một thành viên khác approve trước khi merge.
-4.  **Security**: **Tuyệt đối không** push các thông tin nhạy cảm như `.env`, `application.properties` (chứa mật khẩu), hoặc các thư mục như `target/`, `node_modules/` lên repository.
+2. **Commit Message**: Viết rõ ràng
+   ```
+   feat: Add login functionality
+   fix: Fix inventory stock calculation
+   docs: Update README
+   ```
+
+3. **Pull Request**: Tạo PR vào `develop`, cần ít nhất 1 approve
+
+4. **Security**: 
+   - ❌ KHÔNG commit `.env`, `application-local.properties`
+   - ❌ KHÔNG commit `target/`, `node_modules/`
+   - ✅ Chỉ commit file `.example`
+
+---
+
+## 📞 Liên hệ & Hỗ trợ
+
+- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Documentation**: Xem folder `docs/`
+- **API Reference**: Xem section [API Documentation](#-api-documentation)
+
+---
+
+## 📄 License
+
+MIT License - Xem file `LICENSE` để biết thêm chi tiết
+
+---
+
+**Made with ❤️ by SmallTrend Team**
 
