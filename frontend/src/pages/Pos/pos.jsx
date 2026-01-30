@@ -1,15 +1,16 @@
-import { useState } from "react";
-function incre()
-{
-    const [count, setCount] = useState(0);
-    const increment = () => {
-        setCount(count + 1);
-    }
-    return (
-        <div>
-            <h2>Count: {count}</h2>
-            <button onClick={increment}>+</button>
-        </div>
-    );
+import "bootstrap/dist/css/bootstrap.min.css";
+import ProductCard from "./Card";
+
+function Incre() {
+  return (
+    <div className="p-3">
+      <ProductCard
+        ten="Bánh mì tươi"
+        barcode="Bánh mì & Ngũ cốc"
+        gia="15.000"
+      />
+    </div>
+  );
 }
-export default incre;
+
+export default Incre;
