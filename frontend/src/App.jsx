@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard/Dashboard'
+import POS from './pages/Pos/pos'
 
 function App() {
     return (
@@ -25,8 +26,9 @@ function App() {
                     {/* Module 1: POS (Bán hàng) */}
                     <Route
                         path="pos"
-                        element={<div className="p-4">POS Interface (Bán hàng)</div>}
+                        element={<POS />}
                     />
+
                     <Route path="pos/history" element={<div className="p-4">Lịch sử đơn hàng</div>} />
                     <Route path="pos/suspended" element={<div className="p-4">Đơn hàng treo</div>} />
 
