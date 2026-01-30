@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
-import ProductList from './pages/Products/products'
+import ProductList from './pages/Products/ProductList'
 
 function App() {
     return (
