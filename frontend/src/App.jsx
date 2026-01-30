@@ -37,8 +37,9 @@ function App() {
                         path="inventory"
                         element={<div className="p-4">Inventory Management (Kho)</div>}
                     />
+                      <Route path="inventory/export" element={<div className="p-4">Tổng quan</div>} />
                     <Route path="inventory/import" element={<div className="p-4">Nhập kho</div>} />
-                    <Route path="inventory/export" element={<div className="p-4">Xuất kho</div>} />
+                  
                     <Route path="inventory/audit" element={<div className="p-4">Kiểm kê</div>} />
                     <Route path="inventory/alerts" element={<div className="p-4">Cảnh báo hết hàng</div>} />
 
