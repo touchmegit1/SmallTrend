@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
+import ProductList from './pages/Products/products'
 
 function App() {
     return (
@@ -46,9 +47,7 @@ function App() {
                     <Route
                         path="products"
                         element={
-
-                                <div className="p-4">Product Management (Sản phẩm)</div>
-
+                                <ProductList/>
                         }
                     />
                     <Route path="products/categories" element={<div className="p-4">Danh mục & Brand</div>} />

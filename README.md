@@ -770,7 +770,7 @@ cd SmallTrend
 **Tạo Database:**
 
 ```sql
-CREATE DATABASE smalltrend_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE smalltrend CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 **Cấu hình kết nối:**
