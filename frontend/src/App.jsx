@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
+import InventoryDashboard from './pages/Inventory/InventoryDashboard'
 
 function App() {
     return (
@@ -35,13 +36,11 @@ function App() {
                     {/* Module 2: Inventory (Kho) */}
                     <Route
                         path="inventory"
-                        element={<div className="p-4">Inventory Management (Kho)</div>}
+                        element={<InventoryDashboard />}
                     />
-                      <Route path="inventory/export" element={<div className="p-4">Tổng quan</div>} />
                     <Route path="inventory/import" element={<div className="p-4">Nhập kho</div>} />
-                  
                     <Route path="inventory/audit" element={<div className="p-4">Kiểm kê</div>} />
-                    <Route path="inventory/alerts" element={<div className="p-4">Cảnh báo hết hàng</div>} />
+                    <Route path="inventory/alerts" element={<div className="p-4">Cảnh báo</div>} />
 
                     {/* Module 3: Products (Sản phẩm) */}
                     <Route
