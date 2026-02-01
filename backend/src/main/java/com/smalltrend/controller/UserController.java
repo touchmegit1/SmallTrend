@@ -4,6 +4,7 @@ import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserStatusRequest;
 import com.smalltrend.dto.user.UserUpdateRequest;
+import com.smalltrend.dto.auth.RegisterRequest;
 import com.smalltrend.entity.User;
 import com.smalltrend.service.UserService;
 import jakarta.validation.Valid;
@@ -22,6 +23,17 @@ import java.util.stream.Collectors;
 public class UserController {
 
     private final UserService userService;
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> createUser(@Valid @RequestBody RegisterRequest request) {
+        try {
+            return ResponseEntity.ok(userService.register(request));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(e.getMessage()));
+        }
+    }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
