@@ -2,9 +2,76 @@
 -- SMALLTREND GROCERY STORE DATABASE MOCK DATA - NO VIETNAMESE DIACRITICS
 -- =============================================================================
 
+-- Clear existing data (in reverse order of foreign key dependencies)
+DELETE FROM audit_logs;
+DELETE FROM reports;
+DELETE FROM stock_movements;
+DELETE FROM salary_payout;
+DELETE FROM salary_config;
+DELETE FROM attendance;
+DELETE FROM shift_assignments;
+DELETE FROM shifts;
+DELETE FROM price_history;
+DELETE FROM promotion_conditions;
+DELETE FROM promotions;
+DELETE FROM loyalty_history;
+DELETE FROM sales_order_items;
+DELETE FROM sales_orders;
+DELETE FROM purchase_order_items;
+DELETE FROM purchase_orders;
+DELETE FROM inventory_stock;
+DELETE FROM product_batches;
+DELETE FROM shelves_bins;
+DELETE FROM locations;
+DELETE FROM product_variants;
+DELETE FROM products;
+DELETE FROM customers;
+DELETE FROM user_credentials;
+DELETE FROM users;
+DELETE FROM role_permissions;
+DELETE FROM permissions;
+DELETE FROM roles;
+DELETE FROM tax_rates;
+DELETE FROM suppliers;
+DELETE FROM categories;
+DELETE FROM brands;
+
+-- Reset auto-increment counters
+ALTER TABLE audit_logs AUTO_INCREMENT = 1;
+ALTER TABLE reports AUTO_INCREMENT = 1;
+ALTER TABLE stock_movements AUTO_INCREMENT = 1;
+ALTER TABLE salary_payout AUTO_INCREMENT = 1;
+ALTER TABLE salary_config AUTO_INCREMENT = 1;
+ALTER TABLE attendance AUTO_INCREMENT = 1;
+ALTER TABLE shift_assignments AUTO_INCREMENT = 1;
+ALTER TABLE shifts AUTO_INCREMENT = 1;
+ALTER TABLE price_history AUTO_INCREMENT = 1;
+ALTER TABLE promotion_conditions AUTO_INCREMENT = 1;
+ALTER TABLE promotions AUTO_INCREMENT = 1;
+ALTER TABLE loyalty_history AUTO_INCREMENT = 1;
+ALTER TABLE sales_order_items AUTO_INCREMENT = 1;
+ALTER TABLE sales_orders AUTO_INCREMENT = 1;
+ALTER TABLE purchase_order_items AUTO_INCREMENT = 1;
+ALTER TABLE purchase_orders AUTO_INCREMENT = 1;
+ALTER TABLE inventory_stock AUTO_INCREMENT = 1;
+ALTER TABLE product_batches AUTO_INCREMENT = 1;
+ALTER TABLE shelves_bins AUTO_INCREMENT = 1;
+ALTER TABLE locations AUTO_INCREMENT = 1;
+ALTER TABLE product_variants AUTO_INCREMENT = 1;
+ALTER TABLE products AUTO_INCREMENT = 1;
+ALTER TABLE customers AUTO_INCREMENT = 1;
+ALTER TABLE user_credentials AUTO_INCREMENT = 1;
+ALTER TABLE users AUTO_INCREMENT = 1;
+ALTER TABLE role_permissions AUTO_INCREMENT = 1;
+ALTER TABLE permissions AUTO_INCREMENT = 1;
+ALTER TABLE roles AUTO_INCREMENT = 1;
+ALTER TABLE tax_rates AUTO_INCREMENT = 1;
+ALTER TABLE suppliers AUTO_INCREMENT = 1;
+ALTER TABLE categories AUTO_INCREMENT = 1;
+ALTER TABLE brands AUTO_INCREMENT = 1;
+
 -- Insert Brands
-INSERT IGNORE
-INTO brands
+INSERT INTO brands
 (id, name) VALUES
 (1, 'Vinamilk'),
 (2, 'Nestle'),
@@ -13,8 +80,7 @@ INTO brands
 (5, 'P&G');
 
 -- Insert Categories  
-INSERT IGNORE
-INTO categories
+INSERT INTO categories
 (id, name) VALUES
 (1, 'Food & Beverage'),
 (2, 'Personal Care'),
@@ -23,8 +89,7 @@ INTO categories
 (5, 'Snacks & Confectionery');
 
 -- Insert Suppliers
-INSERT IGNORE
-INTO suppliers
+INSERT INTO suppliers
 (id, name, contact_info) VALUES
 (1, 'Vinamilk Distribution', 'sales@vinamilk.com.vn | 1800 1199'),
 (2, 'Unilever Vietnam', 'contact@unilever.com.vn | 1800 5588'),
@@ -33,8 +98,7 @@ INTO suppliers
 (5, 'Local Wholesale Market', 'wholesale@localmarket.vn | 0909123456');
 
 -- Insert Tax Rates
-INSERT IGNORE
-INTO tax_rates
+INSERT INTO tax_rates
 (id, name, rate, is_active) VALUES
 (1, 'VAT Standard', 10.00, 1),
 (2, 'VAT Reduced', 5.00, 1),
@@ -43,8 +107,7 @@ INTO tax_rates
 (5, 'No Tax', 0.00, 1);
 
 -- Insert Roles
-INSERT IGNORE
-INTO roles
+INSERT INTO roles
 (id, name, description) VALUES
 (1, 'ADMIN', 'System Administrator'),
 (2, 'MANAGER', 'Store Manager'),
@@ -53,8 +116,7 @@ INTO roles
 (5, 'SALES_STAFF', 'Sales Staff');
 
 -- Insert Permissions
-INSERT IGNORE
-INTO permissions
+INSERT INTO permissions
 (id, name, description) VALUES
 (1, 'USER_MANAGEMENT', 'User Management'),
 (2, 'PRODUCT_MANAGEMENT', 'Product Management'),
@@ -63,8 +125,7 @@ INTO permissions
 (5, 'REPORT_VIEWING', 'Report Viewing');
 
 -- Insert Role Permissions
-INSERT IGNORE
-INTO role_permissions
+INSERT INTO role_permissions
 (id, role_id, permission_id) VALUES
 (1, 1, 1),
 (2, 1, 2),
@@ -81,8 +142,7 @@ INTO role_permissions
 (13, 5, 4);
 
 -- Insert Users
-INSERT IGNORE
-INTO users
+INSERT INTO users
 (id, full_name, email, phone, address, status, role_id) VALUES
 (1, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, District 1, Ho Chi Minh City', 'ACTIVE', 1),
 (2, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, District 3, Ho Chi Minh City', 'ACTIVE', 2),
@@ -91,8 +151,7 @@ INTO users
 (5, 'Hoang Van Sales', 'sales@smalltrend.com', '0945678901', '654 Truong Chinh, District 12, Ho Chi Minh City', 'ACTIVE', 5);
 
 -- Insert User Credentials
-INSERT IGNORE
-INTO user_credentials
+INSERT INTO user_credentials
 (user_id, username, password_hash) VALUES
 (1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iYqiSfFVMLVaue6IZ0jjhSdsFkcm'),
 (2, 'manager', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'),
@@ -101,8 +160,7 @@ INTO user_credentials
 (5, 'sales', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.');
 
 -- Insert Customers
-INSERT IGNORE
-INTO customers
+INSERT INTO customers
 (id, name, phone, loyalty_points) VALUES
 (1, 'Nguyen Van A', '0987654321', 150),
 (2, 'Tran Thi B', '0976543210', 250),
@@ -111,8 +169,7 @@ INTO customers
 (5, 'Hoang Van E', '0943210987', 50);
 
 -- Insert Products
-INSERT IGNORE
-INTO products
+INSERT INTO products
 (id, name, description, image_url, brand_id, category_id, tax_rate_id) VALUES
 (1, 'Fresh Milk 1L', 'Vinamilk Fresh Milk 1 Liter Pack', 'https://example.com/vinamilk1l.jpg', 1, 1, 2),
 (2, 'Maggi Instant Noodles', 'Nestle Maggi 2-Minute Noodles', 'https://example.com/maggi.jpg', 2, 1, 2),
@@ -121,8 +178,7 @@ INTO products
 (5, 'Head & Shoulders Shampoo', 'P&G Head & Shoulders 400ml', 'https://example.com/hs400.jpg', 5, 2, 1);
 
 -- Insert Product Variants
-INSERT IGNORE
-INTO product_variants
+INSERT INTO product_variants
 (id, product_id, sku, barcode, sell_price, is_active, image_url) VALUES
 (1, 1, 'VMILK-1L-001', '8901234567890', 25000.00, 1, 'https://example.com/vinamilk1l.jpg'),
 (2, 1, 'VMILK-1L-002', '8901234567891', 27000.00, 1, 'https://example.com/vinamilk1l-choc.jpg'),
@@ -131,8 +187,7 @@ INTO product_variants
 (5, 4, 'DOVE-90G-001', '8901234567894', 15000.00, 1, 'https://example.com/dove90.jpg');
 
 -- Insert Locations
-INSERT IGNORE
-INTO locations
+INSERT INTO locations
 (id, name, type) VALUES
 (1, 'Main Warehouse', 'WAREHOUSE'),
 (2, 'Showroom A1', 'SHOWROOM'),
@@ -141,8 +196,7 @@ INTO locations
 (5, 'Display Area D', 'DISPLAY_AREA');
 
 -- Insert Shelf Bins
-INSERT IGNORE
-INTO shelves_bins
+INSERT INTO shelves_bins
 (id, location_id, bin_code) VALUES
 (1, 1, 'A-01-001'),
 (2, 1, 'A-01-002'),
@@ -151,8 +205,7 @@ INTO shelves_bins
 (5, 4, 'D-04-001');
 
 -- Insert Product Batches
-INSERT IGNORE
-INTO product_batches
+INSERT INTO product_batches
 (id, variant_id, batch_number, cost_price, mfg_date, expiry_date) VALUES
 (1, 1, 'BATCH001', 20000.00, '2024-01-15', '2024-04-15'),
 (2, 2, 'BATCH002', 22000.00, '2024-01-20', '2024-04-20'),
@@ -161,8 +214,7 @@ INTO product_batches
 (5, 5, 'BATCH005', 12000.00, '2024-02-15', '2025-02-15');
 
 -- Insert Inventory Stock
-INSERT IGNORE
-INTO inventory_stock
+INSERT INTO inventory_stock
 (id, variant_id, batch_id, bin_id, quantity) VALUES
 (1, 1, 1, 1, 250),
 (2, 2, 2, 1, 180),
@@ -171,8 +223,7 @@ INTO inventory_stock
 (5, 5, 5, 4, 220);
 
 -- Insert Purchase Orders
-INSERT IGNORE
-INTO purchase_orders
+INSERT INTO purchase_orders
 (id, supplier_id, order_date, status, total_amount, received_by) VALUES
 (1, 1, '2024-01-10', 'COMPLETED', 5000000.00, 2),
 (2, 2, '2024-01-15', 'COMPLETED', 3500000.00, 2),
@@ -181,8 +232,7 @@ INTO purchase_orders
 (5, 5, '2024-02-10', 'PROCESSING', 2200000.00, 4);
 
 -- Insert Purchase Order Items
-INSERT IGNORE
-INTO purchase_order_items
+INSERT INTO purchase_order_items
 (id, purchase_order_id, variant_id, quantity, unit_price) VALUES
 (1, 1, 1, 250, 20000.00),
 (2, 2, 2, 160, 22000.00),
@@ -191,8 +241,7 @@ INTO purchase_order_items
 (5, 5, 5, 180, 12000.00);
 
 -- Insert Sales Orders
-INSERT IGNORE
-INTO sales_orders
+INSERT INTO sales_orders
 (id, cashier_id, customer_id, order_date, payment_method, total_amount) VALUES
 (1, 3, 1, '2024-02-20 10:30:00', 'CASH', 175000.00),
 (2, 3, 2, '2024-02-21 14:15:00', 'CREDIT_CARD', 95000.00),
@@ -201,8 +250,7 @@ INTO sales_orders
 (5, 5, 5, '2024-02-24 11:10:00', 'QR_CODE', 67000.00);
 
 -- Insert Sales Order Items  
-INSERT IGNORE
-INTO sales_order_items
+INSERT INTO sales_order_items
 (id, order_id, variant_id, batch_id, quantity, unit_price, cost_price_at_sale) VALUES
 (1, 1, 1, 1, 7, 25000.00, 20000.00),
 (2, 2, 2, 2, 4, 27000.00, 22000.00),
@@ -211,8 +259,7 @@ INTO sales_order_items
 (5, 5, 5, 5, 5, 15000.00, 12000.00);
 
 -- Insert Loyalty History
-INSERT IGNORE
-INTO loyalty_history
+INSERT INTO loyalty_history
 (id, customer_id, order_id, points_earned, points_used) VALUES
 (1, 1, 1, 18, 0),
 (2, 2, 2, 10, 0),
@@ -221,8 +268,7 @@ INTO loyalty_history
 (5, 5, 5, 7, 0);
 
 -- Insert Promotions
-INSERT IGNORE
-INTO promotions
+INSERT INTO promotions
 (id, name, start_date, end_date, is_active) VALUES
 (1, 'Tet Sale 2024', '2024-02-01', '2024-02-29', 1),
 (2, 'Back to School', '2024-08-01', '2024-08-31', 0),
@@ -231,8 +277,7 @@ INTO promotions
 (5, 'New Year Deal', '2025-01-01', '2025-01-15', 0);
 
 -- Insert Promotion Conditions
-INSERT IGNORE
-INTO promotion_conditions
+INSERT INTO promotion_conditions
 (id, promotion_id, min_order_value, discount_percent) VALUES
 (1, 1, 100000.00, 5.00),
 (2, 1, 200000.00, 8.00),
@@ -241,8 +286,7 @@ INTO promotion_conditions
 (5, 4, 300000.00, 12.00);
 
 -- Insert Price History
-INSERT IGNORE
-INTO price_history
+INSERT INTO price_history
 (id, product_id, old_price, new_price, applied_at, changed_by) VALUES
 (1, 1, 27000.00, 25000.00, '2024-02-01 00:00:00', 2),
 (2, 2, 5000.00, 4500.00, '2024-02-01 00:00:00', 2),
@@ -251,8 +295,7 @@ INTO price_history
 (5, 5, 16000.00, 15000.00, '2024-02-15 00:00:00', 2);
 
 -- Insert Shifts
-INSERT IGNORE
-INTO shifts
+INSERT INTO shifts
 (id, name, date, start_time, end_time) VALUES
 (1, 'Morning Shift', '2024-02-26', '08:00:00', '12:00:00'),
 (2, 'Afternoon Shift', '2024-02-26', '13:00:00', '17:00:00'),
@@ -261,8 +304,7 @@ INTO shifts
 (5, 'Afternoon Shift', '2024-02-27', '13:00:00', '17:00:00');
 
 -- Insert Shift Assignments
-INSERT IGNORE
-INTO shift_assignments
+INSERT INTO shift_assignments
 (id, shift_id, user_id, status) VALUES
 (1, 1, 3, 'ASSIGNED'),
 (2, 1, 5, 'ASSIGNED'),
@@ -271,8 +313,7 @@ INTO shift_assignments
 (5, 4, 5, 'ASSIGNED');
 
 -- Insert Attendance
-INSERT IGNORE
-INTO attendance
+INSERT INTO attendance
 (id, user_id, date, time_in, time_out, status) VALUES
 (1, 3, '2024-02-26', '08:05:00', '12:03:00', 'PRESENT'),
 (2, 5, '2024-02-26', '08:00:00', '12:00:00', 'PRESENT'),
@@ -281,8 +322,7 @@ INTO attendance
 (5, 5, '2024-02-27', '08:10:00', '11:50:00', 'PRESENT');
 
 -- Insert Salary Config
-INSERT IGNORE
-INTO salary_config
+INSERT INTO salary_config
 (id, user_id, base_salary, hourly_rate, overtime_rate) VALUES
 (1, 1, 25000000.00, NULL, NULL),
 (2, 2, 20000000.00, NULL, NULL),
@@ -291,8 +331,7 @@ INTO salary_config
 (5, 5, 11000000.00, 45000.00, 67500.00);
 
 -- Insert Salary Payout
-INSERT IGNORE
-INTO salary_payout
+INSERT INTO salary_payout
 (id, user_id, pay_period_start, pay_period_end, pay_date, base_amount, overtime_amount, total_amount) VALUES
 (1, 1, '2024-02-01', '2024-02-29', '2024-03-05', 25000000.00, 0.00, 25000000.00),
 (2, 2, '2024-02-01', '2024-02-29', '2024-03-05', 20000000.00, 0.00, 20000000.00),
@@ -301,8 +340,7 @@ INTO salary_payout
 (5, 5, '2024-02-01', '2024-02-29', '2024-03-05', 11000000.00, 135000.00, 11135000.00);
 
 -- Insert Stock Movements
-INSERT IGNORE
-INTO stock_movements
+INSERT INTO stock_movements
 (id, variant_id, type, quantity, from_bin_id, to_bin_id) VALUES
 (1, 1, 'IN', 250, NULL, 1),
 (2, 2, 'IN', 180, NULL, 1),
@@ -311,8 +349,7 @@ INTO stock_movements
 (5, 5, 'ADJUSTMENT', -10, 4, 4);
 
 -- Insert Reports
-INSERT IGNORE
-INTO reports
+INSERT INTO reports
 (id, type, report_date, data, created_by) VALUES
 (1, 'SALES_DAILY', '2024-02-26', 'Daily sales report data JSON here', 2),
 (2, 'INVENTORY_WEEKLY', '2024-02-25', 'Weekly inventory report data JSON here', 4),
@@ -321,8 +358,7 @@ INTO reports
 (5, 'PROFIT_ANALYSIS', '2024-01-31', 'Profit analysis report data JSON here', 1);
 
 -- Insert Audit Logs
-INSERT IGNORE
-INTO audit_logs
+INSERT INTO audit_logs
 (id, entity_name, entity_id, action, details, timestamp, user_id) VALUES
 (1, 'Product', 1, 'CREATE', 'Created new product: Fresh Milk 1L', '2024-01-15 10:00:00', 2),
 (2, 'SalesOrder', 1, 'CREATE', 'New sales order created', '2024-02-20 10:30:00', 3),

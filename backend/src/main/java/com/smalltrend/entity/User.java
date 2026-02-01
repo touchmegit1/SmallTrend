@@ -1,5 +1,6 @@
 package com.smalltrend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,17 +32,22 @@ public class User {
     private Role role;
 
     @OneToMany(mappedBy = "user")
+    @JsonIgnore
     private List<Attendance> attendances;
 
     @OneToMany(mappedBy = "user")
+    @JsonIgnore
     private List<ShiftAssignment> shiftAssignments;
 
     @OneToOne(mappedBy = "user")
+    @JsonIgnore
     private UserCredential userCredential;
 
     @OneToOne(mappedBy = "user")
+    @JsonIgnore
     private SalaryConfig salaryConfig;
 
     @OneToMany(mappedBy = "user")
+    @JsonIgnore
     private List<SalaryPayout> salaryPayouts;
 }
