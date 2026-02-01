@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Edit, Trash2, X, Search, Filter, UserCheck, Clock } from 'lucide-react';
-import api from '../../config/axiosConfig';import CustomSelect from '../../components/common/CustomSelect';
+import api from '../../config/axiosConfig'; import CustomSelect from '../../components/common/CustomSelect';
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
@@ -194,8 +194,8 @@ const UserManagement = () => {
                 <button
                     onClick={() => setActiveTab('approved')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${activeTab === 'approved'
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'bg-white text-slate-600 hover:bg-slate-50'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                 >
                     <UserCheck size={20} />
@@ -204,8 +204,8 @@ const UserManagement = () => {
                 <button
                     onClick={() => setActiveTab('pending')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${activeTab === 'pending'
-                            ? 'bg-orange-600 text-white shadow-md'
-                            : 'bg-white text-slate-600 hover:bg-slate-50'
+                        ? 'bg-orange-600 text-white shadow-md'
+                        : 'bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                 >
                     <Clock size={20} />

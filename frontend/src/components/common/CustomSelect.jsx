@@ -53,14 +53,14 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
                 }}
             >
                 <span>{selectedOption?.label || 'Chọn...'}</span>
-                <ChevronDown 
-                    size={16} 
+                <ChevronDown
+                    size={16}
                     className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                 />
             </button>
 
             {isOpen && (
-                <div 
+                <div
                     className="fixed bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-fadeIn"
                     style={{
                         zIndex: 9999,
@@ -72,7 +72,7 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
                 >
                     <div className="py-1 max-h-60 overflow-y-auto custom-scrollbar">
                         {options.map((option) => {
-                            const optionStyle = variant === 'role' ? 
+                            const optionStyle = variant === 'role' ?
                                 {
                                     1: { bg: '#f3e8ff', color: '#6b21a8' },
                                     2: { bg: '#dbeafe', color: '#1e40af' },
@@ -81,12 +81,12 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
                                     5: { bg: '#d1fae5', color: '#065f46' }
                                 }[option.value] || { bg: '#f8fafc', color: '#1e293b' }
                                 : variant === 'status' ?
-                                {
-                                    'active': { bg: '#d1fae5', color: '#065f46' },
-                                    'inactive': { bg: '#fee2e2', color: '#991b1b' },
-                                    'pending': { bg: '#fef3c7', color: '#92400e' }
-                                }[option.value] || { bg: '#f8fafc', color: '#1e293b' }
-                                : { bg: '#f8fafc', color: '#1e293b' };
+                                    {
+                                        'active': { bg: '#d1fae5', color: '#065f46' },
+                                        'inactive': { bg: '#fee2e2', color: '#991b1b' },
+                                        'pending': { bg: '#fef3c7', color: '#92400e' }
+                                    }[option.value] || { bg: '#f8fafc', color: '#1e293b' }
+                                    : { bg: '#f8fafc', color: '#1e293b' };
 
                             return (
                                 <button
@@ -96,9 +96,8 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
                                         onChange(option.value);
                                         setIsOpen(false);
                                     }}
-                                    className={`w-full text-left px-4 py-3 text-sm font-medium transition-all duration-150 block ${
-                                        value === option.value ? 'ring-2 ring-inset ring-indigo-500' : ''
-                                    }`}
+                                    className={`w-full text-left px-4 py-3 text-sm font-medium transition-all duration-150 block ${value === option.value ? 'ring-2 ring-inset ring-indigo-500' : ''
+                                        }`}
                                     style={{
                                         backgroundColor: value === option.value ? optionStyle.bg : '#ffffff',
                                         color: value === option.value ? optionStyle.color : '#475569',
