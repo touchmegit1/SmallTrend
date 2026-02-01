@@ -1,10 +1,13 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { ShoppingCart, Package, LogOut, Store, Warehouse, Users, Clock, BarChart3, ChevronRight } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { ShoppingCart, Package, LogOut, Store, Warehouse, Users, Clock, BarChart3, ChevronRight, Shield } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
-    const [openMenus, setOpenMenus] = React.useState({});
+    const [openMenus, setOpenMenus] = React.useState({ admin: true });
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
 
     const toggleMenu = (label) => {
         setOpenMenus(prev => ({
@@ -12,6 +15,15 @@ const Sidebar = () => {
             [label]: !prev[label]
         }));
     };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    // Debug: log user info
+    console.log('Sidebar - Current user:', user);
+    console.log('Sidebar - User role:', user?.role);
 
     const navItems = [
         {
@@ -82,6 +94,15 @@ const Sidebar = () => {
         },
     ];
 
+    // Debug: log user info
+    console.log('Sidebar - Current user:', user);
+    console.log('Sidebar - User role:', user?.role);
+    console.log('Sidebar - User full object:', JSON.stringify(user));
+
+    // Admin menu - always show for ROLE_ADMIN
+    const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
+    console.log('Sidebar - Is Admin:', isAdmin);
+
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
             <div className="p-6 border-b border-slate-100 flex items-center gap-3">
@@ -94,9 +115,57 @@ const Sidebar = () => {
             </div>
 
             <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+                {/* Admin Menu - ALWAYS FIRST for ROLE_ADMIN */}
+                {isAdmin && (
+                    <div className="mb-2">
+                        <div
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === '/dashboard' || location.pathname.startsWith('/hr/users') || openMenus['admin']
+                                    ? 'bg-indigo-50 text-indigo-700'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                }`}
+                            onClick={() => toggleMenu('admin')}
+                        >
+                            <Shield size={20} className={
+                                location.pathname === '/dashboard' || location.pathname.startsWith('/hr/users') || openMenus['admin']
+                                    ? "text-indigo-600"
+                                    : "text-slate-500 group-hover:text-slate-700"
+                            } />
+                            <span className="flex-1 font-medium">Quản trị</span>
+                            <ChevronRight size={16} className={`transition-transform duration-200 ${openMenus['admin'] ? 'rotate-90' : ''}`} />
+                        </div>
+
+                        {openMenus['admin'] && (
+                            <div className="pl-11 pr-2 py-1 space-y-1">
+                                <NavLink
+                                    to="/dashboard"
+                                    className={({ isActive }) =>
+                                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                                            ? 'bg-indigo-100 text-indigo-700 font-medium'
+                                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                        }`
+                                    }
+                                >
+                                    Dashboard
+                                </NavLink>
+                                <NavLink
+                                    to="/hr/users"
+                                    className={({ isActive }) =>
+                                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                                            ? 'bg-indigo-100 text-indigo-700 font-medium'
+                                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                        }`
+                                    }
+                                >
+                                    Quản lý người dùng
+                                </NavLink>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Regular Menu Items */}
                 {navItems.map((item) => (
                     <div key={item.label}>
-                        {/* Parent Item */}
                         <div
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
                                 ? 'bg-indigo-50 text-indigo-700'
@@ -111,7 +180,6 @@ const Sidebar = () => {
                             )}
                         </div>
 
-                        {/* Children Items */}
                         {item.children && openMenus[item.label] && (
                             <div className="pl-11 pr-2 py-1 space-y-1">
                                 {item.children.map(child => (
@@ -124,7 +192,7 @@ const Sidebar = () => {
                                                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                                             }`
                                         }
-                                        end={child.path === item.path} /* Strict match for root of module */
+                                        end={child.path === item.path}
                                     >
                                         {child.label}
                                     </NavLink>
@@ -136,7 +204,10 @@ const Sidebar = () => {
             </nav>
 
             <div className="p-4 border-t border-slate-100">
-                <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200">
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+                >
                     <LogOut size={20} />
                     <span className="font-medium">Đăng xuất</span>
                 </button>
