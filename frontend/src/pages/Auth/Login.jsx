@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, User, Lock } from 'lucide-react';
 
 const Login = () => {
@@ -83,13 +83,22 @@ const Login = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 ${
-                            loading ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
+                        className={`w-full px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                     >
                         {loading ? 'Đang xử lý...' : 'Đăng nhập'}
                     </button>
                 </form>
+
+                {/* Register Link */}
+                <div className="mt-6 text-center">
+                    <p className="text-gray-600 text-sm">
+                        Chưa có tài khoản?{' '}
+                        <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+                            Đăng ký ngay
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     );

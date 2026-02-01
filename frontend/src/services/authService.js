@@ -2,43 +2,72 @@ import api from '../config/axiosConfig';
 
 const login = async (username, password) => {
     try {
-        const response = await api.post('/api/auth/login', { username, password });
+        const response = await api.post('/auth/login', { username, password });
         if (response.data.token) {
             localStorage.setItem('user', JSON.stringify(response.data));
             localStorage.setItem('token', response.data.token);
-            // Lưu refresh token
-            if (response.data.refreshToken) {
-                localStorage.setItem('refreshToken', response.data.refreshToken);
-            }
         }
         return response.data;
     } catch (error) {
-        throw error.response ? error.response.data : error;
+        throw error.response?.data || error;
+    }
+};
+
+const register = async (userData) => {
+    try {
+        const response = await api.post('/auth/register', userData);
+        if (response.data.token) {
+            localStorage.setItem('user', JSON.stringify(response.data));
+            localStorage.setItem('token', response.data.token);
+        }
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error;
     }
 };
 
 const logout = async () => {
     try {
-        // Gọi API logout để revoke token trên server
-        await api.post('/api/auth/logout');
+        await api.post('/auth/logout');
     } catch (error) {
         console.error('Logout error:', error);
     } finally {
-        // Xóa toàn bộ dữ liệu local
         localStorage.removeItem('user');
         localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
     }
 };
 
 const getCurrentUser = () => {
-    return JSON.parse(localStorage.getItem('user'));
+    try {
+        const user = localStorage.getItem('user');
+        return user ? JSON.parse(user) : null;
+    } catch (error) {
+        console.error('Error parsing user from localStorage:', error);
+        return null;
+    }
+};
+
+const getToken = () => {
+    return localStorage.getItem('token');
+};
+
+const validateToken = async () => {
+    try {
+        await api.get('/auth/validate');
+        return true;
+    } catch (error) {
+        return false;
+    }
 };
 
 const authService = {
     login,
+    register,
     logout,
     getCurrentUser,
+    getToken,
+    validateToken
 };
 
 export default authService;
+
