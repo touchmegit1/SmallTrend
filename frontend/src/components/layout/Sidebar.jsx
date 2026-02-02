@@ -69,6 +69,7 @@ const Sidebar = () => {
                 { label: 'Voucher/Coupon', path: '/crm/vouchers' },
                 { label: 'Tích điểm & Hạng', path: '/crm/loyalty' },
                 { label: 'Khiếu nại', path: '/crm/complaints' },
+                { label: 'Trang chủ', path: '/crm/homepage' },
             ]
         },
         {
