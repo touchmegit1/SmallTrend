@@ -8,6 +8,7 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
 import TransactionHistory from './pages/Pos/Transition_History'
+import ReportforCashier from './pages/Pos/ReportforCashier'
 
 
 function App() {
@@ -28,7 +29,7 @@ function App() {
                 {/* Module 1: POS (Bán hàng) */}
                 <Route path="pos" element={<POS/>} />
                 <Route path="pos/history" element={<TransactionHistory/>} />
-                <Route path="pos/suspended" element={<div className="p-4">Đơn hàng treo</div>} />
+                <Route path="pos/suspended" element={<ReportforCashier/>} />
 
                 {/* Module 2: Inventory (Kho) */}
                 <Route path="inventory" element={<div className="p-4">Inventory Management (Kho)</div>} />
