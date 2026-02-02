@@ -7,7 +7,7 @@ import Register from './pages/Auth/Register'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
-import ProductList from './pages/Products/ProductList'
+import ProductListScreen from './pages/Products/ProductList'
 
 function App() {
     return (
@@ -34,14 +34,14 @@ function App() {
                 <Route path="pos/suspended" element={<div className="p-4">Đơn hàng treo</div>} />
 
                 {/* Module 2: Inventory (Kho) */}
-                <Route path="inventory" element={<ProductList></ProductList>} />
+                <Route path="inventory" element={<div className="p-4">Nhập kho</div>} />
                 <Route path="inventory/import" element={<div className="p-4">Nhập kho</div>} />
                 <Route path="inventory/export" element={<div className="p-4">Xuất kho</div>} />
                 <Route path="inventory/audit" element={<div className="p-4">Kiểm kê</div>} />
                 <Route path="inventory/alerts" element={<div className="p-4">Cảnh báo hết hàng</div>} />
 
                 {/* Module 3: Products (Sản phẩm) */}
-                <Route path="products" element={<ProductList></ProductList>} />
+                <Route path="products" element={<ProductListScreen></ProductListScreen>} />
                 <Route path="products/categories" element={<div className="p-4">Danh mục & Brand</div>} />
                 <Route path="products/price-books" element={<div className="p-4">Thiết lập giá</div>} />
                 <Route path="products/print-barcodes" element={<div className="p-4">In tem mã vạch</div>} />
