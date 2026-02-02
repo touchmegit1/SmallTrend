@@ -29,7 +29,8 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
         if (!hasAccess) {
             console.error('Access denied - User role:', userRole, 'Required roles:', allowedRoles);
-            return <Navigate to="/dashboard" replace />;
+            // Redirect non-authorized users to POS (default workspace for staff)
+            return <Navigate to="/pos" replace />;
         }
     }
 

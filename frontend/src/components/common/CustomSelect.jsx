@@ -30,11 +30,12 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
             return roleColors[value] || roleColors[3];
         } else if (variant === 'status') {
             const statusColors = {
+                'all': { bg: '#f8fafc', color: '#1e293b', label: 'Tất cả trạng thái' },
                 'active': { bg: '#d1fae5', color: '#065f46', label: 'Hoạt động' },
                 'inactive': { bg: '#fee2e2', color: '#991b1b', label: 'Vô hiệu' },
                 'pending': { bg: '#fef3c7', color: '#92400e', label: 'Chờ duyệt' }
             };
-            return statusColors[value] || statusColors['active'];
+            return statusColors[value] || statusColors['all'];
         }
         return { bg: '#ffffff', color: '#1e293b' };
     };
