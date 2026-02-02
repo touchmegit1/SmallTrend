@@ -7,6 +7,8 @@ import Register from './pages/Auth/Register'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
+import TransactionHistory from './pages/Pos/Transition_History'
+
 
 function App() {
     return (
@@ -24,8 +26,8 @@ function App() {
                 <Route path="dashboard" element={<Dashboard />} />
 
                 {/* Module 1: POS (Bán hàng) */}
-                <Route path="pos" element={<POS />} />
-                <Route path="pos/history" element={<div className="p-4">Lịch sử đơn hàng</div>} />
+                <Route path="pos" element={<POS/>} />
+                <Route path="pos/history" element={<TransactionHistory/>} />
                 <Route path="pos/suspended" element={<div className="p-4">Đơn hàng treo</div>} />
 
                 {/* Module 2: Inventory (Kho) */}

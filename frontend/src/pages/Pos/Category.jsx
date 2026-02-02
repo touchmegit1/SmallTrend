@@ -1,6 +1,4 @@
 import { useState } from "react";
-import Nav from "react-bootstrap/Nav";
-import "./CategoryBar.css";
 
 const categories = [
   "Tất Cả",
@@ -16,21 +14,21 @@ function CategoryBar() {
   const [active, setActive] = useState("Tất Cả");
 
   return (
-    <div className="category-wrapper">
-      {/* Wrapper có nhiệm vụ tạo thanh cuộn */}
-      <div className="category-scroll-container">
-        <Nav variant="pills" className="category-scroll">
-          {categories.map((item) => (
-            <Nav.Item key={item}>
-              <Nav.Link
-                active={active === item}
-                onClick={() => setActive(item)}
-              >
-                {item}
-              </Nav.Link>
-            </Nav.Item>
-          ))}
-        </Nav>
+    <div className="mx-3 p-2 bg-gray-50 rounded-2xl border border-gray-200">
+      <div className="flex flex-wrap gap-2">
+        {categories.map((item) => (
+          <button
+            key={item}
+            onClick={() => setActive(item)}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
+              active === item
+                ? "bg-gray-800 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            {item}
+          </button>
+        ))}
       </div>
     </div>
   );
