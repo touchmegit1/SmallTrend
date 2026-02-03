@@ -1,25 +1,19 @@
-import { useState } from "react";
-import Button from "./ProductComponents/button";
-import { Input } from "./ProductComponents/input";
-import { Card, CardContent, CardHeader, CardTitle } from "./ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ProductComponents/table";
-import { Badge } from "./ProductComponents/badge";
-import { Plus, Search, Edit, Package, Eye } from "lucide-react";
-
+import { useEffect, useState } from "react";
+import Button from "../ProductComponents/button";
+import { Input } from "../ProductComponents/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
+import { Badge } from "../ProductComponents/badge";
+import { Plus, Search, Edit, Package, Eye, CheckCircle, Check } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const mockProducts = [
   {
     id: "1",
     name: "Coca Cola",
-    sku: "CC001",
-    barcode: "8934588012345",
     category: "Nước giải khát",
     brand: "Coca Cola",
     unit: "Chai",
-    costPrice: 12000,
-    retailPrice: 15000,
-    wholesalePrice: 13500,
-    stock: 245,
     variants: 3,
     status: "active",
     variantCount: 3,
@@ -27,15 +21,9 @@ const mockProducts = [
   {
     id: "2",
     name: "Mì Hảo Hảo",
-    sku: "HH001",
-    barcode: "8934588012346",
     category: "Mì ăn liền",
     brand: "Acecook",
     unit: "Gói",
-    costPrice: 3000,
-    retailPrice: 4000,
-    wholesalePrice: 3500,
-    stock: 456,
     variants: 5,
     status: "active",
     variantCount: 2,
@@ -43,15 +31,9 @@ const mockProducts = [
   {
     id: "3",
     name: "Pepsi",
-    sku: "PP001",
-    barcode: "8934588012347",
     category: "Nước giải khát",
     brand: "Pepsi",
     unit: "Chai",
-    costPrice: 11000,
-    retailPrice: 14000,
-    wholesalePrice: 13000,
-    stock: 180,
     variants: 2,
     status: "active",
     variantCount: 4,
@@ -59,15 +41,9 @@ const mockProducts = [
   {
     id: "4",
     name: "Bánh Oreo",
-    sku: "OR001",
-    barcode: "8934588012348",
     category: "Bánh kẹo",
     brand: "Oreo",
     unit: "Gói",
-    costPrice: 8000,
-    retailPrice: 12000,
-    wholesalePrice: 10000,
-    stock: 320,
     variants: 4,
     status: "active",
     variantCount: 6,
@@ -75,15 +51,9 @@ const mockProducts = [
   {
     id: "5",
     name: "Sữa tươi Vinamilk",
-    sku: "VM001",
-    barcode: "8934588012349",
     category: "Sữa",
     brand: "Vinamilk",
     unit: "Hộp",
-    costPrice: 6500,
-    retailPrice: 9000,
-    wholesalePrice: 8000,
-    stock: 210,
     variants: 3,
     status: "inactive",
     variantCount: 10,
@@ -91,15 +61,9 @@ const mockProducts = [
   {
     id: "6",
     name: "Trà xanh Không Độ",
-    sku: "KD001",
-    barcode: "8934588012350",
     category: "Nước giải khát",
     brand: "Không Độ",
     unit: "Chai",
-    costPrice: 9000,
-    retailPrice: 12000,
-    wholesalePrice: 11000,
-    stock: 390,
     variants: 2,
     status: "active",
     variantCount: 5,
@@ -108,29 +72,53 @@ const mockProducts = [
 
 
 export function ProductListScreen({
-  onAddNew = () => { },
-  onViewDetail = () => { },
-  onEdit = () => { },
+  onViewDetail,
+  onEdit,
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [toastMessage, setToastMessage] = useState("");
 
   const filteredProducts = mockProducts.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.barcode.includes(searchQuery);
+      product.brand.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesCategory =
-      filterCategory === "all" || product.category === filterCategory; const matchesStatus =
-        filterStatus === "all" || product.status === filterStatus;
+      filterCategory === "all" || product.category === filterCategory;
+
+    const matchesStatus =
+      filterStatus === "all" || product.status === filterStatus;
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  useEffect(() => {
+    if (location.state?.message) {
+      setToastMessage(location.state.message);
+
+      // tự ẩn sau 3s
+      setTimeout(() => {
+        setToastMessage("");
+      }, 3000);
+    }
+  }, [location.state]);
   return (
     <div className="space-y-6">
+      {/* Alter */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50">
+          <div className="relative flex gap-4 bg-green-50 border border-green-200 rounded-xl px-6 py-4 min-w-105 shadow-sm">
+            <CheckCircle className="text-green-600 w-5 h-5" />
+            <span className="text-sm font-medium text-gray-800">
+              {toastMessage}
+            </span>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -145,7 +133,10 @@ export function ProductListScreen({
           <Button variant="success">
             Xuất dữ liệu
           </Button>
-          <Button onClick={onAddNew} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={() => navigate("/products/addproduct")}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
             <Plus className="w-4 h-4 mr-2" />
             Thêm sản phẩm mới
           </Button>
@@ -211,7 +202,7 @@ export function ProductListScreen({
 
             <TableBody>
               {filteredProducts.map((product) => (
-                <TableRow key={product.id}>
+                <TableRow className="hover:bg-gray-200" key={product.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -227,15 +218,15 @@ export function ProductListScreen({
                   </TableCell>
                   <TableCell>{product.brand}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{product.category}</Badge>
+                    <Badge className="bg-neutral-300" variant="secondary">{product.category}</Badge>
                   </TableCell>
                   <TableCell>
-                      <Badge className="bg-purple-100 text-purple-700">
-                        {product.variants} biến thể
-                      </Badge>
-               
-                    </TableCell>
-                   <TableCell>
+                    <Badge className="bg-purple-100 text-purple-700">
+                      {product.variants} biến thể
+                    </Badge>
+
+                  </TableCell>
+                  <TableCell>
                     {product.status === "active" ? (
                       <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
                     ) : (
@@ -250,7 +241,7 @@ export function ProductListScreen({
                         size="sm"
                         variant="ghost"
                         onClick={() => onViewDetail(product)}
-                        title = "Xem chi tiết"
+                        title="Xem chi tiết"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -258,7 +249,7 @@ export function ProductListScreen({
                         size="sm"
                         variant="ghost"
                         onClick={() => onEdit(product)}
-                         title = "Chỉnh sửa"
+                        title="Chỉnh sửa"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>

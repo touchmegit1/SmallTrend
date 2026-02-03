@@ -7,7 +7,8 @@ import Register from './pages/Auth/Register'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
-import ProductListScreen from './pages/Products/ProductList'
+import ProductListScreen from './pages/Products/ProductManager/ProductList'
+import AddNewProduct from './pages/Products/ProductManager/AddNewProduct'
 
 function App() {
     return (
@@ -42,6 +43,7 @@ function App() {
 
                 {/* Module 3: Products (Sản phẩm) */}
                 <Route path="products" element={<ProductListScreen></ProductListScreen>} />
+                <Route path="products/addproduct" element={<AddNewProduct></AddNewProduct>} />
                 <Route path="products/categories" element={<div className="p-4">Danh mục & Brand</div>} />
                 <Route path="products/price-books" element={<div className="p-4">Thiết lập giá</div>} />
                 <Route path="products/print-barcodes" element={<div className="p-4">In tem mã vạch</div>} />
