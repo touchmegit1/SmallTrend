@@ -22,6 +22,7 @@ const mockProducts = [
     stock: 245,
     variants: 3,
     status: "active",
+    variantCount: 3,
   },
   {
     id: "2",
@@ -37,6 +38,7 @@ const mockProducts = [
     stock: 456,
     variants: 5,
     status: "active",
+    variantCount: 2,
   },
   {
     id: "3",
@@ -52,6 +54,7 @@ const mockProducts = [
     stock: 180,
     variants: 2,
     status: "active",
+    variantCount: 4,
   },
   {
     id: "4",
@@ -67,6 +70,7 @@ const mockProducts = [
     stock: 320,
     variants: 4,
     status: "active",
+    variantCount: 6,
   },
   {
     id: "5",
@@ -82,6 +86,7 @@ const mockProducts = [
     stock: 210,
     variants: 3,
     status: "inactive",
+    variantCount: 10,
   },
   {
     id: "6",
@@ -97,6 +102,7 @@ const mockProducts = [
     stock: 390,
     variants: 2,
     status: "active",
+    variantCount: 5,
   },
 ];
 
@@ -105,7 +111,6 @@ export function ProductListScreen({
   onAddNew = () => { },
   onViewDetail = () => { },
   onEdit = () => { },
-  onDelete = () => { },
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
@@ -118,10 +123,8 @@ export function ProductListScreen({
       product.barcode.includes(searchQuery);
 
     const matchesCategory =
-      filterCategory === "all" || product.category === filterCategory;
-
-    const matchesStatus =
-      filterStatus === "all" || product.status === filterStatus;
+      filterCategory === "all" || product.category === filterCategory; const matchesStatus =
+        filterStatus === "all" || product.status === filterStatus;
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -198,13 +201,11 @@ export function ProductListScreen({
             <TableHeader >
               <TableRow className="bg-gray-50">
                 <TableHead>Sản phẩm</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Barcode</TableHead>
+                <TableHead>Thương hiệu</TableHead>
                 <TableHead>Danh mục</TableHead>
-                <TableHead>Giá bán</TableHead>
-                <TableHead>Tồn kho</TableHead>
+                <TableHead>Biến thể</TableHead>
                 <TableHead>Trạng thái</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
+                <TableHead className="text-center">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -224,24 +225,32 @@ export function ProductListScreen({
                       </div>
                     </div>
                   </TableCell>
-
-                  <TableCell>{product.sku}</TableCell>
-                  <TableCell>{product.barcode}</TableCell>
+                  <TableCell>{product.brand}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{product.category}</Badge>
                   </TableCell>
-                  <TableCell className="font-semibold">
-                    {product.retailPrice.toLocaleString("vi-VN")}đ
+                  <TableCell>
+                      <Badge className="bg-purple-100 text-purple-700">
+                        {product.variants} biến thể
+                      </Badge>
+               
+                    </TableCell>
+                   <TableCell>
+                    {product.status === "active" ? (
+                      <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
+                    ) : (
+                      <Badge className="bg-red-100 text-red-700">Ngưng bán</Badge>
+                    )}
                   </TableCell>
-                  <TableCell>{product.stock}</TableCell>
-                  <TableCell>{product.status}</TableCell>
 
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+
+                  <TableCell className="text-center">
+                    <div className="flex justify-center gap-2">
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => onViewDetail(product)}
+                        title = "Xem chi tiết"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -249,6 +258,7 @@ export function ProductListScreen({
                         size="sm"
                         variant="ghost"
                         onClick={() => onEdit(product)}
+                         title = "Chỉnh sửa"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
