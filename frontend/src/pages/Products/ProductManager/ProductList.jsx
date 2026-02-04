@@ -4,97 +4,123 @@ import { Input } from "../ProductComponents/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
-import { Plus, Search, Edit, Package, Eye, CheckCircle, Check } from "lucide-react";
+import { Plus, Search, Edit, Package, Eye, CheckCircle } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const mockProducts = [
   {
-    id: "1",
-    name: "Coca Cola",
-    category: "Nước giải khát",
-    brand: "Coca Cola",
-    unit: "Chai",
-    variants: 3,
-    status: "active",
-    variantCount: 3,
+    id: 1,
+    name: "Yaourt",
+    brand: "Mondelez",
+    category: "Sữa chua",
+    unit: "Lốc",
+    description: "Sản phẩm Yaourt 1kg chất lượng cao",
+    status: "available",
+    variant_count: 2,
+    created_at: "04/02/2026 09:15",
   },
   {
-    id: "2",
-    name: "Mì Hảo Hảo",
-    category: "Mì ăn liền",
-    brand: "Acecook",
+    id: 2,
+    name: "Kẹo ổi",
+    brand: "Oishi",
+    category: "Nước uống",
     unit: "Gói",
-    variants: 5,
-    status: "active",
-    variantCount: 2,
+    description: "Sản phẩm Kẹo 2kg chất lượng cao",
+    status: "available",
+    variant_count: 3,
+    created_at: "04/02/2026 10:30",
   },
   {
-    id: "3",
-    name: "Pepsi",
-    category: "Nước giải khát",
-    brand: "Pepsi",
-    unit: "Chai",
-    variants: 2,
-    status: "active",
-    variantCount: 4,
+    id: 3,
+    name: "Redbull",
+    brand: "TH True Milk",
+    category: "Nước uống",
+    unit: "Cái",
+    description: "Sản phẩm Redbull 2kg chất lượng cao",
+    status: "available",
+    variant_count: 1,
+    created_at: "04/02/2026 11:45",
   },
   {
-    id: "4",
-    name: "Bánh Oreo",
-    category: "Bánh kẹo",
-    brand: "Oreo",
-    unit: "Gói",
-    variants: 4,
-    status: "active",
-    variantCount: 6,
-  },
-  {
-    id: "5",
-    name: "Sữa tươi Vinamilk",
-    category: "Sữa",
-    brand: "Vinamilk",
+    id: 4,
+    name: "Mì tôm",
+    brand: "Orion",
+    category: "Nước uống",
     unit: "Hộp",
-    variants: 3,
-    status: "inactive",
-    variantCount: 10,
+    description: "Sản phẩm Mì tôm 2kg chất lượng cao",
+    status: "available",
+    variant_count: 4,
+    created_at: "04/02/2026 13:00",
   },
   {
-    id: "6",
-    name: "Trà xanh Không Độ",
-    category: "Nước giải khát",
-    brand: "Không Độ",
-    unit: "Chai",
-    variants: 2,
-    status: "active",
-    variantCount: 5,
+    id: 5,
+    name: "Number 1",
+    brand: "Coca Cola",
+    category: "Kem",
+    unit: "Lít",
+    description: "Sản phẩm Number 1 250g chất lượng cao",
+    status: "available",
+    variant_count: 2,
+    created_at: "04/02/2026 14:30",
   },
 ];
 
 
-export function ProductListScreen({
-  onViewDetail,
-  onEdit,
-}) {
+export function ProductListScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc");
   const navigate = useNavigate();
   const location = useLocation();
   const [toastMessage, setToastMessage] = useState("");
 
-  const filteredProducts = mockProducts.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchQuery.toLowerCase());
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
 
-    const matchesCategory =
-      filterCategory === "all" || product.category === filterCategory;
+  const filteredProducts = mockProducts
+    .filter((product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.brand.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus =
-      filterStatus === "all" || product.status === filterStatus;
+      const matchesCategory =
+        filterCategory === "all" || product.category === filterCategory;
 
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+      const matchesStatus =
+        filterStatus === "all" || product.status === filterStatus;
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      if (sortField === "created_at") {
+        const [dateA, timeA] = aValue.split(" ");
+        const [dayA, monthA, yearA] = dateA.split("/");
+        const [dateB, timeB] = bValue.split(" ");
+        const [dayB, monthB, yearB] = dateB.split("/");
+        aValue = new Date(`${yearA}-${monthA}-${dayA} ${timeA}`);
+        bValue = new Date(`${yearB}-${monthB}-${dayB} ${timeB}`);
+      } else {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
 
   useEffect(() => {
     if (location.state?.message) {
@@ -191,11 +217,26 @@ export function ProductListScreen({
           <Table>
             <TableHeader >
               <TableRow className="bg-gray-50">
-                <TableHead>Sản phẩm</TableHead>
-                <TableHead>Thương hiệu</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("name")}
+                >
+                  Sản phẩm {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("brand")}
+                >
+                  Thương hiệu {sortField === "brand" && (sortOrder === "asc" ? "↑" : "↓")}
+                </TableHead>
                 <TableHead>Danh mục</TableHead>
                 <TableHead>Biến thể</TableHead>
-                <TableHead>Trạng thái</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("created_at")}
+                >
+                  Thời gian tạo {sortField === "created_at" && (sortOrder === "asc" ? "↑" : "↓")}
+                </TableHead>
                 <TableHead className="text-center">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -222,25 +263,25 @@ export function ProductListScreen({
                   </TableCell>
                   <TableCell>
                     <Badge className="bg-purple-100 text-purple-700">
-                      {product.variants} biến thể
+                      {product.variant_count} biến thể
                     </Badge>
 
                   </TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     {product.status === "active" ? (
                       <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
                     ) : (
                       <Badge className="bg-red-100 text-red-700">Ngưng bán</Badge>
                     )}
-                  </TableCell>
-
+                  </TableCell> */}
+                  <TableCell>{product.created_at}</TableCell>
 
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => onViewDetail(product)}
+                        onClick={() => navigate("/products/detail", { state: { product } })}
                         title="Xem chi tiết"
                       >
                         <Eye className="w-4 h-4" />
@@ -248,7 +289,7 @@ export function ProductListScreen({
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => onEdit(product)}
+                        onClick={() => navigate("/products/edit", { state: { product } })}
                         title="Chỉnh sửa"
                       >
                         <Edit className="w-4 h-4" />

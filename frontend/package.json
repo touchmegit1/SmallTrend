@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
-    "lint:fix": "eslint src --ext .js,.jsx --fix"
+    "lint:fix": "eslint src --ext .js,.jsx --fix",
+    "server": "json-server --watch db.json --port 3001"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.8",

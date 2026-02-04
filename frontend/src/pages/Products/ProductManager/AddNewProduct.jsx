@@ -7,7 +7,7 @@ import { Label } from "../ProductComponents/label";
 import { Textarea } from "../ProductComponents/textarea";
 import { useNavigate } from "react-router-dom";
 
-const AddNewProduct = ({ onBack, onSave }) => {
+const AddNewProduct = () => {
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -30,7 +30,7 @@ const AddNewProduct = ({ onBack, onSave }) => {
 
     try {
       if (onSave) {
-        await onSave(formData); // ✅ chạy được cả async lẫn sync
+        await onSave(formData);
       }
 
       navigate("/products", {
@@ -80,6 +80,7 @@ const AddNewProduct = ({ onBack, onSave }) => {
                   <Label>
                     Tên sản phẩm <span className="text-red-600">*</span>
                   </Label>
+                  <br />
                   <Input
                     className="text-md bg-gray-200 border border-gray-200 rounded-lg"
                     placeholder="Nhập tên sản phẩm"
@@ -94,6 +95,7 @@ const AddNewProduct = ({ onBack, onSave }) => {
                   <Label>
                     Danh mục <span className="text-red-600">*</span>
                   </Label>
+                  <br />
                   <select
                     name="category"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
@@ -114,6 +116,7 @@ const AddNewProduct = ({ onBack, onSave }) => {
                   <Label>
                     Thuế <span className="text-red-600">*</span>
                   </Label>
+                  <br />
                   <select
                     name="tax"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
@@ -123,13 +126,14 @@ const AddNewProduct = ({ onBack, onSave }) => {
                   >
                     <option value="">Chọn loại thuế</option>
                     <option value="10%">10%</option>
-                    <option value="8%">8%</option>
+                    <option value="5%">5%</option>
                     <option value="0%">0%</option>
                   </select>
                 </div>
 
                 <div>
                   <Label>Thương hiệu</Label>
+                  <br />
                   <Input
                     className="text-md bg-gray-200 border border-gray-200 rounded-lg"
                     placeholder="Nhập tên thương hiệu"
@@ -141,6 +145,7 @@ const AddNewProduct = ({ onBack, onSave }) => {
 
                 <div>
                   <Label>Mô tả sản phẩm</Label>
+                  <br />
                   <Textarea
                     className="text-md bg-gray-200 border border-gray-200 rounded-lg"
                     name="description"
@@ -171,7 +176,7 @@ const AddNewProduct = ({ onBack, onSave }) => {
                   </p>
                 </div>
 
-                <Button type="button" variant="success" className="w-full">
+                <Button type="button" variant="secondary" className="w-full">
                   <Plus className="w-4 h-4 mr-2" />
                   Thêm ảnh
                 </Button>
