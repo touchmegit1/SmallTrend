@@ -4,7 +4,6 @@ import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
 import CRMHomepage from './pages/CRM/homepage'
 import Login from './pages/Auth/Login'
-import Register from './pages/Auth/Register'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
@@ -14,7 +13,6 @@ function App() {
         <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
             {/* Protected Routes */}
             <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
