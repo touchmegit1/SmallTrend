@@ -26,4 +26,5 @@ public class UserUpdateRequest {
 
     private String address;
     private Integer roleId;
+    private String status; // optional, allow updating status via PUT
 }

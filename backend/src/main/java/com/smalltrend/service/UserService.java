@@ -36,8 +36,7 @@ public class UserService implements UserDetailsService {
             UserCredentialsRepository userCredentialsRepository,
             RoleRepository roleRepository,
             @Lazy PasswordEncoder passwordEncoder,
-            JwtUtil jwtUtil
-    ) {
+            JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.userCredentialsRepository = userCredentialsRepository;
         this.roleRepository = roleRepository;
@@ -58,10 +57,13 @@ public class UserService implements UserDetailsService {
             roleName = "ROLE_" + roleName;
         }
 
+        boolean isActive = "ACTIVE".equalsIgnoreCase(user.getStatus());
+
         return org.springframework.security.core.userdetails.User.builder()
                 .username(userCredential.getUsername())
                 .password(userCredential.getPasswordHash())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority(roleName)))
+                .disabled(!isActive)
                 .build();
     }
 
@@ -175,6 +177,9 @@ public class UserService implements UserDetailsService {
                     .orElseThrow(() -> new RuntimeException("Role not found"));
             user.setRole(role);
         }
+        if (request.getStatus() != null) {
+            user.setStatus(request.getStatus().toUpperCase());
+        }
 
         return userRepository.save(user);
     }
@@ -186,7 +191,7 @@ public class UserService implements UserDetailsService {
 
     public User updateUserStatus(Integer id, String status) {
         User user = getUserById(id);
-        user.setStatus(status);
+        user.setStatus(status != null ? status.toUpperCase() : user.getStatus());
         return userRepository.save(user);
     }
 }
