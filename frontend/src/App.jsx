@@ -2,8 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
+import CRMHomepage from './pages/CRM/homepage'
 import Login from './pages/Auth/Login'
-import Register from './pages/Auth/Register'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
@@ -16,7 +16,6 @@ function App() {
         <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
             {/* Protected Routes */}
             <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
@@ -50,6 +49,7 @@ function App() {
 
                 {/* Module 4: CRM (Khách hàng) */}
                 <Route path="crm" element={<div className="p-4">CRM & Promotion</div>} />
+                <Route path="crm/homepage" element={<CRMHomepage />} />
                 <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
                 <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
                 <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
