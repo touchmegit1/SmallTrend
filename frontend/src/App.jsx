@@ -41,11 +41,15 @@ function App() {
         {/* Redirect root to Dashboard */}
         <Route index element={<Navigate to="/dashboard" replace />} />
 
-        {/* Dashboard Route */}
-        <Route path="dashboard" element={<Dashboard />} />
+                {/* Dashboard Route - only ADMIN/MANAGER */}
+                <Route path="dashboard" element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+                        <Dashboard />
+                    </ProtectedRoute>
+                } />
 
         {/* Module 1: POS (Bán hàng) */}
-        <Route path="pos" element={<POS />} />
+        <Route path="pos" element={<POS/>} />
         <Route
           path="pos/history"
           element={<div className="p-4">Lịch sử đơn hàng</div>}

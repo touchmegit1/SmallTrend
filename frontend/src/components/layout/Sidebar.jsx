@@ -105,7 +105,14 @@ const Sidebar = () => {
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
-            <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+            <div
+                className="p-6 border-b border-slate-100 flex items-center gap-3 cursor-pointer hover:bg-slate-50"
+                onClick={() => {
+                    const isAdminRole = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
+                    navigate(isAdminRole ? '/dashboard' : '/pos');
+                }}
+                title="Về trang chính"
+            >
                 <div className="bg-indigo-600 p-2 rounded-lg">
                     <Store className="text-white" size={24} />
                 </div>
