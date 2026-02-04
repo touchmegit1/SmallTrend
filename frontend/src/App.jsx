@@ -7,7 +7,7 @@ import Login from './pages/Auth/Login'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
-
+import CRMcomplain from './pages/CRM/complain'
 function App() {
     return (
         <Routes>
@@ -50,7 +50,7 @@ function App() {
                 <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
                 <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
                 <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
-                <Route path="crm/complaints" element={<div className="p-4">Khiếu nại</div>} />
+                <Route path="crm/complain" element={<CRMcomplain/>} />
 
                 {/* Module 5: HR (Nhân sự) */}
                 <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
