@@ -10,6 +10,7 @@ import UserManagement from './pages/HR/UserManagement'
 import ProductListScreen from './pages/Products/ProductManager/ProductList'
 import AddNewProduct from './pages/Products/ProductManager/AddNewProduct'
 import ProductDetail from './pages/Products/ProductManager/ProductDetail'
+import AddNewProductVariant from './pages/Products/ProductManager/AddNewProductVariant'
 
 function App() {
     return (
@@ -46,6 +47,7 @@ function App() {
                 <Route path="products" element={<ProductListScreen />} />
                 <Route path="products/addproduct" element={<AddNewProduct />} />
                 <Route path="products/detail" element={<ProductDetail />} />
+                <Route path="products/addproduct_variant" element={<AddNewProductVariant />} />
                 <Route path="products/categories" element={<div className="p-4">Danh mục & Brand</div>} />
                 <Route path="products/price-books" element={<div className="p-4">Thiết lập giá</div>} />
                 <Route path="products/print-barcodes" element={<div className="p-4">In tem mã vạch</div>} />

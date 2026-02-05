@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../ProductComponents/badge";
 import { Plus, Search, Edit, Package, Eye, CheckCircle } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import EditProductModal from "./EditProductModal";
 
 const mockProducts = [
   {
@@ -75,6 +76,8 @@ export function ProductListScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const [toastMessage, setToastMessage] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -122,6 +125,17 @@ export function ProductListScreen() {
       return 0;
     });
 
+  const handleEditClick = (product) => {
+    setSelectedProduct(product);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveProduct = (updatedProduct) => {
+    setToastMessage("Cập nhật sản phẩm thành công!");
+    setIsEditModalOpen(false);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
+
   useEffect(() => {
     if (location.state?.message) {
       setToastMessage(location.state.message);
@@ -137,9 +151,9 @@ export function ProductListScreen() {
       {/* Alter */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50">
-          <div className="relative flex gap-4 bg-green-50 border border-green-200 rounded-xl px-6 py-4 min-w-105 shadow-sm">
-            <CheckCircle className="text-green-600 w-5 h-5" />
-            <span className="text-sm font-medium text-gray-800">
+          <div className="relative flex gap-4 bg-green-50 border border-green-200 rounded-xl px-8 py-5 min-w-105 shadow-lg">
+            <CheckCircle className="text-green-600 w-6 h-6" />
+            <span className="text-base font-semibold text-gray-800">
               {toastMessage}
             </span>
           </div>
@@ -289,7 +303,7 @@ export function ProductListScreen() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => navigate("/products/edit", { state: { product } })}
+                        onClick={() => handleEditClick(product)}
                         title="Chỉnh sửa"
                       >
                         <Edit className="w-4 h-4" />
@@ -302,6 +316,13 @@ export function ProductListScreen() {
           </Table>
         </CardContent>
       </Card>
+
+      <EditProductModal
+        product={selectedProduct}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveProduct}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ const baseClass =
 
 const variantClass = {
   primary: "bg-blue-600 text-white hover:bg-blue-700",
+  warning: "bg-yellow-500 text-white hover:bg-yellow-600",
   secondary: "bg-gray-200 text-black hover:bg-gray-300",
   danger: "bg-red-600 text-white hover:bg-red-700",
   success: "bg-green-600 text-white hover:bg-green-700",

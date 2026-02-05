@@ -1,27 +1,38 @@
-import { useState, useRef } from "react";
-import { ArrowLeft, Save, Image as ImageIcon, Plus, X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import { useState, useRef, useEffect } from "react";
+import { X, Save, Image as ImageIcon, Plus } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
 import { Textarea } from "../ProductComponents/textarea";
-import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 
-const AddNewProduct = () => {
+export function EditProductModal({ product, isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: "",
-    category: "",
     brand: "",
-    unit: "Cái",
+    category: "",
+    unit: "",
     description: "",
-    status: "active",
-    tax: "",
+    tax: "10%",
   });
   const [images, setImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    if (product && isOpen) {
+      setFormData({
+        name: product.name || "",
+        brand: product.brand || "",
+        category: product.category || "",
+        unit: product.unit || "",
+        description: product.description || "",
+        tax: "10%",
+      });
+    }
+  }, [product, isOpen]);
+
+  if (!isOpen) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -64,62 +75,35 @@ const AddNewProduct = () => {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-
-    try {
-      if (onSave) {
-        await onSave(formData);
-      }
-
-      navigate("/products", {
-        state: {
-          message: "Thêm sản phẩm thành công!",
-          type: "success",
-        },
-      });
-    } catch (error) {
-      console.error(error);
-      alert("Lưu sản phẩm thất bại!");
-    }
+    onSave({ ...product, ...formData });
+    onClose();
   };
 
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/products")}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">
-            Thêm sản phẩm mới
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Điền thông tin chi tiết sản phẩm
-          </p>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Chỉnh sửa sản phẩm</h2>
+            <p className="text-gray-500 text-sm mt-1">Cập nhật thông tin sản phẩm</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
         </div>
-      </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-
-          {/* LEFT */}
-          <div className="h-full">
-            <Card className="h-full border border-gray-300 rounded-lg bg-white">
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* LEFT */}
+            <Card className="border border-gray-300 rounded-lg bg-white">
               <CardHeader>
-                <CardTitle className="text-xl font-bold">
-                  Thông tin cơ bản
-                </CardTitle>
+                <CardTitle className="text-xl font-bold">Thông tin cơ bản</CardTitle>
               </CardHeader>
-
               <CardContent className="space-y-4">
                 <div>
-                  <Label>
-                    Tên sản phẩm <span className="text-red-600">*</span>
-                  </Label>
-                  <br />
+                  <Label>Tên sản phẩm <span className="text-red-600">*</span></Label>
                   <Input
                     className="text-md bg-gray-200 border border-gray-200 rounded-lg"
                     placeholder="Nhập tên sản phẩm"
@@ -131,10 +115,7 @@ const AddNewProduct = () => {
                 </div>
 
                 <div>
-                  <Label>
-                    Danh mục <span className="text-red-600">*</span>
-                  </Label>
-                  <br />
+                  <Label>Danh mục <span className="text-red-600">*</span></Label>
                   <select
                     name="category"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
@@ -152,10 +133,7 @@ const AddNewProduct = () => {
                 </div>
 
                 <div>
-                  <Label>
-                    Thuế <span className="text-red-600">*</span>
-                  </Label>
-                  <br />
+                  <Label>Thuế <span className="text-red-600">*</span></Label>
                   <select
                     name="tax"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
@@ -172,7 +150,6 @@ const AddNewProduct = () => {
 
                 <div>
                   <Label>Thương hiệu</Label>
-                  <br />
                   <Input
                     className="text-md bg-gray-200 border border-gray-200 rounded-lg"
                     placeholder="Nhập tên thương hiệu"
@@ -184,7 +161,6 @@ const AddNewProduct = () => {
 
                 <div>
                   <Label>Mô tả sản phẩm</Label>
-                  <br />
                   <Textarea
                     className="text-md bg-gray-200 border border-gray-200 rounded-lg"
                     name="description"
@@ -196,17 +172,12 @@ const AddNewProduct = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Right */}
-          <div className="h-full">
-            <Card className="h-full border border-gray-300 rounded-lg bg-white flex flex-col">
+            {/* RIGHT */}
+            <Card className="border border-gray-300 rounded-lg bg-white flex flex-col">
               <CardHeader>
-                <CardTitle className="text-xl font-bold">
-                  Hình ảnh sản phẩm
-                </CardTitle>
+                <CardTitle className="text-xl font-bold">Hình ảnh sản phẩm</CardTitle>
               </CardHeader>
-
               <CardContent className="flex flex-col flex-1 space-y-4">
                 <input
                   ref={fileInputRef}
@@ -236,9 +207,7 @@ const AddNewProduct = () => {
                     }`}
                   >
                     <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
-                    <p className="text-sm text-gray-600">
-                      Kéo thả hoặc click để tải ảnh lên
-                    </p>
+                    <p className="text-sm text-gray-600">Kéo thả hoặc click để tải ảnh lên</p>
                   </div>
                 ) : (
                   <div
@@ -295,22 +264,20 @@ const AddNewProduct = () => {
             </Card>
           </div>
 
-        </div>
-        {/* Actions */}
-        <CardContent className=" justify-center p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
             <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
               <Save className="w-4 h-4 mr-2" />
-              Lưu sản phẩm
+              Lưu thay đổi
             </Button>
-            <Button type="button" variant="danger" className="w-full" onClick={() => navigate("/products")}>
+            <Button type="button" variant="danger" className="w-full" onClick={onClose}>
               Hủy
             </Button>
           </div>
-        </CardContent>
-      </form>
-    </div>//end
+        </form>
+      </div>
+    </div>
   );
 }
 
-export default AddNewProduct
+export default EditProductModal;

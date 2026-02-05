@@ -1,17 +1,19 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Package, Edit, Box, TrendingUp, Calendar, Eye, Trash2 } from "lucide-react";
+import { ArrowLeft, Package, Edit, Box, TrendingUp, Calendar, Eye, Trash2, Power } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Card} from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Label } from "../ProductComponents/label";
 import { Badge } from "../ProductComponents/badge";
+import EditProductModal from "./EditProductModal";
 
 const productVariants = [
   {
     id: 1,
     product_id: 2035,
     variant_name: "Hộp 500g",
+    attributes: "Kích thước: 500g",
     sku: "SKU-00000001",
     barcode: "8934580000001",
     cost: 78000,
@@ -23,6 +25,7 @@ const productVariants = [
     id: 2,
     product_id: 1957,
     variant_name: "Gói nhỏ 50g",
+    attributes: "Kích thước: 50g, Màu sắc: Đỏ",
     sku: "SKU-00000002",
     barcode: "8934580000002",
     cost: 95000,
@@ -34,6 +37,7 @@ const productVariants = [
     id: 3,
     product_id: 1933,
     variant_name: "Lon 250ml",
+    attributes: "Kích thước: 250ml, Hương vị: Nguyên bản",
     sku: "SKU-00000003",
     barcode: "8934580000003",
     cost: 20000,
@@ -45,6 +49,7 @@ const productVariants = [
     id: 4,
     product_id: 676,
     variant_name: "Gói thường",
+    attributes: "Hương vị: Cay",
     sku: "SKU-00000004",
     barcode: "8934580000004",
     cost: 18000,
@@ -56,6 +61,7 @@ const productVariants = [
     id: 5,
     product_id: 1289,
     variant_name: "Chai 500ml",
+    attributes: "Kích thư500ml, Màu sắc: Xanh",
     sku: "SKU-00000005",
     barcode: "8934580000005",
     cost: 150000,
@@ -72,6 +78,38 @@ function ProductDetail() {
   const location = useLocation();
   const product = location.state?.product;
   const [hoveredImage, setHoveredImage] = useState(null);
+  const [variants, setVariants] = useState(productVariants);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
+  const handleToggleStatus = (variant) => {
+    setSelectedVariant(variant);
+    setShowConfirm(true);
+  };
+
+  const confirmToggleStatus = () => {
+    setVariants(variants.map(v => 
+      v.id === selectedVariant.id ? { ...v, is_active: !v.is_active } : v
+    ));
+    setShowConfirm(false);
+    setSelectedVariant(null);
+  };
+
+  const handleSaveProduct = (updatedProduct) => {
+    setToastMessage("Cập nhật sản phẩm thành công!");
+    setIsEditModalOpen(false);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
+
+  // Check for message from AddNewProductVariant
+  React.useEffect(() => {
+    if (location.state?.message) {
+      setToastMessage(location.state.message);
+      setTimeout(() => setToastMessage(""), 3000);
+    }
+  }, [location.state]);
 
   if (!product) {
     return (
@@ -91,6 +129,40 @@ function ProductDetail() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50">
+          <div className="bg-green-50 border border-green-200 rounded-xl px-8 py-5 shadow-lg">
+            <span className="text-base font-semibold text-gray-800">{toastMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/50 shadow-xl backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4">Xác nhận thay đổi trạng thái</h3>
+            <p className="text-gray-600 mb-6">
+              Bạn có muốn sửa trạng thái của sản phẩm này thành {selectedVariant?.is_active ? "ngưng bán" : "đang bán"}?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="danger"
+                onClick={() => setShowConfirm(false)}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="primary"
+                onClick={confirmToggleStatus}
+              >
+                Xác nhận
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-start">
         <div className="flex items-start gap-4">
@@ -191,7 +263,7 @@ function ProductDetail() {
           </div>
           <div className="p-4 border-t border-gray-200">
             <Button
-              onClick={() => navigate("/products/edit", { state: { product } })}
+              onClick={() => setIsEditModalOpen(true)}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
             >
               <Edit className="w-4 h-4" />
@@ -222,6 +294,7 @@ function ProductDetail() {
               <TableRow className="bg-gray-50">
                 <TableHead className="w-16">STT</TableHead>
                 <TableHead>Tên biến thể</TableHead>
+                <TableHead>Thuộc tính</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Barcode</TableHead>
                 <TableHead>Giá vốn</TableHead>
@@ -232,15 +305,17 @@ function ProductDetail() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {productVariants.map((variant, index) => (
+              {variants.map((variant, index) => (
                 <TableRow key={variant.id} className="hover:bg-gray-100">
                   <TableCell className="font-medium">{index + 1}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div 
-                        className="relative w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer"
+                      <button
+                        type="button"
+                        className="relative w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer border-0 p-0"
                         onMouseEnter={() => setHoveredImage(variant.id)}
                         onMouseLeave={() => setHoveredImage(null)}
+                        aria-label="Xem ảnh biến thể"
                       >
                         <Package className="w-5 h-5 text-gray-400" />
                         {hoveredImage === variant.id && (
@@ -250,10 +325,11 @@ function ProductDetail() {
                             </div>
                           </div>
                         )}
-                      </div>
+                      </button>
                       <span className="font-medium">{variant.variant_name}</span>
                     </div>
                   </TableCell>
+                  <TableCell className="text-gray-600 text-sm"><Badge className="bg-neutral-300" variant="secondary">{variant.attributes}</Badge></TableCell>
                   <TableCell className="text-gray-600">{variant.sku}</TableCell>
                   <TableCell className="text-gray-600">{variant.barcode}</TableCell>
                   <TableCell>{variant.cost.toLocaleString('vi-VN')}đ</TableCell>
@@ -272,7 +348,14 @@ function ProductDetail() {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        title={variant.is_active ? "Ngưng bán" : "Bật bán"}
+                        onClick={() => handleToggleStatus(variant)}
+                      >
+                        <Power className={`w-4 h-4 ${variant.is_active ? 'text-green-600' : 'text-gray-400'}`} />
+                      </Button>
                       <Button size="sm" variant="ghost" title="Chỉnh sửa">
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -284,6 +367,13 @@ function ProductDetail() {
           </Table>
         </div>
       </Card>
+
+      <EditProductModal
+        product={product}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveProduct}
+      />
     </div>
   );
 }
