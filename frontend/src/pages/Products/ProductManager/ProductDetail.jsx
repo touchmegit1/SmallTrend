@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Package, Edit, Box, TrendingUp, Calendar, Eye, Trash2, Power } from "lucide-react";
+import { ArrowLeft, Package, Edit, Box, TrendingUp, Calendar, Eye, Trash2, Power, Printer } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Card} from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Label } from "../ProductComponents/label";
 import { Badge } from "../ProductComponents/badge";
 import EditProductModal from "./EditProductModal";
+import EditVariantModal from "./EditVariantModal";
 
 const productVariants = [
   {
@@ -82,6 +83,7 @@ function ProductDetail() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditVariantModalOpen, setIsEditVariantModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   const handleToggleStatus = (variant) => {
@@ -101,6 +103,66 @@ function ProductDetail() {
     setToastMessage("Cập nhật sản phẩm thành công!");
     setIsEditModalOpen(false);
     setTimeout(() => setToastMessage(""), 3000);
+  };
+
+  const handleEditVariant = (variant) => {
+    setSelectedVariant(variant);
+    setIsEditVariantModalOpen(true);
+  };
+
+  const handleSaveVariant = (updatedVariant) => {
+    setVariants(variants.map(v => 
+      v.id === updatedVariant.id ? updatedVariant : v
+    ));
+    setToastMessage("Chỉnh sửa biến thể thành công!");
+    setIsEditVariantModalOpen(false);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
+
+  const handlePrintBarcode = (variant) => {
+    // Create print content
+    const printWindow = window.open('', '', 'width=400,height=300');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>In tem mã vạch - ${variant.variant_name}</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              display: flex; 
+              justify-content: center; 
+              align-items: center; 
+              height: 100vh; 
+              margin: 0;
+            }
+            .barcode-label {
+              text-align: center;
+              border: 2px solid #000;
+              padding: 20px;
+              width: 300px;
+            }
+            .product-name { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+            .barcode { font-size: 24px; font-family: 'Courier New', monospace; margin: 15px 0; }
+            .price { font-size: 18px; font-weight: bold; color: #e53e3e; }
+            .sku { font-size: 12px; color: #666; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="barcode-label">
+            <div class="product-name">${variant.variant_name}</div>
+            <div class="barcode">${variant.barcode || 'N/A'}</div>
+            <div class="price">${variant.retail_price.toLocaleString('vi-VN')}đ</div>
+            <div class="sku">SKU: ${variant.sku}</div>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   // Check for message from AddNewProductVariant
@@ -356,8 +418,21 @@ function ProductDetail() {
                       >
                         <Power className={`w-4 h-4 ${variant.is_active ? 'text-green-600' : 'text-gray-400'}`} />
                       </Button>
-                      <Button size="sm" variant="ghost" title="Chỉnh sửa">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        title="Chỉnh sửa"
+                        onClick={() => handleEditVariant(variant)}
+                      >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        title="In tem mã vạch"
+                        onClick={() => handlePrintBarcode(variant)}
+                      >
+                        <Printer className="w-4 h-4 text-blue-600" />
                       </Button>
                     </div>
                   </TableCell>
@@ -373,6 +448,13 @@ function ProductDetail() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleSaveProduct}
+      />
+
+      <EditVariantModal
+        variant={selectedVariant}
+        isOpen={isEditVariantModalOpen}
+        onClose={() => setIsEditVariantModalOpen(false)}
+        onSave={handleSaveVariant}
       />
     </div>
   );
