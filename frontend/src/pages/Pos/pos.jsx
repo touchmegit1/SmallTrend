@@ -86,6 +86,45 @@ export default function POS() {
     }
   };
 
+  const completeOrder = (orderData) => {
+    // Tạo transaction object
+    const transaction = {
+      id: `#HD${Date.now().toString().slice(-6)}`,
+      time: new Date().toLocaleString('vi-VN', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      }),
+      quantity: `${orderData.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
+      payment: "Tiền mặt",
+      total: `${orderData.total.toLocaleString()} đ`,
+      status: "Hoàn thành",
+      items: orderData.cart,
+      customer: orderData.customer,
+      customerMoney: orderData.customerMoney,
+      change: orderData.change,
+      pointsDiscount: orderData.pointsDiscount,
+      notes: orderData.notes
+    };
+
+    // Lưu vào localStorage
+    const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    existingTransactions.unshift(transaction); // Thêm vào đầu mảng
+    localStorage.setItem('transactions', JSON.stringify(existingTransactions));
+
+    console.log("Order completed:", orderData);
+    alert(`Đơn hàng hoàn tất!\nTổng: ${orderData.total.toLocaleString()}đ\nTiền thừa: ${orderData.change.toLocaleString()}đ`);
+    
+    // Reset order
+    setOrders(orders.map(order =>
+      order.id === activeOrderId 
+        ? { ...order, cart: [], customer: null, usePoints: false } 
+        : order
+    ));
+  };
+
   return (
     <div style={{
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
@@ -137,6 +176,7 @@ export default function POS() {
           cart={activeOrder.cart}
           customer={activeOrder.customer}
           usePoints={activeOrder.usePoints}
+          onCompleteOrder={completeOrder}
         />
       </div>
     </div>

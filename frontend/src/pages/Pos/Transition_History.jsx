@@ -1,14 +1,54 @@
+import { useState, useEffect } from "react";
+
 function TransactionHistory() {
-  const transactions = [
-    {
-      id: "#HD318649",
-      time: "21:25 02/02/2026",
-      quantity: "3 món",
-      payment: "Tiền mặt",
-      total: "20.500 đ",
-      status: "Hoàn thành",
-    },
-  ];
+  const [transactions, setTransactions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc"); // desc = cao xuống thấp, asc = thấp lên cao
+  const [selectedDate, setSelectedDate] = useState("");
+
+  useEffect(() => {
+    // Load transactions from localStorage
+    const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    setTransactions(savedTransactions);
+  }, []);
+
+  // Lọc và sắp xếp transactions
+  const filteredTransactions = transactions
+    .filter(t => {
+      // Tìm kiếm theo mã đơn (chỉ tìm trong phần số của mã)
+      const matchSearch = searchTerm === "" || 
+        t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.id.replace('#HD', '').includes(searchTerm);
+      
+      // Lọc theo ngày - chuyển đổi format để so sánh
+      let matchDate = true;
+      if (selectedDate) {
+        // selectedDate format: yyyy-mm-dd
+        // t.time format: "14:30 15/01/2025"
+        const [datePart] = t.time.split(' ').slice(1); // Lấy "15/01/2025"
+        if (datePart) {
+          const [day, month, year] = datePart.split('/');
+          const transactionDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          matchDate = transactionDate === selectedDate;
+        }
+      }
+      
+      return matchSearch && matchDate;
+    })
+    .sort((a, b) => {
+      // Sắp xếp theo giá tiền
+      const amountA = parseInt(a.total.replace(/[^0-9]/g, ''));
+      const amountB = parseInt(b.total.replace(/[^0-9]/g, ''));
+      return sortOrder === "desc" ? amountB - amountA : amountA - amountB;
+    });
+
+  // Tính toán thống kê
+  const totalTransactions = filteredTransactions.length;
+  const totalRevenue = filteredTransactions.reduce((sum, t) => {
+    const amount = parseInt(t.total.replace(/[^0-9]/g, ''));
+    return sum + amount;
+  }, 0);
+  const averagePerOrder = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
   return (
     <div style={{ padding: "20px 40px", fontFamily: "Arial, sans-serif" }}>
@@ -38,7 +78,7 @@ function TransactionHistory() {
           <span style={{ color: "gray", fontSize: "14px" }}>
             Tổng giao dịch
           </span>
-          <h3 style={{ color: "#0d6efd", margin: "8px 0 0 0" }}>1</h3>
+          <h3 style={{ color: "#0d6efd", margin: "8px 0 0 0" }}>{totalTransactions}</h3>
         </div>
 
         <div
@@ -53,7 +93,7 @@ function TransactionHistory() {
             Tổng doanh thu
           </span>
           <h3 style={{ color: "#198754", margin: "8px 0 0 0" }}>
-            20.500 đ
+            {totalRevenue.toLocaleString()} đ
           </h3>
         </div>
 
@@ -69,7 +109,7 @@ function TransactionHistory() {
             Trung bình/đơn
           </span>
           <h3 style={{ color: "#fd7e14", margin: "8px 0 0 0" }}>
-            20.500 đ
+            {averagePerOrder.toLocaleString()} đ
           </h3>
         </div>
       </div>
@@ -84,7 +124,9 @@ function TransactionHistory() {
         }}
       >
         <input
-          placeholder="Tìm kiếm theo mã đơn hàng hoặc tên sản phẩm..."
+          placeholder="Tìm kiếm theo mã đơn hàng..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           style={{
             width: "70%",
             padding: "10px 12px",
@@ -95,7 +137,9 @@ function TransactionHistory() {
         />
 
         <div style={{ display: "flex", gap: "10px" }}>
-          <button
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
             style={{
               padding: "8px 14px",
               borderRadius: "8px",
@@ -104,10 +148,14 @@ function TransactionHistory() {
               cursor: "pointer",
             }}
           >
-            Lọc
-          </button>
+            <option value="desc">Giá: Cao → Thấp</option>
+            <option value="asc">Giá: Thấp → Cao</option>
+          </select>
 
-          <button
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
             style={{
               padding: "8px 14px",
               borderRadius: "8px",
@@ -115,9 +163,27 @@ function TransactionHistory() {
               background: "white",
               cursor: "pointer",
             }}
-          >
-            Chọn ngày
-          </button>
+          />
+          
+          {(searchTerm || selectedDate || sortOrder !== "desc") && (
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedDate("");
+                setSortOrder("desc");
+              }}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "8px",
+                border: "1px solid #dc3545",
+                background: "#dc3545",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              Xóa lọc
+            </button>
+          )}
         </div>
       </div>
 
@@ -142,7 +208,14 @@ function TransactionHistory() {
         </thead>
 
         <tbody>
-          {transactions.map((item, index) => (
+          {filteredTransactions.length === 0 ? (
+            <tr>
+              <td colSpan="7" style={{ padding: "20px", textAlign: "center", color: "gray" }}>
+                {transactions.length === 0 ? "Chưa có giao dịch nào" : "Không tìm thấy giao dịch phù hợp"}
+              </td>
+            </tr>
+          ) : (
+            filteredTransactions.map((item, index) => (
             <tr key={index} style={{ borderBottom: "1px solid #eee" }}>
               <td
                 style={{
@@ -196,7 +269,8 @@ function TransactionHistory() {
                 </button>
               </td>
             </tr>
-          ))}
+          ))
+          )}
         </tbody>
       </table>
     </div>

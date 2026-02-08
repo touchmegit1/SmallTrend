@@ -1,7 +1,8 @@
 import { useState } from "react";
 
-export default function PaymentPanel({ cart, customer, usePoints }) {
+export default function PaymentPanel({ cart, customer, usePoints, onCompleteOrder }) {
   const [customerMoney, setCustomerMoney] = useState("");
+  const [notes, setNotes] = useState("");
   
   const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.qty || 1), 0);
   const pointsDiscount = usePoints && customer ? Math.min(customer.existingPoints * 100, subtotal) : 0;
@@ -101,27 +102,6 @@ export default function PaymentPanel({ cart, customer, usePoints }) {
         )}
       </div>
 
-      {/* Phương thức thanh toán */}
-      <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", fontSize: "13px" }}>
-          Phương thức thanh toán:
-        </label>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px" }}>
-            <input type="radio" name="payment" defaultChecked />
-            <span>Tiền mặt</span>
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px" }}>
-            <input type="radio" name="payment" />
-            <span>Thẻ ngân hàng</span>
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px" }}>
-            <input type="radio" name="payment" />
-            <span>Chuyển khoản</span>
-          </label>
-        </div>
-      </div>
-
       {/* Ghi chú */}
       <div style={{ marginBottom: "15px" }}>
         <label style={{ display: "block", marginBottom: "5px", fontWeight: "500", fontSize: "13px" }}>
@@ -130,6 +110,8 @@ export default function PaymentPanel({ cart, customer, usePoints }) {
         <textarea
           placeholder="Thêm ghi chú cho đơn hàng..."
           rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
           style={{
             width: "100%",
             padding: "8px",
@@ -142,8 +124,8 @@ export default function PaymentPanel({ cart, customer, usePoints }) {
         />
       </div>
 
-      {/* Nút thanh toán - Đặt dưới phần ghi chú */}
-      <div style={{ marginTop: "auto" }}>
+      {/* Nút thanh toán và hoàn tất */}
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
         <button
           disabled={cart.length === 0}
           style={{
@@ -163,6 +145,46 @@ export default function PaymentPanel({ cart, customer, usePoints }) {
           {cart.length > 0
             ? `THANH TOÁN ${total.toLocaleString()}Đ`
             : "CHƯA CÓ SẢN PHẨM"}
+        </button>
+        
+        <button
+          disabled={cart.length === 0 || !customerMoney || parseFloat(customerMoney) < total}
+          onClick={() => {
+            if (onCompleteOrder) {
+              onCompleteOrder({
+                cart,
+                customer,
+                total,
+                customerMoney: parseFloat(customerMoney),
+                change: parseFloat(customerMoney) - total,
+                pointsDiscount,
+                notes
+              });
+            }
+          }}
+          style={{
+            width: "100%",
+            padding: "18px",
+            background: (cart.length > 0 && customerMoney && parseFloat(customerMoney) >= total) 
+              ? "linear-gradient(135deg, #28a745, #20c997)" 
+              : "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            fontSize: "18px",
+            fontWeight: "bold",
+            cursor: (cart.length > 0 && customerMoney && parseFloat(customerMoney) >= total) ? "pointer" : "not-allowed",
+            transition: "all 0.2s",
+            boxShadow: "0 4px 12px rgba(40,167,69,0.3)"
+          }}
+        >
+          {cart.length === 0 
+            ? "CHƯA CÓ SẢN PHẨM" 
+            : !customerMoney 
+              ? "NHẬP TIỀN KHÁCH ĐƯA"
+              : parseFloat(customerMoney) < total
+                ? "TIỀN KHÔNG ĐỦ"
+                : `HOÀN TẤT`}
         </button>
       </div>
 
