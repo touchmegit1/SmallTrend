@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import Invoice from "./Invoice";
 
 function TransactionHistory() {
   const [transactions, setTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState("desc"); // desc = cao xuống thấp, asc = thấp lên cao
+  const [sortOrder, setSortOrder] = useState("desc");
   const [selectedDate, setSelectedDate] = useState("");
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   useEffect(() => {
     // Load transactions from localStorage
@@ -245,6 +248,10 @@ function TransactionHistory() {
               </td>
               <td style={{ padding: "12px" }}>
                 <button
+                  onClick={() => {
+                    setSelectedTransaction(item);
+                    setShowInvoice(true);
+                  }}
                   style={{
                     border: "none",
                     background: "#f3f3f3",
@@ -257,6 +264,10 @@ function TransactionHistory() {
                   👁
                 </button>
                 <button
+                  onClick={() => {
+                    setSelectedTransaction(item);
+                    setShowInvoice(true);
+                  }}
                   style={{
                     border: "none",
                     background: "#f3f3f3",
@@ -273,6 +284,13 @@ function TransactionHistory() {
           )}
         </tbody>
       </table>
+
+      {showInvoice && (
+        <Invoice
+          transaction={selectedTransaction}
+          onClose={() => setShowInvoice(false)}
+        />
+      )}
     </div>
   );
 }

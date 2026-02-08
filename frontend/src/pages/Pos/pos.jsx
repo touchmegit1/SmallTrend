@@ -4,6 +4,7 @@ import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
 import PaymentPanel from "./PaymentPanel";
 import QRScanner from "./QRScanner";
+import Invoice from "./Invoice";
 
 // Mock data sản phẩm
 const mockProducts = [
@@ -20,6 +21,8 @@ export default function POS() {
   const [activeOrderId, setActiveOrderId] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   const activeOrder = orders.find(order => order.id === activeOrderId);
 
@@ -87,7 +90,6 @@ export default function POS() {
   };
 
   const completeOrder = (orderData) => {
-    // Tạo transaction object
     const transaction = {
       id: `#HD${Date.now().toString().slice(-6)}`,
       time: new Date().toLocaleString('vi-VN', { 
@@ -109,20 +111,28 @@ export default function POS() {
       notes: orderData.notes
     };
 
-    // Lưu vào localStorage
     const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    existingTransactions.unshift(transaction); // Thêm vào đầu mảng
+    existingTransactions.unshift(transaction);
     localStorage.setItem('transactions', JSON.stringify(existingTransactions));
 
-    console.log("Order completed:", orderData);
-    alert(`Đơn hàng hoàn tất!\nTổng: ${orderData.total.toLocaleString()}đ\nTiền thừa: ${orderData.change.toLocaleString()}đ`);
+    setSelectedTransaction(transaction);
+    setShowInvoice(true);
     
-    // Reset order
     setOrders(orders.map(order =>
       order.id === activeOrderId 
         ? { ...order, cart: [], customer: null, usePoints: false } 
         : order
     ));
+  };
+
+  const handlePrintLastInvoice = () => {
+    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    if (transactions.length > 0) {
+      setSelectedTransaction(transactions[0]);
+      setShowInvoice(true);
+    } else {
+      alert("Chưa có hóa đơn nào!");
+    }
   };
 
   return (
@@ -144,6 +154,7 @@ export default function POS() {
         setActiveOrderId={setActiveOrderId}
         setShowQRScanner={setShowQRScanner}
         deleteOrder={deleteOrder}
+        onPrintInvoice={handlePrintLastInvoice}
       />
 
       {showQRScanner && (
@@ -154,6 +165,13 @@ export default function POS() {
             setShowQRScanner(false);
           }}
           onClose={() => setShowQRScanner(false)}
+        />
+      )}
+
+      {showInvoice && (
+        <Invoice
+          transaction={selectedTransaction}
+          onClose={() => setShowInvoice(false)}
         />
       )}
 

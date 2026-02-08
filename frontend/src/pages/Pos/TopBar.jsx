@@ -1,4 +1,4 @@
-export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder }) {
+export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice }) {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && searchTerm) {
       const product = filteredProducts[0];
@@ -171,6 +171,20 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
           }}
         >
           📱 Quét QR
+        </button>
+        <button 
+          onClick={onPrintInvoice}
+          style={{
+            padding: "6px 12px",
+            background: "rgba(255,255,255,0.2)",
+            color: "white",
+            border: "none",
+            borderRadius: "15px",
+            cursor: "pointer",
+            fontSize: "12px"
+          }}
+        >
+          🖨 In hóa đơn
         </button>
         <button style={{
           padding: "6px 12px",
