@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TopBar from "./TopBar";
 import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
@@ -17,12 +17,23 @@ const mockProducts = [
 ];
 
 export default function POS() {
-  const [orders, setOrders] = useState([{ id: 1, cart: [], customer: null, usePoints: false }]);
-  const [activeOrderId, setActiveOrderId] = useState(1);
+  const [orders, setOrders] = useState(() => {
+    const saved = localStorage.getItem('posOrders');
+    return saved ? JSON.parse(saved) : [{ id: 1, cart: [], customer: null, usePoints: false }];
+  });
+  const [activeOrderId, setActiveOrderId] = useState(() => {
+    const saved = localStorage.getItem('activeOrderId');
+    return saved ? parseInt(saved) : 1;
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem('posOrders', JSON.stringify(orders));
+    localStorage.setItem('activeOrderId', activeOrderId.toString());
+  }, [orders, activeOrderId]);
 
   const activeOrder = orders.find(order => order.id === activeOrderId);
 
@@ -53,12 +64,53 @@ export default function POS() {
           : order
       ));
     }
+    savePendingOrder();
   };
 
   const updateCart = (newCart) => {
     setOrders(orders.map(order =>
       order.id === activeOrderId ? { ...order, cart: newCart } : order
     ));
+    savePendingOrder();
+  };
+
+  const savePendingOrder = () => {
+    setTimeout(() => {
+      const currentOrder = orders.find(o => o.id === activeOrderId);
+      if (currentOrder && currentOrder.cart.length > 0) {
+        const subtotal = currentOrder.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const pendingTransaction = {
+          id: `#HD${Date.now().toString().slice(-6)}`,
+          time: new Date().toLocaleString('vi-VN', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+          }),
+          quantity: `${currentOrder.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
+          payment: "Tiền mặt",
+          total: `${subtotal.toLocaleString()} đ`,
+          status: "Chờ thanh toán",
+          items: currentOrder.cart,
+          customer: currentOrder.customer,
+          customerMoney: 0,
+          change: 0,
+          pointsDiscount: 0,
+          notes: ""
+        };
+        
+        const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        const existingIndex = transactions.findIndex(t => t.status === "Chờ thanh toán" && t.id === pendingTransaction.id);
+        
+        if (existingIndex >= 0) {
+          transactions[existingIndex] = pendingTransaction;
+        } else {
+          transactions.unshift(pendingTransaction);
+        }
+        localStorage.setItem('transactions', JSON.stringify(transactions));
+      }
+    }, 500);
   };
 
   const updateCustomer = (customer) => {
@@ -90,6 +142,34 @@ export default function POS() {
   };
 
   const completeOrder = (orderData) => {
+    // Xóa đơn chờ thanh toán
+    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    const filteredTransactions = transactions.filter(t => t.status !== "Chờ thanh toán");
+    
+    // Trừ điểm khách hàng nếu có sử dụng
+    if (orderData.customer && orderData.pointsDiscount > 0) {
+      const customers = JSON.parse(localStorage.getItem('customers') || '[]');
+      const updatedCustomers = customers.map(c => 
+        c.phone === orderData.customer.phone 
+          ? { ...c, points: c.points - (orderData.pointsDiscount / 100) }
+          : c
+      );
+      localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+      orderData.customer.points = orderData.customer.points - (orderData.pointsDiscount / 100);
+    }
+
+    // Cộng điểm tích lũy
+    if (orderData.customer) {
+      const earnedPoints = Math.floor(orderData.total / 10000);
+      const customers = JSON.parse(localStorage.getItem('customers') || '[]');
+      const updatedCustomers = customers.map(c => 
+        c.phone === orderData.customer.phone 
+          ? { ...c, points: (c.points || 0) + earnedPoints }
+          : c
+      );
+      localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+    }
+
     const transaction = {
       id: `#HD${Date.now().toString().slice(-6)}`,
       time: new Date().toLocaleString('vi-VN', { 
@@ -111,9 +191,8 @@ export default function POS() {
       notes: orderData.notes
     };
 
-    const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    existingTransactions.unshift(transaction);
-    localStorage.setItem('transactions', JSON.stringify(existingTransactions));
+    filteredTransactions.unshift(transaction);
+    localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
 
     setSelectedTransaction(transaction);
     setShowInvoice(true);

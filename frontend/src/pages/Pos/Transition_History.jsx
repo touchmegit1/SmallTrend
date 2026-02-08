@@ -239,8 +239,8 @@ function TransactionHistory() {
                     padding: "6px 10px",
                     borderRadius: "20px",
                     fontSize: "13px",
-                    background: "#e6f4ea",
-                    color: "#0f5132",
+                    background: item.status === "Chờ thanh toán" ? "#fff3cd" : "#e6f4ea",
+                    color: item.status === "Chờ thanh toán" ? "#856404" : "#0f5132",
                   }}
                 >
                   {item.status}
