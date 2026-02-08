@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
 import UserManagement from "./pages/HR/UserManagement";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
+import ImportInventory from "./pages/Inventory/ImportInventory";
 function App() {
   return (
     <Routes>
@@ -41,15 +42,18 @@ function App() {
         {/* Redirect root to Dashboard */}
         <Route index element={<Navigate to="/dashboard" replace />} />
 
-                {/* Dashboard Route - only ADMIN/MANAGER */}
-                <Route path="dashboard" element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
-                        <Dashboard />
-                    </ProtectedRoute>
-                } />
+        {/* Dashboard Route - only ADMIN/MANAGER */}
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Module 1: POS (Bán hàng) */}
-        <Route path="pos" element={<POS/>} />
+        <Route path="pos" element={<POS />} />
         <Route
           path="pos/history"
           element={<div className="p-4">Lịch sử đơn hàng</div>}
@@ -60,10 +64,7 @@ function App() {
         />
         {/* Module 2: Inventory (Kho) */}
         <Route path="inventory" element={<InventoryDashboard />} />
-        <Route
-          path="inventory/import"
-          element={<div className="p-4">Nhập kho</div>}
-        />
+        <Route path="inventory/import" element={<ImportInventory />} />
         <Route
           path="inventory/audit"
           element={<div className="p-4">Kiểm kê</div>}

@@ -622,28 +622,91 @@
   "locations": [
     {
       "id": 1,
-      "name": "Kho chính",
-      "type": "WAREHOUSE"
+      "location_code": "KT-CHINH-01",
+      "location_name": "Khu trưng bày chính",
+      "location_type": "DISPLAY_AREA",
+      "address": "Khu vực trung tâm cửa hàng",
+      "capacity": 30,
+      "status": "ACTIVE",
+      "description": "Khu vực trưng bày sản phẩm nổi bật và khuyến mãi",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 2,
-      "name": "Kho lạnh",
-      "type": "WAREHOUSE"
+      "location_code": "KLT-SAU-01",
+      "location_name": "Kho lưu trữ phía sau",
+      "location_type": "STORAGE",
+      "address": "Phía sau quầy thu ngân",
+      "capacity": 20,
+      "status": "ACTIVE",
+      "description": "Kho lưu trữ hàng dự trữ và hàng tồn kho",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 3,
-      "name": "Quầy thu ngân 1",
-      "type": "RETAIL"
+      "location_code": "TL-001",
+      "location_name": "Tủ lạnh số 1",
+      "location_type": "COLD_STORAGE",
+      "address": "Góc phải cửa hàng",
+      "capacity": 8,
+      "status": "ACTIVE",
+      "description": "Tủ lạnh trưng bày đồ uống và thực phẩm tươi sống",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 4,
-      "name": "Quầy thu ngân 2",
-      "type": "RETAIL"
+      "location_code": "TL-002",
+      "location_name": "Tủ đông kem",
+      "location_type": "COLD_STORAGE",
+      "address": "Gần khu thanh toán",
+      "capacity": 5,
+      "status": "ACTIVE",
+      "description": "Tủ đông chuyên dụng cho kem và thực phẩm đông lạnh",
+      "created_at": "2024-01-05T00:00:00Z"
     },
     {
       "id": 5,
-      "name": "Khu vực trưng bày",
-      "type": "RETAIL"
+      "location_code": "QUAY-01",
+      "location_name": "Quầy thu ngân 1",
+      "location_type": "CASHIER",
+      "address": "Lối vào chính",
+      "capacity": 3,
+      "status": "ACTIVE",
+      "description": "Quầy thu ngân chính, phục vụ thanh toán nhanh",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 6,
+      "location_code": "KE-A01",
+      "location_name": "Kệ hàng A1 - Snack & Bánh kẹo",
+      "location_type": "SHELF",
+      "address": "Dãy kệ bên trái",
+      "capacity": 10,
+      "status": "ACTIVE",
+      "description": "Kệ trưng bày snack, bánh kẹo và đồ ăn vặt",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 7,
+      "location_code": "KE-B01",
+      "location_name": "Kệ hàng B1 - Đồ uống",
+      "location_type": "SHELF",
+      "address": "Dãy kệ giữa",
+      "capacity": 12,
+      "status": "ACTIVE",
+      "description": "Kệ trưng bày nước ngọt, nước khoáng, bia",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 8,
+      "location_code": "KE-C01",
+      "location_name": "Kệ hàng C1 - Gia vị",
+      "location_type": "SHELF",
+      "address": "Dãy kệ bên phải",
+      "capacity": 8,
+      "status": "ACTIVE",
+      "description": "Kệ trưng bày gia vị, hạt nêm, đồ khô",
+      "created_at": "2024-01-01T00:00:00Z"
     }
   ],
   "shelves_bins": [
