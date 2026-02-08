@@ -15,6 +15,7 @@ import Category_Brand from './pages/Products/ProductManager/Category_Brand'
 import ComboManage from './pages/Products/ProductManager/ComboManage'
 import CreateCombo from './pages/Products/ProductManager/CreateCombo'
 import ComboDetail from './pages/Products/ProductManager/ComboDetail'
+import SuppliersScreen from './pages/Products/ProductManager/Suppliers'
 
 function App() {
     return (
@@ -52,8 +53,8 @@ function App() {
                 <Route path="products/addproduct" element={<AddNewProduct />} />
                 <Route path="products/detail" element={<ProductDetail />} />
                 <Route path="products/addproduct_variant" element={<AddNewProductVariant />} />
-                <Route path="products/categories" element={<Category_Brand/>}/>
-                <Route path="products/price-books" element={<div className="p-4">Thiết lập giá</div>} />
+                <Route path="products/categories" element={<Category_Brand />} />
+                <Route path="products/suppliers" element={<SuppliersScreen />} />
                 <Route path="products/combos" element={<ComboManage />} />
                 <Route path="products/create_combo" element={<CreateCombo />} />
                 <Route path="products/combo_detail" element={<ComboDetail />} />

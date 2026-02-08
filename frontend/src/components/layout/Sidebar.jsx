@@ -55,7 +55,7 @@ const Sidebar = () => {
             children: [
                 { label: 'Danh sách sản phẩm', path: '/products' },
                 { label: 'Danh mục & Brand', path: '/products/categories' },
-                { label: 'Thiết lập giá', path: '/products/price-books' },
+                { label: 'Nhà cung cấp', path: '/products/suppliers' },
                 { label: 'Tạo combo', path: '/products/combos' },
             ]
         },
