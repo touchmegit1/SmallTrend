@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Package } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Edit, Trash2, Package, Search, CheckCircle, Tag, FolderTree } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
+import { Badge } from "../ProductComponents/badge";
+import Button from "../ProductComponents/button";
+import { Input } from "../ProductComponents/input";
+import { Label } from "../ProductComponents/label";
 
 const Category_Brand = () => {
   const [activeTab, setActiveTab] = useState('categories');
@@ -9,20 +13,25 @@ const Category_Brand = () => {
   const [modalMode, setModalMode] = useState('add');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+  const [formData, setFormData] = useState({ name: '', parent: '', status: 'active' });
 
   const [categories] = useState([
-    { id: 1, name: 'Đồ uống', parent: null, productCount: 45, status: 'active' },
-    { id: 2, name: 'Thực phẩm', parent: null, productCount: 78, status: 'active' },
-    { id: 3, name: 'Nước ngọt', parent: 'Đồ uống', productCount: 12, status: 'active' },
+    { id: 1, name: 'Đồ uống', parent: null, productCount: 45, status: 'active', created_at: '15/01/2025 08:30' },
+    { id: 2, name: 'Thực phẩm', parent: null, productCount: 78, status: 'active', created_at: '16/01/2025 10:15' },
+    { id: 3, name: 'Nước ngọt', parent: 'Đồ uống', productCount: 12, status: 'active', created_at: '17/01/2025 14:20' },
   ]);
 
   const [brands] = useState([
-    { id: 1, name: 'Coca-Cola', productCount: 15, status: 'active' },
-    { id: 2, name: 'Vinamilk', productCount: 23, status: 'active' },
+    { id: 1, name: 'Coca-Cola', country: 'Mỹ', productCount: 15, status: 'active', created_at: '15/01/2025 08:30' },
+    { id: 2, name: 'Vinamilk', country: 'Việt Nam', productCount: 23, status: 'active', created_at: '16/01/2025 10:15' },
+    { id: 3, name: 'Oishi', country: 'Thái Lan', productCount: 8, status: 'active', created_at: '17/01/2025 14:20' },
   ]);
 
   const handleAdd = () => {
     setModalMode('add');
+    setFormData({ name: '', parent: '', status: 'active' });
     setSelectedItem(null);
     setShowModal(true);
   };
@@ -30,6 +39,7 @@ const Category_Brand = () => {
   const handleEdit = (item) => {
     setModalMode('edit');
     setSelectedItem(item);
+    setFormData({ name: item.name, parent: item.parent || '', status: item.status });
     setShowModal(true);
   };
 
@@ -39,199 +49,250 @@ const Category_Brand = () => {
   };
 
   const confirmDelete = () => {
+    setToastMessage(`Xóa ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} thành công!`);
+    setTimeout(() => setToastMessage(""), 3000);
     setShowDeleteConfirm(false);
     setSelectedItem(null);
   };
 
+  const handleSave = () => {
+    setToastMessage(`${modalMode === 'add' ? 'Thêm' : 'Cập nhật'} ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} thành công!`);
+    setTimeout(() => setToastMessage(""), 3000);
+    setShowModal(false);
+  };
+
   const data = activeTab === 'categories' ? categories : brands;
-  const isEmpty = data.length === 0;
+  const filteredData = data.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Quản lý Danh mục & Thương hiệu</h1>
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          <Plus size={20} />
+    <div className="space-y-6">
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50">
+          <div className="relative flex gap-4 bg-green-50 border border-green-200 rounded-xl px-8 py-5 min-w-105 shadow-lg">
+            <CheckCircle className="text-green-600 w-6 h-6" />
+            <span className="text-base font-semibold text-gray-800">{toastMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-semibold text-gray-900">Quản lý Danh mục & Thương hiệu</h1>
+          <p className="text-gray-500 mt-1">Tổng số: {filteredData.length} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</p>
+        </div>
+        <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="w-4 h-4 mr-2" />
           Thêm mới
-        </button>
+        </Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b">
+      {/* Tabs */}
+      <Card className="border border-gray-300 rounded-lg bg-white">
+        <div className="border-b border-gray-200">
           <div className="flex">
             <button
               onClick={() => setActiveTab('categories')}
-              className={`px-6 py-3 font-medium ${
+              className={`px-6 py-3 font-medium transition-colors ${
                 activeTab === 'categories'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
+              <FolderTree className="w-4 h-4 inline mr-2" />
               Danh mục
             </button>
             <button
               onClick={() => setActiveTab('brands')}
-              className={`px-6 py-3 font-medium ${
+              className={`px-6 py-3 font-medium transition-colors ${
                 activeTab === 'brands'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
+              <Tag className="w-4 h-4 inline mr-2" />
               Thương hiệu
             </button>
           </div>
         </div>
 
-        <div className="p-6">
-          {isEmpty ? (
-            <div className="text-center py-12">
-              <Package size={64} className="mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Chưa có {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
-              </h3>
-              <p className="text-gray-500 mb-4">
-                Bắt đầu bằng cách thêm {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} đầu tiên
-              </p>
-              <button
-                onClick={handleAdd}
-                className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                <Plus size={20} />
-                Thêm {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
-              </button>
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</th>
-                  {activeTab === 'categories' && <th className="text-left py-3 px-4">Danh mục cha</th>}
-                  <th className="text-left py-3 px-4">Số sản phẩm</th>
-                  <th className="text-left py-3 px-4">Trạng thái</th>
-                  <th className="text-right py-3 px-4">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((item) => (
-                  <tr key={item.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{item.name}</td>
-                    {activeTab === 'categories' && (
-                      <td className="py-3 px-4 text-gray-600">{item.parent || '-'}</td>
-                    )}
-                    <td className="py-3 px-4">{item.productCount}</td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Hoạt động
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="text-blue-600 hover:text-blue-800 p-1 mr-2"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+        {/* Search */}
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder={`Tìm ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}...`}
+              className="pl-9 h-10 text-md bg-gray-200 border border-gray-200 rounded-lg"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Table */}
+      <Card className="border border-gray-300 rounded-lg bg-white">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold">
+            Danh sách {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50">
+                <TableHead>Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</TableHead>
+                {activeTab === 'categories' ? (
+                  <TableHead>Danh mục cha</TableHead>
+                ) : (
+                  <TableHead>Quốc gia</TableHead>
+                )}
+                <TableHead>Số sản phẩm</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead>Thời gian tạo</TableHead>
+                <TableHead className="text-center">Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredData.map((item) => (
+                <TableRow key={item.id} className="hover:bg-gray-200">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        activeTab === 'categories' ? 'bg-purple-100' : 'bg-blue-100'
+                      }`}>
+                        {activeTab === 'categories' ? (
+                          <FolderTree className="w-5 h-5 text-purple-600" />
+                        ) : (
+                          <Tag className="w-5 h-5 text-blue-600" />
+                        )}
+                      </div>
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {activeTab === 'categories' ? (
+                      item.parent ? <Badge className="bg-neutral-300">{item.parent}</Badge> : '-'
+                    ) : (
+                      <span className="text-gray-600">{item.country}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className="bg-blue-100 text-blue-700">{item.productCount} sản phẩm</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className="bg-green-100 text-green-700">Hoạt động</Badge>
+                  </TableCell>
+                  <TableCell>{item.created_at}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} title="Chỉnh sửa">
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} title="Xóa" className="text-red-600 hover:text-red-700">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">
-              {modalMode === 'add' ? 'Thêm' : 'Sửa'} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
-            </h2>
-            <div className="space-y-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {modalMode === 'add' ? 'Thêm' : 'Chỉnh sửa'} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
-                </label>
-                <input
-                  type="text"
-                  defaultValue={selectedItem?.name}
-                  className="w-full border rounded-lg px-3 py-2"
+                <Label>Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} <span className="text-red-600">*</span></Label>
+                <Input
+                  className="text-md bg-gray-200 border border-gray-200 rounded-lg mt-1"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
                   placeholder={`Nhập tên ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}`}
                 />
               </div>
               {activeTab === 'categories' && (
                 <div>
-                  <label className="block text-sm font-medium mb-1">Danh mục cha</label>
-                  <select className="w-full border rounded-lg px-3 py-2">
+                  <Label>Danh mục cha</Label>
+                  <select 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white mt-1"
+                    value={formData.parent}
+                    onChange={(e) => setFormData({...formData, parent: e.target.value})}
+                  >
                     <option value="">-- Không có --</option>
-                    <option value="1">Đồ uống</option>
-                    <option value="2">Thực phẩm</option>
+                    <option value="Đồ uống">Đồ uống</option>
+                    <option value="Thực phẩm">Thực phẩm</option>
                   </select>
                 </div>
               )}
+              {activeTab === 'brands' && (
+                <div>
+                  <Label>Quốc gia</Label>
+                  <Input
+                    className="text-md bg-gray-200 border border-gray-200 rounded-lg mt-1"
+                    placeholder="VD: Việt Nam, Mỹ, Thái Lan..."
+                  />
+                </div>
+              )}
               <div>
-                <label className="block text-sm font-medium mb-1">Trạng thái</label>
-                <select className="w-full border rounded-lg px-3 py-2">
+                <Label>Trạng thái</Label>
+                <select 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white mt-1"
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
                 </select>
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
-              >
+            <div className="p-6 border-t border-gray-200 flex gap-3">
+              <Button variant="danger" className="flex-1" onClick={() => setShowModal(false)}>
                 Hủy
-              </button>
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
+              </Button>
+              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={handleSave}>
                 {modalMode === 'add' ? 'Thêm' : 'Cập nhật'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-              </div>
-              <div>
-                <h3 className="text-lg font-bold mb-2">
-                  Xác nhận xóa {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
-                </h3>
-                <p className="text-gray-600">
-                  {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
-                  <span className="font-semibold">{selectedItem?.productCount} sản phẩm</span>
-                </p>
-              </div>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-bold mb-4">
+                Xác nhận xóa {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
+              </h3>
+              <p className="text-gray-600 mb-2">
+                Bạn có chắc muốn xóa <span className="font-semibold">{selectedItem?.name}</span>?
+              </p>
+              <p className="text-sm text-red-600">
+                {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
+                <span className="font-semibold">{selectedItem?.productCount} sản phẩm</span>
+              </p>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
-              >
+            <div className="p-6 border-t border-gray-200 flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={() => setShowDeleteConfirm(false)}>
                 Hủy
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
-              >
+              </Button>
+              <Button variant="danger" className="flex-1" onClick={confirmDelete}>
                 Xóa
-              </button>
+              </Button>
             </div>
           </div>
         </div>

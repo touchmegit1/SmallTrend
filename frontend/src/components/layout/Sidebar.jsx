@@ -56,7 +56,7 @@ const Sidebar = () => {
                 { label: 'Danh sách sản phẩm', path: '/products' },
                 { label: 'Danh mục & Brand', path: '/products/categories' },
                 { label: 'Thiết lập giá', path: '/products/price-books' },
-                { label: 'Thêm combo', path: '/products/create_combo' },
+                { label: 'Tạo combo', path: '/products/combos' },
             ]
         },
         {

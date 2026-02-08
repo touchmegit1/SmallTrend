@@ -12,6 +12,9 @@ import AddNewProduct from './pages/Products/ProductManager/AddNewProduct'
 import ProductDetail from './pages/Products/ProductManager/ProductDetail'
 import AddNewProductVariant from './pages/Products/ProductManager/AddNewProductVariant'
 import Category_Brand from './pages/Products/ProductManager/Category_Brand'
+import ComboManage from './pages/Products/ProductManager/ComboManage'
+import CreateCombo from './pages/Products/ProductManager/CreateCombo'
+import ComboDetail from './pages/Products/ProductManager/ComboDetail'
 
 function App() {
     return (
@@ -51,7 +54,9 @@ function App() {
                 <Route path="products/addproduct_variant" element={<AddNewProductVariant />} />
                 <Route path="products/categories" element={<Category_Brand/>}/>
                 <Route path="products/price-books" element={<div className="p-4">Thiết lập giá</div>} />
-                <Route path="products/create_combo" element={<div className="p-4">Tạo Combo</div>} />
+                <Route path="products/combos" element={<ComboManage />} />
+                <Route path="products/create_combo" element={<CreateCombo />} />
+                <Route path="products/combo_detail" element={<ComboDetail />} />
 
                 {/* Module 4: CRM (Khách hàng) */}
                 <Route path="crm" element={<div className="p-4">CRM & Promotion</div>} />
