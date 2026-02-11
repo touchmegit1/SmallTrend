@@ -359,7 +359,7 @@ function ProductDetail() {
                 <TableHead>Thuộc tính</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Barcode</TableHead>
-                <TableHead>Giá vốn</TableHead>
+                <TableHead>Giá nhập</TableHead>
                 <TableHead>Giá bán</TableHead>
                 <TableHead>Tồn kho</TableHead>
                 <TableHead>Trạng thái</TableHead>
