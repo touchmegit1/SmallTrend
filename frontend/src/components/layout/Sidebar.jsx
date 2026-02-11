@@ -64,11 +64,11 @@ const Sidebar = () => {
             label: 'Khách hàng & KM',
             path: '/crm',
             children: [
-                { label: 'Danh sách khách hàng', path: '/crm' },
+                { label: 'Danh sách khách hàng', path: '/crm/customer' },
                 { label: 'Chương trình KM', path: '/crm/promotions' },
                 { label: 'Voucher/Coupon', path: '/crm/vouchers' },
                 { label: 'Tích điểm & Hạng', path: '/crm/loyalty' },
-                { label: 'Khiếu nại', path: '/crm/complaints' },
+                { label: 'Khiếu nại', path: '/crm/complain' },
                 { label: 'Trang chủ', path: '/crm/homepage' },
             ]
         },

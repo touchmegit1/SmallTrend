@@ -1,46 +1,13 @@
 import { useState } from "react";
 import { Pencil, Trash2, Eye, Search, Settings, X } from "lucide-react";
-
-const mockCustomers = [
-  {
-    id: "1",
-    name: "John Smith",
-    phone: "(555) 123-4567",
-    loyaltyPoints: 450,
-    totalSpend: 225000,
-    purchaseHistory: [
-      { id: "p1", date: "2026-02-05", items: "Coffee, Pastry", amount: 155000 },
-      { id: "p2", date: "2026-02-01", items: "Sandwich, Drink", amount: 220000 },
-    ],
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    phone: "(555) 234-5678",
-    loyaltyPoints: 820,
-    totalSpend: 4100000,
-    purchaseHistory: [
-      { id: "p3", date: "2026-02-08", items: "Groceries", amount: 850000 },
-      { id: "p4", date: "2026-01-28", items: "Snacks, Drinks", amount: 345000 },
-    ],
-  },
-  {
-    id: "3",
-    name: "Michael Brown",
-    phone: "(555) 345-6789",
-    loyaltyPoints: 310,
-    totalSpend: 1550000,
-    purchaseHistory: [
-      { id: "p5", date: "2026-02-06", items: "Coffee", amount: 55000 },
-    ],
-  },
-];
+import { useFetchCustomers } from "../../hooks/Customers";
 
 export default function CustomerManagement() {
-  const [customers, setCustomers] = useState(mockCustomers);
+  const { customers, loading, error } = useFetchCustomers();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [viewMode, setViewMode] = useState("list"); // list | edit | history
+  const [viewMode, setViewMode] = useState("list");
   const [showSettings, setShowSettings] = useState(false);
   const [loyaltyRate, setLoyaltyRate] = useState(50000);
   const [editForm, setEditForm] = useState({
@@ -58,9 +25,13 @@ export default function CustomerManagement() {
   const totalCustomers = customers.length;
   const totalSpend = customers.reduce((sum, c) => sum + c.totalSpend, 0);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure?")) {
-      setCustomers(customers.filter((c) => c.id !== id));
+      try {
+        await deleteCustomer(id);
+      } catch (err) {
+        alert("Lỗi khi xóa khách hàng");
+      }
     }
   };
 
@@ -79,14 +50,14 @@ export default function CustomerManagement() {
     setViewMode("history");
   };
 
-  const saveEdit = () => {
-    setCustomers(
-      customers.map((c) =>
-        c.id === selectedCustomer.id ? { ...c, ...editForm } : c
-      )
-    );
-    setViewMode("list");
-    setSelectedCustomer(null);
+  const saveEdit = async () => {
+    try {
+      await updateCustomer(selectedCustomer.id, editForm);
+      setViewMode("list");
+      setSelectedCustomer(null);
+    } catch (err) {
+      alert("Lỗi khi cập nhật khách hàng");
+    }
   };
 
   const cancel = () => {
@@ -98,6 +69,9 @@ export default function CustomerManagement() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl mb-6">Customer Management</h1>
+
+        {loading && <div className="text-center text-blue-600 mb-4">Đang tải dữ liệu...</div>}
+        {error && <div className="text-center text-red-600 mb-4">Lỗi: {error}</div>}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white p-6 rounded-lg shadow">

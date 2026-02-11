@@ -8,6 +8,7 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
 import CRMcomplain from './pages/CRM/complain'
+import CRMcustomer from './pages/CRM/customer'
 function App() {
     return (
         <Routes>
@@ -51,6 +52,7 @@ function App() {
                 <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
                 <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
                 <Route path="crm/complain" element={<CRMcomplain/>} />
+                <Route path="crm/customer" element={<CRMcustomer/>} />
 
                 {/* Module 5: HR (Nhân sự) */}
                 <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
