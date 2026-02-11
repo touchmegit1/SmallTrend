@@ -13,8 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -165,5 +168,105 @@ public class PayrollService {
             throw new RuntimeException("Cannot delete paid payroll records");
         }
         payrollRepository.deleteById(id);
+    }
+
+    // Wrapper methods for controller compatibility
+    public List<PayrollRecord> getAllPayrollRecords() {
+        return findAll();
+    }
+
+    public Optional<PayrollRecord> getPayrollById(Long id) {
+        return findById(id);
+    }
+
+    public List<PayrollRecord> getPayrollByUserId(Long userId) {
+        return findByUserId(userId.intValue());
+    }
+
+    public List<PayrollRecord> getPayrollByPeriod(LocalDate startDate, LocalDate endDate) {
+        return payrollRepository.findByPayPeriodBetween(startDate, endDate);
+    }
+
+    public List<PayrollRecord> getPayrollByStatus(PayrollStatus status) {
+        return findByStatus(status);
+    }
+
+    public PayrollRecord createPayroll(PayrollRecord payroll) {
+        return save(payroll);
+    }
+
+    public PayrollRecord generatePayrollForUser(Long userId, LocalDate periodStart, LocalDate periodEnd,
+            BigDecimal regularHours, BigDecimal overtimeHours) {
+        if (regularHours == null) {
+            regularHours = BigDecimal.valueOf(160); // Default full-time hours
+
+                }if (overtimeHours == null) {
+            overtimeHours = BigDecimal.ZERO;
+        }
+
+        return calculatePayroll(userId.intValue(), periodStart, periodEnd, regularHours, overtimeHours);
+    }
+
+    public PayrollRecord updatePayroll(PayrollRecord payroll) {
+        return save(payroll);
+    }
+
+    public PayrollRecord updatePayrollStatus(Long id, PayrollStatus status) {
+        Optional<PayrollRecord> payrollOpt = findById(id);
+        if (!payrollOpt.isPresent()) {
+            throw new RuntimeException("Payroll not found with id: " + id);
+        }
+
+        PayrollRecord payroll = payrollOpt.get();
+        payroll.setStatus(status);
+        return save(payroll);
+    }
+
+    public PayrollRecord processPayment(Long id, String paymentMethod) {
+        return payPayroll(id, paymentMethod);
+    }
+
+    public void deletePayroll(Long id) {
+        delete(id);
+    }
+
+    public Map<String, Object> getMonthlySummary(Long userId, int year, int month) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+        List<PayrollRecord> records = payrollRepository.findByUserIdAndDateRange(userId.intValue(), startDate, endDate);
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalRecords", records.size());
+        summary.put("totalGrossPay", records.stream()
+                .map(PayrollRecord::getGrossPay)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        summary.put("totalNetPay", records.stream()
+                .map(PayrollRecord::getNetPay)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        summary.put("totalTax", records.stream()
+                .map(PayrollRecord::getTaxAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        summary.put("records", records);
+
+        return summary;
+    }
+
+    public List<PayrollRecord> batchGeneratePayroll(LocalDate periodStart, LocalDate periodEnd) {
+        List<User> activeUsers = userRepository.findByStatus("ACTIVE");
+
+        return activeUsers.stream()
+                .filter(user -> user.getSalaryConfig() != null)
+                .map(user -> {
+                    try {
+                        return generatePayrollForUser(user.getId().longValue(), periodStart, periodEnd,
+                                BigDecimal.valueOf(160), BigDecimal.ZERO);
+                    } catch (Exception e) {
+                        // Skip users with errors
+                        return null;
+                    }
+                })
+                .filter(record -> record != null)
+                .collect(Collectors.toList());
     }
 }

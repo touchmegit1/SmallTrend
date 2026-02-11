@@ -26,4 +26,10 @@ public interface PayrollRecordRepository extends JpaRepository<PayrollRecord, Lo
 
     @Query("SELECT pr FROM PayrollRecord pr WHERE pr.paymentDate BETWEEN :startDate AND :endDate")
     List<PayrollRecord> findByPaymentDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT pr FROM PayrollRecord pr WHERE pr.payPeriodStart BETWEEN :startDate AND :endDate")
+    List<PayrollRecord> findByPayPeriodBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT pr FROM PayrollRecord pr WHERE pr.user.id = :userId AND pr.payPeriodStart BETWEEN :startDate AND :endDate")
+    List<PayrollRecord> findByUserIdAndDateRange(@Param("userId") Integer userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

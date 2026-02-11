@@ -65,7 +65,7 @@ public class PricingRuleController {
 
     // Simple evaluation: list rules by product variant id (if provided)
     @GetMapping("/bulk/evaluate")
-    public List<BulkPricingRule> evaluate(@RequestParam(required = false) Long productVariantId) {
+    public List<BulkPricingRule> evaluate(@RequestParam(required = false) Integer productVariantId) {
         if (productVariantId == null) {
             return activeBulk();
         }

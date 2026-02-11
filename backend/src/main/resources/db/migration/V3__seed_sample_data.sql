@@ -13,15 +13,15 @@ INTO users
 (4, 'Pham Thi Inventory', 'inventory@smalltrend.com', '0934567890', '321 Cach Mang Thang 8, District 10, Ho Chi Minh City', 'ACTIVE', 4),
 (5, 'Hoang Van Sales', 'sales@smalltrend.com', '0945678901', '654 Truong Chinh, District 12, Ho Chi Minh City', 'ACTIVE', 5);
 
--- Insert User Credentials (password = "password123" for all)
+-- Insert User Credentials (password = "password" for all)
 INSERT IGNORE
 INTO user_credentials
 (user_id, username, password_hash) VALUES
-(1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iYqiSfFVMLVaue6IZ0jjhSdsFkcm'),
-(2, 'manager', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'),
-(3, 'cashier', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'),
-(4, 'inventory', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'),
-(5, 'sales', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.');
+(1, 'admin', '$2a$10$dXJ3SW6G7P2jUdgvKBQ0NO4j7B6a6Q/PGt9TG9.YyZq9O1a4xPJT3yge'),
+(2, 'manager', '$2a$10$dXJ3SW6G7P2jUdgvKBQ0NO4j7B6a6Q/PGt9TG9.YyZq9O1a4xPJT3yge'),
+(3, 'cashier', '$2a$10$dXJ3SW6G7P2jUdgvKBQ0NO4j7B6a6Q/PGt9TG9.YyZq9O1a4xPJT3yge'),
+(4, 'inventory', '$2a$10$dXJ3SW6G7P2jUdgvKBQ0NO4j7B6a6Q/PGt9TG9.YyZq9O1a4xPJT3yge'),
+(5, 'sales', '$2a$10$dXJ3SW6G7P2jUdgvKBQ0NO4j7B6a6Q/PGt9TG9.YyZq9O1a4xPJT3yge');
 
 -- Insert Customers
 INSERT IGNORE

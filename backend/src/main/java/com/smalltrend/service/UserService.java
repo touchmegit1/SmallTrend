@@ -57,26 +57,34 @@ public class UserService implements UserDetailsService {
             roleName = "ROLE_" + roleName;
         }
 
-        boolean isActive = "ACTIVE".equalsIgnoreCase(user.getStatus());
+        // Check if user is active from original JWT logic
+        boolean isEnabled = "ACTIVE".equals(user.getStatus()) && (user.getActive() == null || user.getActive());
 
         return org.springframework.security.core.userdetails.User.builder()
                 .username(userCredential.getUsername())
                 .password(userCredential.getPasswordHash())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority(roleName)))
-                .disabled(!isActive)
+                .disabled(!isEnabled)
+                .accountLocked(!"ACTIVE".equals(user.getStatus()))
+                .accountExpired(false)
+                .credentialsExpired(false)
                 .build();
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        // Check if username already exists
+        // Check if username already exists in credentials
         if (userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new RuntimeException("Username is already taken");
         }
 
+        // Check if email already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email is already registered");
         }
 
+        // Get or create default role
         Role role;
         if (request.getRoleId() != null) {
             role = roleRepository.findById(request.getRoleId())
@@ -92,34 +100,31 @@ public class UserService implements UserDetailsService {
                     });
         }
 
+        // Create consolidated user with JWT authentication
         User user = User.builder()
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .address(request.getAddress())
-                .status(request.getStatus() != null ? request.getStatus().toUpperCase() : "PENDING")
+                .status(request.getStatus() != null ? request.getStatus().toUpperCase() : "ACTIVE")
+                .active(true)
                 .role(role)
                 .build();
 
-        user = userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        UserCredential credential = UserCredential.builder()
-                .username(request.getUsername())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .user(user)
-                .build();
-
-        userCredentialsRepository.save(credential);
-
-        String token = jwtUtil.generateToken(request.getUsername());
+        // Generate JWT token
+        String token = jwtUtil.generateToken(savedUser.getUsername());
 
         return AuthResponse.builder()
                 .token(token)
                 .type("Bearer")
-                .userId(user.getId())
-                .username(request.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
+                .userId(savedUser.getId())
+                .username(savedUser.getUsername())
+                .fullName(savedUser.getFullName())
+                .email(savedUser.getEmail())
                 .role(role.getName())
                 .build();
     }
@@ -127,7 +132,6 @@ public class UserService implements UserDetailsService {
     public AuthResponse login(String username) {
         UserCredential userCredential = userCredentialsRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
         User user = userCredential.getUser();
         String token = jwtUtil.generateToken(username);
 

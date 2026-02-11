@@ -27,8 +27,12 @@ public class SupplierContractService {
         return contractRepository.findById(id);
     }
 
-    public List<SupplierContract> findBySupplierId(Integer supplierId) {
-        return contractRepository.findBySupplierId(supplierId);
+    public List<SupplierContract> findBySupplier(Long supplierId) {
+        return contractRepository.findBySupplierId(supplierId.intValue());
+    }
+
+    public void checkAndUpdateExpiredContracts() {
+        this.expireOldContracts();
     }
 
     public List<SupplierContract> findByStatus(ContractStatus status) {

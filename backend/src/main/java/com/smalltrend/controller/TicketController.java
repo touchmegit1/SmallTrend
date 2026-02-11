@@ -2,13 +2,14 @@ package com.smalltrend.controller;
 
 import com.smalltrend.entity.Ticket;
 import com.smalltrend.entity.enums.TicketStatus;
-import com.smalltrend.repository.TicketRepository;
+//import com.smalltrend.repository.TicketRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/*
 @RestController
 @RequestMapping("/api/tickets")
 public class TicketController {
@@ -73,3 +74,4 @@ public class TicketController {
         return ResponseEntity.notFound().build();
     }
 }
+ */

@@ -21,9 +21,9 @@ public class PayrollRecord {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -105,4 +105,197 @@ public class PayrollRecord {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // Explicit getters and setters to avoid Lombok issues
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public LocalDate getPayPeriodStart() {
+        return payPeriodStart;
+    }
+
+    public void setPayPeriodStart(LocalDate payPeriodStart) {
+        this.payPeriodStart = payPeriodStart;
+    }
+
+    public LocalDate getPayPeriodEnd() {
+        return payPeriodEnd;
+    }
+
+    public void setPayPeriodEnd(LocalDate payPeriodEnd) {
+        this.payPeriodEnd = payPeriodEnd;
+    }
+
+    public BigDecimal getBaseSalary() {
+        return baseSalary;
+    }
+
+    public void setBaseSalary(BigDecimal baseSalary) {
+        this.baseSalary = baseSalary;
+    }
+
+    public BigDecimal getRegularHours() {
+        return regularHours;
+    }
+
+    public void setRegularHours(BigDecimal regularHours) {
+        this.regularHours = regularHours;
+    }
+
+    public BigDecimal getOvertimeHours() {
+        return overtimeHours;
+    }
+
+    public void setOvertimeHours(BigDecimal overtimeHours) {
+        this.overtimeHours = overtimeHours;
+    }
+
+    public BigDecimal getHourlyRate() {
+        return hourlyRate;
+    }
+
+    public void setHourlyRate(BigDecimal hourlyRate) {
+        this.hourlyRate = hourlyRate;
+    }
+
+    public BigDecimal getOvertimeRate() {
+        return overtimeRate;
+    }
+
+    public void setOvertimeRate(BigDecimal overtimeRate) {
+        this.overtimeRate = overtimeRate;
+    }
+
+    public BigDecimal getRegularPay() {
+        return regularPay;
+    }
+
+    public void setRegularPay(BigDecimal regularPay) {
+        this.regularPay = regularPay;
+    }
+
+    public BigDecimal getOvertimePay() {
+        return overtimePay;
+    }
+
+    public void setOvertimePay(BigDecimal overtimePay) {
+        this.overtimePay = overtimePay;
+    }
+
+    public BigDecimal getAllowances() {
+        return allowances;
+    }
+
+    public void setAllowances(BigDecimal allowances) {
+        this.allowances = allowances;
+    }
+
+    public BigDecimal getBonus() {
+        return bonus;
+    }
+
+    public void setBonus(BigDecimal bonus) {
+        this.bonus = bonus;
+    }
+
+    public BigDecimal getDeductions() {
+        return deductions;
+    }
+
+    public void setDeductions(BigDecimal deductions) {
+        this.deductions = deductions;
+    }
+
+    public BigDecimal getTaxAmount() {
+        return taxAmount;
+    }
+
+    public void setTaxAmount(BigDecimal taxAmount) {
+        this.taxAmount = taxAmount;
+    }
+
+    public BigDecimal getSocialInsurance() {
+        return socialInsurance;
+    }
+
+    public void setSocialInsurance(BigDecimal socialInsurance) {
+        this.socialInsurance = socialInsurance;
+    }
+
+    public BigDecimal getGrossPay() {
+        return grossPay;
+    }
+
+    public void setGrossPay(BigDecimal grossPay) {
+        this.grossPay = grossPay;
+    }
+
+    public BigDecimal getNetPay() {
+        return netPay;
+    }
+
+    public void setNetPay(BigDecimal netPay) {
+        this.netPay = netPay;
+    }
+
+    public PayrollStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PayrollStatus status) {
+        this.status = status;
+    }
+
+    public LocalDate getPaymentDate() {
+        return paymentDate;
+    }
+
+    public void setPaymentDate(LocalDate paymentDate) {
+        this.paymentDate = paymentDate;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

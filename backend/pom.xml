@@ -17,7 +17,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
-		<lombok.version>1.18.34</lombok.version>
+		<lombok.version>1.18.30</lombok.version>
 	</properties>
 	
 	<dependencies>
@@ -182,6 +182,13 @@
 						<location>filesystem:src/main/resources/db/migration</location>
 					</locations>
 				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>mysql</groupId>
+						<artifactId>mysql-connector-java</artifactId>
+						<version>8.0.33</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 		</plugins>
 	</build>
