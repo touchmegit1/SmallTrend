@@ -35,4 +35,11 @@ public class SalesOrderItem {
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal costPriceAtSale;
+
+    @OneToMany(mappedBy = "orderItem")
+    private java.util.List<OrderItemTax> taxes;
+
+    @OneToMany(mappedBy = "orderItem")
+    private java.util.List<OrderItemDiscount> discounts;
+
 }

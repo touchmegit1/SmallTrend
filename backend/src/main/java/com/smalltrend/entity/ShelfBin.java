@@ -22,5 +22,6 @@ public class ShelfBin {
     @JoinColumn(name = "location_id", nullable = false)
     private Location location;
 
+    @Column(name = "bin_code")
     private String binCode;
 }

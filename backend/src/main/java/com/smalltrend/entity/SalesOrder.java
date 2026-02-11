@@ -27,13 +27,21 @@ public class SalesOrder {
     private Customer customer;
 
     @ManyToOne
-    @JoinColumn(name = "cashier_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User cashier;
 
     private LocalDateTime orderDate;
+    private BigDecimal subtotalAmount;
+    private BigDecimal taxAmount;
+    private BigDecimal shippingAmount;
     private BigDecimal totalAmount;
     private String paymentMethod;
+    private String couponCode;
+    private BigDecimal couponDiscount;
 
     @OneToMany(mappedBy = "order")
     private List<SalesOrderItem> items;
+
+    @OneToMany(mappedBy = "order")
+    private List<OrderDiscount> discounts;
 }

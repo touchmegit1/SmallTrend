@@ -27,6 +27,7 @@ public class ProductVariant {
 
     private String sku;
     private String barcode;
+    @Column(name = "image_url")
     private String imageUrl;
     private BigDecimal sellPrice;
     private boolean isActive;
