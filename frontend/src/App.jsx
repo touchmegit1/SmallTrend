@@ -9,6 +9,8 @@ import PublicRoute from "./components/common/PublicRoute";
 import UserManagement from "./pages/HR/UserManagement";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import ImportInventory from "./pages/Inventory/ImportInventory";
+import CreateImport from "./pages/Inventory/CreateImport";
+import InventoryAudit from "./pages/Inventory/InventoryAudit";
 function App() {
   return (
     <Routes>
@@ -65,9 +67,10 @@ function App() {
         {/* Module 2: Inventory (Kho) */}
         <Route path="inventory" element={<InventoryDashboard />} />
         <Route path="inventory/import" element={<ImportInventory />} />
+        <Route path="inventory/import/create" element={<CreateImport />} />
         <Route
           path="inventory/audit"
-          element={<div className="p-4">Kiểm kê</div>}
+          element={<InventoryAudit />}
         />
         <Route
           path="inventory/alerts"
