@@ -16,7 +16,7 @@ function App() {
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
             {/* Protected Routes */}
-            <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+            <Route path="/" element={<PublicRoute><MainLayout /></PublicRoute>}>
                 {/* Redirect root to Dashboard */}
                 <Route index element={<Navigate to="/dashboard" replace />} />
 
