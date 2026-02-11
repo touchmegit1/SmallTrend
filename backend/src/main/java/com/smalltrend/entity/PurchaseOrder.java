@@ -31,6 +31,10 @@ public class PurchaseOrder {
     private Supplier supplier;
 
     @ManyToOne
+    @JoinColumn(name = "contract_id")
+    private SupplierContract contract;
+
+    @ManyToOne
     @JoinColumn(name = "received_by")
     private User receivedBy;
 
