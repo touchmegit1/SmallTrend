@@ -7,8 +7,10 @@ import Login from './pages/Auth/Login'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
-import CRMcomplain from './pages/CRM/complain'
-import CRMcustomer from './pages/CRM/customer'
+import TransactionHistory from './pages/Pos/Transition_History'
+import ReportforCashier from './pages/Pos/ReportforCashier'
+
+
 function App() {
     return (
         <Routes>
@@ -28,9 +30,9 @@ function App() {
                 } />
 
                 {/* Module 1: POS (Bán hàng) */}
-                <Route path="pos" element={<POS />} />
-                <Route path="pos/history" element={<div className="p-4">Lịch sử đơn hàng</div>} />
-                <Route path="pos/suspended" element={<div className="p-4">Đơn hàng treo</div>} />
+                <Route path="pos" element={<POS/>} />
+                <Route path="pos/history" element={<TransactionHistory/>} />
+                <Route path="pos/suspended" element={<ReportforCashier/>} />
 
                 {/* Module 2: Inventory (Kho) */}
                 <Route path="inventory" element={<div className="p-4">Inventory Management (Kho)</div>} />
@@ -51,8 +53,7 @@ function App() {
                 <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
                 <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
                 <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
-                <Route path="crm/complain" element={<CRMcomplain/>} />
-                <Route path="crm/customer" element={<CRMcustomer/>} />
+                <Route path="crm/complaints" element={<div className="p-4">Khiếu nại</div>} />
 
                 {/* Module 5: HR (Nhân sự) */}
                 <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
