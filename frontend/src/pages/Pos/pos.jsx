@@ -79,8 +79,10 @@ export default function POS() {
       const currentOrder = orders.find(o => o.id === activeOrderId);
       if (currentOrder && currentOrder.cart.length > 0) {
         const subtotal = currentOrder.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const orderId = `ORDER_${activeOrderId}`;
         const pendingTransaction = {
           id: `#HD${Date.now().toString().slice(-6)}`,
+          orderId: orderId,
           time: new Date().toLocaleString('vi-VN', { 
             hour: '2-digit', 
             minute: '2-digit', 
@@ -101,12 +103,15 @@ export default function POS() {
         };
         
         const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-        const existingIndex = transactions.findIndex(t => t.status === "Chờ thanh toán" && t.id === pendingTransaction.id);
+        const existingIndex = transactions.findIndex(t => t.orderId === orderId);
         
         if (existingIndex >= 0) {
           transactions[existingIndex] = pendingTransaction;
         } else {
-          transactions.unshift(pendingTransaction);
+          const filteredTransactions = transactions.filter(t => t.orderId !== orderId);
+          filteredTransactions.unshift(pendingTransaction);
+          localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
+          return;
         }
         localStorage.setItem('transactions', JSON.stringify(transactions));
       }
