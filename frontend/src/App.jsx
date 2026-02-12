@@ -25,15 +25,15 @@ function App() {
             <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
             {/* Protected Routes */}
-            <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+            <Route path="/" element={<PublicRoute><MainLayout /></PublicRoute>}>
                 {/* Redirect root to Dashboard */}
                 <Route index element={<Navigate to="/dashboard" replace />} />
 
                 {/* Dashboard Route - only ADMIN/MANAGER */}
                 <Route path="dashboard" element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+                    <PublicRoute allowedRoles={["ADMIN", "MANAGER"]}>
                         <Dashboard />
-                    </ProtectedRoute>
+                    </PublicRoute>
                 } />
 
                 {/* Module 1: POS (Bán hàng) */}
@@ -49,15 +49,15 @@ function App() {
                 <Route path="inventory/alerts" element={<div className="p-4">Cảnh báo hết hàng</div>} />
 
                 {/* Module 3: Products (Sản phẩm) */}
-                <Route path="products" element={<ProductListScreen />} />
-                <Route path="products/addproduct" element={<AddNewProduct />} />
-                <Route path="products/detail" element={<ProductDetail />} />
-                <Route path="products/addproduct_variant" element={<AddNewProductVariant />} />
-                <Route path="products/categories" element={<Category_Brand />} />
-                <Route path="products/suppliers" element={<SuppliersScreen />} />
-                <Route path="products/combos" element={<ComboManage />} />
-                <Route path="products/create_combo" element={<CreateCombo />} />
-                <Route path="products/combo_detail" element={<ComboDetail />} />
+                <Route path="products" element={<PublicRoute> <ProductListScreen /> </PublicRoute>} />
+                <Route path="products/addproduct" element={<PublicRoute> <AddNewProduct /> </PublicRoute>} />
+                <Route path="products/detail" element={<PublicRoute> <ProductDetail /> </PublicRoute>} />
+                <Route path="products/addproduct_variant" element={<PublicRoute> <AddNewProductVariant /> </PublicRoute> } />
+                <Route path="products/categories" element={<PublicRoute> <Category_Brand /> </PublicRoute>} />
+                <Route path="products/suppliers" element={<PublicRoute> <SuppliersScreen /> </PublicRoute>} />
+                <Route path="products/combos" element={<PublicRoute> <ComboManage /> </PublicRoute>} />
+                <Route path="products/create_combo" element={<PublicRoute> <CreateCombo /> </PublicRoute>} />
+                <Route path="products/combo_detail" element={<PublicRoute> <ComboDetail /> </PublicRoute>} />
 
                 {/* Module 4: CRM (Khách hàng) */}
                 <Route path="crm" element={<div className="p-4">CRM & Promotion</div>} />
@@ -69,9 +69,9 @@ function App() {
                 {/* Module 5: HR (Nhân sự) */}
                 <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
                 <Route path="hr/users" element={
-                    <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                    <PublicRoute allowedRoles={['ROLE_ADMIN']}>
                         <UserManagement />
-                    </ProtectedRoute>
+                    </PublicRoute>
                 } />
                 <Route path="hr/shifts" element={<div className="p-4">Phân ca làm việc</div>} />
                 <Route path="hr/attendance" element={<div className="p-4">Chấm công</div>} />

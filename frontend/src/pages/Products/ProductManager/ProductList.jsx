@@ -4,67 +4,13 @@ import { Input } from "../ProductComponents/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
-import { Plus, Search, Edit, Package, Eye, CheckCircle } from "lucide-react";
+import { Plus, Search, Edit, Package, Eye, CheckCircle, Power } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditProductModal from "./EditProductModal";
-
-const mockProducts = [
-  {
-    id: 1,
-    name: "Yaourt",
-    brand: "Mondelez",
-    category: "Sữa chua",
-    unit: "Lốc",
-    description: "Sản phẩm Yaourt 1kg chất lượng cao",
-    status: "available",
-    variant_count: 2,
-    created_at: "04/02/2026 09:15",
-  },
-  {
-    id: 2,
-    name: "Kẹo ổi",
-    brand: "Oishi",
-    category: "Nước uống",
-    unit: "Gói",
-    description: "Sản phẩm Kẹo 2kg chất lượng cao",
-    status: "available",
-    variant_count: 3,
-    created_at: "04/02/2026 10:30",
-  },
-  {
-    id: 3,
-    name: "Redbull",
-    brand: "TH True Milk",
-    category: "Nước uống",
-    unit: "Cái",
-    description: "Sản phẩm Redbull 2kg chất lượng cao",
-    status: "available",
-    variant_count: 1,
-    created_at: "04/02/2026 11:45",
-  },
-  {
-    id: 4,
-    name: "Mì tôm",
-    brand: "Orion",
-    category: "Nước uống",
-    unit: "Hộp",
-    description: "Sản phẩm Mì tôm 2kg chất lượng cao",
-    status: "available",
-    variant_count: 4,
-    created_at: "04/02/2026 13:00",
-  },
-  {
-    id: 5,
-    name: "Number 1",
-    brand: "Coca Cola",
-    category: "Kem",
-    unit: "Lít",
-    description: "Sản phẩm Number 1 250g chất lượng cao",
-    status: "available",
-    variant_count: 2,
-    created_at: "04/02/2026 14:30",
-  },
-];
+import { useFetchProducts } from "../../../hooks/products";
+import { useFetchCategories } from "../../../hooks/categories";
+import { useFetchBrands } from "../../../hooks/brands";
+import api from "../../../config/axiosConfig";
 
 
 export function ProductListScreen() {
@@ -78,6 +24,20 @@ export function ProductListScreen() {
   const [toastMessage, setToastMessage] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const { products, loading, error, fetchProducts } = useFetchProducts();
+  const { categories } = useFetchCategories();
+  const { brands } = useFetchBrands();
+
+  // Helper functions để lấy tên từ ID
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(cat => cat.id == categoryId);
+    return category?.name || 'N/A';
+  };
+
+  const getBrandName = (brandId) => {
+    const brand = brands.find(b => b.id == brandId);
+    return brand?.name || 'N/A';
+  };
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -88,34 +48,44 @@ export function ProductListScreen() {
     }
   };
 
-  const filteredProducts = mockProducts
+  const filteredProducts = (products || [])
     .filter((product) => {
+      const brandName = getBrandName(product.brand_id);
+      const categoryName = getCategoryName(product.category_id);
+      
       const matchesSearch =
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.brand.toLowerCase().includes(searchQuery.toLowerCase());
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        brandName.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesCategory =
-        filterCategory === "all" || product.category === filterCategory;
+        filterCategory === "all" || categoryName === filterCategory;
 
       const matchesStatus =
-        filterStatus === "all" || product.status === filterStatus;
+        filterStatus === "all" || 
+        (filterStatus === "active" && product.is_active) ||
+        (filterStatus === "inactive" && !product.is_active);
 
       return matchesSearch && matchesCategory && matchesStatus;
     })
     .sort((a, b) => {
       if (!sortField) return 0;
 
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+      let aValue, bValue;
 
-      if (sortField === "created_at") {
-        const [dateA, timeA] = aValue.split(" ");
-        const [dayA, monthA, yearA] = dateA.split("/");
-        const [dateB, timeB] = bValue.split(" ");
-        const [dayB, monthB, yearB] = dateB.split("/");
-        aValue = new Date(`${yearA}-${monthA}-${dayA} ${timeA}`);
-        bValue = new Date(`${yearB}-${monthB}-${dayB} ${timeB}`);
+      if (sortField === "brand") {
+        aValue = getBrandName(a.brand_id);
+        bValue = getBrandName(b.brand_id);
+      } else if (sortField === "created_at") {
+        aValue = new Date(a.created_at);
+        bValue = new Date(b.created_at);
       } else {
+        aValue = a[sortField];
+        bValue = b[sortField];
+      }
+
+      if (!aValue || !bValue) return 0;
+      
+      if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
@@ -124,6 +94,18 @@ export function ProductListScreen() {
       if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
       return 0;
     });
+
+  const handleToggleStatus = async (product) => {
+    try {
+      await api.put(`/products/${product.id}/toggle-status`);
+      setToastMessage(`Đã ${product.is_active ? 'ngừng' : 'kích hoạt'} bán sản phẩm!`);
+      fetchProducts();
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      setToastMessage("Lỗi khi thay đổi trạng thái!");
+      setTimeout(() => setToastMessage(""), 3000);
+    }
+  };
 
   const handleEditClick = (product) => {
     setSelectedProduct(product);
@@ -146,6 +128,11 @@ export function ProductListScreen() {
       }, 3000);
     }
   }, [location.state]);
+
+  // xu ly loading & error
+  if (loading) return <p>Đang tải sản phẩm...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
+
   return (
     <div className="space-y-6">
       {/* Alter */}
@@ -204,9 +191,9 @@ export function ProductListScreen() {
               onChange={(e) => setFilterCategory(e.target.value)}
             >
               <option value="all">Tất cả danh mục</option>
-              <option value="Nước giải khát">Nước giải khát</option>
-              <option value="Mì ăn liền">Mì ăn liền</option>
-              <option value="Sữa">Sữa</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.name}>{cat.name}</option>
+              ))}
             </select>
 
             <select
@@ -216,7 +203,7 @@ export function ProductListScreen() {
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Đang bán</option>
-              <option value="inactive">Ngưng bán</option>
+              <option value="inactive">Ngừng bán</option>
             </select>
           </div>
         </CardContent>
@@ -231,13 +218,13 @@ export function ProductListScreen() {
           <Table>
             <TableHeader >
               <TableRow className="bg-gray-50">
-                <TableHead 
+                <TableHead
                   className="cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort("name")}
                 >
                   Sản phẩm {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className="cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort("brand")}
                 >
@@ -245,7 +232,8 @@ export function ProductListScreen() {
                 </TableHead>
                 <TableHead>Danh mục</TableHead>
                 <TableHead>Biến thể</TableHead>
-                <TableHead 
+                <TableHead>Trạng thái</TableHead>
+                <TableHead
                   className="cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort("created_at")}
                 >
@@ -256,7 +244,14 @@ export function ProductListScreen() {
             </TableHeader>
 
             <TableBody>
-              {filteredProducts.map((product) => (
+              {filteredProducts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                    Không tìm thấy sản phẩm nào
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredProducts.map((product) => (
                 <TableRow className="hover:bg-gray-200" key={product.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -266,14 +261,14 @@ export function ProductListScreen() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">{product.name}</p>
                         <p className="text-xs text-gray-500">
-                          {product.brand}
+                          {getBrandName(product.brand_id)}
                         </p>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{product.brand}</TableCell>
+                  <TableCell>{getBrandName(product.brand_id)}</TableCell>
                   <TableCell>
-                    <Badge className="bg-neutral-300" variant="secondary">{product.category}</Badge>
+                    <Badge className="bg-neutral-300" variant="secondary">{getCategoryName(product.category_id)}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge className="bg-purple-100 text-purple-700">
@@ -281,13 +276,13 @@ export function ProductListScreen() {
                     </Badge>
 
                   </TableCell>
-                  {/* <TableCell>
-                    {product.status === "active" ? (
+                  <TableCell>
+                    {product.is_active ? (
                       <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
                     ) : (
-                      <Badge className="bg-red-100 text-red-700">Ngưng bán</Badge>
+                      <Badge className="bg-red-100 text-red-700">Ngừng bán</Badge>
                     )}
-                  </TableCell> */}
+                  </TableCell>
                   <TableCell>{product.created_at}</TableCell>
 
                   <TableCell className="text-center">
@@ -303,6 +298,14 @@ export function ProductListScreen() {
                       <Button
                         size="sm"
                         variant="ghost"
+                        onClick={() => handleToggleStatus(product)}
+                        title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
+                      >
+                        <Power className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handleEditClick(product)}
                         title="Chỉnh sửa"
                       >
@@ -311,7 +314,8 @@ export function ProductListScreen() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
