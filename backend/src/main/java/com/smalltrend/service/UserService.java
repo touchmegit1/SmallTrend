@@ -2,6 +2,7 @@ package com.smalltrend.service;
 
 import com.smalltrend.dto.auth.AuthResponse;
 import com.smalltrend.dto.auth.RegisterRequest;
+import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserUpdateRequest;
 import com.smalltrend.entity.Role;
 import com.smalltrend.entity.User;
@@ -11,6 +12,10 @@ import com.smalltrend.repository.UserCredentialsRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.util.JwtUtil;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -156,7 +161,84 @@ public class UserService implements UserDetailsService {
         return userRepository.findAll();
     }
 
-    public User getUserById(Integer id) {
+    /**
+     * Admin creates employee account - không có đăng ký tự do
+     */
+    @Transactional
+    public UserDTO createEmployee(RegisterRequest request) {
+        // Check if username already exists
+        if (userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new RuntimeException("Tên đăng nhập đã tồn tại");
+        }
+
+        // Check if email already exists
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email đã được đăng ký");
+        }
+
+        // Get role - must be valid employee role
+        Role role;
+        if (request.getRoleId() != null) {
+            role = roleRepository.findById(request.getRoleId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò"));
+        } else {
+            // Default to SALES_STAFF if no role specified
+            role = roleRepository.findByName("SALES_STAFF")
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò mặc định"));
+        }
+
+        // Create user
+        User user = User.builder()
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .address(request.getAddress())
+                .status("ACTIVE")
+                .role(role)
+                .salaryType(request.getSalaryType())
+                .baseSalary(request.getBaseSalary())
+                .hourlyRate(request.getHourlyRate())
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        // Create credentials
+        UserCredential credential = UserCredential.builder()
+                .user(savedUser)
+                .username(request.getUsername())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .build();
+
+        userCredentialsRepository.save(credential);
+
+        return UserDTO.fromEntity(savedUser);
+    }
+
+    /**
+     * Get all users with pagination
+     */
+    public Page<User> getAllUsers(Integer page, Integer size) {
+        if (size > 100) size = 100; // Max 100 per page
+        if (size <= 0) size = 10; // Default 10 per page
+        if (page < 0) page = 0; // Default first page
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return userRepository.findAll(pageable);
+    }
+
+    /**
+     * Search users by name or email
+     */
+    public Page<User> searchUsers(String query, Integer page, Integer size) {
+        if (size > 100) size = 100; 
+        if (size <= 0) size = 10;
+        if (page < 0) page = 0;
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+            query, query, pageable
+        );
+    }
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
