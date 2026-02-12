@@ -1,90 +1,49 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Package, Edit, Box, TrendingUp, Calendar, Eye, Trash2, Power, Printer } from "lucide-react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { ArrowLeft, Package, Edit, Box, TrendingUp, Calendar, Power, Printer } from "lucide-react";
 import Button from "../ProductComponents/button";
-import { Card} from "../ProductComponents/card";
+import { Card } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Label } from "../ProductComponents/label";
 import { Badge } from "../ProductComponents/badge";
 import EditProductModal from "./EditProductModal";
 import EditVariantModal from "./EditVariantModal";
-
-const productVariants = [
-  {
-    id: 1,
-    product_id: 2035,
-    variant_name: "Hộp 500g",
-    attributes: "Kích thước: 500g",
-    sku: "SKU-00000001",
-    barcode: "8934580000001",
-    cost: 78000,
-    retail_price: 93000,
-    stock: 120,
-    is_active: true,
-  },
-  {
-    id: 2,
-    product_id: 1957,
-    variant_name: "Gói nhỏ 50g",
-    attributes: "Kích thước: 50g, Màu sắc: Đỏ",
-    sku: "SKU-00000002",
-    barcode: "8934580000002",
-    cost: 95000,
-    retail_price: 114000,
-    stock: 80,
-    is_active: true,
-  },
-  {
-    id: 3,
-    product_id: 1933,
-    variant_name: "Lon 250ml",
-    attributes: "Kích thước: 250ml, Hương vị: Nguyên bản",
-    sku: "SKU-00000003",
-    barcode: "8934580000003",
-    cost: 20000,
-    retail_price: 26000,
-    stock: 300,
-    is_active: true,
-  },
-  {
-    id: 4,
-    product_id: 676,
-    variant_name: "Gói thường",
-    attributes: "Hương vị: Cay",
-    sku: "SKU-00000004",
-    barcode: "8934580000004",
-    cost: 18000,
-    retail_price: 24000,
-    stock: 150,
-    is_active: true,
-  },
-  {
-    id: 5,
-    product_id: 1289,
-    variant_name: "Chai 500ml",
-    attributes: "Kích thư500ml, Màu sắc: Xanh",
-    sku: "SKU-00000005",
-    barcode: "8934580000005",
-    cost: 150000,
-    retail_price: 179000,
-    stock: 0,
-    is_active: false,
-  },
-];
-
+import { useFetchVariants } from "../../../hooks/product_variants";
+import { useFetchCategories } from "../../../hooks/categories";
+import { useFetchBrands } from "../../../hooks/brands";
 
 
 function ProductDetail() {
+  const { id: productId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const product = location.state?.product;
+
   const [hoveredImage, setHoveredImage] = useState(null);
-  const [variants, setVariants] = useState(productVariants);
+
+  const { variants, loading, error, fetchVariants } =
+    useFetchVariants(productId);
+
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditVariantModalOpen, setIsEditVariantModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const { categories } = useFetchCategories();
+  const { brands } = useFetchBrands();
+
+
+  // Helper functions để lấy tên từ ID
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(cat => cat.id == categoryId);
+    return category?.name || 'N/A';
+  };
+
+  const getBrandName = (brandId) => {
+    const brand = brands.find(b => b.id == brandId);
+    return brand?.name || 'N/A';
+  };
+
 
   const handleToggleStatus = (variant) => {
     setSelectedVariant(variant);
@@ -92,9 +51,8 @@ function ProductDetail() {
   };
 
   const confirmToggleStatus = () => {
-    setVariants(variants.map(v => 
-      v.id === selectedVariant.id ? { ...v, is_active: !v.is_active } : v
-    ));
+    // Call API to toggle status
+    fetchVariants();
     setShowConfirm(false);
     setSelectedVariant(null);
   };
@@ -111,11 +69,9 @@ function ProductDetail() {
   };
 
   const handleSaveVariant = (updatedVariant) => {
-    setVariants(variants.map(v => 
-      v.id === updatedVariant.id ? updatedVariant : v
-    ));
     setToastMessage("Chỉnh sửa biến thể thành công!");
     setIsEditVariantModalOpen(false);
+    fetchVariants();
     setTimeout(() => setToastMessage(""), 3000);
   };
 
@@ -125,7 +81,7 @@ function ProductDetail() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>In tem mã vạch - ${variant.variant_name}</title>
+          <title>In tem mã vạch -  ${product.name} ${product.unit} ${Object.values(variant.attributes || {})[0] || ""}</title>
           <style>
             body { 
               font-family: Arial, sans-serif; 
@@ -143,15 +99,17 @@ function ProductDetail() {
             }
             .product-name { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
             .barcode { font-size: 24px; font-family: 'Courier New', monospace; margin: 15px 0; }
-            .price { font-size: 18px; font-weight: bold; color: #e53e3e; }
+            .price { font-size: 18px; font-weight: bold; color: #000; }
             .sku { font-size: 12px; color: #666; margin-top: 10px; }
           </style>
         </head>
         <body>
           <div class="barcode-label">
-            <div class="product-name">${variant.variant_name}</div>
+            <div class="product-name">
+            ${product.name}-${product.unit}:${Object.values(variant.attributes || {})[0] || ""}
+            </div>
             <div class="barcode">${variant.barcode || 'N/A'}</div>
-            <div class="price">${variant.retail_price.toLocaleString('vi-VN')}đ</div>
+            <div class="price">${(variant.sell_price || 0).toLocaleString('vi-VN')}đ</div>
             <div class="sku">SKU: ${variant.sku}</div>
           </div>
         </body>
@@ -188,6 +146,9 @@ function ProductDetail() {
       </div>
     );
   }
+
+  if (loading) return <p>Đang tải biến thể...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="p-6 space-y-6">
@@ -232,7 +193,7 @@ function ProductDetail() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-             <h1 className="text-3xl font-semibold text-gray-900">{product.name}</h1>
+            <h1 className="text-3xl font-semibold text-gray-900">{product.name}</h1>
             <p className="text-md text-gray-500 font-semibold">ID: #{product.id}</p>
           </div>
         </div>
@@ -247,7 +208,7 @@ function ProductDetail() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Tổng tồn kho</p>
-              <p className="text-2xl font-bold text-gray-900">1,250</p>
+              <p className="text-2xl font-bold text-gray-900">{product.total_stock}</p>
             </div>
           </div>
         </Card>
@@ -269,7 +230,7 @@ function ProductDetail() {
             </div>
             <div>
               <p className="text-xs text-gray-500">Ngày tạo: {product.created_at}</p>
-              <p className="text-xs text-gray-500">Cập nhật: {product.created_at}</p>  
+              <p className="text-xs text-gray-500">Cập nhật: {product.created_at}</p>
             </div>
           </div>
         </Card>
@@ -299,12 +260,12 @@ function ProductDetail() {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Thương hiệu</Label>
-                <p className="text-sm text-gray-900 mt-1">{product.brand}</p>
+                <p className="text-sm text-gray-900 mt-1">{getBrandName(product.brand_id)}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Danh mục</Label>
                 <div className="mt-1">
-                  <Badge className="inline-block px-2 py-1 bg-neutral-300 rounded-full text-xs">{product.category}</Badge>
+                  <Badge className="inline-block px-2 py-1 bg-neutral-300 rounded-full text-xs">{getCategoryName(product.category_id)}</Badge>
                 </div>
               </div>
               <div>
@@ -341,12 +302,12 @@ function ProductDetail() {
             <h2 className="text-xl font-bold">Biến thể sản phẩm</h2>
             <span className="text-gray-300">•</span>
             <Badge className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
-              {productVariants.length} biến thể
+              {variants.length} biến thể
             </Badge>
           </div>
           <Button
-           onClick={() => navigate("/products/addproduct_variant", { state: { product } })}
-           className="bg-blue-600 hover:bg-blue-700 text-white">
+            onClick={() => navigate("/products/addproduct_variant", { state: { product } })}
+            className="bg-blue-600 hover:bg-blue-700 text-white">
             Thêm biến thể
           </Button>
         </div>
@@ -388,17 +349,39 @@ function ProductDetail() {
                           </div>
                         )}
                       </button>
-                      <span className="font-medium">{variant.variant_name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-semibold">
+                          {`${product.unit} ${Object.values(variant.attributes || {})[0] || ""}`}
+                        </span>
+
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-600 text-sm"><Badge className="bg-neutral-300" variant="secondary">{variant.attributes}</Badge></TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      <div className="space-y-1 text-sm">
+                        {Object.entries(variant.attributes).map(([key, value]) => (
+                          <div key={key}>
+                            <span className="text-gray-400 mr-1 capitalize">
+                              {key}:
+                            </span>
+                            <span className="font-medium text-gray-700">
+                              {value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </Badge>
+
+                  </TableCell>
+
                   <TableCell className="text-gray-600">{variant.sku}</TableCell>
                   <TableCell className="text-gray-600">{variant.barcode}</TableCell>
-                  <TableCell>{variant.cost.toLocaleString('vi-VN')}đ</TableCell>
-                  <TableCell className="font-semibold">{variant.retail_price.toLocaleString('vi-VN')}đ</TableCell>
+                  <TableCell>{(variant.cost_price || 0).toLocaleString('vi-VN')}đ</TableCell>
+                  <TableCell className="font-semibold">{variant.sell_price?.toLocaleString('vi-VN') || "0"}đ</TableCell>
                   <TableCell>
-                    <Badge className={variant.stock > 0 ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}>
-                      {variant.stock}
+                    <Badge className={variant.stock_quantity > 0 ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}>
+                      {variant.stock_quantity}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -410,25 +393,25 @@ function ProductDetail() {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         title={variant.is_active ? "Ngưng bán" : "Bật bán"}
                         onClick={() => handleToggleStatus(variant)}
                       >
                         <Power className={`w-4 h-4 ${variant.is_active ? 'text-green-600' : 'text-gray-400'}`} />
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         title="Chỉnh sửa"
                         onClick={() => handleEditVariant(variant)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         title="In tem mã vạch"
                         onClick={() => handlePrintBarcode(variant)}
                       >

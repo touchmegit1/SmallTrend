@@ -51,7 +51,7 @@ function App() {
                 {/* Module 3: Products (Sản phẩm) */}
                 <Route path="products" element={<PublicRoute> <ProductListScreen /> </PublicRoute>} />
                 <Route path="products/addproduct" element={<PublicRoute> <AddNewProduct /> </PublicRoute>} />
-                <Route path="products/detail" element={<PublicRoute> <ProductDetail /> </PublicRoute>} />
+                <Route path="products/detail/:id" element={<PublicRoute> <ProductDetail /> </PublicRoute>} />
                 <Route path="products/addproduct_variant" element={<PublicRoute> <AddNewProductVariant /> </PublicRoute> } />
                 <Route path="products/categories" element={<PublicRoute> <Category_Brand /> </PublicRoute>} />
                 <Route path="products/suppliers" element={<PublicRoute> <SuppliersScreen /> </PublicRoute>} />

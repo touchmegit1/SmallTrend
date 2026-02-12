@@ -237,7 +237,6 @@
       "updated_at": "2024-01-01T00:00:00Z"
     }
   ],
-
   "brands": [
     {
       "id": 1,
@@ -294,7 +293,6 @@
       "updated_at": "2024-01-01T00:00:00Z"
     }
   ],
-
   "products": [
     {
       "id": 1,
@@ -303,6 +301,7 @@
       "category_id": 1,
       "brand_id": 1,
       "image_url": "",
+      "unit": "Chai",
       "is_active": true,
       "variant_count": 2,
       "total_stock": 250,
@@ -316,6 +315,7 @@
       "category_id": 2,
       "brand_id": 2,
       "image_url": "",
+      "unit": "Chai",
       "is_active": true,
       "variant_count": 2,
       "total_stock": 420,
@@ -329,6 +329,7 @@
       "category_id": 3,
       "brand_id": 3,
       "image_url": "",
+      "unit": "Gói",
       "is_active": true,
       "variant_count": 2,
       "total_stock": 150,
@@ -342,6 +343,7 @@
       "category_id": 4,
       "brand_id": 4,
       "image_url": "",
+      "unit": "Túi",
       "is_active": true,
       "variant_count": 1,
       "total_stock": 100,
@@ -355,6 +357,7 @@
       "category_id": 5,
       "brand_id": 5,
       "image_url": "",
+      "unit": "Hộp",
       "is_active": true,
       "variant_count": 1,
       "total_stock": 50,
@@ -368,6 +371,7 @@
       "category_id": 6,
       "brand_id": 6,
       "image_url": "",
+      "unit": "Thùng",
       "is_active": true,
       "variant_count": 1,
       "total_stock": 500,
@@ -375,15 +379,16 @@
       "updated_at": "2024-01-15T00:00:00Z"
     }
   ],
-
   "product_variants": [
     {
       "id": 1,
       "product_id": 1,
       "sku": "MILK-180ML",
       "barcode": "893456700001",
-      "size": "180ml",
-      "color": null,
+      "attributes": {
+        "size": "180ml",
+        "flavor": "Nguyên bản"
+      },
       "cost_price": 6000,
       "sell_price": 8000,
       "stock_quantity": 200,
@@ -394,8 +399,10 @@
       "product_id": 1,
       "sku": "MILK-1L",
       "barcode": "893456700002",
-      "size": "1L",
-      "color": null,
+      "attributes": {
+        "size": "1L",
+        "flavor": "Nguyên bản"
+      },
       "cost_price": 28000,
       "sell_price": 35000,
       "stock_quantity": 50,
@@ -406,8 +413,9 @@
       "product_id": 2,
       "sku": "COKE-330ML",
       "barcode": "893456700003",
-      "size": "330ml",
-      "color": null,
+      "attributes": {
+        "size": "330ml"
+      },
       "cost_price": 8000,
       "sell_price": 10000,
       "stock_quantity": 300,
@@ -418,8 +426,9 @@
       "product_id": 2,
       "sku": "COKE-1.5L",
       "barcode": "893456700004",
-      "size": "1.5L",
-      "color": null,
+      "attributes": {
+        "size": "1.5L"
+      },
       "cost_price": 15000,
       "sell_price": 20000,
       "stock_quantity": 120,
@@ -430,8 +439,10 @@
       "product_id": 3,
       "sku": "OISHI-80G",
       "barcode": "893456700005",
-      "size": "80g",
-      "color": "Phô mai",
+      "attributes": {
+        "size": "80g",
+        "flavor": "Phô mai"
+      },
       "cost_price": 10000,
       "sell_price": 15000,
       "stock_quantity": 150,
@@ -442,8 +453,10 @@
       "product_id": 3,
       "sku": "OISHI-120G",
       "barcode": "893456700006",
-      "size": "120g",
-      "color": "BBQ",
+      "attributes": {
+        "size": "120g",
+        "flavor": "BBQ"
+      },
       "cost_price": 15000,
       "sell_price": 20000,
       "stock_quantity": 0,
@@ -454,8 +467,9 @@
       "product_id": 4,
       "sku": "AJI-400G",
       "barcode": "893456700007",
-      "size": "400g",
-      "color": null,
+      "attributes": {
+        "size": "400g"
+      },
       "cost_price": 20000,
       "sell_price": 28000,
       "stock_quantity": 100,
@@ -466,8 +480,9 @@
       "product_id": 5,
       "sku": "OMO-3.5KG",
       "barcode": "893456700008",
-      "size": "3.5kg",
-      "color": null,
+      "attributes": {
+        "size": "3.5kg"
+      },
       "cost_price": 110000,
       "sell_price": 150000,
       "stock_quantity": 50,
@@ -478,8 +493,10 @@
       "product_id": 6,
       "sku": "HAOHAO-75G",
       "barcode": "893456700009",
-      "size": "75g",
-      "color": "Chua cay",
+      "attributes": {
+        "size": "75g",
+        "flavor": "Chua Cay"
+      },
       "cost_price": 3000,
       "sell_price": 5000,
       "stock_quantity": 500,

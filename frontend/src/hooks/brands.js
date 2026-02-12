@@ -16,8 +16,7 @@ export const useFetchBrands = () => {
       setError(err.response?.data?.message || 'Lỗi khi tải thương hiệu');
       setBrands([]);
     } finally {
-      setLoading(false);
-    }
+      setLoading(false);    }
   };
 
   useEffect(() => {

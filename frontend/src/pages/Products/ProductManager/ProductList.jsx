@@ -52,7 +52,7 @@ export function ProductListScreen() {
     .filter((product) => {
       const brandName = getBrandName(product.brand_id);
       const categoryName = getCategoryName(product.category_id);
-      
+
       const matchesSearch =
         product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         brandName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -61,7 +61,7 @@ export function ProductListScreen() {
         filterCategory === "all" || categoryName === filterCategory;
 
       const matchesStatus =
-        filterStatus === "all" || 
+        filterStatus === "all" ||
         (filterStatus === "active" && product.is_active) ||
         (filterStatus === "inactive" && !product.is_active);
 
@@ -84,7 +84,7 @@ export function ProductListScreen() {
       }
 
       if (!aValue || !bValue) return 0;
-      
+
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
@@ -112,9 +112,10 @@ export function ProductListScreen() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveProduct = (updatedProduct) => {
+  const handleSaveProduct = async (updatedProduct) => {
     setToastMessage("Cập nhật sản phẩm thành công!");
     setIsEditModalOpen(false);
+    await fetchProducts(); // Refresh the product list
     setTimeout(() => setToastMessage(""), 3000);
   };
 
@@ -252,68 +253,70 @@ export function ProductListScreen() {
                 </TableRow>
               ) : (
                 filteredProducts.map((product) => (
-                <TableRow className="hover:bg-gray-200" key={product.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Package className="w-5 h-5 text-gray-400" />
+                  <TableRow className="hover:bg-gray-200" key={product.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Package className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{product.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {getBrandName(product.brand_id)}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {getBrandName(product.brand_id)}
-                        </p>
+                    </TableCell>
+                    <TableCell>{getBrandName(product.brand_id)}</TableCell>
+                    <TableCell>
+                      <Badge className="bg-neutral-300" variant="secondary">{getCategoryName(product.category_id)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className="bg-purple-100 text-purple-700">
+                        {product.variant_count} biến thể
+                      </Badge>
+
+                    </TableCell>
+                    <TableCell>
+                      {product.is_active ? (
+                        <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
+                      ) : (
+                        <Badge className="bg-red-100 text-red-700">Ngừng bán</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{product.created_at}</TableCell>
+
+                    <TableCell className="text-center">
+                      <div className="flex justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => navigate(`/products/detail/${product.id}`, {
+                            state: { product }
+                          })}
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleToggleStatus(product)}
+                          title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
+                        >
+                          <Power className={`w-4 h-4 ${product.is_active ? 'text-green-600' : 'text-gray-400'}`} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditClick(product)}
+                          title="Chỉnh sửa"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getBrandName(product.brand_id)}</TableCell>
-                  <TableCell>
-                    <Badge className="bg-neutral-300" variant="secondary">{getCategoryName(product.category_id)}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className="bg-purple-100 text-purple-700">
-                      {product.variant_count} biến thể
-                    </Badge>
-
-                  </TableCell>
-                  <TableCell>
-                    {product.is_active ? (
-                      <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
-                    ) : (
-                      <Badge className="bg-red-100 text-red-700">Ngừng bán</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{product.created_at}</TableCell>
-
-                  <TableCell className="text-center">
-                    <div className="flex justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => navigate("/products/detail", { state: { product } })}
-                        title="Xem chi tiết"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleToggleStatus(product)}
-                        title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
-                      >
-                        <Power className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditClick(product)}
-                        title="Chỉnh sửa"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
             </TableBody>

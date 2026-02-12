@@ -5,15 +5,19 @@ import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
 import { Textarea } from "../ProductComponents/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import { useFetchCategories } from "../../../hooks/categories";
+import { useFetchBrands } from "../../../hooks/brands";
+import api from "../../../config/axiosConfig";
 
 export function EditProductModal({ product, isOpen, onClose, onSave }) {
+  const { categories } = useFetchCategories();
+  const { brands } = useFetchBrands();
   const [formData, setFormData] = useState({
     name: "",
-    brand: "",
-    category: "",
+    brand_id: "",
+    category_id: "",
     unit: "",
     description: "",
-    tax: "10%",
   });
   const [images, setImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -23,11 +27,10 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
     if (product && isOpen) {
       setFormData({
         name: product.name || "",
-        brand: product.brand || "",
-        category: product.category || "",
+        brand_id: product.brand_id || "",
+        category_id: product.category_id || "",
         unit: product.unit || "",
         description: product.description || "",
-        tax: "10%",
       });
     }
   }, [product, isOpen]);
@@ -75,10 +78,16 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave({ ...product, ...formData });
-    onClose();
+    try {
+      await api.put(`/products/${product.id}`, formData);
+      onSave({ ...product, ...formData });
+      onClose();
+    } catch (error) {
+      console.error("Error updating product:", error);
+      alert("Lỗi khi cập nhật sản phẩm!");
+    }
   };
 
   return (
@@ -117,45 +126,43 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 <div>
                   <Label>Danh mục <span className="text-red-600">*</span></Label>
                   <select
-                    name="category"
+                    name="category_id"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-                    value={formData.category}
+                    value={formData.category_id}
                     onChange={handleChange}
                     required
                   >
                     <option value="">Chọn danh mục</option>
-                    <option value="Nước giải khát">Nước giải khát</option>
-                    <option value="Mì ăn liền">Mì ăn liền</option>
-                    <option value="Sữa">Sữa</option>
-                    <option value="Bánh kẹo">Bánh kẹo</option>
-                    <option value="Gia vị">Gia vị</option>
-                  </select>
-                </div>
-
-                <div>
-                  <Label>Thuế <span className="text-red-600">*</span></Label>
-                  <select
-                    name="tax"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-                    value={formData.tax}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Chọn loại thuế</option>
-                    <option value="10%">10%</option>
-                    <option value="5%">5%</option>
-                    <option value="0%">0%</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <Label>Thương hiệu</Label>
+                  <select
+                    name="brand_id"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                    value={formData.brand_id}
+                    onChange={handleChange}
+                  >
+                    <option value="">Chọn thương hiệu</option>
+                    {brands.map((brand) => (
+                      <option key={brand.id} value={brand.id}>{brand.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <Label>Đơn vị <span className="text-red-600">*</span></Label>
                   <Input
                     className="text-md bg-gray-200 border border-gray-200 rounded-lg"
-                    placeholder="Nhập tên thương hiệu"
-                    name="brand"
-                    value={formData.brand}
+                    placeholder="VD: Chai, Hộp, Gói, Kg..."
+                    name="unit"
+                    value={formData.unit}
                     onChange={handleChange}
+                    required
                   />
                 </div>
 

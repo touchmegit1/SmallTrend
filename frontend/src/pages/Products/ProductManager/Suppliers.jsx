@@ -7,55 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/c
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Building2, X, Save } from "lucide-react";
-
-const mockSuppliers = [
-  {
-    id: 1,
-    name: "Vinamilk",
-    contact: "Nguyễn Văn A",
-    phone: "0912345678",
-    email: "contact@vinamilk.com",
-    address: "123 Đường ABC, Q.1, TP.HCM",
-    status: "active",
-    products_count: 25,
-  },
-  {
-    id: 2,
-    name: "Coca-Cola Việt Nam",
-    contact: "Trần Thị B",
-    phone: "0987654321",
-    email: "info@cocacola.vn",
-    address: "456 Đường XYZ, Q.3, TP.HCM",
-    status: "active",
-    products_count: 15,
-  },
-  {
-    id: 3,
-    name: "TH True Milk",
-    contact: "Lê Văn C",
-    phone: "0901234567",
-    email: "sales@thmilk.vn",
-    address: "789 Đường DEF, Q.Tân Bình, TP.HCM",
-    status: "active",
-    products_count: 18,
-  },
-  {
-    id: 4,
-    name: "Oishi",
-    contact: "Phạm Thị D",
-    phone: "0923456789",
-    email: "contact@oishi.vn",
-    address: "321 Đường GHI, Q.Bình Thạnh, TP.HCM",
-    status: "inactive",
-    products_count: 12,
-  },
-];
+import { useFetchSuppliers } from "../../../hooks/suppliers";
 
 export function SuppliersScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
+  const { suppliers, loading, error } = useFetchSuppliers();
   const [formData, setFormData] = useState({
     name: "",
     contact: "",
@@ -71,13 +30,15 @@ export function SuppliersScreen() {
     }
   }, [editingSupplier, isModalOpen]);
 
-  const filteredSuppliers = mockSuppliers.filter((supplier) => {
+  const filteredSuppliers = (suppliers || []).filter((supplier) => {
     const matchesSearch =
       supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       supplier.contact.toLowerCase().includes(searchQuery.toLowerCase()) ||
       supplier.phone.includes(searchQuery);
 
-    const matchesStatus = filterStatus === "all" || supplier.status === filterStatus;
+    const matchesStatus = filterStatus === "all" || 
+      (filterStatus === "active" && supplier.is_active) ||
+      (filterStatus === "inactive" && !supplier.is_active);
 
     return matchesSearch && matchesStatus;
   });
@@ -104,6 +65,9 @@ export function SuppliersScreen() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  if (loading) return <p>Đang tải nhà cung cấp...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="space-y-6">

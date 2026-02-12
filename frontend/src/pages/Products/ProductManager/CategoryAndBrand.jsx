@@ -6,6 +6,8 @@ import { Badge } from "../ProductComponents/badge";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
+import { useFetchCategories } from "../../../hooks/categories";
+import { useFetchBrands } from "../../../hooks/brands";
 
 const Category_Brand = () => {
   const [activeTab, setActiveTab] = useState('categories');
@@ -17,17 +19,8 @@ const Category_Brand = () => {
   const [toastMessage, setToastMessage] = useState("");
   const [formData, setFormData] = useState({ name: '', parent: '', status: 'active' });
 
-  const [categories] = useState([
-    { id: 1, name: 'Đồ uống', parent: null, productCount: 45, status: 'active', created_at: '15/01/2025 08:30' },
-    { id: 2, name: 'Thực phẩm', parent: null, productCount: 78, status: 'active', created_at: '16/01/2025 10:15' },
-    { id: 3, name: 'Nước ngọt', parent: 'Đồ uống', productCount: 12, status: 'active', created_at: '17/01/2025 14:20' },
-  ]);
-
-  const [brands] = useState([
-    { id: 1, name: 'Coca-Cola', country: 'Mỹ', productCount: 15, status: 'active', created_at: '15/01/2025 08:30' },
-    { id: 2, name: 'Vinamilk', country: 'Việt Nam', productCount: 23, status: 'active', created_at: '16/01/2025 10:15' },
-    { id: 3, name: 'Oishi', country: 'Thái Lan', productCount: 8, status: 'active', created_at: '17/01/2025 14:20' },
-  ]);
+  const { categories, loading: catLoading, error: catError } = useFetchCategories();
+  const { brands, loading: brandLoading, error: brandError } = useFetchBrands();
 
   const handleAdd = () => {
     setModalMode('add');
@@ -61,10 +54,13 @@ const Category_Brand = () => {
     setShowModal(false);
   };
 
-  const data = activeTab === 'categories' ? categories : brands;
+  const data = activeTab === 'categories' ? (categories || []) : (brands || []);
   const filteredData = data.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    item.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (catLoading || brandLoading) return <p>Đang tải...</p>;
+  if (catError || brandError) return <p className="text-red-500">{catError || brandError}</p>;
 
   return (
     <div className="space-y-6">
