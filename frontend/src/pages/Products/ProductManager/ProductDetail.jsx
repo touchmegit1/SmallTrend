@@ -84,52 +84,93 @@ function ProductDetail() {
   };
 
   const handlePrintBarcode = (variant) => {
-    // Create print content
-    const printWindow = window.open('', '', 'width=400,height=300');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>In tem mã vạch -  ${product.name} ${product.unit} ${Object.values(variant.attributes || {})[0] || ""}</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              display: flex; 
-              justify-content: center; 
-              align-items: center; 
-              height: 100vh; 
-              margin: 0;
-            }
-            .barcode-label {
-              text-align: center;
-              border: 2px solid #000;
-              padding: 20px;
-              width: 300px;
-            }
-            .product-name { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
-            .barcode { font-size: 24px; font-family: 'Courier New', monospace; margin: 15px 0; }
-            .price { font-size: 18px; font-weight: bold; color: #000; }
-            .sku { font-size: 12px; color: #666; margin-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="barcode-label">
-            <div class="product-name">
-            ${product.name}-${product.unit}:${Object.values(variant.attributes || {})[0] || ""}
-            </div>
-            <div class="barcode">${variant.barcode || 'N/A'}</div>
-            <div class="price">${(variant.sell_price || 0).toLocaleString('vi-VN')}đ</div>
-            <div class="sku">SKU: ${variant.sku}</div>
+  const printWindow = window.open("", "", "width=400,height=300");
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>In tem mã vạch ${product.name} - ${product.unit} ${Object.values(variant.attributes || {})[0] || ""}</title>
+
+        <!-- Import JsBarcode CDN -->
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0;
+          }
+
+          .barcode-label {
+            text-align: center;
+            border: 2px solid #000;
+            padding: 15px;
+            width: 280px;
+          }
+
+          .product-name { 
+            font-size: 13px; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+          }
+
+          .price { 
+            font-size: 16px; 
+            font-weight: bold; 
+            margin-top: 5px;
+          }
+
+          .sku { 
+            font-size: 11px; 
+            color: #666; 
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="barcode-label">
+          <div class="product-name">
+            ${product.name} - ${product.unit} ${Object.values(variant.attributes || {})[0] || ""}
           </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
-  };
+
+          <svg id="barcode"></svg>
+
+          <div class="price">
+            ${(variant.sell_price || 0).toLocaleString("vi-VN")}đ
+          </div>
+
+          <div class="sku">
+            SKU: ${variant.sku}
+          </div>
+        </div>
+
+        <script>
+          JsBarcode("#barcode", "${variant.barcode || variant.sku}", {
+            format: "CODE128",
+            width: 2,
+            height: 60,
+            displayValue: true,
+            fontSize: 14
+          });
+
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              window.close();
+            }, 300);
+          };
+        </script>
+
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+};
+
 
   // Check for message from AddNewProductVariant
   React.useEffect(() => {

@@ -19,6 +19,7 @@
     "bootstrap": "^5.3.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jsbarcode": "^3.12.3",
     "json-server": "^1.0.0-beta.5",
     "lucide-react": "^0.562.0",
     "react": "^18.2.0",
