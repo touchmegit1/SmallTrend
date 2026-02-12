@@ -50,11 +50,19 @@ function ProductDetail() {
     setShowConfirm(true);
   };
 
-  const confirmToggleStatus = () => {
-    // Call API to toggle status
-    fetchVariants();
-    setShowConfirm(false);
-    setSelectedVariant(null);
+  const confirmToggleStatus = async () => {
+    try {
+      await api.put(`/product-variants/${selectedVariant.id}/toggle-status`);
+      setToastMessage(`Đã ${selectedVariant.is_active ? 'ngừng' : 'kích hoạt'} bán biến thể!`);
+      fetchVariants();
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      setToastMessage("Lỗi khi thay đổi trạng thái!");
+      setTimeout(() => setToastMessage(""), 3000);
+    } finally {
+      setShowConfirm(false);
+      setSelectedVariant(null);
+    }
   };
 
   const handleSaveProduct = (updatedProduct) => {

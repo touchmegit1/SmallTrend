@@ -24,6 +24,8 @@ export function ProductListScreen() {
   const [toastMessage, setToastMessage] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [productToToggle, setProductToToggle] = useState(null);
   const { products, loading, error, fetchProducts } = useFetchProducts();
   const { categories } = useFetchCategories();
   const { brands } = useFetchBrands();
@@ -95,15 +97,23 @@ export function ProductListScreen() {
       return 0;
     });
 
-  const handleToggleStatus = async (product) => {
+  const handleToggleStatus = (product) => {
+    setProductToToggle(product);
+    setShowConfirm(true);
+  };
+
+  const confirmToggleStatus = async () => {
     try {
-      await api.put(`/products/${product.id}/toggle-status`);
-      setToastMessage(`Đã ${product.is_active ? 'ngừng' : 'kích hoạt'} bán sản phẩm!`);
+      await api.put(`/products/${productToToggle.id}/toggle-status`);
+      setToastMessage(`Đã ${productToToggle.is_active ? 'ngừng' : 'kích hoạt'} bán sản phẩm!`);
       fetchProducts();
       setTimeout(() => setToastMessage(""), 3000);
     } catch (err) {
       setToastMessage("Lỗi khi thay đổi trạng thái!");
       setTimeout(() => setToastMessage(""), 3000);
+    } finally {
+      setShowConfirm(false);
+      setProductToToggle(null);
     }
   };
 
@@ -136,7 +146,33 @@ export function ProductListScreen() {
 
   return (
     <div className="space-y-6">
-      {/* Alter */}
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/50 shadow-xl backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4">Xác nhận thay đổi trạng thái</h3>
+            <p className="text-gray-600 mb-6">
+              Bạn có muốn sửa trạng thái của sản phẩm này thành {productToToggle?.is_active ? "ngừng bán" : "đang bán"}?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="danger"
+                onClick={() => setShowConfirm(false)}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="primary"
+                onClick={confirmToggleStatus}
+              >
+                Xác nhận
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Message */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50">
           <div className="relative flex gap-4 bg-green-50 border border-green-200 rounded-xl px-8 py-5 min-w-105 shadow-lg">
