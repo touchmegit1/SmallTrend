@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Edit, Trash2, Package, Search, CheckCircle, Tag, FolderTree } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
@@ -8,6 +8,7 @@ import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
+import { useFetchProducts } from "../../../hooks/products";
 
 const Category_Brand = () => {
   const [activeTab, setActiveTab] = useState('categories');
@@ -17,14 +18,43 @@ const Category_Brand = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [toastMessage, setToastMessage] = useState("");
-  const [formData, setFormData] = useState({ name: '', parent: '', status: 'active' });
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    country: '',
+    status: 'active'
+  });
+
 
   const { categories, loading: catLoading, error: catError } = useFetchCategories();
   const { brands, loading: brandLoading, error: brandError } = useFetchBrands();
+  const { products } = useFetchProducts();
+
+  const productCountMap = useMemo(() => {
+    const map = {};
+
+    products?.forEach(p => {
+      if (activeTab === "categories") {
+        map[p.category_id] = (map[p.category_id] || 0) + 1;
+      }
+      if (activeTab === "brands") {
+        map[p.brand_id] = (map[p.brand_id] || 0) + 1;
+      }
+    });
+
+    return map;
+  }, [products, activeTab]);
+
 
   const handleAdd = () => {
     setModalMode('add');
-    setFormData({ name: '', parent: '', status: 'active' });
+    setFormData({
+      name: '',
+      description: '',
+      country: '',
+      status: 'active'
+    });
+
     setSelectedItem(null);
     setShowModal(true);
   };
@@ -32,7 +62,13 @@ const Category_Brand = () => {
   const handleEdit = (item) => {
     setModalMode('edit');
     setSelectedItem(item);
-    setFormData({ name: item.name, parent: item.parent || '', status: item.status });
+    setFormData({
+      name: item.name,
+      description: item.description || '',
+      country: item.country || '',
+      status: item.status || 'active'
+    });
+
     setShowModal(true);
   };
 
@@ -55,7 +91,7 @@ const Category_Brand = () => {
   };
 
   const data = activeTab === 'categories' ? (categories || []) : (brands || []);
-  const filteredData = data.filter(item => 
+  const filteredData = data.filter(item =>
     item.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -92,22 +128,20 @@ const Category_Brand = () => {
           <div className="flex">
             <button
               onClick={() => setActiveTab('categories')}
-              className={`px-6 py-3 font-medium transition-colors ${
-                activeTab === 'categories'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
+              className={`px-6 py-3 font-medium transition-colors ${activeTab === 'categories'
+                ? 'border-b-2 border-blue-600 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+                }`}
             >
               <FolderTree className="w-4 h-4 inline mr-2" />
               Danh mục
             </button>
             <button
               onClick={() => setActiveTab('brands')}
-              className={`px-6 py-3 font-medium transition-colors ${
-                activeTab === 'brands'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
+              className={`px-6 py-3 font-medium transition-colors ${activeTab === 'brands'
+                ? 'border-b-2 border-blue-600 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+                }`}
             >
               <Tag className="w-4 h-4 inline mr-2" />
               Thương hiệu
@@ -141,11 +175,10 @@ const Category_Brand = () => {
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead>Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</TableHead>
-                {activeTab === 'categories' ? (
-                  <TableHead>Danh mục cha</TableHead>
-                ) : (
+                {activeTab === "brands" && (
                   <TableHead>Quốc gia</TableHead>
                 )}
+
                 <TableHead>Số sản phẩm</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Thời gian tạo</TableHead>
@@ -157,9 +190,8 @@ const Category_Brand = () => {
                 <TableRow key={item.id} className="hover:bg-gray-200">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        activeTab === 'categories' ? 'bg-purple-100' : 'bg-blue-100'
-                      }`}>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${activeTab === 'categories' ? 'bg-purple-100' : 'bg-blue-100'
+                        }`}>
                         {activeTab === 'categories' ? (
                           <FolderTree className="w-5 h-5 text-purple-600" />
                         ) : (
@@ -169,15 +201,14 @@ const Category_Brand = () => {
                       <span className="font-medium">{item.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {activeTab === 'categories' ? (
-                      item.parent ? <Badge className="bg-neutral-300">{item.parent}</Badge> : '-'
-                    ) : (
+                  {activeTab === "brands" && (
+                    <TableCell>
                       <span className="text-gray-600">{item.country}</span>
-                    )}
-                  </TableCell>
+                    </TableCell>
+                  )}
+
                   <TableCell>
-                    <Badge className="bg-blue-100 text-blue-700">{item.productCount} sản phẩm</Badge>
+                    <Badge className="bg-blue-100 text-blue-700">{productCountMap[item.id] || 0} sản phẩm</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge className="bg-green-100 text-green-700">Hoạt động</Badge>
@@ -215,44 +246,50 @@ const Category_Brand = () => {
                 <Input
                   className="text-md bg-gray-200 border border-gray-200 rounded-lg mt-1"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder={`Nhập tên ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}`}
                 />
               </div>
-              {activeTab === 'categories' && (
-                <div>
-                  <Label>Danh mục cha</Label>
-                  <select 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white mt-1"
-                    value={formData.parent}
-                    onChange={(e) => setFormData({...formData, parent: e.target.value})}
-                  >
-                    <option value="">-- Không có --</option>
-                    <option value="Đồ uống">Đồ uống</option>
-                    <option value="Thực phẩm">Thực phẩm</option>
-                  </select>
-                </div>
-              )}
+
               {activeTab === 'brands' && (
                 <div>
                   <Label>Quốc gia</Label>
                   <Input
-                    className="text-md bg-gray-200 border border-gray-200 rounded-lg mt-1"
+                    className="text-md bg-gray-100 border border-gray-300 rounded-lg mt-1"
+                    value={formData.country || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, country: e.target.value })
+                    }
                     placeholder="VD: Việt Nam, Mỹ, Thái Lan..."
                   />
                 </div>
               )}
+
               <div>
                 <Label>Trạng thái</Label>
-                <select 
+                <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white mt-1"
                   value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Không hoạt động</option>
                 </select>
               </div>
+
+              <div>
+                <Label>Mô tả</Label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 mt-1 text-sm"
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Nhập mô tả..."
+                />
+              </div>
+
             </div>
             <div className="p-6 border-t border-gray-200 flex gap-3">
               <Button variant="danger" className="flex-1" onClick={() => setShowModal(false)}>
@@ -279,7 +316,7 @@ const Category_Brand = () => {
               </p>
               <p className="text-sm text-red-600">
                 {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
-                <span className="font-semibold">{selectedItem?.productCount} sản phẩm</span>
+                <span className="font-semibold">{productCountMap[selectedItem?.id] || 0} sản phẩm</span>
               </p>
             </div>
             <div className="p-6 border-t border-gray-200 flex gap-3">
