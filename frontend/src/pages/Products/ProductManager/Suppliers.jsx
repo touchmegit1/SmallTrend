@@ -32,16 +32,19 @@ export function SuppliersScreen() {
 
   const filteredSuppliers = (suppliers || []).filter((supplier) => {
     const matchesSearch =
-      supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supplier.contact.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supplier.phone.includes(searchQuery);
+      supplier.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      supplier.contact_person?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      supplier.phone?.includes(searchQuery) ||
+      supplier.email?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = filterStatus === "all" || 
-      (filterStatus === "active" && supplier.is_active) ||
-      (filterStatus === "inactive" && !supplier.is_active);
+    const matchesStatus = 
+      filterStatus === "all" || 
+      (filterStatus === "active" && supplier.status === "active") ||
+      (filterStatus === "inactive" && supplier.status === "inactive");
 
     return matchesSearch && matchesStatus;
   });
+
 
   const handleAdd = () => {
     setEditingSupplier(null);
@@ -122,7 +125,6 @@ export function SuppliersScreen() {
                 <TableHead>Nhà cung cấp</TableHead>
                 <TableHead>Liên hệ</TableHead>
                 <TableHead>Địa chỉ</TableHead>
-                <TableHead>Sản phẩm</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-center">Thao tác</TableHead>
               </TableRow>
@@ -138,6 +140,7 @@ export function SuppliersScreen() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">{supplier.name}</p>
+                        <p className="text-xs text-gray-500">{supplier.contact_person}</p>
                         <p className="text-xs text-gray-500">{supplier.contact}</p>
                       </div>
                     </div>
@@ -161,12 +164,7 @@ export function SuppliersScreen() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className="bg-purple-100 text-purple-700">
-                      {supplier.products_count} sản phẩm
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {supplier.status === "active" ? (
+                    {supplier.status === 'active' ? (
                       <Badge className="bg-green-100 text-green-700">Đang hợp tác</Badge>
                     ) : (
                       <Badge className="bg-red-100 text-red-700">Ngưng hợp tác</Badge>

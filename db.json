@@ -552,52 +552,57 @@
     }
   ],
   "suppliers": [
-    {
-      "id": 1,
-      "name": "Công ty CP Vinamilk",
-      "contact_person": "Nguyễn Văn Sữa",
-      "phone": "0901234567",
-      "email": "vinamilk@supplier.vn",
-      "address": "Số 10 Tân Trào, P.Tân Phú, Q.7, TP.HCM",
-      "created_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": 2,
-      "name": "Công ty Coca-Cola Việt Nam",
-      "contact_person": "Trần Thị Ngọt",
-      "phone": "0912345678",
-      "email": "cocacola@supplier.vn",
-      "address": "977 Đại lộ Võ Văn Kiệt, Q.5, TP.HCM",
-      "created_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": 3,
-      "name": "Công ty Liwayway (Oishi)",
-      "contact_person": "Lê Văn Giòn",
-      "phone": "0923456789",
-      "email": "oishi@supplier.vn",
-      "address": "Lô D-12C, KCN Tân Bình, Q.Tân Phú, TP.HCM",
-      "created_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": 4,
-      "name": "Công ty TNHH Ajinomoto VN",
-      "contact_person": "Phạm Thị Ngon",
-      "phone": "0934567890",
-      "email": "ajinomoto@supplier.vn",
-      "address": "Lô II-1, KCN Biên Hòa, Đồng Nai",
-      "created_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": 5,
-      "name": "Công ty Unilever Việt Nam (OMO)",
-      "contact_person": "Hoàng Văn Sạch",
-      "phone": "0945678901",
-      "email": "unilever@supplier.vn",
-      "address": "156 Nguyễn Lương Bằng, Q.7, TP.HCM",
-      "created_at": "2024-01-01T00:00:00Z"
-    }
-  ],
+  {
+    "id": 1,
+    "name": "Công ty CP Vinamilk",
+    "contact_person": "Nguyễn Văn Sữa",
+    "phone": "0901234567",
+    "email": "vinamilk@supplier.vn",
+    "address": "Số 10 Tân Trào, P.Tân Phú, Q.7, TP.HCM",
+    "status": "active",
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "name": "Công ty Coca-Cola Việt Nam",
+    "contact_person": "Trần Thị Ngọt",
+    "phone": "0912345678",
+    "email": "cocacola@supplier.vn",
+    "address": "977 Đại lộ Võ Văn Kiệt, Q.5, TP.HCM",
+    "status": "active",
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": 3,
+    "name": "Công ty Liwayway (Oishi)",
+    "contact_person": "Lê Văn Giòn",
+    "phone": "0923456789",
+    "email": "oishi@supplier.vn",
+    "address": "Lô D-12C, KCN Tân Bình, Q.Tân Phú, TP.HCM",
+    "status": "active",
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": 4,
+    "name": "Công ty TNHH Ajinomoto VN",
+    "contact_person": "Phạm Thị Ngon",
+    "phone": "0934567890",
+    "email": "ajinomoto@supplier.vn",
+    "address": "Lô II-1, KCN Biên Hòa, Đồng Nai",
+    "status": "active",
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": 5,
+    "name": "Công ty Unilever Việt Nam (OMO)",
+    "contact_person": "Hoàng Văn Sạch",
+    "phone": "0945678901",
+    "email": "unilever@supplier.vn",
+    "address": "156 Nguyễn Lương Bằng, Q.7, TP.HCM",
+    "status": "active",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+],
   "purchase_orders": [
     {
       "id": 1,
