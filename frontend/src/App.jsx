@@ -8,6 +8,9 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
 import CRMcomplain from './pages/CRM/complain'
+import TicketCenter from './pages/Admin/TicketCenter'
+import AuditLogPage from './pages/Admin/AuditLogPage'
+import AiChatPage from './pages/Admin/AiChatPage'
 function App() {
     return (
         <Routes>
@@ -68,6 +71,23 @@ function App() {
                 <Route path="reports/sales" element={<div className="p-4">Báo cáo doanh thu</div>} />
                 <Route path="reports/inventory" element={<div className="p-4">Báo cáo kho</div>} />
                 <Route path="reports/logs" element={<div className="p-4">Nhật ký hoạt động</div>} />
+                <Route path="reports/ai-chat" element={
+                    <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                        <AiChatPage />
+                    </ProtectedRoute>
+                } />
+
+                {/* Module 7: Admin (Quản trị) */}
+                <Route path="admin/ticket-center" element={
+                    <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <TicketCenter />
+                    </ProtectedRoute>
+                } />
+                <Route path="admin/audit-logs" element={
+                    <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <AuditLogPage />
+                    </ProtectedRoute>
+                } />
             </Route>
         </Routes>
     )
