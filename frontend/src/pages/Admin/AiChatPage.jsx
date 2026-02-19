@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
     MessageCircle,
     Send,
@@ -9,69 +9,38 @@ import {
     Target,
     Calendar,
     Sparkles,
-    MoreVertical
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import aiChatService from '../../services/aiChatService';
+    MoreVertical,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import aiChatService from "../../services/aiChatService";
 
 const AiChatPage = () => {
     // State management
     const [messages, setMessages] = useState([]);
-    const [inputMessage, setInputMessage] = useState('');
+    const [inputMessage, setInputMessage] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const [sessionId, setSessionId] = useState(null);
-    const [contextDate, setContextDate] = useState(new Date().toISOString().split('T')[0]);
+    const [contextDate, setContextDate] = useState(
+        new Date().toISOString().split("T")[0],
+    );
     const [stats, setStats] = useState({
         dailyQueryCount: 0,
         avgResponseTime: 0,
-        accuracyPercentage: 0
+        accuracyPercentage: 0,
     });
     const [loading, setLoading] = useState(true);
 
-    // Ref for auto-scrolling
     const messagesEndRef = useRef(null);
 
-    // Initialize with mock conversation
-    useEffect(() => {
-        const initialMessages = [
-            {
-                id: 1,
-                type: 'ai',
-                content: 'Xin chào! Tôi là trợ lý AI của bạn. Tôi có thể giúp gì cho việc quản lý cửa hàng hôm nay?',
-                timestamp: new Date(Date.now() - 300000)
-            },
-            {
-                id: 2,
-                type: 'user',
-                content: 'Cho tôi xem doanh thu 7 ngày gần nhất',
-                timestamp: new Date(Date.now() - 240000)
-            },
-            {
-                id: 3,
-                type: 'ai',
-                content: 'Doanh thu 7 ngày gần nhất tăng 12% so với tuần trước.\n\n📊 **Tổng doanh thu:** 45,200,000 VNĐ\n📦 **Tổng đơn hàng:** 320 đơn\n💰 **Giá trị trung bình:** 141,250 VNĐ/đơn\n\n🏆 **Top sản phẩm:**\n1. Áo thun basic - 85 sản phẩm\n2. Quần jean slim - 62 sản phẩm\n3. Giày sneaker - 48 sản phẩm',
-                timestamp: new Date(Date.now() - 180000)
-            }
-        ];
-        setMessages(initialMessages);
-
-        // Generate session ID
-        setSessionId(`session-${Date.now()}`);
-
-        // Load statistics
-        loadStatistics();
-    }, []);
-
-    // Auto-scroll to bottom when messages change
     useEffect(() => {
         scrollToBottom();
     }, [messages, isTyping]);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
     const loadStatistics = async () => {
@@ -79,12 +48,12 @@ const AiChatPage = () => {
             const statsData = await aiChatService.getStatistics();
             setStats(statsData);
         } catch (error) {
-            console.error('Error loading statistics:', error);
+            console.error("Error loading statistics:", error);
             // Use mock data if API fails
             setStats({
                 dailyQueryCount: 142,
                 avgResponseTime: 1.2,
-                accuracyPercentage: 98
+                accuracyPercentage: 98,
             });
         } finally {
             setLoading(false);
@@ -97,50 +66,47 @@ const AiChatPage = () => {
         // Add user message
         const userMessage = {
             id: Date.now(),
-            type: 'user',
+            type: "user",
             content: inputMessage,
-            timestamp: new Date()
+            timestamp: new Date(),
         };
-        setMessages(prev => [...prev, userMessage]);
-        setInputMessage('');
+        setMessages((prev) => [...prev, userMessage]);
+        setInputMessage("");
 
-        // Show typing indicator
         setIsTyping(true);
 
-        // Simulate delay for better UX
         setTimeout(async () => {
             try {
                 // Call AI service
                 const response = await aiChatService.sendMessage(
                     inputMessage,
                     sessionId,
-                    contextDate ? new Date(contextDate) : null
+                    contextDate ? new Date(contextDate) : null,
                 );
 
-                // Add AI response
                 const aiMessage = {
                     id: Date.now() + 1,
-                    type: 'ai',
-                    content: response.reply,
-                    timestamp: new Date(response.timestamp)
+                    type: "ai",
+                    content: response.reply || response.response || response.answer || "Không có nội dung phản hồi từ AI.",
+                    timestamp: new Date(response.timestamp || Date.now()),
                 };
-                setMessages(prev => [...prev, aiMessage]);
+                setMessages((prev) => [...prev, aiMessage]);
 
                 // Update session ID if provided
                 if (response.sessionId) {
                     setSessionId(response.sessionId);
                 }
             } catch (error) {
-                console.error('Error sending message:', error);
+                console.error("Error sending message:", error);
 
-                // Fallback to mock response
                 const mockResponse = {
                     id: Date.now() + 1,
-                    type: 'ai',
-                    content: 'Xin lỗi, tôi đang gặp sự cố kết nối. Vui lòng thử lại sau.\n\nTrong thời gian chờ, bạn có thể:\n📊 Xem báo cáo doanh thu\n📦 Kiểm tra tồn kho\n👥 Xem thông tin khách hàng',
-                    timestamp: new Date()
+                    type: "ai",
+                    content:
+                        "Xin lỗi, tôi đang gặp sự cố kết nối. Vui lòng thử lại sau.\n\nTrong thời gian chờ, bạn có thể:\n📊 Xem báo cáo doanh thu\n📦 Kiểm tra tồn kho\n👥 Xem thông tin khách hàng",
+                    timestamp: new Date(),
                 };
-                setMessages(prev => [...prev, mockResponse]);
+                setMessages((prev) => [...prev, mockResponse]);
             } finally {
                 setIsTyping(false);
             }
@@ -148,7 +114,7 @@ const AiChatPage = () => {
     };
 
     const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
         }
@@ -156,9 +122,9 @@ const AiChatPage = () => {
 
     const formatTime = (timestamp) => {
         const date = new Date(timestamp);
-        return date.toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit'
+        return date.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
         });
     };
 
@@ -172,11 +138,18 @@ const AiChatPage = () => {
                         <CardContent className="p-5">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="w-10 h-10 rounded-xl gradient-purple flex items-center justify-center shadow-md">
-                                    <Sparkles size={20} className="text-white" />
+                                    <Sparkles
+                                        size={20}
+                                        className="text-white"
+                                    />
                                 </div>
                                 <div>
-                                    <h1 className="text-xl font-bold text-slate-800">AI Assistant</h1>
-                                    <p className="text-xs text-slate-500 font-medium">SmallTrend Intelligent System</p>
+                                    <h1 className="text-xl font-bold text-slate-800">
+                                        AI Assistant
+                                    </h1>
+                                    <p className="text-xs text-slate-500 font-medium">
+                                        SmallTrend Intelligent System
+                                    </p>
                                 </div>
                             </div>
                         </CardContent>
@@ -189,12 +162,17 @@ const AiChatPage = () => {
                                 Dữ liệu ngày
                             </label>
                             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                <Calendar size={18} className="text-slate-500" />
+                                <Calendar
+                                    size={18}
+                                    className="text-slate-500"
+                                />
                                 <Input
                                     type="date"
                                     className="border-0 bg-transparent p-0 h-auto focus-visible:ring-0 text-slate-700 font-medium"
                                     value={contextDate}
-                                    onChange={(e) => setContextDate(e.target.value)}
+                                    onChange={(e) =>
+                                        setContextDate(e.target.value)
+                                    }
                                 />
                             </div>
                         </CardContent>
@@ -206,12 +184,21 @@ const AiChatPage = () => {
                             <CardContent className="p-5">
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                                        <TrendingUp size={18} className="text-white" />
+                                        <TrendingUp
+                                            size={18}
+                                            className="text-white"
+                                        />
                                     </div>
-                                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">Hôm nay</span>
+                                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
+                                        Hôm nay
+                                    </span>
                                 </div>
-                                <div className="text-3xl font-bold mb-1">{stats.dailyQueryCount}</div>
-                                <p className="text-indigo-100 text-xs">Truy vấn đã xử lý</p>
+                                <div className="text-3xl font-bold mb-1">
+                                    {stats.dailyQueryCount}
+                                </div>
+                                <p className="text-indigo-100 text-xs">
+                                    Truy vấn đã xử lý
+                                </p>
                             </CardContent>
                         </Card>
 
@@ -220,9 +207,13 @@ const AiChatPage = () => {
                                 <CardContent className="p-4">
                                     <div className="flex items-center gap-2 mb-2 text-slate-500">
                                         <Clock size={16} />
-                                        <span className="text-xs font-medium">Tốc độ</span>
+                                        <span className="text-xs font-medium">
+                                            Tốc độ
+                                        </span>
                                     </div>
-                                    <div className="text-xl font-bold text-slate-800">{stats.avgResponseTime}s</div>
+                                    <div className="text-xl font-bold text-slate-800">
+                                        {stats.avgResponseTime}s
+                                    </div>
                                 </CardContent>
                             </Card>
 
@@ -230,9 +221,13 @@ const AiChatPage = () => {
                                 <CardContent className="p-4">
                                     <div className="flex items-center gap-2 mb-2 text-slate-500">
                                         <Target size={16} />
-                                        <span className="text-xs font-medium">Độ chính xác</span>
+                                        <span className="text-xs font-medium">
+                                            Độ chính xác
+                                        </span>
                                     </div>
-                                    <div className="text-xl font-bold text-slate-800">{stats.accuracyPercentage}%</div>
+                                    <div className="text-xl font-bold text-slate-800">
+                                        {stats.accuracyPercentage}%
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -241,9 +236,15 @@ const AiChatPage = () => {
                     {/* Quick Prompts Hint */}
                     <Card className="border-0 shadow-sm bg-white shrink-0 mt-auto">
                         <CardContent className="p-5">
-                            <h3 className="text-sm font-semibold text-slate-800 mb-3">Gợi ý câu hỏi</h3>
+                            <h3 className="text-sm font-semibold text-slate-800 mb-3">
+                                Gợi ý câu hỏi
+                            </h3>
                             <div className="flex flex-col gap-2">
-                                {['Doanh thu hôm nay thế nào?', 'Sản phẩm nào bán chạy nhất?', 'Có đơn hàng nào đang chờ xử lý không?'].map((prompt, idx) => (
+                                {[
+                                    "Doanh thu hôm nay thế nào?",
+                                    "Sản phẩm nào bán chạy nhất?",
+                                    "Có đơn hàng nào đang chờ xử lý không?",
+                                ].map((prompt, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => setInputMessage(prompt)}
@@ -265,11 +266,22 @@ const AiChatPage = () => {
                             <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                                 <div>
-                                    <h2 className="text-base font-semibold text-slate-800">Cuộc hội thoại</h2>
-                                    <p className="text-xs text-slate-500">Session ID: <span className="font-mono">{sessionId?.substring(0, 8)}...</span></p>
+                                    <h2 className="text-base font-semibold text-slate-800">
+                                        Cuộc hội thoại
+                                    </h2>
+                                    <p className="text-xs text-slate-500">
+                                        Session ID:{" "}
+                                        <span className="font-mono">
+                                            {sessionId?.substring(0, 8)}...
+                                        </span>
+                                    </p>
                                 </div>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-slate-400 hover:text-slate-600"
+                            >
                                 <MoreVertical size={20} />
                             </Button>
                         </div>
@@ -279,34 +291,50 @@ const AiChatPage = () => {
                             {messages.length === 0 && (
                                 <div className="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-60">
                                     <Bot size={48} className="mb-4" />
-                                    <p>Bắt đầu cuộc trò chuyện với AI Assistant</p>
+                                    <p>
+                                        Bắt đầu cuộc trò chuyện với AI Assistant
+                                    </p>
                                 </div>
                             )}
 
                             {messages.map((message) => (
                                 <div
                                     key={message.id}
-                                    className={`flex gap-4 max-w-[85%] ${message.type === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
+                                    className={`flex gap-4 max-w-[85%] ${message.type === "user" ? "ml-auto flex-row-reverse" : ""}`}
                                 >
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm mt-1 ${
-                                        message.type === 'ai'
-                                            ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
-                                            : 'bg-slate-200 text-slate-600'
-                                    }`}>
-                                        {message.type === 'ai' ? <Bot size={16} /> : <User size={16} />}
+                                    <div
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm mt-1 ${
+                                            message.type === "ai"
+                                                ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white"
+                                                : "bg-slate-200 text-slate-600"
+                                        }`}
+                                    >
+                                        {message.type === "ai" ? (
+                                            <Bot size={16} />
+                                        ) : (
+                                            <User size={16} />
+                                        )}
                                     </div>
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-xs font-semibold ${message.type === 'user' ? 'text-right w-full' : ''}`}>
-                                                {message.type === 'ai' ? 'SmallTrend AI' : 'Bạn'}
+                                            <span
+                                                className={`text-xs font-semibold ${message.type === "user" ? "text-right w-full" : ""}`}
+                                            >
+                                                {message.type === "ai"
+                                                    ? "SmallTrend AI"
+                                                    : "Bạn"}
                                             </span>
-                                            <span className="text-[10px] text-slate-400">{formatTime(message.timestamp)}</span>
+                                            <span className="text-[10px] text-slate-400">
+                                                {formatTime(message.timestamp)}
+                                            </span>
                                         </div>
-                                        <div className={`px-5 py-3.5 rounded-2xl text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
-                                            message.type === 'ai'
-                                                ? 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
-                                                : 'bg-indigo-600 text-white rounded-tr-none'
-                                        }`}>
+                                        <div
+                                            className={`px-5 py-3.5 rounded-2xl text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
+                                                message.type === "ai"
+                                                    ? "bg-white text-slate-700 border border-slate-100 rounded-tl-none"
+                                                    : "bg-indigo-600 text-white rounded-tr-none"
+                                            }`}
+                                        >
                                             {message.content}
                                         </div>
                                     </div>
@@ -339,7 +367,9 @@ const AiChatPage = () => {
                                     className="flex-1 resize-none border-0 bg-transparent focus-visible:ring-0 min-h-[44px] py-3 max-h-[150px] text-slate-700 placeholder:text-slate-400"
                                     placeholder="Nhập câu hỏi của bạn..."
                                     value={inputMessage}
-                                    onChange={(e) => setInputMessage(e.target.value)}
+                                    onChange={(e) =>
+                                        setInputMessage(e.target.value)
+                                    }
                                     onKeyPress={handleKeyPress}
                                     rows={1}
                                     disabled={isTyping}
@@ -348,14 +378,26 @@ const AiChatPage = () => {
                                     onClick={handleSendMessage}
                                     disabled={!inputMessage.trim() || isTyping}
                                     className={`h-[44px] w-[44px] p-0 rounded-lg shrink-0 transition-all duration-300 ${
-                                        inputMessage.trim() ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                        inputMessage.trim()
+                                            ? "bg-indigo-600 hover:bg-indigo-700 shadow-md"
+                                            : "bg-slate-200 text-slate-400 cursor-not-allowed"
                                     }`}
                                 >
-                                    <Send size={18} className={inputMessage.trim() ? 'translate-x-[1px] -translate-y-[1px]' : ''} />
+                                    <Send
+                                        size={18}
+                                        className={
+                                            inputMessage.trim()
+                                                ? "translate-x-[1px] -translate-y-[1px]"
+                                                : ""
+                                        }
+                                    />
                                 </Button>
                             </div>
                             <div className="text-center mt-2">
-                                <p className="text-[10px] text-slate-400">AI có thể mắc lỗi. Vui lòng kiểm tra thông tin quan trọng.</p>
+                                <p className="text-[10px] text-slate-400">
+                                    AI có thể mắc lỗi. Vui lòng kiểm tra thông
+                                    tin quan trọng.
+                                </p>
                             </div>
                         </div>
                     </Card>
