@@ -11,15 +11,21 @@
     "lint:fix": "eslint src --ext .js,.jsx --fix"
   },
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.1.15",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/postcss": "^4.1.18",
     "axios": "^1.6.0",
     "bootstrap": "^5.3.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "json-server": "^1.0.0-beta.5",
     "lucide-react": "^0.562.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.0"
+    "react-router-dom": "^6.20.0",
+    "tailwind-merge": "^3.4.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",

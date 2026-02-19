@@ -2,6 +2,8 @@
 -- SMALLTREND GROCERY STORE DATABASE MOCK DATA - NO VIETNAMESE DIACRITICS
 -- =============================================================================
 
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- Clear existing data (in reverse order of foreign key dependencies)
 DELETE FROM audit_logs;
 DELETE FROM reports;
@@ -79,7 +81,7 @@ INSERT INTO brands
 (4, 'Unilever'),
 (5, 'P&G');
 
--- Insert Categories  
+-- Insert Categories
 INSERT INTO categories
 (id, name) VALUES
 (1, 'Food & Beverage'),
@@ -248,7 +250,7 @@ INSERT INTO sales_orders
 (4, 3, 4, '2024-02-23 16:20:00', 'CASH', 120000.00),
 (5, 5, 5, '2024-02-24 11:10:00', 'QR_CODE', 67000.00);
 
--- Insert Sales Order Items  
+-- Insert Sales Order Items
 INSERT INTO sales_order_items
 (id, order_id, variant_id, batch_id, quantity, unit_price, cost_price_at_sale) VALUES
 (1, 1, 1, 1, 7, 25000.00, 20000.00),
@@ -349,18 +351,20 @@ INSERT INTO stock_movements
 
 -- Insert Reports
 INSERT INTO reports
-(id, type, report_date, data, created_by) VALUES
-(1, 'SALES_DAILY', '2024-02-26', 'Daily sales report data JSON here', 2),
-(2, 'INVENTORY_WEEKLY', '2024-02-25', 'Weekly inventory report data JSON here', 4),
-(3, 'REVENUE_MONTHLY', '2024-01-31', 'Monthly revenue report data JSON here', 2),
-(4, 'STAFF_PERFORMANCE', '2024-02-25', 'Staff performance report data JSON here', 2),
-(5, 'PROFIT_ANALYSIS', '2024-01-31', 'Profit analysis report data JSON here', 1);
+(id, type, report_date, data, created_by, status, report_name, format, created_at, completed_at, file_path) VALUES
+(1, 'Revenue', '2024-02-26', 'Daily sales report data JSON here', 1, 'COMPLETED', 'Revenue Report (01/02/2024 - 26/02/2024)', 'PDF', '2024-02-26 10:00:00', '2024-02-26 10:00:05', '/reports/1.pdf'),
+(2, 'Products', '2024-02-25', 'Weekly inventory report data JSON here', 1, 'COMPLETED', 'Products Report (18/02/2024 - 25/02/2024)', 'EXCEL', '2024-02-25 14:30:00', '2024-02-25 14:30:04', '/reports/2.xlsx'),
+(3, 'Revenue', '2024-01-31', 'Monthly revenue report data JSON here', 1, 'COMPLETED', 'Revenue Report (01/01/2024 - 31/01/2024)', 'PDF', '2024-01-31 09:00:00', '2024-01-31 09:00:06', '/reports/3.pdf'),
+(4, 'Customers', '2024-02-25', 'Staff performance report data JSON here', 1, 'COMPLETED', 'Customers Report (01/02/2024 - 25/02/2024)', 'CSV', '2024-02-25 11:15:00', '2024-02-25 11:15:03', '/reports/4.csv'),
+(5, 'Inventory', '2024-01-31', 'Profit analysis report data JSON here', 1, 'COMPLETED', 'Inventory Report (01/01/2024 - 31/01/2024)', 'PDF', '2024-01-31 16:45:00', '2024-01-31 16:45:05', '/reports/5.pdf');
 
 -- Insert Audit Logs
 INSERT INTO audit_logs
-(id, entity_name, entity_id, action, details, timestamp, user_id) VALUES
+(id, entity_name, entity_id, action, details, created_at, user_id) VALUES
 (1, 'Product', 1, 'CREATE', 'Created new product: Fresh Milk 1L', '2024-01-15 10:00:00', 2),
 (2, 'SalesOrder', 1, 'CREATE', 'New sales order created', '2024-02-20 10:30:00', 3),
 (3, 'User', 3, 'UPDATE', 'Updated user profile', '2024-02-21 09:15:00', 1),
 (4, 'Inventory', 1, 'ADJUSTMENT', 'Stock adjustment made', '2024-02-22 14:20:00', 4),
 (5, 'Price', 1, 'UPDATE', 'Price updated for Fresh Milk 1L', '2024-02-01 00:00:00', 2);
+
+SET FOREIGN_KEY_CHECKS = 1;
