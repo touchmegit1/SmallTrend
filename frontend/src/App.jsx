@@ -4,28 +4,21 @@ import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
 import Login from './pages/Auth/Login'
 import Register from './pages/Auth/Register'
-import ProtectedRoute from './components/common/ProtectedRoute'
-import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
 
 function App() {
     return (
         <Routes>
             {/* Public Routes */}
-            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-            {/* Protected Routes */}
-            <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+            {/* App Routes */}
+            <Route path="/" element={<MainLayout />}>
                 {/* Redirect root to Dashboard */}
                 <Route index element={<Navigate to="/dashboard" replace />} />
 
-                {/* Dashboard Route - only ADMIN/MANAGER */}
-                <Route path="dashboard" element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
-                        <Dashboard />
-                    </ProtectedRoute>
-                } />
+                <Route path="dashboard" element={<Dashboard />} />
 
                 {/* Module 1: POS (Bán hàng) */}
                 <Route path="pos" element={<POS />} />
@@ -54,11 +47,7 @@ function App() {
 
                 {/* Module 5: HR (Nhân sự) */}
                 <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
-                <Route path="hr/users" element={
-                    <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
-                        <UserManagement />
-                    </ProtectedRoute>
-                } />
+                <Route path="hr/users" element={<UserManagement />} />
                 <Route path="hr/shifts" element={<div className="p-4">Phân ca làm việc</div>} />
                 <Route path="hr/attendance" element={<div className="p-4">Chấm công</div>} />
                 <Route path="hr/payroll" element={<div className="p-4">Tính lương</div>} />

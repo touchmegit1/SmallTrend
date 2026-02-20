@@ -21,12 +21,13 @@
 	</properties>
 	
 	<dependencies>
-		<!-- Dev-only: H2 in-memory database for one-click startup -->
+		<!-- Fallback in-memory DB for local startup when .env is missing -->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+
 		<!-- Cloudinary SDK -->
 		<dependency>
     		<groupId>com.cloudinary</groupId>
