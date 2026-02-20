@@ -73,9 +73,6 @@ public class SupplierContract {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-    @OneToMany(mappedBy = "contract", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PurchaseOrder> purchaseOrders;
-
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -211,14 +208,6 @@ public class SupplierContract {
 
     public void setNotes(String notes) {
         this.notes = notes;
-    }
-
-    public List<PurchaseOrder> getPurchaseOrders() {
-        return purchaseOrders;
-    }
-
-    public void setPurchaseOrders(List<PurchaseOrder> purchaseOrders) {
-        this.purchaseOrders = purchaseOrders;
     }
 
     public LocalDateTime getCreatedAt() {

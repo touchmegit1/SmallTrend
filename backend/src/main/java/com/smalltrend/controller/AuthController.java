@@ -2,7 +2,6 @@ package com.smalltrend.controller;
 
 import com.smalltrend.dto.auth.AuthRequest;
 import com.smalltrend.dto.auth.AuthResponse;
-import com.smalltrend.dto.auth.RegisterRequest;
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.entity.User;
 import com.smalltrend.service.UserService;
@@ -34,41 +33,6 @@ public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final UserManagementValidator validator;
-
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        try {
-            // Validate using UserManagementValidator
-            List<String> errors = validator.validateUser(
-                    request.getFullName(),
-                    request.getEmail(),
-                    request.getPhone(),
-                    request.getAddress(),
-                    "ACTIVE"
-            );
-
-            List<String> credentialErrors = validator.validateUserCredentials(
-                    request.getUsername(),
-                    request.getPassword()
-            );
-            errors.addAll(credentialErrors);
-
-            if (validator.hasErrors(errors)) {
-                log.warn("Registration validation failed: {}", validator.errorsToString(errors));
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse(validator.errorsToString(errors)));
-            }
-
-            AuthResponse response = userService.register(request);
-            log.info("User registered successfully: {}", request.getUsername());
-            return ResponseEntity.ok(response);
-
-        } catch (RuntimeException e) {
-            log.error("Registration failed for user: {}, error: {}", request.getUsername(), e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse(e.getMessage()));
-        }
-    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {

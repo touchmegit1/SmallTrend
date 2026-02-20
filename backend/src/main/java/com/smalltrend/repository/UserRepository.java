@@ -18,11 +18,11 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     List<User> findByStatus(String status);
 
     List<User> findByRoleId(Integer roleId);
-    
+
     /**
      * Search users by name or email with pagination
      */
     Page<User> findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-        String fullName, String email, Pageable pageable
+            String fullName, String email, Pageable pageable
     );
 }

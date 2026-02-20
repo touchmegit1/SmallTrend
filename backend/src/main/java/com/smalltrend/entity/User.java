@@ -64,21 +64,9 @@ public class User {
     @JsonIgnore
     private List<Attendance> attendances;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ShiftAssignment> shiftAssignments;
-
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private SalaryConfig salaryConfig;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<SalaryPayout> salaryPayouts;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<PayrollRecord> payrollRecords;
 
     // Helper methods for JWT integration
     public boolean isActive() {

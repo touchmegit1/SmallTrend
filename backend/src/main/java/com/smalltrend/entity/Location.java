@@ -24,5 +24,5 @@ public class Location {
     private String type;
 
     @OneToMany(mappedBy = "location")
-    private List<ShelfBin> shelfBins;
+    private List<InventoryStock> stocks;
 }

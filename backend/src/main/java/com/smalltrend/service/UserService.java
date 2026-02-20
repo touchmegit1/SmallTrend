@@ -195,9 +195,6 @@ public class UserService implements UserDetailsService {
                 .address(request.getAddress())
                 .status("ACTIVE")
                 .role(role)
-                .salaryType(request.getSalaryType())
-                .baseSalary(request.getBaseSalary())
-                .hourlyRate(request.getHourlyRate())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -218,10 +215,17 @@ public class UserService implements UserDetailsService {
      * Get all users with pagination
      */
     public Page<User> getAllUsers(Integer page, Integer size) {
-        if (size > 100) size = 100; // Max 100 per page
-        if (size <= 0) size = 10; // Default 10 per page
-        if (page < 0) page = 0; // Default first page
-        
+        if (size > 100) {
+            size = 100; // Max 100 per page
+
+        }
+        if (size <= 0) {
+            size = 10; // Default 10 per page
+
+        }
+        if (page < 0) {
+            page = 0; // Default first page
+        }
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return userRepository.findAll(pageable);
     }
@@ -230,15 +234,26 @@ public class UserService implements UserDetailsService {
      * Search users by name or email
      */
     public Page<User> searchUsers(String query, Integer page, Integer size) {
-        if (size > 100) size = 100; 
-        if (size <= 0) size = 10;
-        if (page < 0) page = 0;
-        
+        if (size > 100) {
+            size = 100;
+        }
+        if (size <= 0) {
+            size = 10;
+        }
+        if (page < 0) {
+            page = 0;
+        }
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-            query, query, pageable
+                query, query, pageable
         );
     }
+
+    /**
+     * Get user by ID
+     */
+    public User getUserById(Integer id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }

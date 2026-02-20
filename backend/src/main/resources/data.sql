@@ -1,145 +1,785 @@
 -- =============================================================================
--- SMALLTREND GROCERY STORE DATABASE - Essential Basic Data
+-- SMALLTREND GROCERY STORE DATABASE - Comprehensive Sample Data
+-- =============================================================================
+-- Password for all users: password123
+-- Hashed: $2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW
 -- =============================================================================
 
--- Insert Essential Reference Data
-INSERT INTO brands (name) VALUES
-('Vinamilk'), ('Nestle'), ('Coca-Cola'), ('Unilever'), ('P&G');
+-- 1. BRANDS & CATEGORIES
+insert into brands ( name ) values ( 'Vinamilk' ),( 'Nestle' ),( 'Coca-Cola' ),( 'Unilever' ),( 'P&G' ),( 'Kinh Do' ),( 'Oishi'
+);
 
-INSERT INTO categories (name) VALUES
-('Food & Beverage'), ('Personal Care'), ('Household Items'), ('Health & Medicine'), ('Snacks & Confectionery');
+insert into categories ( name ) values ( 'Beverages' ),( 'Dairy Products' ),( 'Personal Care' ),( 'Household Items' ),( 'Snacks'
 
-INSERT INTO suppliers (name, contact_info) VALUES
-('Vinamilk Distribution', 'sales@vinamilk.com.vn | 1800 1199'),
-('Unilever Vietnam', 'contact@unilever.com.vn | 1800 5588'),
-('Nestle Vietnam', 'info@nestle.com.vn | 1900 6011');
+),( 'Health Care' );
 
-INSERT INTO tax_rates (name, rate, is_active) VALUES
-('VAT Standard', 10.00, 1), 
-('VAT Reduced', 5.00, 1), 
-('No Tax', 0.00, 1);
+-- 2. SUPPLIERS (with contract management)
+insert into suppliers (
+   name,
+   tax_code,
+   address,
+   email,
+   phone,
+   contact_person,
+   contract_files,
+   contract_signed_date,
+   contract_expiry,
+   active,
+   notes
+) values 
+( 'Vinamilk Distribution',
+  '0100170098',
+  '10 Tan Trao, Tan Phu Ward, District 7, HCMC',
+  'sales@vinamilk.com.vn',
+  '1800-1199',
+  'Nguyen Van A',
+  '["https://res.cloudinary.com/demo/sample_contract1.pdf"]',
+  '2023-01-15',
+  '2025-01-15',
+  1,
+  'Main dairy supplier with 2-year contract' ),
+( 'Unilever Vietnam',
+  '0300491828',
+  '15 Le Duan Blvd, District 1, HCMC',
+  'contact@unilever.com.vn',
+  '1800-5588',
+  'Tran Thi B',
+  '["https://res.cloudinary.com/demo/sample_contract2.pdf", "https://res.cloudinary.com/demo/sample_contract2_annex.pdf"]',
+  '2023-03-01',
+  '2024-12-31',
+  1,
+  'Personal care and household items supplier' ),
+( 'Nestle Vietnam',
+  '0302127854',
+  'The Vista Building, 628C Hanoi Highway, HCMC',
+  'info@nestle.com.vn',
+  '1900-6011',
+  'Le Van C',
+  '["https://res.cloudinary.com/demo/sample_contract3.pdf"]',
+  '2023-06-01',
+  '2025-06-01',
+  1,
+  'Beverages and snacks supplier' ),
+( 'Coca-Cola Vietnam',
+  '0300693409',
+  '124 Kim Ma Street, Ba Dinh, Hanoi',
+  'vietnam@cocacola.com',
+  '1900-0180',
+  'Pham Thi D',
+  NULL,
+  NULL,
+  NULL,
+  1,
+  'Soft drinks supplier - contract pending' );
 
-INSERT INTO roles (name, description) VALUES
-('ADMIN', 'System Administrator'), 
-('MANAGER', 'Store Manager'), 
-('CASHIER', 'Cashier Staff'), 
-('INVENTORY_STAFF', 'Inventory Staff'), 
-('SALES_STAFF', 'Sales Staff');
+-- 3. TAX RATES
+insert into tax_rates (
+   name,
+   rate,
+   is_active
+) values ( 'VAT Standard',
+           10.00,
+           1 ),( 'VAT Reduced',
+                 5.00,
+                 1 ),( 'No Tax',
+                       0.00,
+                       1 );
 
-INSERT INTO permissions (name, description) VALUES
-('USER_MANAGEMENT', 'User Management'), 
-('PRODUCT_MANAGEMENT', 'Product Management'),
-('INVENTORY_MANAGEMENT', 'Inventory Management'), 
-('SALES_PROCESSING', 'Sales Processing'), 
-('REPORT_VIEWING', 'Report Viewing'),
-('ADMIN_ACCESS', 'Admin Access'),
-('CUSTOMER_MANAGEMENT', 'Customer Management'),
-('SUPPLIER_MANAGEMENT', 'Supplier Management'),
-('FINANCIAL_MANAGEMENT', 'Financial Management');
+-- 4. ROLES & PERMISSIONS
+insert into roles (
+   name,
+   description
+) values ( 'ADMIN',
+           'System Administrator' ),( 'MANAGER',
+                                      'Store Manager' ),( 'CASHIER',
+                                                          'Cashier Staff' ),( 'INVENTORY_STAFF',
+                                                                              'Inventory Staff' );
 
-INSERT INTO role_permissions (role_id, permission_id) VALUES
--- ADMIN - all permissions
-(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (1, 9),
--- MANAGER - most permissions except admin
-(2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 7), (2, 8), (2, 9),
--- CASHIER - sales only
-(3, 4), (3, 7),
--- INVENTORY - inventory and products  
-(4, 2), (4, 3),
--- SALES - sales and customers
-(5, 4), (5, 7);
+insert into permissions (
+   name,
+   description
+) values ( 'USER_MANAGEMENT',
+           'User Management' ),( 'PRODUCT_MANAGEMENT',
+                                 'Product Management' ),( 'INVENTORY_MANAGEMENT',
+                                                          'Inventory Management' ),( 'SALES_PROCESSING',
+                                                                                     'Sales Processing' ),( 'REPORT_VIEWING',
+                                                                                                            'Report Viewing' )
+                                                                                                            ,( 'ADMIN_ACCESS'
+                                                                                                            ,
+                                                                                                                             'Admin Access'
+                                                                                                                             )
+                                                                                                                             ;
 
--- Insert Essential Users (password: "password123" for all users - hashed with BCrypt)
-INSERT INTO users (full_name, email, phone, address, status, role_id, salary_type, base_salary, hourly_rate, created_at, updated_at) VALUES
-('Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, Ho Chi Minh City', 'ACTIVE', 1, 'MONTHLY', 25000000.00, NULL, NOW(), NOW()),
-('Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, Ho Chi Minh City', 'ACTIVE', 2, 'MONTHLY', 20000000.00, NULL, NOW(), NOW()),
-('Le Van Cashier', 'cashier@smalltrend.com', '0923456789', '789 Dien Bien Phu, Ho Chi Minh City', 'ACTIVE', 3, 'HOURLY', 12000000.00, 50000.00, NOW(), NOW()),
-('Pham Thi Inventory', 'inventory@smalltrend.com', '0934567890', '101 Tran Hung Dao, Ho Chi Minh City', 'ACTIVE', 4, 'MONTHLY', 15000000.00, NULL, NOW(), NOW()),
-('Hoang Van Sales', 'sales@smalltrend.com', '0945678901', '202 Vo Van Tan, Ho Chi Minh City', 'ACTIVE', 5, 'HOURLY', 10000000.00, 45000.00, NOW(), NOW());
+insert into role_permissions (
+   role_id,
+   permission_id
+) values ( 1,
+           1 ),( 1,
+                 2 ),( 1,
+                       3 ),( 1,
+                             4 ),( 1,
+                                   5 ),( 1,
+                                         6 ),( 2,
+                                               1 ),( 2,
+                                                     2 ),( 2,
+                                                           3 ),( 2,
+                                                                 4 ),( 2,
+                                                                       5 ),( 3,
+                                                                             4 ),( 4,
+                                                                                   2 ),( 4,
+                                                                                         3 );
 
--- Insert User Credentials (password: "password123" - BCryptPasswordEncoder with strength 12)
-INSERT INTO user_credentials (user_id, username, password_hash) VALUES
-(1, 'admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW'),
-(2, 'manager', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW'),
-(3, 'cashier', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW'),
-(4, 'inventory', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW'),
-(5, 'sales', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW');
+-- 5. USERS
+insert into users (
+   full_name,
+   email,
+   phone,
+   address,
+   status,
+   role_id,
+   created_at,
+   updated_at
+) values ( 'Nguyen Van Admin',
+           'admin@smalltrend.com',
+           '0901234567',
+           '123 Nguyen Hue, HCMC',
+           'ACTIVE',
+           1,
+           now(),
+           now() ),( 'Tran Thi Manager',
+                     'manager@smalltrend.com',
+                     '0912345678',
+                     '456 Le Loi, HCMC',
+                     'ACTIVE',
+                     2,
+                     now(),
+                     now() ),( 'Le Van Cashier',
+                               'cashier@smalltrend.com',
+                               '0923456789',
+                               '789 Dien Bien Phu, HCMC',
+                               'ACTIVE',
+                               3,
+                               now(),
+                               now() );
 
--- Insert Basic Customers
-INSERT INTO customers (name, phone, loyalty_points) VALUES
-('Nguyen Van A', '0987654321', 150), 
-('Tran Thi B', '0976543210', 250),
-('Le Van C', '0965432109', 100),
-('Pham Thi D', '0954321098', 300);
+insert into user_credentials (
+   user_id,
+   username,
+   password_hash
+) values ( 1,
+           'admin',
+           '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW' ),( 2,
+                                                                              'manager',
+                                                                              '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW'
+                                                                              ),( 3,
+                                                                                                                                             'cashier'
+                                                                                                                                             ,
+                                                                                                                                             '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW'
+                                                                                                                                             )
+                                                                                                                                             ;
 
--- Insert Basic Products
-INSERT INTO products (name, description, image_url, brand_id, category_id, tax_rate_id) VALUES
-('Fresh Milk 1L', 'Vinamilk Fresh Milk 1 Liter Pack', 'https://example.com/vinamilk1l.jpg', 1, 1, 2),
-('Dove Soap Bar', 'Unilever Dove Beauty Bar 90g', 'https://example.com/dove.jpg', 4, 2, 1),
-('Nescafe Instant Coffee', 'Nestle Nescafe 3-in-1 Coffee 20g x 10 sachets', 'https://example.com/nescafe.jpg', 2, 1, 1),
-('Coca Cola 330ml', 'Coca Cola Classic 330ml Can', 'https://example.com/cocacola.jpg', 3, 1, 1);
+-- 6. CUSTOMER TIERS
+insert into customer_tiers (
+   tier_code,
+   tier_name,
+   min_points,
+   max_points,
+   min_spending,
+   points_multiplier,
+   discount_rate,
+   color,
+   is_active,
+   priority,
+   created_at,
+   updated_at
+) values ( 'BRONZE',
+           'Đồng',
+           0,
+           499,
+           0.00,
+           1.0,
+           0.00,
+           '#CD7F32',
+           1,
+           1,
+           now(),
+           now() ),( 'SILVER',
+                     'Bạc',
+                     500,
+                     1499,
+                     5000000.00,
+                     1.5,
+                     2.00,
+                     '#C0C0C0',
+                     1,
+                     2,
+                     now(),
+                     now() ),( 'GOLD',
+                               'Vàng',
+                               1500,
+                               4999,
+                               15000000.00,
+                               2.0,
+                               5.00,
+                               '#FFD700',
+                               1,
+                               3,
+                               now(),
+                               now() ),( 'PLATINUM',
+                                         'Bạch Kim',
+                                         5000,
+                                         null,
+                                         50000000.00,
+                                         3.0,
+                                         10.00,
+                                         '#E5E4E2',
+                                         1,
+                                         4,
+                                         now(),
+                                         now() );
 
--- Insert Basic Product Variants
-INSERT INTO product_variants (product_id, sku, barcode, sell_price, is_active, image_url) VALUES
-(1, 'VMILK-1L-001', '8901234567890', 25000.00, 1, 'https://example.com/vinamilk1l.jpg'),
-(2, 'DOVE-90G-001', '8901234567891', 15000.00, 1, 'https://example.com/dove90.jpg'),
-(3, 'NESCAFE-200G-001', '8901234567892', 45000.00, 1, 'https://example.com/nescafe200.jpg'),
-(4, 'COCA-330ML-001', '8901234567893', 12000.00, 1, 'https://example.com/coca330.jpg');
+-- 7. CUSTOMERS
+insert into customers (
+   name,
+   phone,
+   email,
+   loyalty_points,
+   total_spending,
+   tier_id,
+   created_at
+) values ( 'Nguyen Van A',
+           '0987654321',
+           'nguyenvana@gmail.com',
+           150,
+           3500000.00,
+           1,
+           now() ),( 'Tran Thi B',
+                     '0976543210',
+                     'tranthib@gmail.com',
+                     800,
+                     8000000.00,
+                     2,
+                     now() ),( 'Le Van C',
+                               '0965432109',
+                               'levanc@gmail.com',
+                               2000,
+                               18000000.00,
+                               3,
+                               now() ),( 'Pham Thi D',
+                                         '0954321098',
+                                         'phamthid@gmail.com',
+                                         6500,
+                                         65000000.00,
+                                         4,
+                                         now() );
 
--- Insert Basic Locations
-INSERT INTO locations (name, type) VALUES
-('Main Warehouse', 'WAREHOUSE'), 
-('Showroom A1', 'SHOWROOM'),
-('Storage Room B1', 'STORAGE');
+-- 8. PRODUCTS
+insert into products (
+   name,
+   description,
+   brand_id,
+   category_id,
+   tax_rate_id,
+   created_at
+) values ( 'Fresh Milk 1L',
+           'Vinamilk Fresh Milk',
+           1,
+           2,
+           2,
+           now() ),( 'Dove Soap 90g',
+                     'Dove Beauty Bar',
+                     4,
+                     3,
+                     1,
+                     now() ),( 'Nescafe 3in1',
+                               'Instant Coffee 20g x 10',
+                               2,
+                               1,
+                               1,
+                               now() ),( 'Coca Cola 330ml',
+                                         'Coca Cola Classic',
+                                         3,
+                                         1,
+                                         1,
+                                         now() ),( 'Oishi Snack',
+                                                   'Potato Chips 50g',
+                                                   7,
+                                                   5,
+                                                   1,
+                                                   now() );
 
--- Insert Basic Shelf Bins
-INSERT INTO shelves_bins (location_id, bin_code) VALUES
-(1, 'A-01-001'), (1, 'A-01-002'), (1, 'A-01-003'),
-(2, 'B-02-001'), (2, 'B-02-002'),
-(3, 'C-03-001');
+-- 9. PRODUCT VARIANTS
+insert into product_variants (
+   product_id,
+   sku,
+   barcode,
+   sell_price,
+   is_active,
+   created_at
+) values ( 1,
+           'VMILK-1L',
+           '8901234567890',
+           25000.00,
+           1,
+           now() ),( 2,
+                     'DOVE-90G',
+                     '8901234567891',
+                     15000.00,
+                     1,
+                     now() ),( 3,
+                               'NESCAFE-200G',
+                               '8901234567892',
+                               45000.00,
+                               1,
+                               now() ),( 4,
+                                         'COCA-330ML',
+                                         '8901234567893',
+                                         12000.00,
+                                         1,
+                                         now() ),( 5,
+                                                   'OISHI-50G',
+                                                   '8901234567894',
+                                                   8000.00,
+                                                   1,
+                                                   now() );
 
--- Insert Basic Product Batches
-INSERT INTO product_batches (variant_id, batch_number, cost_price, mfg_date, expiry_date) VALUES
-(1, 'VM2024001', 20000.00, '2024-01-15', '2024-04-15'),
-(2, 'DV2024001', 12000.00, '2024-02-15', '2025-02-15'),
-(3, 'NC2024001', 35000.00, '2024-01-20', '2025-01-20'),
-(4, 'CC2024001', 8000.00, '2024-02-10', '2024-08-10');
+-- 10. LOCATIONS & WAREHOUSE ZONES
+insert into locations (
+   name,
+   type,
+   created_at
+) values ( 'Main Warehouse',
+           'WAREHOUSE',
+           now() ),( 'Store Front',
+                     'SHOWROOM',
+                     now() );
 
--- Insert Basic Inventory Stock
-INSERT INTO inventory_stock (variant_id, batch_id, bin_id, quantity) VALUES
-(1, 1, 1, 250), 
-(2, 2, 2, 220),
-(3, 3, 3, 180),
-(4, 4, 4, 300);
+insert into warehouse_zones (
+   zone_code,
+   zone_name,
+   zone_type,
+   location_id,
+   temperature,
+   humidity,
+   max_capacity,
+   current_capacity,
+   is_active,
+   created_at,
+   updated_at
+) values ( 'COLD-01',
+           'Cold Storage 1',
+           'COLD',
+           1,
+           2.0,
+           70.0,
+           5000.0,
+           1200.0,
+           1,
+           now(),
+           now() ),( 'DRY-01',
+                     'Dry Storage 1',
+                     'DRY',
+                     1,
+                     20.0,
+                     50.0,
+                     10000.0,
+                     4500.0,
+                     1,
+                     now(),
+                     now() ),( 'FROZEN-01',
+                               'Frozen Storage',
+                               'FROZEN',
+                               1,
+                               - 18.0,
+                               60.0,
+                               3000.0,
+                               800.0,
+                               1,
+                               now(),
+                               now() );
 
--- Insert Basic Shifts
-INSERT INTO shifts (name, date, start_time, end_time) VALUES
-('Morning Shift', CURDATE(), '08:00:00', '16:00:00'),
-('Evening Shift', CURDATE(), '16:00:00', '00:00:00'),
-('Night Shift', CURDATE(), '00:00:00', '08:00:00');
+-- 11. PRODUCT BATCHES & INVENTORY
+insert into product_batches (
+   variant_id,
+   batch_number,
+   cost_price,
+   mfg_date,
+   expiry_date,
+   created_at
+) values ( 1,
+           'VM2026001',
+           20000.00,
+           '2026-01-15',
+           '2026-04-15',
+           now() ),( 2,
+                     'DV2026001',
+                     12000.00,
+                     '2026-02-01',
+                     '2027-02-01',
+                     now() ),( 3,
+                               'NC2026001',
+                               35000.00,
+                               '2026-01-20',
+                               '2027-01-20',
+                               now() ),( 4,
+                                         'CC2026001',
+                                         8000.00,
+                                         '2026-02-10',
+                                         '2026-08-10',
+                                         now() ),( 5,
+                                                   'OI2026001',
+                                                   6000.00,
+                                                   '2026-02-01',
+                                                   '2026-06-01',
+                                                   now() );
 
--- Insert Basic Salary Configs
-INSERT INTO salary_configs (user_id, base_salary, hourly_rate, overtime_rate_multiplier, allowances, bonus_percentage, is_active, effective_from, created_at, updated_at) VALUES
-(1, 25000000.00, NULL, 1.5, 2000000.00, 10.00, 1, NOW(), NOW(), NOW()),
-(2, 20000000.00, NULL, 1.5, 1500000.00, 8.00, 1, NOW(), NOW(), NOW()),
-(3, 12000000.00, 50000.00, 1.5, 500000.00, 5.00, 1, NOW(), NOW(), NOW()),
-(4, 15000000.00, NULL, 1.5, 800000.00, 6.00, 1, NOW(), NOW(), NOW()),
-(5, 10000000.00, 45000.00, 1.5, 300000.00, 4.00, 1, NOW(), NOW(), NOW());
+-- 12. WORK SHIFTS
+insert into work_shifts (
+   shift_code,
+   shift_name,
+   start_time,
+   end_time,
+   break_minutes,
+   working_minutes,
+   overtime_multiplier,
+   night_multiplier,
+   is_active,
+   created_at,
+   updated_at
+) values ( 'MORNING',
+           'Ca Sáng',
+           '08:00:00',
+           '16:00:00',
+           60,
+           420,
+           1.5,
+           1.0,
+           1,
+           now(),
+           now() ),( 'AFTERNOON',
+                     'Ca Chiều',
+                     '16:00:00',
+                     '00:00:00',
+                     60,
+                     420,
+                     1.5,
+                     1.3,
+                     1,
+                     now(),
+                     now() ),( 'NIGHT',
+                               'Ca Đêm',
+                               '00:00:00',
+                               '08:00:00',
+                               60,
+                               420,
+                               1.5,
+                               1.5,
+                               1,
+                               now(),
+                               now() );
 
--- Insert Tax Classes
-INSERT INTO tax_classes (code, name, description) VALUES
-('STANDARD', 'Standard Tax', 'Standard tax rate for most products'),
-('REDUCED', 'Reduced Tax', 'Reduced tax rate for essential goods'),
-('EXEMPT', 'Tax Exempt', 'No tax applied');
+-- 13. CAMPAIGNS
+insert into campaigns (
+   campaign_code,
+   campaign_name,
+   campaign_type,
+   description,
+   start_date,
+   end_date,
+   status,
+   budget,
+   target_revenue,
+   is_public,
+   created_by,
+   created_at,
+   updated_at
+) values ( 'CAMP-202602-001',
+           'Tết Sale 2026',
+           'SEASONAL',
+           'Khuyến mãi Tết Nguyên Đán',
+           '2026-02-10',
+           '2026-02-20',
+           'ACTIVE',
+           50000000.00,
+           200000000.00,
+           1,
+           2,
+           now(),
+           now() ),( 'CAMP-202602-002',
+                     'Flash Sale Cuối Tuần',
+                     'FLASH_SALE',
+                     'Giảm giá sốc cuối tuần',
+                     '2026-02-14',
+                     '2026-02-15',
+                     'ACTIVE',
+                     10000000.00,
+                     30000000.00,
+                     1,
+                     2,
+                     now(),
+                     now() );
 
--- Insert Tax Zones
-INSERT INTO tax_zones (name, country_code, state_region, city, postal_code_from, postal_code_to, is_active) VALUES
-('Ho Chi Minh City', 'VN', 'Ho Chi Minh', 'Ho Chi Minh City', '700000', '799999', 1),
-('Hanoi', 'VN', 'Hanoi', 'Hanoi', '100000', '199999', 1),
-('Da Nang', 'VN', 'Da Nang', 'Da Nang', '550000', '559999', 1);
+-- 14. COUPONS
+insert into coupons (
+   coupon_code,
+   coupon_name,
+   description,
+   coupon_type,
+   campaign_id,
+   discount_percent,
+   discount_amount,
+   max_discount_amount,
+   min_purchase_amount,
+   start_date,
+   end_date,
+   total_usage_limit,
+   usage_per_customer,
+   status,
+   created_by,
+   created_at,
+   updated_at
+) values ( 'WELCOME10',
+           'Giảm 10% Đơn Đầu',
+           'Mã giảm 10% cho đơn hàng đầu tiên',
+           'PERCENTAGE',
+           1,
+           10.00,
+           null,
+           50000.00,
+           100000.00,
+           '2026-02-01',
+           '2026-03-31',
+           1000,
+           1,
+           'ACTIVE',
+           2,
+           now(),
+           now() ),( 'FREESHIP50K',
+                     'Miễn Phí Ship',
+                     'Miễn phí vận chuyển đơn từ 200k',
+                     'FREE_SHIPPING',
+                     1,
+                     null,
+                     25000.00,
+                     null,
+                     200000.00,
+                     '2026-02-10',
+                     '2026-02-28',
+                     null,
+                     5,
+                     'ACTIVE',
+                     2,
+                     now(),
+                     now() ),( 'FLASH50K',
+                               'Giảm 50K Flash Sale',
+                               'Giảm ngay 50k cho đơn từ 300k',
+                               'FIXED_AMOUNT',
+                               2,
+                               null,
+                               50000.00,
+                               null,
+                               300000.00,
+                               '2026-02-14',
+                               '2026-02-15',
+                               500,
+                               2,
+                               'ACTIVE',
+                               2,
+                               now(),
+                               now() );
 
--- Create default tax rules
-INSERT INTO tax_rules (class_id, tax_rate_id, zone_id, priority, start_date, end_date, compound, is_active) VALUES
-(1, 1, 1, 1, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), 0, 1),
-(2, 2, 1, 2, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), 0, 1),
-(3, 3, 1, 3, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), 0, 1);
+-- 15. PRODUCT COMBOS
+insert into product_combos (
+   combo_code,
+   combo_name,
+   description,
+   original_price,
+   combo_price,
+   saved_amount,
+   discount_percent,
+   valid_from,
+   valid_to,
+   is_active,
+   status,
+   created_by,
+   created_at,
+   updated_at
+) values ( 'COMBO-BREAKFAST',
+           'Combo Sáng Năng Động',
+           'Sữa + Bánh mì + Nước ngọt',
+           60000.00,
+           50000.00,
+           10000.00,
+           16.67,
+           '2026-02-01',
+           '2026-03-31',
+           1,
+           'ACTIVE',
+           2,
+           now(),
+           now() ),( 'COMBO-SNACK',
+                     'Combo Snack Vui Vẻ',
+                     'Snack + Nước ngọt',
+                     20000.00,
+                     18000.00,
+                     2000.00,
+                     10.00,
+                     '2026-02-14',
+                     '2026-02-28',
+                     1,
+                     'ACTIVE',
+                     2,
+                     now(),
+                     now() );
+
+insert into product_combo_items (
+   combo_id,
+   product_variant_id,
+   quantity,
+   display_order
+) values ( 1,
+           1,
+           1,
+           1 ), -- Milk
+           ( 1,
+                 3,
+                 1,
+                 2 ), -- Coffee
+                 ( 1,
+                       4,
+                       1,
+                       3 ), -- Coca
+                       ( 2,
+                             5,
+                             2,
+                             1 ), -- Snack x2
+                             ( 2,
+                                   4,
+                                   2,
+                                   2 ); -- Coca x2
+
+-- 16. CASH REGISTERS
+insert into cash_registers (
+   register_code,
+   register_name,
+   store_name,
+   location,
+   register_type,
+   status,
+   device_id,
+   current_cash,
+   opening_balance,
+   current_operator_id,
+   session_start_time,
+   total_transactions_today,
+   created_at,
+   updated_at
+) values ( 'POS-001',
+           'Quầy 1',
+           'SmallTrend Store',
+           'Front Counter',
+           'MAIN',
+           'ACTIVE',
+           'DEV-POS-001',
+           5000000.00,
+           2000000.00,
+           3,
+           now(),
+           0,
+           now(),
+           now() ),( 'POS-002',
+                     'Quầy 2',
+                     'SmallTrend Store',
+                     'Express Counter',
+                     'EXPRESS',
+                     'ACTIVE',
+                     'DEV-POS-002',
+                     3000000.00,
+                     1000000.00,
+                     null,
+                     null,
+                     0,
+                     now(),
+                     now() );
+-- 21. TICKETS (Swap Shift, Handover, Refund)
+insert into tickets (
+   ticket_code,
+   ticket_type,
+   title,
+   description,
+   status,
+   priority,
+   created_by_user_id,
+   assigned_to_user_id,
+   resolved_by_user_id,
+   related_entity_type,
+   related_entity_id,
+   resolution,
+   resolved_at,
+   created_at,
+   updated_at
+) values 
+( 'TCK-SWAP-001',
+  'SWAP_SHIFT',
+  'Swap shift ngày 15/02 - Ca sáng <-> Ca chiều',
+  'Nhân viên A muốn đổi ca sáng sang ca chiều với nhân viên B do có lịch cá nhân',
+  'OPEN',
+  'NORMAL',
+  2,
+  3,
+  NULL,
+  'WorkShift',
+  1,
+  NULL,
+  NULL,
+  now(),
+  now() ),
+( 'TCK-HAND-001',
+  'HANDOVER',
+  'Bàn giao ca tối 14/02/2026',
+  'Bàn giao ca tối: Quầy 1 có 2,500,000 VND trong két, 15 giao dịch hoàn tất, cần kiểm kê lại kệ đồ uống',
+  'RESOLVED',
+  'HIGH',
+  2,
+  3,
+  2,
+  'CashRegister',
+  1,
+  'Đã bàn giao thành công. Nhân viên ca tối xác nhận đã nhận đầy đủ tiền mặt và ghi chú',
+  now(),
+  now() - INTERVAL 1 DAY,
+  now() ),
+( 'TCK-REF-001',
+  'REFUND',
+  'Hoàn tiền đơn hàng ORD-2026-001',
+  'Khách hàng mua nhầm sản phẩm, yêu cầu hoàn tiền. Sản phẩm còn nguyên seal, trong thời hạn đổi trả',
+  'IN_PROGRESS',
+  'URGENT',
+  2,
+  1,
+  NULL,
+  'Order',
+  1,
+  NULL,
+  NULL,
+  now() - INTERVAL 2 HOUR,
+  now() - INTERVAL 1 HOUR ),
+( 'TCK-COMP-001',
+  'COMPLAINT',
+  'Khiếu nại về chất lượng sản phẩm',
+  'Khách hàng phàn nàn sữa hết hạn sử dụng. Cần kiểm tra lại quy trình kiểm kê',
+  'OPEN',
+  'HIGH',
+  3,
+  1,
+  NULL,
+  'Product',
+  1,
+  NULL,
+  NULL,
+  now() - INTERVAL 3 HOUR,
+  now() - INTERVAL 3 HOUR );
+
+-- =============================================================================
+-- End of SmallTrend Sample Data
+-- =============================================================================
