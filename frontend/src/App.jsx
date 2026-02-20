@@ -72,11 +72,6 @@ function App() {
           path="inventory/audit"
           element={<InventoryAudit />}
         />
-        <Route
-          path="inventory/alerts"
-          element={<div className="p-4">Cảnh báo</div>}
-        />
-
         {/* Module 3: Products (Sản phẩm) */}
         <Route
           path="products"
