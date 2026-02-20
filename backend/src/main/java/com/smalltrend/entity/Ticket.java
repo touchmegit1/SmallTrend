@@ -22,7 +22,7 @@ public class Ticket {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Column(name = "ticket_code", unique = true, nullable = false, length = 20)
     private String ticketCode;
 
@@ -32,7 +32,7 @@ public class Ticket {
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
-    
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
@@ -53,7 +53,7 @@ public class Ticket {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to_user_id")
     private User assignedTo;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "resolved_by_user_id")
     private User resolvedBy;
@@ -64,10 +64,10 @@ public class Ticket {
 
     @Column(name = "related_entity_id")
     private Long relatedEntityId;
-    
+
     @Column(name = "resolution", columnDefinition = "TEXT")
     private String resolution;
-    
+
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
@@ -78,7 +78,7 @@ public class Ticket {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
     @PrePersist
     private void prePersist() {
         if (ticketCode == null) {
@@ -92,4 +92,3 @@ public class Ticket {
         }
     }
 }
-

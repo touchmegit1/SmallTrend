@@ -26,42 +26,42 @@ public class Supplier {
 
     @Column(nullable = false)
     private String name;
-    
+
     @Column(name = "tax_code", unique = true)
     private String taxCode;
-    
+
     private String address;
     private String email;
     private String phone;
-    
+
     @Column(name = "contact_person")
     private String contactPerson;
-    
+
     // Store contract file URLs as JSON array from Cloudinary
     @Column(name = "contract_files", columnDefinition = "JSON")
     private String contractFiles;
-    
+
     @Column(name = "contract_signed_date")
     private LocalDate contractSignedDate;
-    
+
     @Column(name = "contract_expiry")
     private LocalDate contractExpiry;
-    
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
-    
+
     @Column(columnDefinition = "TEXT")
     private String notes;
-    
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-    
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
     @PrePersist
     @PreUpdate
     private void autoCalculate() {
@@ -69,11 +69,10 @@ public class Supplier {
             createdAt = LocalDateTime.now();
         }
         updatedAt = LocalDateTime.now();
-        
+
         // Default active if not set
         if (active == null) {
             active = true;
         }
     }
 }
-
