@@ -7,10 +7,10 @@ import Login from './pages/Auth/Login'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
-import TransactionHistory from './pages/Pos/Transition_History'
-import ReportforCashier from './pages/Pos/ReportforCashier'
-
-
+import CRMcomplain from './pages/CRM/complain'
+import CRMcustomer from './pages/CRM/customer'
+import CRMevent from './pages/CRM/event'
+import CRMloyalty from './pages/CRM/loyalty'
 function App() {
     return (
         <Routes>
@@ -30,9 +30,9 @@ function App() {
                 } />
 
                 {/* Module 1: POS (Bán hàng) */}
-                <Route path="pos" element={<POS/>} />
-                <Route path="pos/history" element={<TransactionHistory/>} />
-                <Route path="pos/suspended" element={<ReportforCashier/>} />
+                <Route path="pos" element={<POS />} />
+                <Route path="pos/history" element={<div className="p-4">Lịch sử đơn hàng</div>} />
+                <Route path="pos/suspended" element={<div className="p-4">Đơn hàng treo</div>} />
 
                 {/* Module 2: Inventory (Kho) */}
                 <Route path="inventory" element={<div className="p-4">Inventory Management (Kho)</div>} />
@@ -50,10 +50,10 @@ function App() {
                 {/* Module 4: CRM (Khách hàng) */}
                 <Route path="crm" element={<div className="p-4">CRM & Promotion</div>} />
                 <Route path="crm/homepage" element={<CRMHomepage />} />
-                <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
-                <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
-                <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
-                <Route path="crm/complaints" element={<div className="p-4">Khiếu nại</div>} />
+                <Route path="crm/event" element={<CRMevent/>} />
+                <Route path="crm/loyalty" element={<CRMloyalty/>} />
+                <Route path="crm/complain" element={<CRMcomplain/>} />
+                <Route path="crm/customer" element={<CRMcustomer/>} />
 
                 {/* Module 5: HR (Nhân sự) */}
                 <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
