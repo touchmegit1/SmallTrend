@@ -7,6 +7,7 @@ import com.smalltrend.dto.user.UserUpdateRequest;
 import com.smalltrend.entity.Role;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.UserCredential;
+import com.smalltrend.exception.UserException;
 import com.smalltrend.repository.RoleRepository;
 import com.smalltrend.repository.UserCredentialsRepository;
 import com.smalltrend.repository.UserRepository;
@@ -81,19 +82,23 @@ public class UserService implements UserDetailsService {
         // Check if username already exists
         // Check if username already exists in credentials
         if (userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Username is already taken");
+            throw UserException.usernameExists();
         }
 
         // Check if email already exists
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email is already registered");
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw UserException.emailExists();
+        }
+
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw UserException.phoneExists();
         }
 
         // Get or create default role
         Role role;
         if (request.getRoleId() != null) {
             role = roleRepository.findById(request.getRoleId())
-                    .orElseThrow(() -> new RuntimeException("Role not found"));
+                    .orElseThrow(UserException::roleNotFound);
         } else {
             role = roleRepository.findByName("ROLE_USER")
                     .orElseGet(() -> {
@@ -168,23 +173,27 @@ public class UserService implements UserDetailsService {
     public UserDTO createEmployee(RegisterRequest request) {
         // Check if username already exists
         if (userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Tên đăng nhập đã tồn tại");
+            throw UserException.usernameExists();
         }
 
         // Check if email already exists
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email đã được đăng ký");
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw UserException.emailExists();
+        }
+
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw UserException.phoneExists();
         }
 
         // Get role - must be valid employee role
         Role role;
         if (request.getRoleId() != null) {
             role = roleRepository.findById(request.getRoleId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò"));
+                    .orElseThrow(UserException::roleNotFound);
         } else {
             // Default to SALES_STAFF if no role specified
             role = roleRepository.findByName("SALES_STAFF")
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò mặc định"));
+                    .orElseThrow(UserException::defaultRoleNotFound);
         }
 
         // Create user
@@ -246,8 +255,7 @@ public class UserService implements UserDetailsService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                query, query, pageable
-        );
+                query, query, pageable);
     }
 
     /**
@@ -255,11 +263,21 @@ public class UserService implements UserDetailsService {
      */
     public User getUserById(Integer id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> UserException.userNotFound(id));
     }
 
     public User updateUser(Integer id, UserUpdateRequest request) {
         User user = getUserById(id);
+
+        if (request.getEmail() != null
+                && userRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
+            throw UserException.emailUsedByOther();
+        }
+
+        if (request.getPhone() != null
+                && userRepository.existsByPhoneAndIdNot(request.getPhone(), id)) {
+            throw UserException.phoneUsedByOther();
+        }
 
         if (request.getFullName() != null) {
             user.setFullName(request.getFullName());
@@ -275,7 +293,7 @@ public class UserService implements UserDetailsService {
         }
         if (request.getRoleId() != null) {
             Role role = roleRepository.findById(request.getRoleId())
-                    .orElseThrow(() -> new RuntimeException("Role not found"));
+                    .orElseThrow(UserException::roleNotFound);
             user.setRole(role);
         }
         if (request.getStatus() != null) {

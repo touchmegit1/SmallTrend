@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Package, LogOut, Store, Warehouse, Users, Clock, BarChart3, ChevronRight, Shield } from 'lucide-react';
+import { ShoppingCart, Package, LogOut, Store, Warehouse, Users, Clock, BarChart3, ChevronRight, Shield, Truck, MessageSquare, Bot } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
@@ -72,6 +72,16 @@ const Sidebar = () => {
             ]
         },
         {
+            icon: Truck,
+            label: 'Nhà cung cấp',
+            path: '/suppliers',
+            children: [
+                { label: 'Danh sách nhà cung cấp', path: '/suppliers' },
+                { label: 'Hợp đồng & SLA', path: '/suppliers/contracts' },
+                { label: 'Đánh giá & Hiệu suất', path: '/suppliers/performance' },
+            ]
+        },
+        {
             icon: Clock,
             label: 'Nhân sự & Ca',
             path: '/hr',
@@ -80,6 +90,26 @@ const Sidebar = () => {
                 { label: 'Phân ca làm việc', path: '/hr/shifts' },
                 { label: 'Chấm công', path: '/hr/attendance' },
                 { label: 'Tính lương', path: '/hr/payroll' },
+            ]
+        },
+        {
+            icon: MessageSquare,
+            label: 'Ticket Center',
+            path: '/tickets',
+            children: [
+                { label: 'Danh sách ticket', path: '/tickets' },
+                { label: 'Tạo ticket', path: '/tickets/new' },
+                { label: 'Hàng đợi & SLA', path: '/tickets/queue' },
+            ]
+        },
+        {
+            icon: Bot,
+            label: 'AI Chatbot',
+            path: '/ai-chatbot',
+            children: [
+                { label: 'Trợ lý AI', path: '/ai-chatbot' },
+                { label: 'Kịch bản hội thoại', path: '/ai-chatbot/flows' },
+                { label: 'Nhật ký hội thoại', path: '/ai-chatbot/logs' },
             ]
         },
         {

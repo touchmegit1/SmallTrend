@@ -45,12 +45,27 @@ function App() {
                 <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
                 <Route path="crm/complaints" element={<div className="p-4">Khiếu nại</div>} />
 
+                {/* Module: Suppliers (Nhà cung cấp) */}
+                <Route path="suppliers" element={<div className="p-4">Danh sách nhà cung cấp</div>} />
+                <Route path="suppliers/contracts" element={<div className="p-4">Hợp đồng & SLA</div>} />
+                <Route path="suppliers/performance" element={<div className="p-4">Đánh giá & Hiệu suất</div>} />
+
                 {/* Module 5: HR (Nhân sự) */}
                 <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
                 <Route path="hr/users" element={<UserManagement />} />
                 <Route path="hr/shifts" element={<div className="p-4">Phân ca làm việc</div>} />
                 <Route path="hr/attendance" element={<div className="p-4">Chấm công</div>} />
                 <Route path="hr/payroll" element={<div className="p-4">Tính lương</div>} />
+
+                {/* Module: Ticket Center */}
+                <Route path="tickets" element={<div className="p-4">Danh sách ticket</div>} />
+                <Route path="tickets/new" element={<div className="p-4">Tạo ticket</div>} />
+                <Route path="tickets/queue" element={<div className="p-4">Hàng đợi & SLA</div>} />
+
+                {/* Module: AI Chatbot */}
+                <Route path="ai-chatbot" element={<div className="p-4">Trợ lý AI</div>} />
+                <Route path="ai-chatbot/flows" element={<div className="p-4">Kịch bản hội thoại</div>} />
+                <Route path="ai-chatbot/logs" element={<div className="p-4">Nhật ký hội thoại</div>} />
 
                 {/* Module 6: Reports (Báo cáo) */}
                 <Route path="reports" element={<div className="p-4">Reports & AI (Báo cáo)</div>} />
