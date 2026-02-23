@@ -4,7 +4,8 @@ import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
 import Login from './pages/Auth/Login'
 import Register from './pages/Auth/Register'
-import UserManagement from './pages/HR/UserManagement'
+import UserManagement from './pages/Hr/UserManagement'
+import ShiftManagement from './pages/Hr/ShiftManagement'
 
 function App() {
     return (
@@ -53,7 +54,7 @@ function App() {
                 {/* Module 5: HR (Nhân sự) */}
                 <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
                 <Route path="hr/users" element={<UserManagement />} />
-                <Route path="hr/shifts" element={<div className="p-4">Phân ca làm việc</div>} />
+                <Route path="hr/shifts" element={<ShiftManagement />} />
                 <Route path="hr/attendance" element={<div className="p-4">Chấm công</div>} />
                 <Route path="hr/payroll" element={<div className="p-4">Tính lương</div>} />
 
