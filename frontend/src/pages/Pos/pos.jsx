@@ -132,13 +132,14 @@ export default function POS() {
 
   const addNewOrder = () => {
     const newId = Math.max(...orders.map(o => o.id)) + 1;
-    setOrders([...orders, { id: newId, cart: [], customer: null, usePoints: false }]);
+    const newOrders = [...orders, { id: newId, cart: [], customer: null, usePoints: false }].sort((a, b) => a.id - b.id);
+    setOrders(newOrders);
     setActiveOrderId(newId);
   };
 
   const deleteOrder = (orderId) => {
     if (orders.length > 1) {
-      const newOrders = orders.filter(order => order.id !== orderId);
+      const newOrders = orders.filter(order => order.id !== orderId).sort((a, b) => a.id - b.id);
       setOrders(newOrders);
       if (activeOrderId === orderId) {
         setActiveOrderId(newOrders[0].id);

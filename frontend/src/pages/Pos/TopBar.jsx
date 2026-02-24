@@ -94,7 +94,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
       
       {/* Order Tabs */}
       <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: 1 }}>
-        {orders.map(order => (
+        {[...orders].sort((a, b) => a.id - b.id).map((order, index) => (
           <div key={order.id} style={{ position: "relative", display: "flex", alignItems: "center" }}>
             <button
               onClick={() => setActiveOrderId(order.id)}
@@ -106,10 +106,11 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
                 borderRadius: "5px",
                 cursor: "pointer",
                 fontSize: "11px",
-                paddingRight: orders.length > 1 ? "25px" : "10px"
+                paddingRight: orders.length > 1 ? "25px" : "10px",
+                 minWidth: 0  
               }}
             >
-              Hóa đơn {order.id} ({order.cart.length})
+              Hóa đơn {index + 1} ({order.cart.length})
             </button>
             {orders.length > 1 && (
               <button
