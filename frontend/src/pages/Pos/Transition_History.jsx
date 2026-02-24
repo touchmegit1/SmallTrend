@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Invoice from "./Invoice";
 
 function TransactionHistory() {
+  const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -15,6 +17,17 @@ function TransactionHistory() {
     const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     setTransactions(savedTransactions);
   }, []);
+
+  const restorePendingOrder = (transaction) => {
+    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+    const orderExists = pendingOrders.some(order => order.id === transaction.id);
+    
+    if (!orderExists) {
+      pendingOrders.push(transaction);
+      localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
+    }
+    navigate('/pos');
+  };
 
   const deleteTransaction = (transactionId) => {
     const updatedTransactions = transactions.filter(t => t.id !== transactionId);
@@ -245,10 +258,10 @@ function TransactionHistory() {
                 </td>
                 <td style={{ padding: "12px" }}>{item.time}</td>
                 <td style={{ padding: "12px" }}>{item.quantity}</td>
-                <td style={{ padding: "12px" }}>💵 {item.payment}</td>
+                <td style={{ padding: "12px" }}>{item.payment}</td>
                 <td style={{ padding: "12px" }}>{item.total}</td>
                 <td style={{ padding: "12px" }}>
-                  <span
+                  <span 
                     style={{
                       padding: "6px 10px",
                       borderRadius: "20px",
@@ -303,6 +316,26 @@ function TransactionHistory() {
                         minWidth: "120px",
                         marginTop: "4px"
                       }}>
+                        {item.status === "Chờ thanh toán" && (
+                          <button
+                            onClick={() => restorePendingOrder(item)}
+                            style={{
+                              width: "100%",
+                              padding: "8px 12px",
+                              border: "none",
+                              background: "white",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontSize: "13px",
+                              borderBottom: "1px solid #f0f0f0",
+                              color: "#0d6efd"
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
+                            onMouseLeave={(e) => e.target.style.background = "white"}
+                          >
+                            ↩ Quay lại POS
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setSelectedTransaction(item);

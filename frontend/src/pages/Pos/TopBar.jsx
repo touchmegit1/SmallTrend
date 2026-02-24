@@ -1,4 +1,33 @@
+import { useRef, useState, useEffect } from "react";
+
 export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice }) {
+  const scrollContainerRef = useRef(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+  }, [orders]);
+
+  const scroll = (direction) => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 150;
+      scrollContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+      setTimeout(checkScroll, 300);
+    }
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && searchTerm) {
       const product = filteredProducts[0];
@@ -93,69 +122,139 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
       </div>
       
       {/* Order Tabs */}
-      <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: 1 }}>
-        {[...orders].sort((a, b) => a.id - b.id).map((order, index) => (
-          <div key={order.id} style={{ position: "relative", display: "flex", alignItems: "center" }}>
-            <button
-              onClick={() => setActiveOrderId(order.id)}
-              style={{
-                padding: "5px 10px",
-                background: order.id === activeOrderId ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.3)",
-                borderRadius: "5px",
-                cursor: "pointer",
-                fontSize: "11px",
-                paddingRight: orders.length > 1 ? "25px" : "10px",
-                 minWidth: 0  
-              }}
-            >
-              Hóa đơn {index + 1} ({order.cart.length})
-            </button>
-            {orders.length > 1 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteOrder(order.id);
-                }}
-                style={{
-                  position: "absolute",
-                  right: "2px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  width: "16px",
-                  height: "16px",
-                  background: "rgba(220,53,69,0.8)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                  fontSize: "10px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        <button
-          onClick={addNewOrder}
-          style={{
-            padding: "5px 8px",
-            background: "rgba(0,123,255,0.8)",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            fontSize: "12px",
-            fontWeight: "bold"
+      <div style={{ position: "relative", flex: 1, maxWidth: "400px", display: "flex", alignItems: "center" }}>
+        {showLeftArrow && (
+          <button
+            onClick={() => scroll('left')}
+            style={{
+              position: "absolute",
+              left: 0,
+              zIndex: 10,
+              width: "20px",
+              height: "20px",
+              background: "rgba(255,255,255,0.9)",
+              color: "#007bff",
+              border: "none",
+              borderRadius: "50%",
+              cursor: "pointer",
+              fontSize: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+              fontWeight: "bold"
+            }}
+          >
+            ‹
+          </button>
+        )}
+        <div 
+          ref={scrollContainerRef}
+          onScroll={checkScroll}
+          style={{ 
+            display: "flex", 
+            gap: "8px", 
+            alignItems: "center", 
+            overflowX: "auto",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            flex: 1,
+            padding: orders.length > 3 ? "0 25px" : "0"
           }}
         >
-          +
-        </button>
+          <style>{`
+            div::-webkit-scrollbar { display: none; }
+          `}</style>
+          {[...orders].sort((a, b) => a.id - b.id).map((order, index) => (
+            <div key={order.id} style={{ position: "relative", display: "flex", alignItems: "center", flexShrink: 0 }}>
+              <button
+                onClick={() => setActiveOrderId(order.id)}
+                style={{
+                  padding: "5px 10px",
+                  background: order.id === activeOrderId ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  paddingRight: orders.length > 1 ? "25px" : "10px",
+                  minWidth: 0,
+                  whiteSpace: "nowrap"
+                }}
+              >
+                Hóa đơn {index + 1} ({order.cart.length})
+              </button>
+              {orders.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteOrder(order.id);
+                  }}
+                  style={{
+                    position: "absolute",
+                    right: "2px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "16px",
+                    height: "16px",
+                    background: "rgba(220,53,69,0.8)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "50%",
+                    cursor: "pointer",
+                    fontSize: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            onClick={addNewOrder}
+            style={{
+              padding: "5px 8px",
+              background: "rgba(0,123,255,0.8)",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "bold",
+              flexShrink: 0
+            }}
+          >
+            +
+          </button>
+        </div>
+        {showRightArrow && (
+          <button
+            onClick={() => scroll('right')}
+            style={{
+              position: "absolute",
+              right: 0,
+              zIndex: 10,
+              width: "20px",
+              height: "20px",
+              background: "rgba(255,255,255,0.9)",
+              color: "#007bff",
+              border: "none",
+              borderRadius: "50%",
+              cursor: "pointer",
+              fontSize: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+              fontWeight: "bold"
+            }}
+          >
+            ›
+          </button>
+        )}
       </div>
       
       <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
