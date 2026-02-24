@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axiosInstance from '../config/axiosConfig';
+import api from '../config/axiosConfig';
 
 export const useFetchCustomers = () => {
   const [customers, setCustomers] = useState([]);
@@ -9,7 +9,7 @@ export const useFetchCustomers = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get('/customers');
+      const response = await api.get('/crm/customers');
       setCustomers(response.data);
       setError(null);
     } catch (err) {

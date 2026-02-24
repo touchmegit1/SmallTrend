@@ -1,9 +1,13 @@
 package com.smalltrend.repository;
 
 import com.smalltrend.entity.Customer;
+
+import java.util.*;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface CustomerRepository extends JpaRepository<Customer, Long> {
+public interface CustomerRepository extends JpaRepository<Customer, Integer> {
+    Optional<Customer> findByPhone(String phone);
 }
