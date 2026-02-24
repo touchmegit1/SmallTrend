@@ -260,6 +260,7 @@
       "retail_price": 8000,
       "wholesale_price": 7000,
       "stock_quantity": 200,
+      "min_stock": 150,
       "unit": "Hộp",
       "image_url": "https://example.com/milk-vinamilk.jpg",
       "is_active": true,
@@ -276,7 +277,8 @@
       "purchase_price": 8000,
       "retail_price": 10000,
       "wholesale_price": 9000,
-      "stock_quantity": 300,
+      "stock_quantity": 30,
+      "min_stock": 100,
       "unit": "Lon",
       "image_url": "https://example.com/cocacola.jpg",
       "is_active": true,
@@ -293,7 +295,8 @@
       "purchase_price": 10000,
       "retail_price": 15000,
       "wholesale_price": 12000,
-      "stock_quantity": 150,
+      "stock_quantity": 0,
+      "min_stock": 80,
       "unit": "Gói",
       "image_url": "https://example.com/oishi-snack.jpg",
       "is_active": true,
@@ -311,6 +314,7 @@
       "retail_price": 28000,
       "wholesale_price": 24000,
       "stock_quantity": 100,
+      "min_stock": 40,
       "unit": "Gói",
       "image_url": "https://example.com/aji-ngon.jpg",
       "is_active": true,
@@ -327,7 +331,8 @@
       "purchase_price": 110000,
       "retail_price": 150000,
       "wholesale_price": 130000,
-      "stock_quantity": 50,
+      "stock_quantity": 8,
+      "min_stock": 20,
       "unit": "Túi",
       "image_url": "https://example.com/omo-detergent.jpg",
       "is_active": true,
@@ -486,48 +491,143 @@
   "purchase_orders": [
     {
       "id": 1,
-      "po_number": "PO-2024-001",
+      "po_number": "PN-2024-0001",
       "supplier_id": 1,
+      "supplier_name": "Công ty CP Vinamilk",
+      "location_id": 2,
       "creator_id": 4,
-      "total_amount": 6000000,
-      "status": "COMPLETED",
-      "created_at": "2024-01-05T09:00:00Z"
+      "status": "CONFIRMED",
+      "subtotal": 6000000,
+      "discount": 0,
+      "tax_percent": 10,
+      "tax_amount": 600000,
+      "shipping_fee": 0,
+      "total_amount": 6600000,
+      "paid_amount": 6600000,
+      "remaining_amount": 0,
+      "notes": "",
+      "created_at": "2024-01-05T09:00:00Z",
+      "confirmed_at": "2024-01-05T09:30:00Z"
     },
     {
       "id": 2,
-      "po_number": "PO-2024-002",
+      "po_number": "PN-2024-0002",
       "supplier_id": 2,
+      "supplier_name": "Công ty Coca-Cola Việt Nam",
+      "location_id": 2,
       "creator_id": 4,
-      "total_amount": 4800000,
-      "status": "COMPLETED",
-      "created_at": "2024-01-08T09:00:00Z"
+      "status": "CONFIRMED",
+      "subtotal": 4800000,
+      "discount": 0,
+      "tax_percent": 10,
+      "tax_amount": 480000,
+      "shipping_fee": 50000,
+      "total_amount": 5330000,
+      "paid_amount": 5330000,
+      "remaining_amount": 0,
+      "notes": "",
+      "created_at": "2024-01-08T09:00:00Z",
+      "confirmed_at": "2024-01-08T10:00:00Z"
     },
     {
       "id": 3,
-      "po_number": "PO-2024-003",
+      "po_number": "PN-2024-0003",
       "supplier_id": 3,
+      "supplier_name": "Công ty Liwayway (Oishi)",
+      "location_id": 6,
       "creator_id": 4,
-      "total_amount": 2000000,
-      "status": "PENDING",
-      "created_at": "2024-01-10T09:00:00Z"
+      "status": "DRAFT",
+      "subtotal": 2000000,
+      "discount": 100000,
+      "tax_percent": 10,
+      "tax_amount": 190000,
+      "shipping_fee": 30000,
+      "total_amount": 2120000,
+      "paid_amount": 0,
+      "remaining_amount": 2120000,
+      "notes": "Chờ xác nhận từ nhà cung cấp",
+      "created_at": "2024-01-10T09:00:00Z",
+      "confirmed_at": null
     },
     {
       "id": 4,
-      "po_number": "PO-2024-004",
+      "po_number": "PN-2024-0004",
       "supplier_id": 4,
+      "supplier_name": "Công ty TNHH Ajinomoto VN",
+      "location_id": 8,
       "creator_id": 4,
-      "total_amount": 3200000,
-      "status": "APPROVED",
-      "created_at": "2024-01-12T09:00:00Z"
+      "status": "CONFIRMED",
+      "subtotal": 3200000,
+      "discount": 0,
+      "tax_percent": 10,
+      "tax_amount": 320000,
+      "shipping_fee": 0,
+      "total_amount": 3520000,
+      "paid_amount": 2000000,
+      "remaining_amount": 1520000,
+      "notes": "Thanh toán một phần, còn nợ",
+      "created_at": "2024-01-12T09:00:00Z",
+      "confirmed_at": "2024-01-12T10:00:00Z"
     },
     {
       "id": 5,
-      "po_number": "PO-2024-005",
+      "po_number": "PN-2024-0005",
       "supplier_id": 5,
+      "supplier_name": "Công ty Unilever Việt Nam (OMO)",
+      "location_id": 2,
       "creator_id": 4,
-      "total_amount": 8800000,
-      "status": "COMPLETED",
-      "created_at": "2024-01-15T09:00:00Z"
+      "status": "CANCELLED",
+      "subtotal": 8800000,
+      "discount": 0,
+      "tax_percent": 10,
+      "tax_amount": 880000,
+      "shipping_fee": 0,
+      "total_amount": 9680000,
+      "paid_amount": 0,
+      "remaining_amount": 9680000,
+      "notes": "Đã hủy do thay đổi nhà cung cấp",
+      "created_at": "2024-01-15T09:00:00Z",
+      "confirmed_at": null
+    },
+    {
+      "id": "96f8",
+      "po_number": "PN-2026-0001",
+      "supplier_id": 1,
+      "supplier_name": "Công ty CP Vinamilk",
+      "location_id": 1,
+      "status": "CONFIRMED",
+      "discount": 0,
+      "tax_percent": 0,
+      "shipping_fee": 0,
+      "paid_amount": 0,
+      "notes": "",
+      "created_by": 1,
+      "created_at": "2026-02-24T07:25:56.006Z",
+      "confirmed_at": "2026-02-24T07:25:56.006Z",
+      "subtotal": 6000,
+      "tax_amount": 0,
+      "total_amount": 6000,
+      "remaining_amount": 6000
+    },
+    {
+      "id": "de43",
+      "po_number": "PN-2026-0001",
+      "supplier_id": 1,
+      "supplier_name": "Công ty CP Vinamilk",
+      "location_id": 1,
+      "status": "DRAFT",
+      "discount": 0,
+      "tax_percent": 0,
+      "shipping_fee": 0,
+      "paid_amount": 0,
+      "notes": "",
+      "created_by": 1,
+      "created_at": "2026-02-24T07:26:05.688Z",
+      "confirmed_at": null,
+      "subtotal": 6000,
+      "tax_amount": 0,
+      "total_amount": 6000,
+      "remaining_amount": 6000
     }
   ],
   "purchase_order_items": [
@@ -536,40 +636,63 @@
       "purchase_order_id": 1,
       "product_id": 1,
       "quantity": 1000,
-      "unit_cost": 6000,
-      "total_cost": 6000000
+      "unit_price": 6000,
+      "discount": 0,
+      "total": 6000000
     },
     {
       "id": 2,
       "purchase_order_id": 2,
       "product_id": 2,
       "quantity": 600,
-      "unit_cost": 8000,
-      "total_cost": 4800000
+      "unit_price": 8000,
+      "discount": 0,
+      "total": 4800000
     },
     {
       "id": 3,
       "purchase_order_id": 3,
       "product_id": 3,
       "quantity": 200,
-      "unit_cost": 10000,
-      "total_cost": 2000000
+      "unit_price": 10000,
+      "discount": 0,
+      "total": 2000000
     },
     {
       "id": 4,
       "purchase_order_id": 4,
       "product_id": 4,
       "quantity": 160,
-      "unit_cost": 20000,
-      "total_cost": 3200000
+      "unit_price": 20000,
+      "discount": 0,
+      "total": 3200000
     },
     {
       "id": 5,
       "purchase_order_id": 5,
       "product_id": 5,
       "quantity": 80,
-      "unit_cost": 110000,
-      "total_cost": 8800000
+      "unit_price": 110000,
+      "discount": 0,
+      "total": 8800000
+    },
+    {
+      "id": "2218",
+      "purchase_order_id": "96f8",
+      "product_id": 1,
+      "quantity": 1,
+      "unit_price": 6000,
+      "discount": 0,
+      "total": 6000
+    },
+    {
+      "id": "9549",
+      "purchase_order_id": "de43",
+      "product_id": 1,
+      "quantity": 1,
+      "unit_price": 6000,
+      "discount": 0,
+      "total": 6000
     }
   ],
   "product_batches": [
@@ -577,8 +700,8 @@
       "id": 1,
       "batch_code": "BATCH-MILK-2024-01",
       "product_id": 1,
-      "quantity": 1000,
-      "expiry_date": "2024-02-15",
+      "quantity": 200,
+      "expiry_date": "2026-02-20",
       "received_date": "2024-01-06",
       "created_at": "2024-01-06T10:00:00Z"
     },
@@ -586,8 +709,8 @@
       "id": 2,
       "batch_code": "BATCH-COKE-2024-01",
       "product_id": 2,
-      "quantity": 600,
-      "expiry_date": "2025-06-30",
+      "quantity": 30,
+      "expiry_date": "2026-03-01",
       "received_date": "2024-01-09",
       "created_at": "2024-01-09T10:00:00Z"
     },
@@ -595,8 +718,8 @@
       "id": 3,
       "batch_code": "BATCH-OISHI-2024-01",
       "product_id": 3,
-      "quantity": 200,
-      "expiry_date": "2024-07-01",
+      "quantity": 0,
+      "expiry_date": "2026-03-15",
       "received_date": "2024-01-11",
       "created_at": "2024-01-11T10:00:00Z"
     },
@@ -604,8 +727,8 @@
       "id": 4,
       "batch_code": "BATCH-AJI-2024-01",
       "product_id": 4,
-      "quantity": 160,
-      "expiry_date": "2025-12-31",
+      "quantity": 60,
+      "expiry_date": "2026-04-10",
       "received_date": "2024-01-13",
       "created_at": "2024-01-13T10:00:00Z"
     },
@@ -613,10 +736,19 @@
       "id": 5,
       "batch_code": "BATCH-OMO-2024-01",
       "product_id": 5,
-      "quantity": 80,
+      "quantity": 8,
       "expiry_date": null,
       "received_date": "2024-01-15",
       "created_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 6,
+      "batch_code": "BATCH-AJI-2024-02",
+      "product_id": 4,
+      "quantity": 40,
+      "expiry_date": "2027-06-30",
+      "received_date": "2024-02-01",
+      "created_at": "2024-02-01T10:00:00Z"
     }
   ],
   "locations": [
@@ -874,7 +1006,7 @@
       "description": "Giảm giá 10% toàn bộ sản phẩm",
       "start_date": "2024-02-01",
       "end_date": "2024-02-15",
-      "discount_percent": 10.0,
+      "discount_percent": 10,
       "discount_amount": null,
       "is_active": true,
       "created_at": "2024-01-25T00:00:00Z"
@@ -896,7 +1028,7 @@
       "description": "Giảm 20% bánh snack các loại",
       "start_date": "2024-02-10",
       "end_date": "2024-02-11",
-      "discount_percent": 20.0,
+      "discount_percent": 20,
       "discount_amount": null,
       "is_active": false,
       "created_at": "2024-01-27T00:00:00Z"
@@ -918,7 +1050,7 @@
       "description": "Giảm 15% cho bột giặt các loại",
       "start_date": "2024-02-20",
       "end_date": "2024-02-28",
-      "discount_percent": 15.0,
+      "discount_percent": 15,
       "discount_amount": null,
       "is_active": false,
       "created_at": "2024-01-29T00:00:00Z"
@@ -929,7 +1061,7 @@
       "id": 1,
       "promotion_id": 1,
       "min_order_value": 50000,
-      "discount_percent": 10.0
+      "discount_percent": 10
     },
     {
       "id": 2,
@@ -941,19 +1073,19 @@
       "id": 3,
       "promotion_id": 3,
       "min_order_value": 30000,
-      "discount_percent": 20.0
+      "discount_percent": 20
     },
     {
       "id": 4,
       "promotion_id": 5,
       "min_order_value": 100000,
-      "discount_percent": 15.0
+      "discount_percent": 15
     },
     {
       "id": 5,
       "promotion_id": 1,
       "min_order_value": 100000,
-      "discount_percent": 15.0
+      "discount_percent": 15
     }
   ],
   "sales_orders": [
@@ -1301,31 +1433,31 @@
     {
       "id": 1,
       "name": "VAT 10%",
-      "rate": 10.0,
+      "rate": 10,
       "is_active": true
     },
     {
       "id": 2,
       "name": "VAT 8%",
-      "rate": 8.0,
+      "rate": 8,
       "is_active": true
     },
     {
       "id": 3,
       "name": "VAT 5%",
-      "rate": 5.0,
+      "rate": 5,
       "is_active": true
     },
     {
       "id": 4,
       "name": "Không VAT",
-      "rate": 0.0,
+      "rate": 0,
       "is_active": true
     },
     {
       "id": 5,
       "name": "VAT 15% (cũ)",
-      "rate": 15.0,
+      "rate": 15,
       "is_active": false
     }
   ],

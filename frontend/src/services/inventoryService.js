@@ -45,6 +45,16 @@ export const createPurchaseOrder = async (orderData) => {
   return response.json();
 };
 
+export const updatePurchaseOrder = async (id, orderData) => {
+  const response = await fetch(`${API_URL}/purchase_orders/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(orderData),
+  });
+  if (!response.ok) throw new Error("Failed to update purchase order");
+  return response.json();
+};
+
 // Purchase Order Items
 export const getPurchaseOrderItems = async () => {
   const response = await fetch(`${API_URL}/purchase_order_items`);
