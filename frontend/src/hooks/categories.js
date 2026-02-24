@@ -9,7 +9,7 @@ export const useFetchCategories = () => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/categories');
+      const response = await api.get('product/categories');
       setCategories(response.data);
       setError(null);
     } catch (err) {

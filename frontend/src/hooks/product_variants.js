@@ -13,7 +13,7 @@ export const useFetchVariants = (productId) => {
             setLoading(true);
             try {
                 const response = await api.get(
-                    `/product_variants?product_id=${productId}`
+                    `/product/product_variants?product_id=${productId}`
                 );
                 setVariants(response.data);
             } catch (err) {

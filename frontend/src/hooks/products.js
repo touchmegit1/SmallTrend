@@ -9,7 +9,7 @@ export const useFetchProducts = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/products');
+      const response = await api.get('/product/products');
       setProducts(response.data);
       setError(null);
     } catch (err) {

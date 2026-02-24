@@ -9,7 +9,7 @@ export const useFetchBrands = () => {
   const fetchBrands= async () => {
     setLoading(true);
     try {
-      const response = await api.get('/brands');
+      const response = await api.get('product/brands');
       setBrands(response.data);
       setError(null);
     } catch (err) {
