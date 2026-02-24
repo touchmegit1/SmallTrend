@@ -29,6 +29,7 @@ export default function POS() {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('posOrders', JSON.stringify(orders));
@@ -245,6 +246,9 @@ export default function POS() {
     filteredTransactions.unshift(transaction);
     localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
 
+    setShowSuccessNotification(true);
+    setTimeout(() => setShowSuccessNotification(false), 3000);
+
     setSelectedTransaction(transaction);
     setShowInvoice(true);
     
@@ -302,6 +306,35 @@ export default function POS() {
           transaction={selectedTransaction}
           onClose={() => setShowInvoice(false)}
         />
+      )}
+
+      {showSuccessNotification && (
+        <div style={{
+          position: "fixed",
+          top: "20px",
+          right: "20px",
+          background: "#28a745",
+          color: "white",
+          padding: "15px 25px",
+          borderRadius: "8px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          fontSize: "14px",
+          fontWeight: "500",
+          animation: "slideIn 0.3s ease-out"
+        }}>
+          <style>{`
+            @keyframes slideIn {
+              from { transform: translateX(400px); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+          `}</style>
+          <span style={{ fontSize: "20px" }}>✓</span>
+          <span>Thanh toán thành công!</span>
+        </div>
       )}
 
       <div style={{
