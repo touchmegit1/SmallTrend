@@ -44,8 +44,9 @@ export default function POS() {
 
   const addToCart = (product) => {
     const existingItem = activeOrder.cart.find(item => item.id === product.id);
+    let updatedOrders;
     if (existingItem) {
-      setOrders(orders.map(order =>
+      updatedOrders = orders.map(order =>
         order.id === activeOrderId
           ? {
             ...order,
@@ -56,27 +57,19 @@ export default function POS() {
             )
           }
           : order
-      ));
+      );
     } else {
-      setOrders(orders.map(order =>
+      updatedOrders = orders.map(order =>
         order.id === activeOrderId
           ? { ...order, cart: [...order.cart, { ...product, qty: 1 }] }
           : order
-      ));
+      );
     }
-    savePendingOrder();
-  };
-
-  const updateCart = (newCart) => {
-    setOrders(orders.map(order =>
-      order.id === activeOrderId ? { ...order, cart: newCart } : order
-    ));
-    savePendingOrder();
-  };
-
-  const savePendingOrder = () => {
+    setOrders(updatedOrders);
+    
+    // Lưu ngay sau khi cập nhật
     setTimeout(() => {
-      const currentOrder = orders.find(o => o.id === activeOrderId);
+      const currentOrder = updatedOrders.find(o => o.id === activeOrderId);
       if (currentOrder && currentOrder.cart.length > 0) {
         const subtotal = currentOrder.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
         const orderId = `ORDER_${activeOrderId}`;
@@ -108,15 +101,67 @@ export default function POS() {
         if (existingIndex >= 0) {
           transactions[existingIndex] = pendingTransaction;
         } else {
-          const filteredTransactions = transactions.filter(t => t.orderId !== orderId);
-          filteredTransactions.unshift(pendingTransaction);
-          localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
-          return;
+          transactions.unshift(pendingTransaction);
         }
         localStorage.setItem('transactions', JSON.stringify(transactions));
       }
-    }, 500);
+    }, 100);
   };
+
+  const updateCart = (newCart) => {
+    const updatedOrders = orders.map(order =>
+      order.id === activeOrderId ? { ...order, cart: newCart } : order
+    );
+    setOrders(updatedOrders);
+    
+    // Lưu ngay sau khi cập nhật
+    setTimeout(() => {
+      const currentOrder = updatedOrders.find(o => o.id === activeOrderId);
+      if (currentOrder && currentOrder.cart.length > 0) {
+        const subtotal = currentOrder.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const orderId = `ORDER_${activeOrderId}`;
+        const pendingTransaction = {
+          id: `#HD${Date.now().toString().slice(-6)}`,
+          orderId: orderId,
+          time: new Date().toLocaleString('vi-VN', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+          }),
+          quantity: `${currentOrder.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
+          payment: "Tiền mặt",
+          total: `${subtotal.toLocaleString()} đ`,
+          status: "Chờ thanh toán",
+          items: currentOrder.cart,
+          customer: currentOrder.customer,
+          customerMoney: 0,
+          change: 0,
+          pointsDiscount: 0,
+          notes: ""
+        };
+        
+        const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        const existingIndex = transactions.findIndex(t => t.orderId === orderId);
+        
+        if (existingIndex >= 0) {
+          transactions[existingIndex] = pendingTransaction;
+        } else {
+          transactions.unshift(pendingTransaction);
+        }
+        localStorage.setItem('transactions', JSON.stringify(transactions));
+      } else {
+        // Xóa đơn treo nếu giỏ hàng trống
+        const orderId = `ORDER_${activeOrderId}`;
+        const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        const filteredTransactions = transactions.filter(t => t.orderId !== orderId);
+        localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
+      }
+    }, 100);
+  };
+
+
 
   const updateCustomer = (customer) => {
     setOrders(orders.map(order =>
@@ -222,11 +267,10 @@ export default function POS() {
 
   return (
     <div style={{
+      padding: "15px 25px",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       background: "#f8f9fa",
-      height: "100vh",
-      overflow: "hidden",
-    
+      minHeight: "100vh"
     }}>
       <TopBar
         searchTerm={searchTerm}
@@ -263,9 +307,7 @@ export default function POS() {
       <div style={{
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
-        flex: 1,
-        gap: "0",
-        minHeight: 0
+        gap: "15px"
       }}>
         <Cart
           cart={activeOrder.cart}

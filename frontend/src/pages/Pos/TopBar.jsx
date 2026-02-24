@@ -13,14 +13,14 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
     <div style={{
       background: "linear-gradient(135deg, #007bff 0%, #0056b3 100%)",
       color: "white",
-      padding: "10px 20px",
+      padding: "8px 15px",
       display: "flex",
       alignItems: "center",
-      gap: "15px",
+      gap: "12px",
       boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-      position: "relative",
-      height: "50px",
-      zIndex: 1000
+      borderRadius: "10px",
+      height: "45px",
+      marginBottom: "15px"
     }}>
       <div style={{ fontSize: "18px", fontWeight: "bold", minWidth: "150px" }}>SmallTrend POS</div>
       
@@ -171,7 +171,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
             fontSize: "12px"
           }}
         >
-          📱 Quét QR
+          Quét QR
         </button>
         <button 
           onClick={onPrintInvoice}
@@ -185,7 +185,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
             fontSize: "12px"
           }}
         >
-          🖨 In hóa đơn
+        In hóa đơn
         </button>
         <button style={{
           padding: "6px 12px",

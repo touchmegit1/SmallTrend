@@ -8,6 +8,7 @@ function TransactionHistory() {
   const [selectedDate, setSelectedDate] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showActionMenu, setShowActionMenu] = useState(null);
 
   useEffect(() => {
     // Load transactions from localStorage
@@ -15,27 +16,40 @@ function TransactionHistory() {
     setTransactions(savedTransactions);
   }, []);
 
+  const deleteTransaction = (transactionId) => {
+    const updatedTransactions = transactions.filter(t => t.id !== transactionId);
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    setShowActionMenu(null);
+  };
+
   // Lọc và sắp xếp transactions
   const filteredTransactions = transactions
     .filter(t => {
       // Tìm kiếm theo mã đơn (chỉ tìm trong phần số của mã)
-      const matchSearch = searchTerm === "" || 
+      const matchSearch = searchTerm === "" ||
         t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.id.replace('#HD', '').includes(searchTerm);
-      
+
       // Lọc theo ngày - chuyển đổi format để so sánh
       let matchDate = true;
       if (selectedDate) {
-        // selectedDate format: yyyy-mm-dd
-        // t.time format: "14:30 15/01/2025"
-        const [datePart] = t.time.split(' ').slice(1); // Lấy "15/01/2025"
-        if (datePart) {
-          const [day, month, year] = datePart.split('/');
+        const timeParts = t.time.includes(',')
+          ? t.time.split(', ')
+          : t.time.split(' ');
+
+        const datePart = timeParts.length > 1 ? timeParts[1] : timeParts[0];
+
+        if (datePart && datePart.includes('/')) {
+          // Format: MM/DD/YYYY
+          const [month, day, year] = datePart.split('/');
+
           const transactionDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
           matchDate = transactionDate === selectedDate;
         }
       }
-      
+
       return matchSearch && matchDate;
     })
     .sort((a, b) => {
@@ -167,7 +181,7 @@ function TransactionHistory() {
               cursor: "pointer",
             }}
           />
-          
+
           {(searchTerm || selectedDate || sortOrder !== "desc") && (
             <button
               onClick={() => {
@@ -219,68 +233,120 @@ function TransactionHistory() {
             </tr>
           ) : (
             filteredTransactions.map((item, index) => (
-            <tr key={index} style={{ borderBottom: "1px solid #eee" }}>
-              <td
-                style={{
-                  padding: "12px",
-                  color: "#0d6efd",
-                  fontWeight: "600",
-                }}
-              >
-                {item.id}
-              </td>
-              <td style={{ padding: "12px" }}>{item.time}</td>
-              <td style={{ padding: "12px" }}>{item.quantity}</td>
-              <td style={{ padding: "12px" }}>💵 {item.payment}</td>
-              <td style={{ padding: "12px" }}>{item.total}</td>
-              <td style={{ padding: "12px" }}>
-                <span
+              <tr key={index} style={{ borderBottom: "1px solid #eee" }}>
+                <td
                   style={{
-                    padding: "6px 10px",
-                    borderRadius: "20px",
-                    fontSize: "13px",
-                    background: item.status === "Chờ thanh toán" ? "#fff3cd" : "#e6f4ea",
-                    color: item.status === "Chờ thanh toán" ? "#856404" : "#0f5132",
+                    padding: "12px",
+                    color: "#0d6efd",
+                    fontWeight: "600",
                   }}
                 >
-                  {item.status}
-                </span>
-              </td>
-              <td style={{ padding: "12px" }}>
-                <button
-                  onClick={() => {
-                    setSelectedTransaction(item);
-                    setShowInvoice(true);
-                  }}
-                  style={{
-                    border: "none",
-                    background: "#f3f3f3",
-                    marginRight: "6px",
-                    padding: "6px 8px",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                  }}
-                >
-                  👁
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedTransaction(item);
-                    setShowInvoice(true);
-                  }}
-                  style={{
-                    border: "none",
-                    background: "#f3f3f3",
-                    padding: "6px 8px",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                  }}
-                >
-                  🖨
-                </button>
-              </td>
-            </tr>
-          ))
+                  {item.id}
+                </td>
+                <td style={{ padding: "12px" }}>{item.time}</td>
+                <td style={{ padding: "12px" }}>{item.quantity}</td>
+                <td style={{ padding: "12px" }}>💵 {item.payment}</td>
+                <td style={{ padding: "12px" }}>{item.total}</td>
+                <td style={{ padding: "12px" }}>
+                  <span
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "20px",
+                      fontSize: "13px",
+                      background: item.status === "Chờ thanh toán" ? "#fff3cd" : "#e6f4ea",
+                      color: item.status === "Chờ thanh toán" ? "#856404" : "#0f5132",
+                    }}
+                  >
+                    {item.status}
+                  </span>
+                </td>
+                <td style={{ padding: "12px" }}>
+                  <button
+                    onClick={() => {
+                      setSelectedTransaction(item);
+                      setShowInvoice(true);
+                    }}
+                    style={{
+                      border: "none",
+                      background: "#f3f3f3",
+                      marginRight: "6px",
+                      padding: "6px 8px",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    👁
+                  </button>
+                  <div style={{ position: "relative", display: "inline-block" }}>
+                    <button
+                      onClick={() => setShowActionMenu(showActionMenu === index ? null : index)}
+                      style={{
+                        border: "none",
+                        background: "#f3f3f3",
+                        padding: "6px 8px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ⋮
+                    </button>
+                    {showActionMenu === index && (
+                      <div style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "100%",
+                        background: "white",
+                        border: "1px solid #ddd",
+                        borderRadius: "6px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        zIndex: 1000,
+                        minWidth: "120px",
+                        marginTop: "4px"
+                      }}>
+                        <button
+                          onClick={() => {
+                            setSelectedTransaction(item);
+                            setShowInvoice(true);
+                            setShowActionMenu(null);
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            border: "none",
+                            background: "white",
+                            textAlign: "left",
+                            cursor: "pointer",
+                            fontSize: "13px",
+                            borderBottom: "1px solid #f0f0f0"
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
+                          onMouseLeave={(e) => e.target.style.background = "white"}
+                        >
+                          🖨 In hóa đơn
+                        </button>
+                        <button
+                          onClick={() => deleteTransaction(item.id)}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            border: "none",
+                            background: "white",
+                            textAlign: "left",
+                            cursor: "pointer",
+                            fontSize: "13px",
+                            color: "#dc3545"
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
+                          onMouseLeave={(e) => e.target.style.background = "white"}
+                        >
+                          🗑 Xóa
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))
           )}
         </tbody>
       </table>
