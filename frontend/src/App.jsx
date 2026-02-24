@@ -11,6 +11,7 @@ import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import ImportInventory from "./pages/Inventory/ImportInventory";
 import CreateImport from "./pages/Inventory/CreateImport";
 import InventoryAudit from "./pages/Inventory/InventoryAudit";
+import LocationManagement from "./pages/Inventory/LocationManagement";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -68,54 +69,13 @@ function App() {
           path="pos/suspended"
           element={<div className="p-4">Đơn hàng treo</div>}
         />
+
         {/* Module 2: Inventory (Kho) */}
         <Route path="inventory" element={<InventoryDashboard />} />
         <Route path="inventory/import" element={<ImportInventory />} />
         <Route path="inventory/import/create" element={<CreateImport />} />
         <Route path="inventory/audit" element={<InventoryAudit />} />
-        {/* Module 3: Products (Sản phẩm) */}
-        <Route
-          path="products"
-          element={<div className="p-4">Product Management (Sản phẩm)</div>}
-        />
-        <Route
-          path="products/categories"
-          element={<div className="p-4">Danh mục & Brand</div>}
-        />
-        <Route
-          path="products/price-books"
-          element={<div className="p-4">Thiết lập giá</div>}
-        />
-        <Route
-          path="products/print-barcodes"
-          element={<div className="p-4">In tem mã vạch</div>}
-        />
-
-        {/* Module 5: HR (Nhân sự) */}
-        <Route
-          path="hr"
-          element={<div className="p-4">HR & Shift (Nhân sự)</div>}
-        />
-        <Route
-          path="hr/users"
-          element={
-            <ProtectedRoute allowedRoles={["ROLE_ADMIN"]}>
-              <UserManagement />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/shifts"
-          element={<div className="p-4">Phân ca làm việc</div>}
-        />
-        <Route
-          path="hr/attendance"
-          element={<div className="p-4">Chấm công</div>}
-        />
-        <Route
-          path="hr/payroll"
-          element={<div className="p-4">Tính lương</div>}
-        />
+        <Route path="inventory/locations" element={<LocationManagement />} />
 
         {/* Module 3: Products (Sản phẩm) */}
         <Route
@@ -140,7 +100,6 @@ function App() {
           path="crm"
           element={<div className="p-4">CRM & Promotion</div>}
         />
-        <Route path="crm/homepage" element={<CRMHomepage />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
         <Route path="crm/complain" element={<CRMcomplain />} />

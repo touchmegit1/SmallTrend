@@ -93,6 +93,38 @@ export const getLocations = async () => {
   return response.json();
 };
 
+export const createLocation = async (locationData) => {
+  const response = await fetch(`${API_URL}/locations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...locationData,
+      created_at: new Date().toISOString(),
+      status: "ACTIVE",
+    }),
+  });
+  if (!response.ok) throw new Error("Failed to create location");
+  return response.json();
+};
+
+export const updateLocation = async (id, locationData) => {
+  const response = await fetch(`${API_URL}/locations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(locationData),
+  });
+  if (!response.ok) throw new Error("Failed to update location");
+  return response.json();
+};
+
+export const deleteLocation = async (id) => {
+  const response = await fetch(`${API_URL}/locations/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw new Error("Failed to delete location");
+  return true;
+};
+
 // Inventory Stock
 export const getInventoryStock = async () => {
   const response = await fetch(`${API_URL}/inventory_stock`);
