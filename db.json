@@ -1544,5 +1544,148 @@
       "performed_by": "admin",
       "performed_at": "2024-01-25T09:00:00Z"
     }
+  ],
+  "inventory_counts": [
+    {
+      "id": 1,
+      "code": "IC-2024-0001",
+      "location_id": 2,
+      "status": "CONFIRMED",
+      "total_shortage_value": 100000,
+      "total_overage_value": 0,
+      "total_difference_value": -100000,
+      "created_by": 4,
+      "confirmed_by": 2,
+      "created_at": "2024-01-20T08:00:00Z",
+      "confirmed_at": "2024-01-20T12:00:00Z",
+      "notes": "Kiểm kho định kỳ tháng 1/2024"
+    },
+    {
+      "id": "8e2d",
+      "code": "IC-2026-0001",
+      "location_id": 1,
+      "status": "CONFIRMED",
+      "notes": "",
+      "created_by": 1,
+      "confirmed_by": 1,
+      "created_at": "2026-02-24T07:38:39.049Z",
+      "confirmed_at": "2026-02-24T07:39:06.623Z",
+      "total_shortage_value": 0,
+      "total_overage_value": 0,
+      "total_difference_value": 0
+    }
+  ],
+  "inventory_count_items": [
+    {
+      "id": 1,
+      "inventory_count_id": 1,
+      "product_id": 1,
+      "system_quantity": 200,
+      "actual_quantity": 200,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": 2,
+      "inventory_count_id": 1,
+      "product_id": 2,
+      "system_quantity": 30,
+      "actual_quantity": 30,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": 3,
+      "inventory_count_id": 1,
+      "product_id": 3,
+      "system_quantity": 0,
+      "actual_quantity": 0,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": 4,
+      "inventory_count_id": 1,
+      "product_id": 4,
+      "system_quantity": 100,
+      "actual_quantity": 95,
+      "difference_quantity": -5,
+      "difference_value": -100000,
+      "reason": "SHRINKAGE"
+    },
+    {
+      "id": 5,
+      "inventory_count_id": 1,
+      "product_id": 5,
+      "system_quantity": 8,
+      "actual_quantity": 8,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "a1b9",
+      "inventory_count_id": "8e2d",
+      "product_id": 1,
+      "system_quantity": 200,
+      "actual_quantity": 200,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "38ae",
+      "inventory_count_id": "8e2d",
+      "product_id": 2,
+      "system_quantity": 30,
+      "actual_quantity": 30,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "1b73",
+      "inventory_count_id": "8e2d",
+      "product_id": 3,
+      "system_quantity": 0,
+      "actual_quantity": 0,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "b5b4",
+      "inventory_count_id": "8e2d",
+      "product_id": 4,
+      "system_quantity": 100,
+      "actual_quantity": 100,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "4972",
+      "inventory_count_id": "8e2d",
+      "product_id": 5,
+      "system_quantity": 8,
+      "actual_quantity": 8,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    }
+  ],
+  "inventory_adjustments": [
+    {
+      "id": 1,
+      "reference_id": 1,
+      "reference_type": "INVENTORY_COUNT",
+      "product_id": 4,
+      "quantity_change": -5,
+      "reason": "SHRINKAGE",
+      "created_at": "2024-01-20T12:00:00Z"
+    }
   ]
 }

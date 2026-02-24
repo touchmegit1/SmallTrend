@@ -10,7 +10,8 @@ import UserManagement from "./pages/HR/UserManagement";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import ImportInventory from "./pages/Inventory/ImportInventory";
 import CreateImport from "./pages/Inventory/CreateImport";
-import InventoryAudit from "./pages/Inventory/InventoryAudit";
+import InventoryCountList from "./pages/Inventory/InventoryCountList";
+import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import LocationManagement from "./pages/Inventory/LocationManagement";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
@@ -74,7 +75,16 @@ function App() {
         <Route path="inventory" element={<InventoryDashboard />} />
         <Route path="inventory/import" element={<ImportInventory />} />
         <Route path="inventory/import/create" element={<CreateImport />} />
-        <Route path="inventory/audit" element={<InventoryAudit />} />
+        <Route
+          path="inventory/audit"
+          element={<Navigate to="/inventory-counts" replace />}
+        />
+        <Route path="inventory-counts" element={<InventoryCountList />} />
+        <Route
+          path="inventory-counts/create"
+          element={<InventoryCountDetail />}
+        />
+        <Route path="inventory-counts/:id" element={<InventoryCountDetail />} />
         <Route path="inventory/locations" element={<LocationManagement />} />
 
         {/* Module 3: Products (Sản phẩm) */}
