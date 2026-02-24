@@ -1,6 +1,5 @@
 package com.smalltrend.dto.user;
 
-import com.smalltrend.entity.Role;
 import com.smalltrend.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
