@@ -44,7 +44,7 @@ const Sidebar = () => {
       children: [
         { label: "Giao diện bán hàng", path: "/pos" },
         { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Đơn hàng treo", path: "/pos/suspended" },
+        { label: "Báo cáo doanh thu", path: "/pos/suspended" },
       ],
     },
     {
@@ -73,11 +73,11 @@ const Sidebar = () => {
       label: "Khách hàng & KM",
       path: "/crm",
       children: [
-        { label: "Danh sách khách hàng", path: "/crm" },
-        { label: "Chương trình KM", path: "/crm/promotions" },
-        { label: "Voucher/Coupon", path: "/crm/vouchers" },
-        { label: "Tích điểm & Hạng", path: "/crm/loyalty" },
-        { label: "Khiếu nại", path: "/crm/complaints" },
+        { label: "Danh sách khách hàng", path: "/crm/customer" },
+        { label: "Chương trình KM", path: "/crm/event" },
+        { label: "Kho quà tặng", path: "/crm/loyalty" },
+        { label: "Khiếu nại", path: "/crm/complain" },
+        { label: "Trang chủ", path: "/crm/homepage" },
       ],
     },
     {
