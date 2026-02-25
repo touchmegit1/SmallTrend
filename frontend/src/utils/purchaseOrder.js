@@ -49,12 +49,11 @@ export function canTransitionTo(currentStatus, targetStatus) {
 }
 
 // ─── Code Generation ─────────────────────────────────────
-// Format: PN-YYYY-XXXX  (e.g. PN-2026-0001)
+// Format: NH001, NH002, NH003 ...
 export function generatePOCode(existingOrders = []) {
-  const year = new Date().getFullYear();
-  const prefix = `PN-${year}-`;
+  const prefix = "NH";
 
-  // Find highest existing number for this year
+  // Find highest existing number
   let maxNum = 0;
   for (const order of existingOrders) {
     const code = order.po_number || order.code || "";
@@ -64,7 +63,7 @@ export function generatePOCode(existingOrders = []) {
     }
   }
 
-  return `${prefix}${String(maxNum + 1).padStart(4, "0")}`;
+  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
 }
 
 // ─── Financial Calculations ──────────────────────────────
@@ -162,6 +161,7 @@ export function createDefaultOrder(code) {
     tax_percent: 0,
     shipping_fee: 0,
     paid_amount: 0,
+    expiry_date: "",
     notes: "",
     created_by: 1, // TODO: get from auth context
     created_at: new Date().toISOString(),
@@ -182,6 +182,7 @@ export function createOrderItem(product) {
     unit_price: product.purchase_price || 0,
     discount: 0,
     total: product.purchase_price || 0,
+    expiry_date: "",
     batches: [], // [{ batch_code, expiry_date, quantity }]
   };
 }

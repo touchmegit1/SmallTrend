@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getProducts, getSuppliers, getPurchaseOrders, createPurchaseOrder, createPurchaseOrderItem, updateProductStock } from "../services/inventoryService";
+import { generatePOCode } from "../utils/purchaseOrder";
 
 export function useImportForm() {
   const [suppliers, setSuppliers] = useState([]);
@@ -28,9 +29,8 @@ export function useImportForm() {
         setSuppliers(suppliersData);
         setProducts(productsData);
 
-        const lastPO = ordersData[ordersData.length - 1];
-        const nextNumber = lastPO ? parseInt(lastPO.po_number.replace("PN", "")) + 1 : 1;
-        setImportForm((prev) => ({ ...prev, po_number: `PN${String(nextNumber).padStart(6, "0")}` }));
+        const code = generatePOCode(ordersData);
+        setImportForm((prev) => ({ ...prev, po_number: code }));
       } catch (error) {
         console.error("Error:", error);
       } finally {

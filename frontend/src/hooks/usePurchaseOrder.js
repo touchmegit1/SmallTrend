@@ -209,6 +209,7 @@ export function usePurchaseOrder() {
             unit_price: item.unit_price,
             discount: item.discount || 0,
             total: item.total,
+            expiry_date: item.expiry_date || null,
           });
         }
 
@@ -264,6 +265,7 @@ export function usePurchaseOrder() {
             unit_price: item.unit_price,
             discount: item.discount || 0,
             total: item.total,
+            expiry_date: item.expiry_date || null,
           });
 
           // Update product stock

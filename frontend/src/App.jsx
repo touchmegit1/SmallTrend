@@ -13,6 +13,8 @@ import CreateImport from "./pages/Inventory/CreateImport";
 import InventoryCountList from "./pages/Inventory/InventoryCountList";
 import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import LocationManagement from "./pages/Inventory/LocationManagement";
+import DisposalList from "./pages/Inventory/DisposalList";
+import DisposalDetail from "./pages/Inventory/DisposalDetail";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -86,6 +88,9 @@ function App() {
         />
         <Route path="inventory-counts/:id" element={<InventoryCountDetail />} />
         <Route path="inventory/locations" element={<LocationManagement />} />
+        <Route path="inventory/disposal" element={<DisposalList />} />
+        <Route path="inventory/disposal/create" element={<DisposalDetail />} />
+        <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
 
         {/* Module 3: Products (Sản phẩm) */}
         <Route

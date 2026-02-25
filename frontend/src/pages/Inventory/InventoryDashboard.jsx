@@ -3,8 +3,6 @@ import { RefreshCw, Download, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInventoryDashboard } from "../../hooks/useInventoryData";
 import StatsCards from "../../components/inventory/StatsCards";
-import ProductStockTable from "../../components/inventory/ProductStockTable";
-import StockHealthOverview from "../../components/inventory/StockHealthOverview";
 import BatchManagementPanel from "../../components/inventory/BatchManagementPanel";
 import RecentActivities from "../../components/inventory/RecentActivities";
 
@@ -102,37 +100,19 @@ function InventoryDashboard() {
       {/* ─── Stats Cards ─────────────────────────────────────── */}
       <StatsCards stats={stats} />
 
-      {/* ─── Main Content Grid ───────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-        {/* Product Stock Table - takes 2 columns */}
+      {/* ─── Batch Management & Recent Activities ────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2">
-          <ProductStockTable
-            products={products}
-            categories={categories}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            categoryFilter={categoryFilter}
-            setCategoryFilter={setCategoryFilter}
-            stockFilter={stockFilter}
-            setStockFilter={setStockFilter}
-            sortConfig={sortConfig}
-            handleSort={handleSort}
+          <BatchManagementPanel
+            batches={batchTab === "all" ? allBatches : batches}
+            batchTab={batchTab}
+            setBatchTab={setBatchTab}
           />
         </div>
-
-        {/* Right sidebar */}
-        <div className="space-y-6">
-          <StockHealthOverview products={allProducts} />
+        <div>
           <RecentActivities stockMovements={stockMovements} />
         </div>
       </div>
-
-      {/* ─── Batch Management ────────────────────────────────── */}
-      <BatchManagementPanel
-        batches={batchTab === "all" ? allBatches : batches}
-        batchTab={batchTab}
-        setBatchTab={setBatchTab}
-      />
     </div>
   );
 }

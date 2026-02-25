@@ -55,6 +55,7 @@ const Sidebar = () => {
         { label: "Tổng quan kho", path: "/inventory" },
         { label: "Nhập kho", path: "/inventory/import" },
         { label: "Kiểm kê", path: "/inventory-counts" },
+        { label: "Xử lý hàng", path: "/inventory/disposal" },
         { label: "Quản lý vị trí", path: "/inventory/locations" },
       ],
     },

@@ -49,6 +49,17 @@ const PurchaseItemRow = memo(function PurchaseItemRow({
           />
         </td>
 
+        {/* Expiry Date */}
+        <td className="px-3 py-3 w-36">
+          <input
+            type="date"
+            value={item.expiry_date || ""}
+            onChange={(e) => onUpdate(item._key, "expiry_date", e.target.value)}
+            disabled={!isEditable}
+            className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-400"
+          />
+        </td>
+
         {/* Unit Price */}
         <td className="px-3 py-3 w-32">
           <input
@@ -115,7 +126,7 @@ const PurchaseItemRow = memo(function PurchaseItemRow({
       {hasBatches && (
         <tr className="bg-indigo-50/30 border-b border-slate-100">
           <td></td>
-          <td colSpan={7} className="px-3 py-2">
+          <td colSpan={8} className="px-3 py-2">
             <div className="flex items-center gap-2 flex-wrap">
               <Layers size={12} className="text-indigo-500" />
               <span className="text-xs font-medium text-indigo-600">
@@ -185,6 +196,9 @@ export default function PurchaseItemTable({
             </th>
             <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 w-28">
               Số lượng
+            </th>
+            <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 w-36">
+              Hạn SD
             </th>
             <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 w-32">
               Đơn giá

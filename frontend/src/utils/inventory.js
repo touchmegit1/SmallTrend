@@ -172,6 +172,7 @@ export const MOVEMENT_CONFIG = {
   OUT: { label: "Xuất kho", bg: "bg-red-100", text: "text-red-700", icon: "↑" },
   TRANSFER: { label: "Chuyển kho", bg: "bg-blue-100", text: "text-blue-700", icon: "⇄" },
   ADJUSTMENT: { label: "Điều chỉnh", bg: "bg-purple-100", text: "text-purple-700", icon: "±" },
+  DISPOSAL: { label: "Xử lý hủy", bg: "bg-orange-100", text: "text-orange-700", icon: "🗑" },
 };
 
 // ─── Sorting Helpers ─────────────────────────────────────────
