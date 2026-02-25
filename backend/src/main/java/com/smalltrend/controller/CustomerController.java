@@ -17,9 +17,10 @@ public class CustomerController {
     private final CustomerService customerService;
     
     @GetMapping("/customers")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
-        List<CustomerResponse> customers = customerService.getAllCustomers();
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER')")
+    public ResponseEntity<List<CustomerResponse>> getAllCustomers(
+            @RequestParam(required = false) String phone) {
+        List<CustomerResponse> customers = customerService.getAllCustomers(phone);
         return ResponseEntity.ok(customers);
     }
 }

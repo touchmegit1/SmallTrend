@@ -1,10 +1,12 @@
 import { useState } from "react";
 import EmptyCart from "./EmptyCart";
+import customerService from "../../services/customerService";
 
 export default function Cart({ cart, setCart, customer, setCustomer, usePoints, setUsePoints }) {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const updateQuantity = (id, newQty) => {
     if (newQty <= 0) {
@@ -37,25 +39,55 @@ export default function Cart({ cart, setCart, customer, setCustomer, usePoints, 
     else setPhoneError("");
   };
 
-  const handlePhoneSubmit = () => {
+  const handlePhoneSubmit = async () => {
     if (!validatePhone(phone)) {
       return;
     }
     
-    const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const loyaltyPoints = Math.floor(totalAmount / 1000);
-    
-    // Mock check if customer exists
-    const isExistingCustomer = Math.random() > 0.5;
-    const existingPoints = isExistingCustomer ? Math.floor(Math.random() * 500) : 0;
-    
-    setCustomer({
-      phone,
-      name: name || (isExistingCustomer ? "Khách hàng thân thiết" : ""),
-      loyaltyPoints,
-      existingPoints,
-      isNew: !isExistingCustomer
-    });
+    setLoading(true);
+    try {
+      // Search customer by phone from backend
+      const customers = await customerService.searchByPhone(phone);
+      
+      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const loyaltyPoints = Math.floor(totalAmount / 10000); // 1 point per 10,000 VND
+      
+      if (customers && customers.length > 0) {
+        // Existing customer
+        const existingCustomer = customers[0];
+        setCustomer({
+          id: existingCustomer.id,
+          phone: existingCustomer.phone,
+          name: existingCustomer.name || "Khách hàng thân thiết",
+          loyaltyPoints,
+          existingPoints: existingCustomer.loyaltyPoints || 0,
+          isNew: false
+        });
+      } else {
+        // New customer
+        setCustomer({
+          phone,
+          name: name || "",
+          loyaltyPoints,
+          existingPoints: 0,
+          isNew: true
+        });
+      }
+    } catch (error) {
+      console.error('Error searching customer:', error);
+      // Fallback to local customer
+      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const loyaltyPoints = Math.floor(totalAmount / 10000);
+      setCustomer({
+        phone,
+        name: name || "",
+        loyaltyPoints,
+        existingPoints: 0,
+        isNew: true
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const saveCustomer = () => {
@@ -191,18 +223,18 @@ export default function Cart({ cart, setCart, customer, setCustomer, usePoints, 
             />
             <button
               onClick={handlePhoneSubmit}
-              disabled={!phone || phoneError}
+              disabled={!phone || phoneError || loading}
               style={{
                 padding: "8px 16px",
-                background: phone && !phoneError ? "#28a745" : "#6c757d",
+                background: phone && !phoneError && !loading ? "#28a745" : "#6c757d",
                 color: "white",
                 border: "none",
                 borderRadius: "6px",
-                cursor: phone && !phoneError ? "pointer" : "not-allowed",
+                cursor: phone && !phoneError && !loading ? "pointer" : "not-allowed",
                 fontSize: "14px"
               }}
             >
-              Xác nhận
+              {loading ? "Đang tìm..." : "Xác nhận"}
             </button>
           </div>
           {phoneError && <div style={{ color: "#dc3545", fontSize: "12px" }}>{phoneError}</div>}

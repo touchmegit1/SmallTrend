@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
+import TransactionHistory from './pages/Pos/TransactionHistory'
+import ReportforCashier from './pages/Pos/ReportforCashier'
 import CRMHomepage from './pages/CRM/homepage'
 import Login from './pages/Auth/Login'
 import ProtectedRoute from './components/common/ProtectedRoute'
@@ -11,6 +13,7 @@ import CRMcomplain from './pages/CRM/complain'
 import CRMcustomer from './pages/CRM/customer'
 import CRMevent from './pages/CRM/event'
 import CRMloyalty from './pages/CRM/loyalty'
+import DebugAPI from './components/debug/DebugAPI'
 function App() {
     return (
         <Routes>
@@ -30,9 +33,13 @@ function App() {
                 } />
 
                 {/* Module 1: POS (Bán hàng) */}
-                <Route path="pos" element={<POS />} />
-                <Route path="pos/history" element={<div className="p-4">Lịch sử đơn hàng</div>} />
-                <Route path="pos/suspended" element={<div className="p-4">Đơn hàng treo</div>} />
+                <Route path="pos" element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "CASHIER"]}>
+                        <POS />
+                    </ProtectedRoute>
+                } />
+                <Route path="pos/history" element={<TransactionHistory/>} />     
+                <Route path="pos/suspended" element={<ReportforCashier/>} />
 
                 {/* Module 2: Inventory (Kho) */}
                 <Route path="inventory" element={<div className="p-4">Inventory Management (Kho)</div>} />
@@ -65,6 +72,9 @@ function App() {
                 <Route path="hr/shifts" element={<div className="p-4">Phân ca làm việc</div>} />
                 <Route path="hr/attendance" element={<div className="p-4">Chấm công</div>} />
                 <Route path="hr/payroll" element={<div className="p-4">Tính lương</div>} />
+
+                {/* Debug Route */}
+                <Route path="debug" element={<DebugAPI />} />
 
                 {/* Module 6: Reports (Báo cáo) */}
                 <Route path="reports" element={<div className="p-4">Reports & AI (Báo cáo)</div>} />
