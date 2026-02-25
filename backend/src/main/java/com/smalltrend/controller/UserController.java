@@ -64,7 +64,7 @@ public class UserController {
      * Lấy danh sách tất cả user với phân trang
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> getAllUsers(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
@@ -85,7 +85,7 @@ public class UserController {
      * Lấy thông tin user theo ID
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> getUserById(@PathVariable Integer id) {
         // Validate ID
         List<String> errors = validator.validateId(id, "ID người dùng");
@@ -173,7 +173,7 @@ public class UserController {
      * Tìm kiếm user theo tên hoặc email
      */
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> searchUsers(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") Integer page,

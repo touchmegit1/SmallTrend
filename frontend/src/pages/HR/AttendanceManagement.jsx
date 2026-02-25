@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { shiftService } from '../../services/shiftService';
 import { userService } from '../../services/userService';
+import { ClipboardCheck, CalendarDays, Users, Clock3, TriangleAlert, RotateCcw } from 'lucide-react';
+import CustomSelect from '../../components/common/CustomSelect';
 
 const AttendanceManagement = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [users, setUsers] = useState([]);
     const [records, setRecords] = useState([]);
+    const [rowErrors, setRowErrors] = useState({});
+    const [filterErrors, setFilterErrors] = useState({});
 
     const [filters, setFilters] = useState({
         date: toDateInput(new Date()),
@@ -33,6 +37,15 @@ const AttendanceManagement = () => {
     };
 
     const loadAttendance = async () => {
+        const validationErrors = validateAttendanceFilters(filters);
+        setFilterErrors(validationErrors);
+        if (Object.keys(validationErrors).length > 0) {
+            setError(Object.values(validationErrors)[0]);
+            setRecords([]);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             const params = {
@@ -69,6 +82,20 @@ const AttendanceManagement = () => {
     }, [records]);
 
     const updateAttendance = async (record, patch) => {
+        const validationMessage = validateAttendancePatch(record, patch);
+        if (validationMessage) {
+            setRowErrors((prev) => ({ ...prev, [record.key]: validationMessage }));
+            setError(validationMessage);
+            return;
+        }
+
+        setRowErrors((prev) => {
+            if (!prev[record.key]) return prev;
+            const next = { ...prev };
+            delete next[record.key];
+            return next;
+        });
+
         try {
             const next = {
                 ...record,
@@ -95,9 +122,14 @@ const AttendanceManagement = () => {
 
     return (
         <div className="space-y-5">
-            <div>
-                <h1 className="text-2xl font-semibold text-slate-900">Chấm công</h1>
-                <p className="text-sm text-slate-500 mt-1">Theo dõi trạng thái đi làm theo phân ca.</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+                        <ClipboardCheck size={24} className="text-indigo-600" />
+                        Chấm công
+                    </h1>
+                    <p className="text-sm text-slate-500 mt-1">Theo dõi trạng thái đi làm theo phân ca.</p>
+                </div>
             </div>
 
             {error && (
@@ -107,45 +139,55 @@ const AttendanceManagement = () => {
             )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard title="Tổng ca" value={summary.total} />
-                <StatCard title="Có mặt" value={summary.present} />
-                <StatCard title="Đi muộn" value={summary.late} />
-                <StatCard title="Vắng" value={summary.absent} />
+                <StatCard title="Tổng ca" value={summary.total} icon={CalendarDays} />
+                <StatCard title="Có mặt" value={summary.present} icon={Users} />
+                <StatCard title="Đi muộn" value={summary.late} icon={Clock3} />
+                <StatCard title="Vắng" value={summary.absent} icon={TriangleAlert} />
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="grid gap-3 md:grid-cols-4">
-                    <input
-                        type="date"
-                        value={filters.date}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, date: event.target.value }))}
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    />
-                    <select
-                        value={filters.userId}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, userId: event.target.value }))}
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    >
-                        <option value="">Tất cả nhân viên</option>
-                        {users.map((user) => (
-                            <option key={user.id} value={user.id}>{user.fullName || user.email}</option>
-                        ))}
-                    </select>
-                    <select
-                        value={filters.status}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    >
-                        <option value="ALL">Tất cả trạng thái</option>
-                        <option value="PENDING">Chưa chấm</option>
-                        <option value="PRESENT">Có mặt</option>
-                        <option value="LATE">Đi muộn</option>
-                        <option value="ABSENT">Vắng</option>
-                    </select>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600">Ngày chấm công</label>
+                        <input
+                            type="date"
+                            value={filters.date}
+                            onChange={(event) => setFilters((prev) => ({ ...prev, date: event.target.value }))}
+                            className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.date ? 'border-rose-400' : 'border-slate-200'}`}
+                        />
+                        {filterErrors.date && <p className="text-xs text-rose-600">{filterErrors.date}</p>}
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600">Nhân viên</label>
+                        <CustomSelect
+                            value={filters.userId}
+                            onChange={(value) => setFilters((prev) => ({ ...prev, userId: value }))}
+                            options={[
+                                { value: '', label: 'Tất cả nhân viên' },
+                                ...users.map((user) => ({ value: String(user.id), label: user.fullName || user.email }))
+                            ]}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600">Trạng thái chấm công</label>
+                        <CustomSelect
+                            value={filters.status}
+                            onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+                            variant="status"
+                            options={[
+                                { value: 'ALL', label: 'Tất cả trạng thái' },
+                                { value: 'PENDING', label: 'Chưa chấm' },
+                                { value: 'PRESENT', label: 'Có mặt' },
+                                { value: 'LATE', label: 'Đi muộn' },
+                                { value: 'ABSENT', label: 'Vắng' },
+                            ]}
+                        />
+                    </div>
                     <button
                         onClick={() => setFilters({ date: toDateInput(new Date()), userId: '', status: 'ALL' })}
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                     >
+                        <RotateCcw size={14} />
                         Đặt lại bộ lọc
                     </button>
                 </div>
@@ -174,26 +216,28 @@ const AttendanceManagement = () => {
                                 type="time"
                                 value={record.checkIn}
                                 onChange={(event) => updateAttendance(record, { checkIn: event.target.value })}
-                                className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
+                                className={`w-full rounded-md border px-2 py-1 text-xs ${rowErrors[record.key] ? 'border-rose-400' : 'border-slate-200'}`}
                             />
                             <input
                                 type="time"
                                 value={record.checkOut}
                                 onChange={(event) => updateAttendance(record, { checkOut: event.target.value })}
-                                className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
+                                className={`w-full rounded-md border px-2 py-1 text-xs ${rowErrors[record.key] ? 'border-rose-400' : 'border-slate-200'}`}
                             />
                         </div>
                         <div className="col-span-2">
-                            <select
+                            <CustomSelect
                                 value={record.status}
-                                onChange={(event) => updateAttendance(record, { status: event.target.value })}
-                                className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
-                            >
-                                <option value="PENDING">Chưa chấm</option>
-                                <option value="PRESENT">Có mặt</option>
-                                <option value="LATE">Đi muộn</option>
-                                <option value="ABSENT">Vắng</option>
-                            </select>
+                                onChange={(value) => updateAttendance(record, { status: value })}
+                                className="w-full"
+                                variant="status"
+                                options={[
+                                    { value: 'PENDING', label: 'Chưa chấm' },
+                                    { value: 'PRESENT', label: 'Có mặt' },
+                                    { value: 'LATE', label: 'Đi muộn' },
+                                    { value: 'ABSENT', label: 'Vắng' },
+                                ]}
+                            />
                         </div>
                         <div className="col-span-2">
                             <input
@@ -203,6 +247,9 @@ const AttendanceManagement = () => {
                                 className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
                             />
                         </div>
+                        {rowErrors[record.key] && (
+                            <div className="col-span-12 text-xs text-rose-600">{rowErrors[record.key]}</div>
+                        )}
                     </div>
                 ))}
 
@@ -214,9 +261,12 @@ const AttendanceManagement = () => {
     );
 };
 
-const StatCard = ({ title, value }) => (
+const StatCard = ({ title, value, icon: Icon }) => (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-400">{title}</p>
+        <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-wide text-slate-400">{title}</p>
+            {Icon ? <Icon size={16} className="text-indigo-500" /> : null}
+        </div>
         <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
     </div>
 );
@@ -237,6 +287,27 @@ const formatDate = (value) => {
 const formatTime = (value) => {
     if (!value) return '--:--';
     return value.toString().slice(0, 5);
+};
+
+const validateAttendancePatch = (record, patch) => {
+    const nextCheckIn = patch.checkIn !== undefined ? patch.checkIn : record.checkIn;
+    const nextCheckOut = patch.checkOut !== undefined ? patch.checkOut : record.checkOut;
+
+    if (nextCheckIn && nextCheckOut && nextCheckOut <= nextCheckIn) {
+        return 'Giờ ra phải sau giờ vào.';
+    }
+
+    return '';
+};
+
+const validateAttendanceFilters = (filters) => {
+    const errors = {};
+
+    if (!filters.date) {
+        errors.date = 'Vui lòng chọn ngày chấm công.';
+    }
+
+    return errors;
 };
 
 export default AttendanceManagement;

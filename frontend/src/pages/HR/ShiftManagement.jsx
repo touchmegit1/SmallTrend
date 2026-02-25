@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Plus, Search, X, Pencil, Trash2, Users } from 'lucide-react';
+import { CalendarDays, Plus, Search, X, Pencil, Trash2, Users, UserPlus, ChevronLeft, ChevronRight, CalendarRange, CheckCircle2 } from 'lucide-react';
 import api from '../../config/axiosConfig';
 import { shiftService } from '../../services/shiftService';
+import CustomSelect from '../../components/common/CustomSelect';
 
 const defaultShiftForm = {
     shiftCode: '',
@@ -50,10 +51,12 @@ const ShiftManagement = () => {
     const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
     const [editingShift, setEditingShift] = useState(null);
     const [shiftForm, setShiftForm] = useState(defaultShiftForm);
+    const [shiftFormErrors, setShiftFormErrors] = useState({});
 
     const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
     const [editingAssignment, setEditingAssignment] = useState(null);
     const [assignmentForm, setAssignmentForm] = useState(defaultAssignmentForm);
+    const [assignmentFormErrors, setAssignmentFormErrors] = useState({});
 
     const [calendarView, setCalendarView] = useState('week');
     const [anchorDate, setAnchorDate] = useState(new Date());
@@ -86,13 +89,13 @@ const ShiftManagement = () => {
             setShifts(Array.isArray(data) ? data : []);
             setError('');
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load shifts');
+            setError(err.response?.data?.message || 'Không thể tải danh sách ca');
         }
     };
 
     const loadUsers = async () => {
         try {
-            const res = await api.get('/users', { params: { page: 0, size: 200 } });
+            const res = await api.get('/users', { params: { page: 0, size: 100 } });
             const payload = res.data?.content ? res.data.content : res.data;
             setUsers(Array.isArray(payload) ? payload : []);
         } catch (err) {
@@ -113,12 +116,13 @@ const ShiftManagement = () => {
             setAssignments(Array.isArray(data) ? data : []);
             setError('');
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load assignments');
+            setError(err.response?.data?.message || 'Không thể tải danh sách phân công');
         }
     };
 
     const openShiftModal = (shift = null) => {
         setEditingShift(shift);
+        setShiftFormErrors({});
         if (shift) {
             setShiftForm({
                 shiftCode: shift.shiftCode || '',
@@ -151,6 +155,7 @@ const ShiftManagement = () => {
 
     const openAssignmentModal = (assignment = null) => {
         setEditingAssignment(assignment);
+        setAssignmentFormErrors({});
         if (assignment) {
             setAssignmentForm({
                 workShiftId: assignment.shift?.id || '',
@@ -167,6 +172,12 @@ const ShiftManagement = () => {
 
     const handleShiftSubmit = async (event) => {
         event.preventDefault();
+        const errors = validateShiftForm(shiftForm);
+        setShiftFormErrors(errors);
+        if (Object.keys(errors).length > 0) {
+            setError(Object.values(errors)[0]);
+            return;
+        }
         try {
             const payload = buildShiftPayload(shiftForm);
             if (editingShift) {
@@ -177,12 +188,18 @@ const ShiftManagement = () => {
             setIsShiftModalOpen(false);
             await loadShifts();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to save shift');
+            setError(err.response?.data?.message || 'Không thể lưu ca làm');
         }
     };
 
     const handleAssignmentSubmit = async (event) => {
         event.preventDefault();
+        const errors = validateAssignmentForm(assignmentForm);
+        setAssignmentFormErrors(errors);
+        if (Object.keys(errors).length > 0) {
+            setError(Object.values(errors)[0]);
+            return;
+        }
         try {
             const payload = buildAssignmentPayload(assignmentForm);
             if (editingAssignment) {
@@ -193,7 +210,7 @@ const ShiftManagement = () => {
             setIsAssignmentModalOpen(false);
             await loadAssignments();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to save assignment');
+            setError(err.response?.data?.message || 'Không thể lưu phân công');
         }
     };
 
@@ -203,7 +220,7 @@ const ShiftManagement = () => {
             await shiftService.deleteShift(shiftId);
             await loadShifts();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to delete shift');
+            setError(err.response?.data?.message || 'Không thể xóa ca làm');
         }
     };
 
@@ -213,7 +230,7 @@ const ShiftManagement = () => {
             await shiftService.deleteAssignment(assignmentId);
             await loadAssignments();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to delete assignment');
+            setError(err.response?.data?.message || 'Không thể xóa phân công');
         }
     };
 
@@ -226,10 +243,35 @@ const ShiftManagement = () => {
         }, {});
     }, [assignments]);
 
+    const handleQuickAttendance = async (assignment) => {
+        try {
+            const userId = assignment?.user?.id;
+            if (!userId || !assignment?.shiftDate) {
+                setError('Thiếu thông tin nhân viên hoặc ngày ca để chấm công.');
+                return;
+            }
+
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+
+            await shiftService.upsertAttendance({
+                userId,
+                date: assignment.shiftDate,
+                timeIn: `${hh}:${mm}`,
+                status: 'PRESENT',
+            });
+
+            setError('');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Không thể chấm công từ thời gian biểu');
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[60vh] text-slate-500">
-                Loading shift center...
+                Đang tải dữ liệu ca làm...
             </div>
         );
     }
@@ -238,23 +280,26 @@ const ShiftManagement = () => {
         <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-semibold text-slate-900">Shift Center</h1>
-                    <p className="text-sm text-slate-500 mt-1">Shifts, assignments, and weekly planning in one place.</p>
+                    <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+                        <CalendarRange size={24} className="text-indigo-600" />
+                        Quản lý ca làm
+                    </h1>
+                    <p className="text-sm text-slate-500 mt-1">Quản trị mẫu ca, phân ca nhân sự và lịch theo tuần/tháng.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => openShiftModal()}
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+                        className="inline-flex items-center gap-2 rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
                     >
                         <Plus size={16} />
-                        New shift
+                        Tạo ca mới
                     </button>
                     <button
                         onClick={() => openAssignmentModal()}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
                     >
-                        <Users size={16} />
-                        Assign staff
+                        <UserPlus size={16} />
+                        Phân ca
                     </button>
                 </div>
             </div>
@@ -276,7 +321,7 @@ const ShiftManagement = () => {
                                 : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
                         }`}
                     >
-                        {tab === 'shifts' ? 'Shift templates' : tab === 'assignments' ? 'Assignments' : 'Calendar'}
+                        {tab === 'shifts' ? 'Mẫu ca' : tab === 'assignments' ? 'Phân công' : 'Lịch ca'}
                     </button>
                 ))}
             </div>
@@ -289,19 +334,20 @@ const ShiftManagement = () => {
                             <input
                                 value={shiftQuery}
                                 onChange={(event) => setShiftQuery(event.target.value)}
-                                placeholder="Search shift name or code"
+                                placeholder="Tìm theo mã hoặc tên ca"
                                 className="w-64 rounded-lg border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
                             />
                         </div>
-                        <select
+                        <CustomSelect
                             value={shiftStatus}
-                            onChange={(event) => setShiftStatus(event.target.value)}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                        >
-                            <option value="all">All status</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE">Inactive</option>
-                        </select>
+                            onChange={setShiftStatus}
+                            variant="status"
+                            options={[
+                                { value: 'all', label: 'Tất cả trạng thái' },
+                                { value: 'ACTIVE', label: 'Hoạt động' },
+                                { value: 'INACTIVE', label: 'Ngưng hoạt động' },
+                            ]}
+                        />
                     </div>
 
                     <div className="grid gap-4 lg:grid-cols-3">
@@ -317,8 +363,8 @@ const ShiftManagement = () => {
                                     </div>
                                     <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
                                         shift.status === 'ACTIVE'
-                                            ? 'bg-slate-900 text-white'
-                                            : 'bg-slate-100 text-slate-500'
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-rose-100 text-rose-700'
                                     }`}>
                                         {shift.status}
                                     </span>
@@ -332,24 +378,22 @@ const ShiftManagement = () => {
                                 <div className="mt-4 flex items-center gap-2">
                                     <button
                                         onClick={() => openShiftModal(shift)}
-                                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 hover:border-slate-300"
+                                        className="inline-flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
                                     >
                                         <Pencil size={14} />
-                                        Edit
                                     </button>
                                     <button
                                         onClick={() => handleDeleteShift(shift.id)}
-                                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-rose-600 hover:border-rose-200"
+                                        className="inline-flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 hover:bg-rose-100"
                                     >
                                         <Trash2 size={14} />
-                                        Remove
                                     </button>
                                 </div>
                             </div>
                         ))}
                         {shifts.length === 0 && (
                             <div className="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-500">
-                                No shift templates yet.
+                                Chưa có mẫu ca nào.
                             </div>
                         )}
                     </div>
@@ -359,42 +403,38 @@ const ShiftManagement = () => {
             {activeTab === 'assignments' && (
                 <section className="space-y-4">
                     <div className="flex flex-wrap items-center gap-3">
-                        <select
+                        <CustomSelect
                             value={assignmentFilters.userId}
-                            onChange={(event) => setAssignmentFilters((prev) => ({ ...prev, userId: event.target.value }))}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                        >
-                            <option value="">All staff</option>
-                            {users.map((user) => (
-                                <option key={user.id} value={user.id}>{user.fullName || user.email}</option>
-                            ))}
-                        </select>
-                        <select
+                            onChange={(value) => setAssignmentFilters((prev) => ({ ...prev, userId: value }))}
+                            options={[
+                                { value: '', label: 'Tất cả nhân viên' },
+                                ...users.map((user) => ({ value: String(user.id), label: user.fullName || user.email }))
+                            ]}
+                        />
+                        <CustomSelect
                             value={assignmentFilters.shiftId}
-                            onChange={(event) => setAssignmentFilters((prev) => ({ ...prev, shiftId: event.target.value }))}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                        >
-                            <option value="">All shifts</option>
-                            {shifts.map((shift) => (
-                                <option key={shift.id} value={shift.id}>{shift.shiftName}</option>
-                            ))}
-                        </select>
+                            onChange={(value) => setAssignmentFilters((prev) => ({ ...prev, shiftId: value }))}
+                            options={[
+                                { value: '', label: 'Tất cả ca' },
+                                ...shifts.map((shift) => ({ value: String(shift.id), label: shift.shiftName }))
+                            ]}
+                        />
                         <button
                             onClick={() => openAssignmentModal()}
-                            className="inline-flex items-center gap-2 rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-medium text-white"
+                            className="inline-flex items-center gap-2 rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700"
                         >
                             <Plus size={14} />
-                            New assignment
+                            Tạo phân công
                         </button>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                         <div className="grid grid-cols-12 gap-2 border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            <div className="col-span-2">Date</div>
-                            <div className="col-span-3">Staff</div>
-                            <div className="col-span-3">Shift</div>
-                            <div className="col-span-2">Status</div>
-                            <div className="col-span-2">Actions</div>
+                            <div className="col-span-2">Ngày</div>
+                            <div className="col-span-3">Nhân viên</div>
+                            <div className="col-span-3">Ca</div>
+                            <div className="col-span-2">Trạng thái</div>
+                            <div className="col-span-2">Thao tác</div>
                         </div>
                         {assignments.map((assignment) => (
                             <div key={assignment.id} className="grid grid-cols-12 gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100">
@@ -410,28 +450,28 @@ const ShiftManagement = () => {
                                     </div>
                                 </div>
                                 <div className="col-span-2">
-                                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+                                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusPillClass(assignment.status)}`}>
                                         {assignment.status}
                                     </span>
                                 </div>
                                 <div className="col-span-2 flex gap-2">
                                     <button
                                         onClick={() => openAssignmentModal(assignment)}
-                                        className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                                        className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
                                     >
-                                        Edit
+                                        <Pencil size={12} /> Sửa
                                     </button>
                                     <button
                                         onClick={() => handleDeleteAssignment(assignment.id)}
-                                        className="text-xs font-medium text-rose-600 hover:text-rose-700"
+                                        className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
                                     >
-                                        Remove
+                                        <Trash2 size={12} /> Xóa
                                     </button>
                                 </div>
                             </div>
                         ))}
                         {assignments.length === 0 && (
-                            <div className="px-4 py-6 text-sm text-slate-500">No assignments for this range.</div>
+                            <div className="px-4 py-6 text-sm text-slate-500">Không có phân công trong khoảng thời gian này.</div>
                         )}
                     </div>
                 </section>
@@ -447,7 +487,7 @@ const ShiftManagement = () => {
                                     calendarView === 'week' ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600'
                                 }`}
                             >
-                                Week
+                                Tuần
                             </button>
                             <button
                                 onClick={() => setCalendarView('month')}
@@ -455,15 +495,15 @@ const ShiftManagement = () => {
                                     calendarView === 'month' ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600'
                                 }`}
                             >
-                                Month
+                                Tháng
                             </button>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => shiftAnchor(calendarView, anchorDate, -1, setAnchorDate)}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600"
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600"
                             >
-                                Prev
+                                <ChevronLeft size={14} /> Trước
                             </button>
                             <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                                 <CalendarDays size={16} />
@@ -471,9 +511,9 @@ const ShiftManagement = () => {
                             </div>
                             <button
                                 onClick={() => shiftAnchor(calendarView, anchorDate, 1, setAnchorDate)}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600"
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600"
                             >
-                                Next
+                                Sau <ChevronRight size={14} />
                             </button>
                         </div>
                     </div>
@@ -485,6 +525,7 @@ const ShiftManagement = () => {
                                     key={date.toISOString()}
                                     date={date}
                                     assignments={assignmentsByDate[toDateInput(date)] || []}
+                                    onQuickAttendance={handleQuickAttendance}
                                 />
                             ))}
                         </div>
@@ -496,6 +537,7 @@ const ShiftManagement = () => {
                                     date={date}
                                     inMonth={date.getMonth() === anchorDate.getMonth()}
                                     assignments={assignmentsByDate[toDateInput(date)] || []}
+                                    onQuickAttendance={handleQuickAttendance}
                                 />
                             ))}
                         </div>
@@ -509,9 +551,9 @@ const ShiftManagement = () => {
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">
-                                    {editingShift ? 'Edit shift' : 'Create shift'}
+                                    {editingShift ? 'Cập nhật ca' : 'Tạo ca mới'}
                                 </h2>
-                                <p className="text-xs text-slate-500">Define time ranges, staff limits, and policy.</p>
+                                <p className="text-xs text-slate-500">Thiết lập khung giờ, số lượng nhân sự và chính sách ca.</p>
                             </div>
                             <button onClick={() => setIsShiftModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                                 <X size={18} />
@@ -519,140 +561,198 @@ const ShiftManagement = () => {
                         </div>
                         <form onSubmit={handleShiftSubmit} className="p-6 space-y-4">
                             <div className="grid gap-4 md:grid-cols-2">
-                                <input
-                                    value={shiftForm.shiftCode}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, shiftCode: event.target.value })}
-                                    placeholder="Shift code"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    required
-                                />
-                                <input
-                                    value={shiftForm.shiftName}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, shiftName: event.target.value })}
-                                    placeholder="Shift name"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    required
-                                />
-                                <input
-                                    type="time"
-                                    value={shiftForm.startTime}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, startTime: event.target.value })}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    required
-                                />
-                                <input
-                                    type="time"
-                                    value={shiftForm.endTime}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, endTime: event.target.value })}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    required
-                                />
-                                <input
-                                    type="time"
-                                    value={shiftForm.breakStartTime}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, breakStartTime: event.target.value })}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                                <input
-                                    type="time"
-                                    value={shiftForm.breakEndTime}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, breakEndTime: event.target.value })}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                                <select
-                                    value={shiftForm.shiftType}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, shiftType: event.target.value })}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                >
-                                    <option value="REGULAR">Regular</option>
-                                    <option value="WEEKEND">Weekend</option>
-                                    <option value="HOLIDAY">Holiday</option>
-                                    <option value="NIGHT">Night</option>
-                                </select>
-                                <select
-                                    value={shiftForm.status}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, status: event.target.value })}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                >
-                                    <option value="ACTIVE">Active</option>
-                                    <option value="INACTIVE">Inactive</option>
-                                </select>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Mã ca</label>
+                                    <input
+                                        value={shiftForm.shiftCode}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, shiftCode: event.target.value })}
+                                        placeholder="Nhập mã ca"
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.shiftCode ? 'border-rose-400' : 'border-slate-200'}`}
+                                        required
+                                    />
+                                    {shiftFormErrors.shiftCode && <p className="text-xs text-rose-600">{shiftFormErrors.shiftCode}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Tên ca</label>
+                                    <input
+                                        value={shiftForm.shiftName}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, shiftName: event.target.value })}
+                                        placeholder="Nhập tên ca"
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.shiftName ? 'border-rose-400' : 'border-slate-200'}`}
+                                        required
+                                    />
+                                    {shiftFormErrors.shiftName && <p className="text-xs text-rose-600">{shiftFormErrors.shiftName}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Giờ bắt đầu</label>
+                                    <input
+                                        type="time"
+                                        value={shiftForm.startTime}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, startTime: event.target.value })}
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.startTime ? 'border-rose-400' : 'border-slate-200'}`}
+                                        required
+                                    />
+                                    {shiftFormErrors.startTime && <p className="text-xs text-rose-600">{shiftFormErrors.startTime}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Giờ kết thúc</label>
+                                    <input
+                                        type="time"
+                                        value={shiftForm.endTime}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, endTime: event.target.value })}
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.endTime ? 'border-rose-400' : 'border-slate-200'}`}
+                                        required
+                                    />
+                                    {shiftFormErrors.endTime && <p className="text-xs text-rose-600">{shiftFormErrors.endTime}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Bắt đầu nghỉ giữa ca</label>
+                                    <input
+                                        type="time"
+                                        value={shiftForm.breakStartTime}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, breakStartTime: event.target.value })}
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Kết thúc nghỉ giữa ca</label>
+                                    <input
+                                        type="time"
+                                        value={shiftForm.breakEndTime}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, breakEndTime: event.target.value })}
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Loại ca</label>
+                                    <CustomSelect
+                                        value={shiftForm.shiftType}
+                                        onChange={(value) => setShiftForm({ ...shiftForm, shiftType: value })}
+                                        options={[
+                                            { value: 'REGULAR', label: 'Thường' },
+                                            { value: 'WEEKEND', label: 'Cuối tuần' },
+                                            { value: 'HOLIDAY', label: 'Ngày lễ' },
+                                            { value: 'NIGHT', label: 'Ca đêm' },
+                                        ]}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Trạng thái</label>
+                                    <CustomSelect
+                                        value={shiftForm.status}
+                                        onChange={(value) => setShiftForm({ ...shiftForm, status: value })}
+                                        variant="status"
+                                        options={[
+                                            { value: 'ACTIVE', label: 'Hoạt động' },
+                                            { value: 'INACTIVE', label: 'Ngưng hoạt động' },
+                                        ]}
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-3">
-                                <input
-                                    type="number"
-                                    value={shiftForm.minimumStaffRequired}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, minimumStaffRequired: event.target.value })}
-                                    placeholder="Min staff"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    value={shiftForm.maximumStaffAllowed}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, maximumStaffAllowed: event.target.value })}
-                                    placeholder="Max staff"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    value={shiftForm.gracePeriodMinutes}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, gracePeriodMinutes: event.target.value })}
-                                    placeholder="Grace period (min)"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Nhân sự tối thiểu</label>
+                                    <input
+                                        type="number"
+                                        value={shiftForm.minimumStaffRequired}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, minimumStaffRequired: event.target.value })}
+                                        placeholder="Nhập số lượng"
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.minimumStaffRequired ? 'border-rose-400' : 'border-slate-200'}`}
+                                    />
+                                    {shiftFormErrors.minimumStaffRequired && <p className="text-xs text-rose-600">{shiftFormErrors.minimumStaffRequired}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Nhân sự tối đa</label>
+                                    <input
+                                        type="number"
+                                        value={shiftForm.maximumStaffAllowed}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, maximumStaffAllowed: event.target.value })}
+                                        placeholder="Nhập số lượng"
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.maximumStaffAllowed ? 'border-rose-400' : 'border-slate-200'}`}
+                                    />
+                                    {shiftFormErrors.maximumStaffAllowed && <p className="text-xs text-rose-600">{shiftFormErrors.maximumStaffAllowed}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Thời gian ân hạn (phút)</label>
+                                    <input
+                                        type="number"
+                                        value={shiftForm.gracePeriodMinutes}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, gracePeriodMinutes: event.target.value })}
+                                        placeholder="Nhập phút"
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-3">
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    value={shiftForm.overtimeMultiplier}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, overtimeMultiplier: event.target.value })}
-                                    placeholder="Overtime x"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    value={shiftForm.nightShiftBonus}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, nightShiftBonus: event.target.value })}
-                                    placeholder="Night bonus %"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    value={shiftForm.weekendBonus}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, weekendBonus: event.target.value })}
-                                    placeholder="Weekend bonus %"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Hệ số tăng ca</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        value={shiftForm.overtimeMultiplier}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, overtimeMultiplier: event.target.value })}
+                                        placeholder="Ví dụ: 1.5"
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Phụ cấp ca đêm (%)</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        value={shiftForm.nightShiftBonus}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, nightShiftBonus: event.target.value })}
+                                        placeholder="Nhập phần trăm"
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Phụ cấp cuối tuần (%)</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        value={shiftForm.weekendBonus}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, weekendBonus: event.target.value })}
+                                        placeholder="Nhập phần trăm"
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-3">
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    value={shiftForm.holidayBonus}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, holidayBonus: event.target.value })}
-                                    placeholder="Holiday bonus %"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    value={shiftForm.earlyClockInMinutes}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, earlyClockInMinutes: event.target.value })}
-                                    placeholder="Early clock-in (min)"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    value={shiftForm.lateClockOutMinutes}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, lateClockOutMinutes: event.target.value })}
-                                    placeholder="Late clock-out (min)"
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Phụ cấp ngày lễ (%)</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        value={shiftForm.holidayBonus}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, holidayBonus: event.target.value })}
+                                        placeholder="Nhập phần trăm"
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Vào sớm tối đa (phút)</label>
+                                    <input
+                                        type="number"
+                                        value={shiftForm.earlyClockInMinutes}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, earlyClockInMinutes: event.target.value })}
+                                        placeholder="Nhập phút"
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Ra muộn tối đa (phút)</label>
+                                    <input
+                                        type="number"
+                                        value={shiftForm.lateClockOutMinutes}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, lateClockOutMinutes: event.target.value })}
+                                        placeholder="Nhập phút"
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-3">
@@ -682,12 +782,15 @@ const ShiftManagement = () => {
                                 </label>
                             </div>
 
-                            <textarea
-                                value={shiftForm.description}
-                                onChange={(event) => setShiftForm({ ...shiftForm, description: event.target.value })}
-                                placeholder="Notes"
-                                className="min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                            />
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-600">Ghi chú ca làm</label>
+                                <textarea
+                                    value={shiftForm.description}
+                                    onChange={(event) => setShiftForm({ ...shiftForm, description: event.target.value })}
+                                    placeholder="Nhập ghi chú"
+                                    className="min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                />
+                            </div>
 
                             <div className="flex justify-end gap-2">
                                 <button
@@ -695,13 +798,13 @@ const ShiftManagement = () => {
                                     onClick={() => setIsShiftModalOpen(false)}
                                     className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
                                 >
-                                    Cancel
+                                    Hủy
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-sm text-white"
+                                    className="rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
                                 >
-                                    Save shift
+                                    Lưu ca
                                 </button>
                             </div>
                         </form>
@@ -715,79 +818,92 @@ const ShiftManagement = () => {
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">
-                                    {editingAssignment ? 'Edit assignment' : 'Create assignment'}
+                                    {editingAssignment ? 'Cập nhật phân công' : 'Tạo phân công'}
                                 </h2>
-                                <p className="text-xs text-slate-500">Assign staff to a shift and date.</p>
+                                <p className="text-xs text-slate-500">Gán nhân viên vào ca theo ngày làm việc.</p>
                             </div>
                             <button onClick={() => setIsAssignmentModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                                 <X size={18} />
                             </button>
                         </div>
                         <form onSubmit={handleAssignmentSubmit} className="p-6 space-y-4">
-                            <select
-                                value={assignmentForm.workShiftId}
-                                onChange={(event) => setAssignmentForm({ ...assignmentForm, workShiftId: event.target.value })}
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                required
-                            >
-                                <option value="">Select shift</option>
-                                {shifts.map((shift) => (
-                                    <option key={shift.id} value={shift.id}>
-                                        {shift.shiftName} ({formatTime(shift.startTime)} - {formatTime(shift.endTime)})
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                value={assignmentForm.userId}
-                                onChange={(event) => setAssignmentForm({ ...assignmentForm, userId: event.target.value })}
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                required
-                            >
-                                <option value="">Select staff</option>
-                                {users.map((user) => (
-                                    <option key={user.id} value={user.id}>
-                                        {user.fullName || user.email}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <input
-                                    type="date"
-                                    value={assignmentForm.shiftDate}
-                                    onChange={(event) => setAssignmentForm({ ...assignmentForm, shiftDate: event.target.value })}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    required
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-600">Ca làm</label>
+                                <CustomSelect
+                                    value={assignmentForm.workShiftId}
+                                    onChange={(value) => setAssignmentForm({ ...assignmentForm, workShiftId: value })}
+                                    className={`w-full ${assignmentFormErrors.workShiftId ? 'ring-1 ring-rose-400 rounded-xl' : ''}`}
+                                    options={[
+                                        { value: '', label: 'Chọn ca' },
+                                        ...shifts.map((shift) => ({
+                                            value: String(shift.id),
+                                            label: `${shift.shiftName} (${formatTime(shift.startTime)} - ${formatTime(shift.endTime)})`
+                                        }))
+                                    ]}
                                 />
-                                <select
-                                    value={assignmentForm.status}
-                                    onChange={(event) => setAssignmentForm({ ...assignmentForm, status: event.target.value })}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                >
-                                    <option value="ASSIGNED">Assigned</option>
-                                    <option value="CONFIRMED">Confirmed</option>
-                                    <option value="COMPLETED">Completed</option>
-                                    <option value="CANCELLED">Cancelled</option>
-                                </select>
+                                {assignmentFormErrors.workShiftId && <p className="text-xs text-rose-600">{assignmentFormErrors.workShiftId}</p>}
                             </div>
-                            <textarea
-                                value={assignmentForm.notes}
-                                onChange={(event) => setAssignmentForm({ ...assignmentForm, notes: event.target.value })}
-                                placeholder="Notes"
-                                className="min-h-[80px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                            />
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-600">Nhân viên</label>
+                                <CustomSelect
+                                    value={assignmentForm.userId}
+                                    onChange={(value) => setAssignmentForm({ ...assignmentForm, userId: value })}
+                                    className={`w-full ${assignmentFormErrors.userId ? 'ring-1 ring-rose-400 rounded-xl' : ''}`}
+                                    options={[
+                                        { value: '', label: 'Chọn nhân viên' },
+                                        ...users.map((user) => ({ value: String(user.id), label: user.fullName || user.email }))
+                                    ]}
+                                />
+                                {assignmentFormErrors.userId && <p className="text-xs text-rose-600">{assignmentFormErrors.userId}</p>}
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Ngày làm việc</label>
+                                    <input
+                                        type="date"
+                                        value={assignmentForm.shiftDate}
+                                        onChange={(event) => setAssignmentForm({ ...assignmentForm, shiftDate: event.target.value })}
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${assignmentFormErrors.shiftDate ? 'border-rose-400' : 'border-slate-200'}`}
+                                        required
+                                    />
+                                    {assignmentFormErrors.shiftDate && <p className="text-xs text-rose-600">{assignmentFormErrors.shiftDate}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Trạng thái phân công</label>
+                                    <CustomSelect
+                                        value={assignmentForm.status}
+                                        onChange={(value) => setAssignmentForm({ ...assignmentForm, status: value })}
+                                        options={[
+                                            { value: 'ASSIGNED', label: 'Đã phân công' },
+                                            { value: 'CONFIRMED', label: 'Đã xác nhận' },
+                                            { value: 'COMPLETED', label: 'Hoàn thành' },
+                                            { value: 'CANCELLED', label: 'Đã hủy' },
+                                        ]}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-600">Ghi chú phân công</label>
+                                <textarea
+                                    value={assignmentForm.notes}
+                                    onChange={(event) => setAssignmentForm({ ...assignmentForm, notes: event.target.value })}
+                                    placeholder="Nhập ghi chú"
+                                    className="min-h-[80px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                />
+                            </div>
                             <div className="flex justify-end gap-2">
                                 <button
                                     type="button"
                                     onClick={() => setIsAssignmentModalOpen(false)}
                                     className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
                                 >
-                                    Cancel
+                                    Hủy
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-sm text-white"
+                                    className="rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
                                 >
-                                    Save assignment
+                                    Lưu phân công
                                 </button>
                             </div>
                         </form>
@@ -798,7 +914,7 @@ const ShiftManagement = () => {
     );
 };
 
-const CalendarColumn = ({ date, assignments }) => {
+const CalendarColumn = ({ date, assignments, onQuickAttendance }) => {
     return (
         <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
             <div className="mb-3">
@@ -812,17 +928,25 @@ const CalendarColumn = ({ date, assignments }) => {
                         <div className="text-slate-500">
                             {item.shift?.shiftName} ({formatTime(item.shift?.startTime)} - {formatTime(item.shift?.endTime)})
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => onQuickAttendance?.(item)}
+                            className="mt-2 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
+                        >
+                            <CheckCircle2 size={12} />
+                            Chấm công
+                        </button>
                     </div>
                 ))}
                 {assignments.length === 0 && (
-                    <div className="text-xs text-slate-400">No assignments</div>
+                    <div className="text-xs text-slate-400">Không có phân công</div>
                 )}
             </div>
         </div>
     );
 };
 
-const CalendarTile = ({ date, inMonth, assignments }) => {
+const CalendarTile = ({ date, inMonth, assignments, onQuickAttendance }) => {
     return (
         <div className={`min-h-[140px] rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${
             inMonth ? '' : 'opacity-50'
@@ -834,7 +958,14 @@ const CalendarTile = ({ date, inMonth, assignments }) => {
             <div className="mt-2 space-y-1">
                 {assignments.slice(0, 3).map((item) => (
                     <div key={item.id} className="rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-700">
-                        {item.shift?.shiftName} - {item.user?.fullName || 'Unknown'}
+                        <div>{item.shift?.shiftName} - {item.user?.fullName || 'Unknown'}</div>
+                        <button
+                            type="button"
+                            onClick={() => onQuickAttendance?.(item)}
+                            className="mt-1 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100"
+                        >
+                            <CheckCircle2 size={10} /> Chấm công
+                        </button>
                     </div>
                 ))}
                 {assignments.length > 3 && (
@@ -846,7 +977,7 @@ const CalendarTile = ({ date, inMonth, assignments }) => {
 };
 
 const weekdayLabel = (date) => {
-    return date.toLocaleDateString('en-US', { weekday: 'short' });
+    return date.toLocaleDateString('vi-VN', { weekday: 'short' });
 };
 
 const formatTime = (value) => {
@@ -856,7 +987,7 @@ const formatTime = (value) => {
 
 const formatDate = (value) => {
     if (!value) return '-';
-    return new Date(value).toLocaleDateString('en-GB');
+    return new Date(value).toLocaleDateString('vi-VN');
 };
 
 const toTimeInput = (value) => {
@@ -896,6 +1027,47 @@ const buildShiftPayload = (form) => ({
     description: form.description || null,
 });
 
+const validateShiftForm = (form) => {
+    const errors = {};
+
+    if (!form.shiftCode?.trim()) {
+        errors.shiftCode = 'Vui lòng nhập mã ca.';
+    }
+
+    if (!form.shiftName?.trim()) {
+        errors.shiftName = 'Vui lòng nhập tên ca.';
+    }
+
+    if (!form.startTime) {
+        errors.startTime = 'Vui lòng chọn giờ bắt đầu.';
+    }
+
+    if (!form.endTime) {
+        errors.endTime = 'Vui lòng chọn giờ kết thúc.';
+    }
+
+    if (form.startTime && form.endTime && form.startTime >= form.endTime) {
+        errors.endTime = 'Giờ kết thúc phải sau giờ bắt đầu.';
+    }
+
+    const minStaff = form.minimumStaffRequired === '' ? null : Number(form.minimumStaffRequired);
+    const maxStaff = form.maximumStaffAllowed === '' ? null : Number(form.maximumStaffAllowed);
+
+    if (minStaff !== null && (Number.isNaN(minStaff) || minStaff < 0)) {
+        errors.minimumStaffRequired = 'Số lượng tối thiểu phải lớn hơn hoặc bằng 0.';
+    }
+
+    if (maxStaff !== null && (Number.isNaN(maxStaff) || maxStaff < 0)) {
+        errors.maximumStaffAllowed = 'Số lượng tối đa phải lớn hơn hoặc bằng 0.';
+    }
+
+    if (minStaff !== null && maxStaff !== null && minStaff > maxStaff) {
+        errors.maximumStaffAllowed = 'Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu.';
+    }
+
+    return errors;
+};
+
 const buildAssignmentPayload = (form) => ({
     workShiftId: form.workShiftId ? Number(form.workShiftId) : null,
     userId: form.userId ? Number(form.userId) : null,
@@ -903,6 +1075,45 @@ const buildAssignmentPayload = (form) => ({
     status: form.status,
     notes: form.notes || null,
 });
+
+const validateAssignmentForm = (form) => {
+    const errors = {};
+
+    if (!form.workShiftId) {
+        errors.workShiftId = 'Vui lòng chọn ca làm.';
+    }
+
+    if (!form.userId) {
+        errors.userId = 'Vui lòng chọn nhân viên.';
+    }
+
+    if (!form.shiftDate) {
+        errors.shiftDate = 'Vui lòng chọn ngày làm việc.';
+    }
+
+    return errors;
+};
+
+const statusPillClass = (status) => {
+    switch ((status || '').toUpperCase()) {
+        case 'ASSIGNED':
+            return 'bg-indigo-100 text-indigo-700';
+        case 'CONFIRMED':
+        case 'COMPLETED':
+        case 'ACTIVE':
+        case 'PRESENT':
+            return 'bg-emerald-100 text-emerald-700';
+        case 'PENDING':
+        case 'LATE':
+            return 'bg-amber-100 text-amber-700';
+        case 'INACTIVE':
+        case 'CANCELLED':
+        case 'ABSENT':
+            return 'bg-rose-100 text-rose-700';
+        default:
+            return 'bg-slate-100 text-slate-700';
+    }
+};
 
 const getRange = (view, anchor) => {
     if (view === 'month') {
@@ -945,10 +1156,10 @@ const monthDays = (anchor) => {
 
 const calendarLabel = (view, anchor) => {
     if (view === 'month') {
-        return anchor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        return anchor.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
     }
     const { startDate, endDate } = getRange('week', anchor);
-    return `${startDate.toLocaleDateString('en-GB')} - ${endDate.toLocaleDateString('en-GB')}`;
+    return `${startDate.toLocaleDateString('vi-VN')} - ${endDate.toLocaleDateString('vi-VN')}`;
 };
 
 const shiftAnchor = (view, anchor, direction, setAnchorDate) => {

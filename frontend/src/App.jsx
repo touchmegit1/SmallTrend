@@ -5,6 +5,7 @@ import POS from './pages/Pos/pos'
 import Login from './pages/Auth/Login'
 import Register from './pages/Auth/Register'
 import UserManagement from './pages/HR/UserManagement'
+import EmployeeList from './pages/HR/EmployeeList'
 import ShiftManagement from './pages/HR/ShiftManagement'
 import AttendanceManagement from './pages/HR/AttendanceManagement'
 import PayrollManagement from './pages/HR/PayrollManagement'
@@ -62,7 +63,7 @@ function App() {
                     path="hr"
                     element={
 
-                        <UserManagement />
+                        <EmployeeList />
 
                     }
                 />

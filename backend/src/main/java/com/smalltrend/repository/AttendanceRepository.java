@@ -11,9 +11,9 @@ import java.util.Optional;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Integer> {
 
-	Optional<Attendance> findByUserIdAndDate(Integer userId, LocalDate date);
+    Optional<Attendance> findByUserIdAndDate(Integer userId, LocalDate date);
 
-	List<Attendance> findByDateBetween(LocalDate startDate, LocalDate endDate);
+    List<Attendance> findByDateBetween(LocalDate startDate, LocalDate endDate);
 
-	List<Attendance> findByUserIdAndDateBetween(Integer userId, LocalDate startDate, LocalDate endDate);
+    List<Attendance> findByUserIdAndDateBetween(Integer userId, LocalDate startDate, LocalDate endDate);
 }

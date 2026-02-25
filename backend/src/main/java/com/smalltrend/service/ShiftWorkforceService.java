@@ -108,10 +108,10 @@ public class ShiftWorkforceService {
 
         Attendance attendance = attendanceRepository.findByUserIdAndDate(request.getUserId(), request.getDate())
                 .orElseGet(() -> Attendance.builder()
-                        .user(user)
-                        .date(request.getDate())
-                        .status("PENDING")
-                        .build());
+                .user(user)
+                .date(request.getDate())
+                .status("PENDING")
+                .build());
 
         attendance.setUser(user);
         attendance.setDate(request.getDate());
@@ -308,6 +308,7 @@ public class ShiftWorkforceService {
     }
 
     private static class PayrollAccumulator {
+
         private final User user;
         private int totalShifts;
         private int workedShifts;

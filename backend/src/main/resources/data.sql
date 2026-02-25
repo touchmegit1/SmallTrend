@@ -560,9 +560,9 @@ INSERT IGNORE INTO tickets (
 
 -- 19. USER CREDENTIALS (Bảng phụ đăng nhập nếu một số module cũ còn dùng)
 INSERT IGNORE INTO user_credentials (user_id, username, password_hash) VALUES
-(1, 'admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW'),
-(2, 'manager', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW'),
-(3, 'cashier', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW');
+(1, 'admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(2, 'manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(3, 'cashier', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
 
 -- 20. ATTENDANCE (Chấm công thực tế theo phân ca)
 INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES

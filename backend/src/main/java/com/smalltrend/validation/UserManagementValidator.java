@@ -27,7 +27,7 @@ public class UserManagementValidator {
     );
     
     private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-        "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d@$!%*?&]{8,}$"
+        "^.{6,}$"
     );
 
     /**
@@ -55,9 +55,7 @@ public class UserManagementValidator {
         }
         
         // Validate phone
-        if (phone == null || phone.trim().isEmpty()) {
-            errors.add("Số điện thoại không được để trống");
-        } else if (!PHONE_PATTERN.matcher(phone).matches()) {
+        if (phone != null && !phone.trim().isEmpty() && !PHONE_PATTERN.matcher(phone).matches()) {
             errors.add("Số điện thoại không đúng định dạng (VD: 0901234567 hoặc +84901234567)");
         }
         
@@ -67,8 +65,8 @@ public class UserManagementValidator {
         }
         
         // Validate status
-        if (status != null && !isValidUserStatus(status)) {
-            errors.add("Trạng thái không hợp lệ (ACTIVE, INACTIVE, SUSPENDED)");
+        if (status != null && !status.trim().isEmpty() && !isValidUserStatus(status)) {
+            errors.add("Trạng thái không hợp lệ (ACTIVE, INACTIVE, PENDING, LOCKED)");
         }
         
         return errors;
@@ -91,7 +89,7 @@ public class UserManagementValidator {
         if (password == null || password.trim().isEmpty()) {
             errors.add("Mật khẩu không được để trống");
         } else if (!PASSWORD_PATTERN.matcher(password).matches()) {
-            errors.add("Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số");
+            errors.add("Mật khẩu phải có ít nhất 6 ký tự");
         }
         
         return errors;
@@ -227,7 +225,11 @@ public class UserManagementValidator {
 
     // Helper methods
     private boolean isValidUserStatus(String status) {
-        return "ACTIVE".equals(status) || "INACTIVE".equals(status) || "SUSPENDED".equals(status);
+        String normalized = status == null ? "" : status.trim().toUpperCase();
+        return "ACTIVE".equals(normalized)
+            || "INACTIVE".equals(normalized)
+            || "PENDING".equals(normalized)
+            || "LOCKED".equals(normalized);
     }
     
     private boolean isValidSalaryType(String salaryType) {

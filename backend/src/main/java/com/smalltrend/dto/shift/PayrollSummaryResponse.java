@@ -25,6 +25,7 @@ public class PayrollSummaryResponse {
     @AllArgsConstructor
     @Builder
     public static class Row {
+
         private Integer userId;
         private String fullName;
         private Integer totalShifts;

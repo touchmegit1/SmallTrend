@@ -83,9 +83,9 @@ const Sidebar = () => {
             icon: Clock,
             label: 'Nhân sự & Ca',
             path: '/hr',
-            allowedRoles: ['ROLE_ADMIN', 'ROLE_MANAGER'],
+            allowedRoles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_CASHIER', 'ROLE_INVENTORY_STAFF', 'ROLE_SALES_STAFF'],
             children: [
-                { label: 'Nhân viên', path: '/hr' },
+                { label: 'Danh sách nhân viên', path: '/hr' },
                 { label: 'Thời khóa biểu ca', path: '/hr/shifts' },
                 { label: 'Chấm công', path: '/hr/attendance' },
                 { label: 'Tính lương', path: '/hr/payroll' },
@@ -125,7 +125,7 @@ const Sidebar = () => {
     ];
 
     const isAdmin = currentRole === 'ROLE_ADMIN';
-    const visibleNavItems = navItems;
+    const visibleNavItems = navItems.filter(item => canAccess(item.allowedRoles, currentRole));
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
@@ -187,7 +187,7 @@ const Sidebar = () => {
                                         }`
                                     }
                                 >
-                                    Quản lý người dùng
+                                    Tài khoản hệ thống
                                 </NavLink>
                             </div>
                         )}
