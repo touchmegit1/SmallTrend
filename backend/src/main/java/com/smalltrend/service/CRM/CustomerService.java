@@ -1,7 +1,8 @@
-package com.smalltrend.service;
+package com.smalltrend.service.CRM;
 
 import java.util.List;
-import com.smalltrend.dto.CustomerResponse;
+
+import com.smalltrend.dto.CRM.CustomerResponse;
 import com.smalltrend.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;

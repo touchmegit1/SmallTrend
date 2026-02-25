@@ -1,12 +1,13 @@
-package com.smalltrend.controller;
+package com.smalltrend.controller.CRM;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import com.smalltrend.dto.CustomerResponse;
-import com.smalltrend.service.CustomerService;
+
+import com.smalltrend.dto.CRM.CustomerResponse;
+import com.smalltrend.service.CRM.CustomerService;
 
 @RestController
 @RequestMapping("/api/crm")

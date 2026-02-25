@@ -1,4 +1,4 @@
-package com.smalltrend.dto;
+package com.smalltrend.dto.CRM;
 
 import lombok.Data;
 
