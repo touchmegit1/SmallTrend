@@ -9,25 +9,24 @@ import java.util.ArrayList;
  * UserManagementValidator - Tập hợp tất cả validation rules cho User Management
  * Gộp tất cả validation liên quan đến User, UserCredential, Role, Permission
  */
-
 @Component
 public class UserManagementValidator {
 
     // Regex patterns for validation
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
-        "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+            "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
     );
-    
+
     private static final Pattern PHONE_PATTERN = Pattern.compile(
-        "^(\\+84|0)[0-9]{8,10}$"
+            "^(\\+84|0)[0-9]{8,10}$"
     );
-    
+
     private static final Pattern USERNAME_PATTERN = Pattern.compile(
-        "^[a-zA-Z0-9._-]{3,20}$"
+            "^[a-zA-Z0-9._-]{3,20}$"
     );
-    
+
     private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-        "^.{6,}$"
+            "^.{6,}$"
     );
 
     /**
@@ -35,7 +34,7 @@ public class UserManagementValidator {
      */
     public List<String> validateUser(String fullName, String email, String phone, String address, String status) {
         List<String> errors = new ArrayList<>();
-        
+
         // Validate full name
         if (fullName == null || fullName.trim().isEmpty()) {
             errors.add("Họ tên không được để trống");
@@ -44,7 +43,7 @@ public class UserManagementValidator {
         } else if (fullName.trim().length() > 255) {
             errors.add("Họ tên không được vượt quá 255 ký tự");
         }
-        
+
         // Validate email
         if (email == null || email.trim().isEmpty()) {
             errors.add("Email không được để trống");
@@ -53,22 +52,22 @@ public class UserManagementValidator {
         } else if (email.length() > 100) {
             errors.add("Email không được vượt quá 100 ký tự");
         }
-        
+
         // Validate phone
         if (phone != null && !phone.trim().isEmpty() && !PHONE_PATTERN.matcher(phone).matches()) {
             errors.add("Số điện thoại không đúng định dạng (VD: 0901234567 hoặc +84901234567)");
         }
-        
+
         // Validate address
         if (address != null && address.length() > 255) {
             errors.add("Địa chỉ không được vượt quá 255 ký tự");
         }
-        
+
         // Validate status
         if (status != null && !status.trim().isEmpty() && !isValidUserStatus(status)) {
             errors.add("Trạng thái không hợp lệ (ACTIVE, INACTIVE, PENDING, LOCKED)");
         }
-        
+
         return errors;
     }
 
@@ -77,21 +76,21 @@ public class UserManagementValidator {
      */
     public List<String> validateUserCredentials(String username, String password) {
         List<String> errors = new ArrayList<>();
-        
+
         // Validate username
         if (username == null || username.trim().isEmpty()) {
             errors.add("Tên đăng nhập không được để trống");
         } else if (!USERNAME_PATTERN.matcher(username).matches()) {
             errors.add("Tên đăng nhập chỉ được chứa chữ cái, số, dấu chấm, gạch dưới, gạch ngang (3-20 ký tự)");
         }
-        
+
         // Validate password
         if (password == null || password.trim().isEmpty()) {
             errors.add("Mật khẩu không được để trống");
         } else if (!PASSWORD_PATTERN.matcher(password).matches()) {
             errors.add("Mật khẩu phải có ít nhất 6 ký tự");
         }
-        
+
         return errors;
     }
 
@@ -100,7 +99,7 @@ public class UserManagementValidator {
      */
     public List<String> validateRole(String name, String description) {
         List<String> errors = new ArrayList<>();
-        
+
         // Validate role name
         if (name == null || name.trim().isEmpty()) {
             errors.add("Tên vai trò không được để trống");
@@ -111,21 +110,21 @@ public class UserManagementValidator {
         } else if (!isValidRoleName(name.trim())) {
             errors.add("Tên vai trò không hợp lệ");
         }
-        
+
         // Validate description (optional)
         if (description != null && description.length() > 255) {
             errors.add("Mô tả vai trò không được vượt quá 255 ký tự");
         }
-        
+
         return errors;
     }
 
     /**
-     * Validate Permission Information  
+     * Validate Permission Information
      */
     public List<String> validatePermission(String name, String description) {
         List<String> errors = new ArrayList<>();
-        
+
         // Validate permission name
         if (name == null || name.trim().isEmpty()) {
             errors.add("Tên quyền không được để trống");
@@ -134,12 +133,12 @@ public class UserManagementValidator {
         } else if (name.trim().length() > 255) {
             errors.add("Tên quyền không được vượt quá 255 ký tự");
         }
-        
+
         // Validate description (optional)
         if (description != null && description.length() > 255) {
             errors.add("Mô tả quyền không được vượt quá 255 ký tự");
         }
-        
+
         return errors;
     }
 
@@ -148,12 +147,12 @@ public class UserManagementValidator {
      */
     public List<String> validateSalary(String salaryType, Double baseSalary, Double hourlyRate) {
         List<String> errors = new ArrayList<>();
-        
+
         // Validate salary type
         if (salaryType != null && !isValidSalaryType(salaryType)) {
             errors.add("Loại lương không hợp lệ (MONTHLY, HOURLY)");
         }
-        
+
         // Validate based on salary type
         if ("MONTHLY".equals(salaryType)) {
             if (baseSalary == null || baseSalary <= 0) {
@@ -168,7 +167,7 @@ public class UserManagementValidator {
                 errors.add("Lương theo giờ không được vượt quá 999,999.99");
             }
         }
-        
+
         return errors;
     }
 
@@ -177,15 +176,15 @@ public class UserManagementValidator {
      */
     public List<String> validateRoleAssignment(Integer userId, Integer roleId) {
         List<String> errors = new ArrayList<>();
-        
+
         if (userId == null || userId <= 0) {
             errors.add("ID người dùng không hợp lệ");
         }
-        
+
         if (roleId == null || roleId <= 0) {
             errors.add("ID vai trò không hợp lệ");
         }
-        
+
         return errors;
     }
 
@@ -194,15 +193,15 @@ public class UserManagementValidator {
      */
     public List<String> validatePermissionAssignment(Integer roleId, Integer permissionId) {
         List<String> errors = new ArrayList<>();
-        
+
         if (roleId == null || roleId <= 0) {
             errors.add("ID vai trò không hợp lệ");
         }
-        
+
         if (permissionId == null || permissionId <= 0) {
             errors.add("ID quyền không hợp lệ");
         }
-        
+
         return errors;
     }
 
@@ -211,15 +210,15 @@ public class UserManagementValidator {
      */
     public List<String> validateLogin(String username, String password) {
         List<String> errors = new ArrayList<>();
-        
+
         if (username == null || username.trim().isEmpty()) {
             errors.add("Tên đăng nhập không được để trống");
         }
-        
+
         if (password == null || password.trim().isEmpty()) {
             errors.add("Mật khẩu không được để trống");
         }
-        
+
         return errors;
     }
 
@@ -227,20 +226,20 @@ public class UserManagementValidator {
     private boolean isValidUserStatus(String status) {
         String normalized = status == null ? "" : status.trim().toUpperCase();
         return "ACTIVE".equals(normalized)
-            || "INACTIVE".equals(normalized)
-            || "PENDING".equals(normalized)
-            || "LOCKED".equals(normalized);
+                || "INACTIVE".equals(normalized)
+                || "PENDING".equals(normalized)
+                || "LOCKED".equals(normalized);
     }
-    
+
     private boolean isValidSalaryType(String salaryType) {
         return "MONTHLY".equals(salaryType) || "HOURLY".equals(salaryType);
     }
-    
+
     private boolean isValidRoleName(String roleName) {
         // Define valid role names
-        return "ADMIN".equals(roleName) || "MANAGER".equals(roleName) || 
-               "CASHIER".equals(roleName) || "INVENTORY_STAFF".equals(roleName) || 
-               "SALES_STAFF".equals(roleName);
+        return "ADMIN".equals(roleName) || "MANAGER".equals(roleName)
+                || "CASHIER".equals(roleName) || "INVENTORY_STAFF".equals(roleName)
+                || "SALES_STAFF".equals(roleName);
     }
 
     /**
@@ -248,11 +247,11 @@ public class UserManagementValidator {
      */
     public List<String> validateId(Integer id, String fieldName) {
         List<String> errors = new ArrayList<>();
-        
+
         if (id == null || id <= 0) {
             errors.add(fieldName + " không hợp lệ");
         }
-        
+
         return errors;
     }
 
@@ -261,15 +260,15 @@ public class UserManagementValidator {
      */
     public List<String> validatePagination(Integer page, Integer size) {
         List<String> errors = new ArrayList<>();
-        
+
         if (page != null && page < 0) {
             errors.add("Số trang phải lớn hơn hoặc bằng 0");
         }
-        
+
         if (size != null && (size <= 0 || size > 100)) {
             errors.add("Kích thước trang phải từ 1 đến 100");
         }
-        
+
         return errors;
     }
 

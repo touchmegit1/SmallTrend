@@ -315,11 +315,10 @@ const ShiftManagement = () => {
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                            activeTab === tab
+                        className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab
                                 ? 'bg-slate-900 text-white'
                                 : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                        }`}
+                            }`}
                     >
                         {tab === 'shifts' ? 'Mẫu ca' : tab === 'assignments' ? 'Phân công' : 'Lịch ca'}
                     </button>
@@ -361,11 +360,10 @@ const ShiftManagement = () => {
                                             {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
                                         </p>
                                     </div>
-                                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                                        shift.status === 'ACTIVE'
+                                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${shift.status === 'ACTIVE'
                                             ? 'bg-emerald-100 text-emerald-700'
                                             : 'bg-rose-100 text-rose-700'
-                                    }`}>
+                                        }`}>
                                         {shift.status}
                                     </span>
                                 </div>
@@ -483,17 +481,15 @@ const ShiftManagement = () => {
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCalendarView('week')}
-                                className={`rounded-lg px-3 py-2 text-xs font-medium ${
-                                    calendarView === 'week' ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600'
-                                }`}
+                                className={`rounded-lg px-3 py-2 text-xs font-medium ${calendarView === 'week' ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600'
+                                    }`}
                             >
                                 Tuần
                             </button>
                             <button
                                 onClick={() => setCalendarView('month')}
-                                className={`rounded-lg px-3 py-2 text-xs font-medium ${
-                                    calendarView === 'month' ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600'
-                                }`}
+                                className={`rounded-lg px-3 py-2 text-xs font-medium ${calendarView === 'month' ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600'
+                                    }`}
                             >
                                 Tháng
                             </button>
@@ -948,9 +944,8 @@ const CalendarColumn = ({ date, assignments, onQuickAttendance }) => {
 
 const CalendarTile = ({ date, inMonth, assignments, onQuickAttendance }) => {
     return (
-        <div className={`min-h-[140px] rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${
-            inMonth ? '' : 'opacity-50'
-        }`}>
+        <div className={`min-h-[140px] rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${inMonth ? '' : 'opacity-50'
+            }`}>
             <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-slate-900">{date.getDate()}</span>
                 <span className="text-[10px] uppercase tracking-wide text-slate-400">{weekdayLabel(date)}</span>

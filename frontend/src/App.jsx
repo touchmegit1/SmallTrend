@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
+import ProtectedRoute from './components/common/ProtectedRoute'
+import PublicRoute from './components/common/PublicRoute'
 import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
 import Login from './pages/Auth/Login'
-import Register from './pages/Auth/Register'
 import UserManagement from './pages/HR/UserManagement'
 import EmployeeList from './pages/HR/EmployeeList'
 import ShiftManagement from './pages/HR/ShiftManagement'
@@ -11,20 +12,42 @@ import AttendanceManagement from './pages/HR/AttendanceManagement'
 import PayrollManagement from './pages/HR/PayrollManagement'
 
 function App() {
+    const ADMIN_MANAGER = ['ADMIN', 'MANAGER']
+    const ADMIN_ONLY = ['ADMIN']
+    const HR_ROLES = ['ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF']
+
     return (
         <Routes>
             {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route
+                path="/login"
+                element={
+                    <PublicRoute>
+                        <Login />
+                    </PublicRoute>
+                }
+            />
+            <Route path="/register" element={<Navigate to="/login" replace />} />
 
             {/* App Routes */}
-            <Route path="/" element={<MainLayout />}>
+            <Route
+                path="/"
+                element={
+                    <ProtectedRoute>
+                        <MainLayout />
+                    </ProtectedRoute>
+                }
+            >
                 {/* Redirect root to Dashboard */}
                 <Route index element={<Navigate to="/dashboard" replace />} />
 
                 <Route
                     path="dashboard"
-                    element={<Dashboard />}
+                    element={
+                        <ProtectedRoute allowedRoles={ADMIN_MANAGER}>
+                            <Dashboard />
+                        </ProtectedRoute>
+                    }
                 />
 
                 {/* Module 1: POS (Bán hàng) */}
@@ -62,34 +85,42 @@ function App() {
                 <Route
                     path="hr"
                     element={
-
-                        <EmployeeList />
-
+                        <ProtectedRoute allowedRoles={HR_ROLES}>
+                            <EmployeeList />
+                        </ProtectedRoute>
                     }
                 />
                 <Route
                     path="hr/users"
                     element={
-
-                        <UserManagement />
-
+                        <ProtectedRoute allowedRoles={ADMIN_ONLY}>
+                            <UserManagement />
+                        </ProtectedRoute>
                     }
                 />
                 <Route
                     path="hr/shifts"
                     element={
-
-                        <ShiftManagement />
-
+                        <ProtectedRoute allowedRoles={HR_ROLES}>
+                            <ShiftManagement />
+                        </ProtectedRoute>
                     }
                 />
                 <Route
                     path="hr/attendance"
-                    element={<AttendanceManagement />}
+                    element={
+                        <ProtectedRoute allowedRoles={HR_ROLES}>
+                            <AttendanceManagement />
+                        </ProtectedRoute>
+                    }
                 />
                 <Route
                     path="hr/payroll"
-                    element={<PayrollManagement />}
+                    element={
+                        <ProtectedRoute allowedRoles={HR_ROLES}>
+                            <PayrollManagement />
+                        </ProtectedRoute>
+                    }
                 />
 
                 {/* Module 6: Suppliers (Nhà cung cấp) */}
@@ -120,11 +151,11 @@ function App() {
                 <Route path="reports/audit-logs" element={<div className="p-4">Audit Logs</div>} />
 
                 {/* In-app fallback */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to="/pos" replace />} />
             </Route>
 
             {/* Global fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
     )
 }
