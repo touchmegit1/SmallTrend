@@ -12,26 +12,22 @@ export default function CustomerManagement() {
   const [loyaltyRate, setLoyaltyRate] = useState(50000);
   const [editForm, setEditForm] = useState({
     name: "",
-    phone: "",
+    phoneNumber: "",
     loyaltyPoints: 0,
   });
 
   const filteredCustomers = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.phone.includes(searchTerm)
+      c.phoneNumber.includes(searchTerm)
   );
 
   const totalCustomers = customers.length;
-  const totalSpend = customers.reduce((sum, c) => sum + c.totalSpend, 0);
+  const totalSpend = customers.reduce((sum, c) => sum + (c.spentAmount || 0), 0);
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure?")) {
-      try {
-        await deleteCustomer(id);
-      } catch (err) {
-        alert("Lỗi khi xóa khách hàng");
-      }
+      alert("Delete functionality coming soon");
     }
   };
 
@@ -39,7 +35,7 @@ export default function CustomerManagement() {
     setSelectedCustomer(customer);
     setEditForm({
       name: customer.name,
-      phone: customer.phone,
+      phoneNumber: customer.phoneNumber,
       loyaltyPoints: customer.loyaltyPoints,
     });
     setViewMode("edit");
@@ -51,13 +47,9 @@ export default function CustomerManagement() {
   };
 
   const saveEdit = async () => {
-    try {
-      await updateCustomer(selectedCustomer.id, editForm);
-      setViewMode("list");
-      setSelectedCustomer(null);
-    } catch (err) {
-      alert("Lỗi khi cập nhật khách hàng");
-    }
+    alert("Update functionality coming soon");
+    setViewMode("list");
+    setSelectedCustomer(null);
   };
 
   const cancel = () => {
@@ -122,10 +114,10 @@ export default function CustomerManagement() {
                   {filteredCustomers.map((c) => (
                     <tr key={c.id} className="border-t">
                       <td className="p-3">{c.name}</td>
-                      <td className="p-3">{c.phone}</td>
+                      <td className="p-3">{c.phoneNumber}</td>
                       <td className="p-3">{c.loyaltyPoints}</td>
                       <td className="p-3">
-                        {c.totalSpend.toLocaleString("vi-VN")} VNĐ
+                        {(c.spentAmount || 0).toLocaleString("vi-VN")} VNĐ
                       </td>
                       <td className="p-3 flex gap-2 justify-center">
                         <button onClick={() => handleViewHistory(c)}>
@@ -157,9 +149,9 @@ export default function CustomerManagement() {
             />
             <input
               className="w-full border p-2 mb-3"
-              value={editForm.phone}
+              value={editForm.phoneNumber}
               onChange={(e) =>
-                setEditForm({ ...editForm, phone: e.target.value })
+                setEditForm({ ...editForm, phoneNumber: e.target.value })
               }
             />
             <input
@@ -190,15 +182,11 @@ export default function CustomerManagement() {
         {viewMode === "history" && selectedCustomer && (
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-2xl mb-4">{selectedCustomer.name}</h2>
-            {selectedCustomer.purchaseHistory.map((p) => (
-              <div key={p.id} className="border p-3 rounded mb-2">
-                <div>{p.items}</div>
-                <div className="text-sm text-gray-500">
-                  {new Date(p.date).toLocaleDateString()}
-                </div>
-                <div>{p.amount.toLocaleString("vi-VN")} VNĐ</div>
-              </div>
-            ))}
+            <div className="border p-3 rounded mb-2">
+              <div><strong>Phone:</strong> {selectedCustomer.phoneNumber}</div>
+              <div><strong>Loyalty Points:</strong> {selectedCustomer.loyaltyPoints}</div>
+              <div><strong>Total Spend:</strong> {(selectedCustomer.spentAmount || 0).toLocaleString("vi-VN")} VNĐ</div>
+            </div>
             <button className="mt-4 bg-gray-300 px-4 py-2" onClick={cancel}>
               Back
             </button>

@@ -4,6 +4,7 @@ import EmptyCart from "./EmptyCart";
 export default function Cart({ cart, setCart, customer, setCustomer, usePoints, setUsePoints }) {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
   const updateQuantity = (id, newQty) => {
     if (newQty <= 0) {
@@ -19,23 +20,42 @@ export default function Cart({ cart, setCart, customer, setCustomer, usePoints, 
     setCart(cart.filter(item => item.id !== id));
   };
 
-  const handlePhoneSubmit = () => {
-    if (phone.length >= 10) {
-      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-      const loyaltyPoints = Math.floor(totalAmount / 1000);
-      
-      // Mock check if customer exists
-      const isExistingCustomer = Math.random() > 0.5;
-      const existingPoints = isExistingCustomer ? Math.floor(Math.random() * 500) : 0;
-      
-      setCustomer({
-        phone,
-        name: name || (isExistingCustomer ? "Khách hàng thân thiết" : ""),
-        loyaltyPoints,
-        existingPoints,
-        isNew: !isExistingCustomer
-      });
+  const validatePhone = (value) => {
+    const phoneRegex = /^0\d{9,10}$/;
+    if (!phoneRegex.test(value)) {
+      setPhoneError("Số điện thoại phải bắt đầu bằng 0 và có 10-11 chữ số");
+      return false;
     }
+    setPhoneError("");
+    return true;
+  };
+
+  const handlePhoneChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    setPhone(value);
+    if (value) validatePhone(value);
+    else setPhoneError("");
+  };
+
+  const handlePhoneSubmit = () => {
+    if (!validatePhone(phone)) {
+      return;
+    }
+    
+    const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const loyaltyPoints = Math.floor(totalAmount / 1000);
+    
+    // Mock check if customer exists
+    const isExistingCustomer = Math.random() > 0.5;
+    const existingPoints = isExistingCustomer ? Math.floor(Math.random() * 500) : 0;
+    
+    setCustomer({
+      phone,
+      name: name || (isExistingCustomer ? "Khách hàng thân thiết" : ""),
+      loyaltyPoints,
+      existingPoints,
+      isNew: !isExistingCustomer
+    });
   };
 
   const saveCustomer = () => {
@@ -153,35 +173,39 @@ export default function Cart({ cart, setCart, customer, setCustomer, usePoints, 
       }}>
         <h4 style={{ margin: "0 0 15px 0", color: "#2c3e50" }}>Thông tin khách hàng</h4>
         
-        <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-          <input
-            type="tel"
-            placeholder="Số điện thoại khách hàng"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "8px 12px",
-              border: "1px solid #ddd",
-              borderRadius: "6px",
-              fontSize: "14px"
-            }}
-          />
-          <button
-            onClick={handlePhoneSubmit}
-            disabled={phone.length < 10}
-            style={{
-              padding: "8px 16px",
-              background: phone.length >= 10 ? "#28a745" : "#6c757d",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: phone.length >= 10 ? "pointer" : "not-allowed",
-              fontSize: "14px"
-            }}
-          >
-            Xác nhận
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "10px" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              type="tel"
+              placeholder="Số điện thoại khách hàng"
+              value={phone}
+              onChange={handlePhoneChange}
+              maxLength={11}
+              style={{
+                flex: 1,
+                padding: "8px 12px",
+                border: phoneError ? "1px solid #dc3545" : "1px solid #ddd",
+                borderRadius: "6px",
+                fontSize: "14px"
+              }}
+            />
+            <button
+              onClick={handlePhoneSubmit}
+              disabled={!phone || phoneError}
+              style={{
+                padding: "8px 16px",
+                background: phone && !phoneError ? "#28a745" : "#6c757d",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: phone && !phoneError ? "pointer" : "not-allowed",
+                fontSize: "14px"
+              }}
+            >
+              Xác nhận
+            </button>
+          </div>
+          {phoneError && <div style={{ color: "#dc3545", fontSize: "12px" }}>{phoneError}</div>}
         </div>
 
         {customer && customer.isNew && (
