@@ -1,8 +1,8 @@
 import api from '../config/axiosConfig';
 
 export const userService = {
-  async getAll() {
-    const res = await api.get('/users');
+  async getAll(params = {}) {
+    const res = await api.get('/users', { params });
     return res.data;
   },
   async create(payload) {

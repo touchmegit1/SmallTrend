@@ -1,28 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogIn, User, Lock } from 'lucide-react';
+import { LogIn, User, Lock, AlertCircle, X } from 'lucide-react';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [showError, setShowError] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
+    // Auto hide error after 10 seconds
+    useEffect(() => {
+        if (error) {
+            setShowError(true);
+            const timer = setTimeout(() => {
+                setShowError(false);
+                setTimeout(() => setError(''), 300); // delay to allow fade out animation
+            }, 10000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setShowError(false);
         setLoading(true);
+
+        // Basic client-side validation
+        if (!username.trim()) {
+            setError('Tên đăng nhập không được để trống');
+            setLoading(false);
+            return;
+        }
+
+        if (!password.trim()) {
+            setError('Mật khẩu không được để trống');
+            setLoading(false);
+            return;
+        }
+
         try {
-            await login(username, password);
+            await login(username.trim(), password);
             navigate('/'); // Chuyển hướng về trang chủ sau khi login
         } catch (err) {
+            console.error('Login error:', err);
             setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const dismissError = () => {
+        setShowError(false);
+        setTimeout(() => setError(''), 300);
     };
 
     return (
@@ -36,8 +70,26 @@ const Login = () => {
                 <h2 className="mb-6 text-2xl font-bold text-center text-gray-800">Đăng nhập SmallTrend</h2>
 
                 {error && (
-                    <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
-                        {error}
+                    <div className={`p-4 mb-4 text-sm text-red-700 bg-red-100 border border-red-300 rounded-lg transition-all duration-300 ${showError ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`} role="alert">
+                        <div className="flex items-start justify-between">
+                            <div className="flex items-center">
+                                <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                    <span className="font-medium">Lỗi đăng nhập:</span>
+                                    <div className="mt-1">{error}</div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={dismissError}
+                                className="ml-3 text-red-400 hover:text-red-600 transition-colors"
+                                aria-label="Đóng thông báo lỗi"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="mt-2 text-xs text-red-600">
+                            Thông báo này sẽ tự động ẩn sau 10 giây
+                        </div>
                     </div>
                 )}
 
@@ -90,14 +142,17 @@ const Login = () => {
                     </button>
                 </form>
 
-                {/* Register Link */}
+                {/* Information for new employees */}
                 <div className="mt-6 text-center">
                     <p className="text-gray-600 text-sm">
-                        Chưa có tài khoản?{' '}
-                        <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-                            Đăng ký ngay
-                        </Link>
+                        Nhân viên mới?{' '}
+                        <span className="text-gray-800 font-medium">
+                            Liên hệ quản trị viên để được cấp tài khoản
+                        </span>
                     </p>
+                    <div className="mt-2 text-xs text-gray-500">
+                        Chỉ quản trị viên mới có thể tạo tài khoản cho nhân viên
+                    </div>
                 </div>
             </div>
         </div>

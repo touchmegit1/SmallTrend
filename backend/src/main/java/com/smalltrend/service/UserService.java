@@ -2,15 +2,21 @@ package com.smalltrend.service;
 
 import com.smalltrend.dto.auth.AuthResponse;
 import com.smalltrend.dto.auth.RegisterRequest;
+import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserUpdateRequest;
 import com.smalltrend.entity.Role;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.UserCredential;
+import com.smalltrend.exception.UserException;
 import com.smalltrend.repository.RoleRepository;
 import com.smalltrend.repository.UserCredentialsRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.util.JwtUtil;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -57,30 +63,42 @@ public class UserService implements UserDetailsService {
             roleName = "ROLE_" + roleName;
         }
 
-        boolean isActive = "ACTIVE".equalsIgnoreCase(user.getStatus());
+        // Check if user is active from original JWT logic
+        boolean isEnabled = "ACTIVE".equals(user.getStatus()) && (user.getActive() == null || user.getActive());
 
         return org.springframework.security.core.userdetails.User.builder()
                 .username(userCredential.getUsername())
                 .password(userCredential.getPasswordHash())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority(roleName)))
-                .disabled(!isActive)
+                .disabled(!isEnabled)
+                .accountLocked(!"ACTIVE".equals(user.getStatus()))
+                .accountExpired(false)
+                .credentialsExpired(false)
                 .build();
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        // Check if username already exists
+        // Check if username already exists in credentials
         if (userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Username is already taken");
+            throw UserException.usernameExists();
         }
 
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email is already registered");
+        // Check if email already exists
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw UserException.emailExists();
         }
 
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw UserException.phoneExists();
+        }
+
+        // Get or create default role
         Role role;
         if (request.getRoleId() != null) {
             role = roleRepository.findById(request.getRoleId())
-                    .orElseThrow(() -> new RuntimeException("Role not found"));
+                    .orElseThrow(UserException::roleNotFound);
         } else {
             role = roleRepository.findByName("ROLE_USER")
                     .orElseGet(() -> {
@@ -92,34 +110,31 @@ public class UserService implements UserDetailsService {
                     });
         }
 
+        // Create consolidated user with JWT authentication
         User user = User.builder()
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .address(request.getAddress())
-                .status(request.getStatus() != null ? request.getStatus().toUpperCase() : "PENDING")
+                .status(request.getStatus() != null ? request.getStatus().toUpperCase() : "ACTIVE")
+                .active(true)
                 .role(role)
                 .build();
 
-        user = userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        UserCredential credential = UserCredential.builder()
-                .username(request.getUsername())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .user(user)
-                .build();
-
-        userCredentialsRepository.save(credential);
-
-        String token = jwtUtil.generateToken(request.getUsername());
+        // Generate JWT token
+        String token = jwtUtil.generateToken(savedUser.getUsername());
 
         return AuthResponse.builder()
                 .token(token)
                 .type("Bearer")
-                .userId(user.getId())
-                .username(request.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
+                .userId(savedUser.getId())
+                .username(savedUser.getUsername())
+                .fullName(savedUser.getFullName())
+                .email(savedUser.getEmail())
                 .role(role.getName())
                 .build();
     }
@@ -127,7 +142,6 @@ public class UserService implements UserDetailsService {
     public AuthResponse login(String username) {
         UserCredential userCredential = userCredentialsRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
         User user = userCredential.getUser();
         String token = jwtUtil.generateToken(username);
 
@@ -152,13 +166,118 @@ public class UserService implements UserDetailsService {
         return userRepository.findAll();
     }
 
+    /**
+     * Admin creates employee account - không có đăng ký tự do
+     */
+    @Transactional
+    public UserDTO createEmployee(RegisterRequest request) {
+        // Check if username already exists
+        if (userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw UserException.usernameExists();
+        }
+
+        // Check if email already exists
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw UserException.emailExists();
+        }
+
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw UserException.phoneExists();
+        }
+
+        // Get role - must be valid employee role
+        Role role;
+        if (request.getRoleId() != null) {
+            role = roleRepository.findById(request.getRoleId())
+                    .orElseThrow(UserException::roleNotFound);
+        } else {
+            // Default to SALES_STAFF if no role specified
+            role = roleRepository.findByName("SALES_STAFF")
+                    .orElseThrow(UserException::defaultRoleNotFound);
+        }
+
+        // Create user
+        User user = User.builder()
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .address(request.getAddress())
+                .status("ACTIVE")
+                .role(role)
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        // Create credentials
+        UserCredential credential = UserCredential.builder()
+                .user(savedUser)
+                .username(request.getUsername())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .build();
+
+        userCredentialsRepository.save(credential);
+
+        return UserDTO.fromEntity(savedUser);
+    }
+
+    /**
+     * Get all users with pagination
+     */
+    public Page<User> getAllUsers(Integer page, Integer size) {
+        if (size > 100) {
+            size = 100; // Max 100 per page
+
+        }
+        if (size <= 0) {
+            size = 10; // Default 10 per page
+
+        }
+        if (page < 0) {
+            page = 0; // Default first page
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return userRepository.findAll(pageable);
+    }
+
+    /**
+     * Search users by name or email
+     */
+    public Page<User> searchUsers(String query, Integer page, Integer size) {
+        if (size > 100) {
+            size = 100;
+        }
+        if (size <= 0) {
+            size = 10;
+        }
+        if (page < 0) {
+            page = 0;
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                query, query, pageable);
+    }
+
+    /**
+     * Get user by ID
+     */
     public User getUserById(Integer id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> UserException.userNotFound(id));
     }
 
     public User updateUser(Integer id, UserUpdateRequest request) {
         User user = getUserById(id);
+
+        if (request.getEmail() != null
+                && userRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
+            throw UserException.emailUsedByOther();
+        }
+
+        if (request.getPhone() != null
+                && userRepository.existsByPhoneAndIdNot(request.getPhone(), id)) {
+            throw UserException.phoneUsedByOther();
+        }
 
         if (request.getFullName() != null) {
             user.setFullName(request.getFullName());
@@ -174,7 +293,7 @@ public class UserService implements UserDetailsService {
         }
         if (request.getRoleId() != null) {
             Role role = roleRepository.findById(request.getRoleId())
-                    .orElseThrow(() -> new RuntimeException("Role not found"));
+                    .orElseThrow(UserException::roleNotFound);
             user.setRole(role);
         }
         if (request.getStatus() != null) {

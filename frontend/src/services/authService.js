@@ -9,7 +9,12 @@ const login = async (username, password) => {
         }
         return response.data;
     } catch (error) {
-        throw error.response?.data || error;
+        // Extract error message from backend response
+        const errorMessage = error.response?.data?.message ||
+            error.response?.data?.error ||
+            error.message ||
+            'Đăng nhập thất bại';
+        throw new Error(errorMessage);
     }
 };
 
@@ -22,7 +27,12 @@ const register = async (userData) => {
         }
         return response.data;
     } catch (error) {
-        throw error.response?.data || error;
+        // Extract error message from backend response  
+        const errorMessage = error.response?.data?.message ||
+            error.response?.data?.error ||
+            error.message ||
+            'Đăng ký thất bại';
+        throw new Error(errorMessage);
     }
 };
 

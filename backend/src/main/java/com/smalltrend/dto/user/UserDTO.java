@@ -48,14 +48,9 @@ public class UserDTO {
                     .build();
         }
 
-        String username = null;
-        if (user.getUserCredential() != null) {
-            username = user.getUserCredential().getUsername();
-        }
-
         return UserDTO.builder()
                 .id(user.getId())
-                .username(username)
+                .username(user.getUsername())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
