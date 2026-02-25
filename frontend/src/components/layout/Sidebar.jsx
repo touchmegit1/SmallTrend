@@ -21,9 +21,7 @@ const Sidebar = () => {
         navigate('/login');
     };
 
-    // Debug: log user info
-    console.log('Sidebar - Current user:', user);
-    console.log('Sidebar - User role:', user?.role);
+    const currentRole = normalizeRole(user?.role);
 
     const navItems = [
         {
@@ -85,9 +83,10 @@ const Sidebar = () => {
             icon: Clock,
             label: 'Nhân sự & Ca',
             path: '/hr',
+            allowedRoles: ['ROLE_ADMIN', 'ROLE_MANAGER'],
             children: [
-                { label: 'Danh sách nhân viên', path: '/hr' },
-                { label: 'Phân ca làm việc', path: '/hr/shifts' },
+                { label: 'Nhân viên', path: '/hr' },
+                { label: 'Thời khóa biểu ca', path: '/hr/shifts' },
                 { label: 'Chấm công', path: '/hr/attendance' },
                 { label: 'Tính lương', path: '/hr/payroll' },
             ]
@@ -125,14 +124,8 @@ const Sidebar = () => {
         },
     ];
 
-    // Debug: log user info
-    console.log('Sidebar - Current user:', user);
-    console.log('Sidebar - User role:', user?.role);
-    console.log('Sidebar - User full object:', JSON.stringify(user));
-
-    // Admin menu - always show for ROLE_ADMIN
-    const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
-    console.log('Sidebar - Is Admin:', isAdmin);
+    const isAdmin = currentRole === 'ROLE_ADMIN';
+    const visibleNavItems = navItems;
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
@@ -158,8 +151,8 @@ const Sidebar = () => {
                     <div className="mb-2">
                         <div
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === '/dashboard' || location.pathname.startsWith('/hr/users') || openMenus['admin']
-                                    ? 'bg-indigo-50 text-indigo-700'
-                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                ? 'bg-indigo-50 text-indigo-700'
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                 }`}
                             onClick={() => toggleMenu('admin')}
                         >
@@ -202,7 +195,7 @@ const Sidebar = () => {
                 )}
 
                 {/* Regular Menu Items */}
-                {navItems.map((item) => (
+                {visibleNavItems.map((item) => (
                     <div key={item.label}>
                         <div
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
@@ -252,6 +245,17 @@ const Sidebar = () => {
             </div>
         </aside>
     );
+};
+
+const normalizeRole = (role) => {
+    if (!role) return null;
+    return role.startsWith('ROLE_') ? role : `ROLE_${role}`;
+};
+
+const canAccess = (allowedRoles, userRole) => {
+    if (!allowedRoles || allowedRoles.length === 0) return true;
+    if (!userRole) return false;
+    return allowedRoles.includes(userRole);
 };
 
 export default Sidebar;

@@ -4,8 +4,10 @@ import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
 import Login from './pages/Auth/Login'
 import Register from './pages/Auth/Register'
-import UserManagement from './pages/Hr/UserManagement'
-import ShiftManagement from './pages/Hr/ShiftManagement'
+import UserManagement from './pages/HR/UserManagement'
+import ShiftManagement from './pages/HR/ShiftManagement'
+import AttendanceManagement from './pages/HR/AttendanceManagement'
+import PayrollManagement from './pages/HR/PayrollManagement'
 
 function App() {
     return (
@@ -19,7 +21,10 @@ function App() {
                 {/* Redirect root to Dashboard */}
                 <Route index element={<Navigate to="/dashboard" replace />} />
 
-                <Route path="dashboard" element={<Dashboard />} />
+                <Route
+                    path="dashboard"
+                    element={<Dashboard />}
+                />
 
                 {/* Module 1: POS (Bán hàng) */}
                 <Route path="pos" element={<POS />} />
@@ -46,24 +51,57 @@ function App() {
                 <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
                 <Route path="crm/complaints" element={<div className="p-4">Khiếu nại</div>} />
 
-                {/* Module: Suppliers (Nhà cung cấp) */}
+                {/* Dashboard Route - only ADMIN/MANAGER
+                <Route path="dashboard" element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+                        <Dashboard />
+                    </ProtectedRoute>
+                } /> */}
+                {/* Module 5: HR (Nhân sự) */}
+                <Route
+                    path="hr"
+                    element={
+
+                        <UserManagement />
+
+                    }
+                />
+                <Route
+                    path="hr/users"
+                    element={
+
+                        <UserManagement />
+
+                    }
+                />
+                <Route
+                    path="hr/shifts"
+                    element={
+
+                        <ShiftManagement />
+
+                    }
+                />
+                <Route
+                    path="hr/attendance"
+                    element={<AttendanceManagement />}
+                />
+                <Route
+                    path="hr/payroll"
+                    element={<PayrollManagement />}
+                />
+
+                {/* Module 6: Suppliers (Nhà cung cấp) */}
                 <Route path="suppliers" element={<div className="p-4">Danh sách nhà cung cấp</div>} />
                 <Route path="suppliers/contracts" element={<div className="p-4">Hợp đồng & SLA</div>} />
                 <Route path="suppliers/performance" element={<div className="p-4">Đánh giá & Hiệu suất</div>} />
 
-                {/* Module 5: HR (Nhân sự) */}
-                <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
-                <Route path="hr/users" element={<UserManagement />} />
-                <Route path="hr/shifts" element={<ShiftManagement />} />
-                <Route path="hr/attendance" element={<div className="p-4">Chấm công</div>} />
-                <Route path="hr/payroll" element={<div className="p-4">Tính lương</div>} />
-
-                {/* Module: Ticket Center */}
+                {/* Module 7: Ticket Center */}
                 <Route path="tickets" element={<div className="p-4">Danh sách ticket</div>} />
                 <Route path="tickets/new" element={<div className="p-4">Tạo ticket</div>} />
                 <Route path="tickets/queue" element={<div className="p-4">Hàng đợi & SLA</div>} />
 
-                {/* Module: AI Chatbot */}
+                {/* Module 8: AI Chatbot */}
                 <Route path="ai-chatbot" element={<div className="p-4">Trợ lý AI</div>} />
                 <Route path="ai-chatbot/flows" element={<div className="p-4">Kịch bản hội thoại</div>} />
                 <Route path="ai-chatbot/logs" element={<div className="p-4">Nhật ký hội thoại</div>} />
@@ -73,7 +111,19 @@ function App() {
                 <Route path="reports/sales" element={<div className="p-4">Báo cáo doanh thu</div>} />
                 <Route path="reports/inventory" element={<div className="p-4">Báo cáo kho</div>} />
                 <Route path="reports/logs" element={<div className="p-4">Nhật ký hoạt động</div>} />
+
+                {/* Sidebar reports links */}
+                <Route path="reports/create" element={<div className="p-4">Tạo báo cáo</div>} />
+                <Route path="reports/manage" element={<div className="p-4">Quản lý báo cáo</div>} />
+                <Route path="reports/ai" element={<div className="p-4">AI dự báo</div>} />
+                <Route path="reports/audit-logs" element={<div className="p-4">Audit Logs</div>} />
+
+                {/* In-app fallback */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
+
+            {/* Global fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     )
 }

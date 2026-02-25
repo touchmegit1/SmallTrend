@@ -37,4 +37,16 @@ export const shiftService = {
         const res = await api.delete(`/shifts/assignments/${id}`);
         return res.data;
     },
+    async getAttendance(params = {}) {
+        const res = await api.get('/shifts/attendance', { params });
+        return res.data;
+    },
+    async upsertAttendance(payload) {
+        const res = await api.post('/shifts/attendance', payload);
+        return res.data;
+    },
+    async getPayrollSummary(params = {}) {
+        const res = await api.get('/shifts/payroll/summary', { params });
+        return res.data;
+    },
 };

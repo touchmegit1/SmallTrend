@@ -1,10 +1,14 @@
 package com.smalltrend.controller;
 
 import com.smalltrend.dto.common.MessageResponse;
+import com.smalltrend.dto.shift.AttendanceResponse;
+import com.smalltrend.dto.shift.AttendanceUpsertRequest;
+import com.smalltrend.dto.shift.PayrollSummaryResponse;
 import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
 import com.smalltrend.dto.shift.WorkShiftRequest;
 import com.smalltrend.dto.shift.WorkShiftResponse;
+import com.smalltrend.service.ShiftWorkforceService;
 import com.smalltrend.service.WorkShiftAssignmentService;
 import com.smalltrend.service.WorkShiftService;
 import com.smalltrend.validation.ShiftValidator;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/shifts")
@@ -26,6 +31,7 @@ public class ShiftController {
 
     private final WorkShiftService workShiftService;
     private final WorkShiftAssignmentService assignmentService;
+    private final ShiftWorkforceService workforceService;
     private final ShiftValidator validator;
 
     @PostMapping
@@ -154,5 +160,32 @@ public class ShiftController {
         }
         assignmentService.deleteAssignment(id);
         return ResponseEntity.ok(new MessageResponse("Assignment deleted"));
+    }
+
+    @GetMapping("/attendance")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<?> listAttendance(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Integer userId,
+            @RequestParam(required = false) String status) {
+        List<AttendanceResponse> responses = workforceService.listAttendance(date, userId, status);
+        return ResponseEntity.ok(responses);
+    }
+
+    @PostMapping("/attendance")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<?> upsertAttendance(@RequestBody AttendanceUpsertRequest request) {
+        AttendanceResponse response = workforceService.upsertAttendance(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/payroll/summary")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<?> payrollSummary(
+            @RequestParam(required = false) String month,
+            @RequestParam(required = false) Integer userId,
+            @RequestParam(required = false) BigDecimal hourlyRate) {
+        PayrollSummaryResponse response = workforceService.buildPayrollSummary(month, userId, hourlyRate);
+        return ResponseEntity.ok(response);
     }
 }
