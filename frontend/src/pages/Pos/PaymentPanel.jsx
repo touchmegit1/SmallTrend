@@ -10,6 +10,22 @@ export default function PaymentPanel({ cart, customer, usePoints, onCompleteOrde
   const itemCount = cart.reduce((sum, item) => sum + (item.qty || 1), 0);
   const change = customerMoney ? Math.max(0, parseFloat(customerMoney) - total) : 0;
 
+  const handlePaymentKeyPress = (e) => {
+    if (e.key === 'Enter' && customerMoney && parseFloat(customerMoney) >= total && cart.length > 0) {
+      if (onCompleteOrder) {
+        onCompleteOrder({
+          cart,
+          customer,
+          total,
+          customerMoney: parseFloat(customerMoney),
+          change: parseFloat(customerMoney) - total,
+          pointsDiscount,
+          notes
+        });
+      }
+    }
+  };
+
   return (
     <div style={{
       background: "white",
@@ -77,6 +93,7 @@ export default function PaymentPanel({ cart, customer, usePoints, onCompleteOrde
           placeholder="Nhập số tiền"
           value={customerMoney}
           onChange={(e) => setCustomerMoney(e.target.value)}
+          onKeyPress={handlePaymentKeyPress}
           style={{
             width: "100%",
             padding: "8px",

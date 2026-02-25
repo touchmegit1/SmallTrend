@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
+import TransactionHistory from './pages/Pos/Transition_History'
+import ReportforCashier from './pages/Pos/ReportforCashier'
 import CRMHomepage from './pages/CRM/homepage'
 import Login from './pages/Auth/Login'
 import ProtectedRoute from './components/common/ProtectedRoute'
@@ -31,8 +33,8 @@ function App() {
 
                 {/* Module 1: POS (Bán hàng) */}
                 <Route path="pos" element={<POS />} />
-                <Route path="pos/history" element={<div className="p-4">Lịch sử đơn hàng</div>} />
-                <Route path="pos/suspended" element={<div className="p-4">Đơn hàng treo</div>} />
+                <Route path="pos/history" element={<TransactionHistory/>} />
+                <Route path="pos/suspended" element={<ReportforCashier/>} />
 
                 {/* Module 2: Inventory (Kho) */}
                 <Route path="inventory" element={<div className="p-4">Inventory Management (Kho)</div>} />
