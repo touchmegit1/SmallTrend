@@ -10,7 +10,8 @@ export const useFetchBrands = () => {
     setLoading(true);
     try {
       const response = await api.get('product/brands');
-      setBrands(response.data);
+      const data = Array.isArray(response.data) ? response.data : (response.data?.content || []);
+      setBrands(data);
       setError(null);
     } catch (err) {
       setError(err.response?.data?.message || 'Lỗi khi tải thương hiệu');

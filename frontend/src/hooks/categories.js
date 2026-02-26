@@ -10,7 +10,8 @@ export const useFetchCategories = () => {
     setLoading(true);
     try {
       const response = await api.get('product/categories');
-      setCategories(response.data);
+      const data = Array.isArray(response.data) ? response.data : (response.data?.content || []);
+      setCategories(data);
       setError(null);
     } catch (err) {
       setError(err.response?.data?.message || 'Lỗi khi tải danh mục');

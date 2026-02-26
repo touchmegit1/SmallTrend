@@ -1,4 +1,4 @@
-package com.smalltrend.dto.Products;
+package com.smalltrend.dto.products;
 
 import lombok.Data;
 

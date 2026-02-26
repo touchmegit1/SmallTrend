@@ -1,7 +1,7 @@
 package com.smalltrend.controller;
 
 import com.smalltrend.entity.Brand;
-import com.smalltrend.entity.CategoriesResponse;
+import com.smalltrend.entity.Category;
 import com.smalltrend.entity.Role;
 import com.smalltrend.repository.BrandRepository;
 import com.smalltrend.repository.CategoryRepository;
@@ -53,7 +53,7 @@ public class TestController {
                     .build();
             brandRepository.save(testBrand);
 
-            CategoriesResponse testCategory = CategoriesResponse.builder()
+            Category testCategory = Category.builder()
                     .name("Test Category")
                     .build();
             categoryRepository.save(testCategory);
@@ -85,7 +85,7 @@ public class TestController {
     }
 
     @GetMapping("/categories")
-    public List<CategoriesResponse> getCategories() {
+    public List<Category> getCategories() {
         return categoryRepository.findAll();
     }
 }

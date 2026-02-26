@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, Package, Search, CheckCircle, Tag, FolderTree } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, CheckCircle, Tag, FolderTree, X, Filter, ArrowUpDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
@@ -17,12 +17,13 @@ const Category_Brand = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState('desc');
   const [toastMessage, setToastMessage] = useState("");
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    country: '',
-    status: 'active'
+    country: ''
   });
 
 
@@ -51,8 +52,7 @@ const Category_Brand = () => {
     setFormData({
       name: '',
       description: '',
-      country: '',
-      status: 'active'
+      country: ''
     });
 
     setSelectedItem(null);
@@ -65,8 +65,7 @@ const Category_Brand = () => {
     setFormData({
       name: item.name,
       description: item.description || '',
-      country: item.country || '',
-      status: item.status || 'active'
+      country: item.country || ''
     });
 
     setShowModal(true);
@@ -91,9 +90,28 @@ const Category_Brand = () => {
   };
 
   const data = activeTab === 'categories' ? (categories || []) : (brands || []);
-  const filteredData = data.filter(item =>
-    item.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  
+  const uniqueCountries = useMemo(() => {
+    if (activeTab !== 'brands') return [];
+    const countries = brands?.map(b => b.country).filter(Boolean) || [];
+    return [...new Set(countries)].sort();
+  }, [brands, activeTab]);
+
+  const filteredData = useMemo(() => {
+    let filtered = data.filter(item =>
+      item.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (activeTab === 'brands' && countryFilter) {
+      filtered = filtered.filter(item => item.country === countryFilter);
+    }
+
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+  }, [data, searchQuery, countryFilter, sortOrder, activeTab]);
 
   if (catLoading || brandLoading) return <p>Đang tải...</p>;
   if (catError || brandError) return <p className="text-red-500">{catError || brandError}</p>;
@@ -102,10 +120,10 @@ const Category_Brand = () => {
     <div className="space-y-6">
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed top-6 right-6 z-50">
-          <div className="relative flex gap-4 bg-green-50 border border-green-200 rounded-xl px-8 py-5 min-w-105 shadow-lg">
-            <CheckCircle className="text-green-600 w-6 h-6" />
-            <span className="text-base font-semibold text-gray-800">{toastMessage}</span>
+        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right">
+          <div className="flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg px-6 py-4 shadow-lg">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">{toastMessage}</span>
           </div>
         </div>
       )}
@@ -113,24 +131,28 @@ const Category_Brand = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Quản lý Danh mục & Thương hiệu</h1>
-          <p className="text-gray-500 mt-1">Tổng số: {filteredData.length} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</p>
+          <h1 className="text-3xl font-bold text-gray-900">Quản lý Danh mục & Thương hiệu</h1>
+          <p className="text-gray-600 mt-2 flex items-center gap-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
+              {filteredData.length} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
+            </span>
+          </p>
         </div>
-        <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={handleAdd} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md">
           <Plus className="w-4 h-4 mr-2" />
           Thêm mới
         </Button>
       </div>
 
       {/* Tabs */}
-      <Card className="border border-gray-300 rounded-lg bg-white">
-        <div className="border-b border-gray-200">
-          <div className="flex">
+      <Card className="border-0 shadow-md rounded-xl bg-white overflow-hidden">
+        <div className="border-b border-gray-100">
+          <div className="flex p-1 bg-gray-50">
             <button
               onClick={() => setActiveTab('categories')}
-              className={`px-6 py-3 font-medium transition-colors ${activeTab === 'categories'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              className={`flex-1 px-6 py-3 font-semibold rounded-lg transition-all duration-200 ${activeTab === 'categories'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
             >
               <FolderTree className="w-4 h-4 inline mr-2" />
@@ -138,9 +160,9 @@ const Category_Brand = () => {
             </button>
             <button
               onClick={() => setActiveTab('brands')}
-              className={`px-6 py-3 font-medium transition-colors ${activeTab === 'brands'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              className={`flex-1 px-6 py-3 font-semibold rounded-lg transition-all duration-200 ${activeTab === 'brands'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
             >
               <Tag className="w-4 h-4 inline mr-2" />
@@ -149,48 +171,73 @@ const Category_Brand = () => {
           </div>
         </div>
 
-        {/* Search */}
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder={`Tìm ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}...`}
-              className="pl-9 h-10 text-md bg-gray-200 border border-gray-200 rounded-lg"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        {/* Search & Filters */}
+        <CardContent className="p-6">
+          <div className="flex gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-[250px]">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                placeholder={`Tìm kiếm ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}...`}
+                className="pl-12 h-12 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            {activeTab === 'brands' && (
+              <div className="relative min-w-[200px]">
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <select
+                  className="w-full pl-12 h-12 text-base bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
+                  value={countryFilter}
+                  onChange={(e) => setCountryFilter(e.target.value)}
+                >
+                  <option value="">Tất cả quốc gia</option>
+                  {uniqueCountries.map(country => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            <Button
+              variant="outline"
+              className="h-12 px-4 rounded-xl border-gray-200 hover:bg-gray-100"
+              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+            >
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              {sortOrder === 'desc' ? 'Mới nhất' : 'Cũ nhất'}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Table */}
-      <Card className="border border-gray-300 rounded-lg bg-white">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold">
+      <Card className="border-0 shadow-md rounded-xl bg-white overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+          <CardTitle className="text-xl font-bold text-gray-800">
             Danh sách {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead>Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</TableHead>
+              <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
+                <TableHead className="font-bold text-gray-700">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</TableHead>
                 {activeTab === "brands" && (
-                  <TableHead>Quốc gia</TableHead>
+                  <TableHead className="font-bold text-gray-700">Quốc gia</TableHead>
                 )}
-
-                <TableHead>Số sản phẩm</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Thời gian tạo</TableHead>
-                <TableHead className="text-center">Thao tác</TableHead>
+                <TableHead className="font-bold text-gray-700">Số sản phẩm</TableHead>
+                <TableHead className="font-bold text-gray-700">Thời gian tạo</TableHead>
+                <TableHead className="text-center font-bold text-gray-700">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredData.map((item) => (
-                <TableRow key={item.id} className="hover:bg-gray-200">
+                <TableRow key={item.id} className="hover:bg-blue-50 transition-colors border-b border-gray-100">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${activeTab === 'categories' ? 'bg-purple-100' : 'bg-blue-100'
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-sm ${activeTab === 'categories' ? 'bg-gradient-to-br from-purple-100 to-purple-200' : 'bg-gradient-to-br from-blue-100 to-blue-200'
                         }`}>
                         {activeTab === 'categories' ? (
                           <FolderTree className="w-5 h-5 text-purple-600" />
@@ -198,7 +245,7 @@ const Category_Brand = () => {
                           <Tag className="w-5 h-5 text-blue-600" />
                         )}
                       </div>
-                      <span className="font-medium">{item.name}</span>
+                      <span className="font-semibold text-gray-800">{item.name}</span>
                     </div>
                   </TableCell>
                   {activeTab === "brands" && (
@@ -208,18 +255,15 @@ const Category_Brand = () => {
                   )}
 
                   <TableCell>
-                    <Badge className="bg-blue-100 text-blue-700">{productCountMap[item.id] || 0} sản phẩm</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className="bg-green-100 text-green-700">Hoạt động</Badge>
+                    <Badge className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold px-3 py-1">{productCountMap[item.id] || 0} sản phẩm</Badge>
                   </TableCell>
                   <TableCell>{item.created_at}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} title="Chỉnh sửa">
+                      <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} title="Chỉnh sửa" className="hover:bg-blue-100 text-blue-600">
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} title="Xóa" className="text-red-600 hover:text-red-700">
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} title="Xóa" className="hover:bg-red-100 text-red-600">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -233,18 +277,21 @@ const Category_Brand = () => {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
+            <div className="relative p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
               <h2 className="text-2xl font-bold text-gray-900">
-                {modalMode === 'add' ? 'Thêm' : 'Chỉnh sửa'} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
+                {modalMode === 'add' ? '✨ Thêm mới' : '✏️ Chỉnh sửa'} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
               </h2>
+              <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
               <div>
-                <Label>Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} <span className="text-red-600">*</span></Label>
+                <Label className="text-sm font-semibold text-gray-700">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} <span className="text-red-500">*</span></Label>
                 <Input
-                  className="text-md bg-gray-200 border border-gray-200 rounded-lg mt-1"
+                  className="mt-2 h-11 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder={`Nhập tên ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}`}
@@ -253,9 +300,9 @@ const Category_Brand = () => {
 
               {activeTab === 'brands' && (
                 <div>
-                  <Label>Quốc gia</Label>
+                  <Label className="text-sm font-semibold text-gray-700">Quốc gia</Label>
                   <Input
-                    className="text-md bg-gray-100 border border-gray-300 rounded-lg mt-1"
+                    className="mt-2 h-11 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={formData.country || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, country: e.target.value })
@@ -266,37 +313,25 @@ const Category_Brand = () => {
               )}
 
               <div>
-                <Label>Trạng thái</Label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white mt-1"
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                >
-                  <option value="active">Hoạt động</option>
-                  <option value="inactive">Không hoạt động</option>
-                </select>
-              </div>
-
-              <div>
-                <Label>Mô tả</Label>
+                <Label className="text-sm font-semibold text-gray-700">Mô tả</Label>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 mt-1 text-sm"
-                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 mt-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={4}
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  placeholder="Nhập mô tả..."
+                  placeholder="Nhập mô tả chi tiết..."
                 />
               </div>
 
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3">
-              <Button variant="danger" className="flex-1" onClick={() => setShowModal(false)}>
+            <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+              <Button variant="outline" className="flex-1 h-11 rounded-xl font-semibold" onClick={() => setShowModal(false)}>
                 Hủy
               </Button>
-              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={handleSave}>
-                {modalMode === 'add' ? 'Thêm' : 'Cập nhật'}
+              <Button className="flex-1 h-11 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md" onClick={handleSave}>
+                {modalMode === 'add' ? '✓ Thêm mới' : '✓ Cập nhật'}
               </Button>
             </div>
           </div>
@@ -305,26 +340,31 @@ const Category_Brand = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-bold mb-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
+            <div className="p-6 bg-gradient-to-r from-red-50 to-orange-50 rounded-t-2xl">
+              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-7 h-7 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
                 Xác nhận xóa {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
               </h3>
-              <p className="text-gray-600 mb-2">
-                Bạn có chắc muốn xóa <span className="font-semibold">{selectedItem?.name}</span>?
+              <p className="text-center text-gray-600 mb-3">
+                Bạn có chắc muốn xóa <span className="font-bold text-gray-900">{selectedItem?.name}</span>?
               </p>
-              <p className="text-sm text-red-600">
-                {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
-                <span className="font-semibold">{productCountMap[selectedItem?.id] || 0} sản phẩm</span>
-              </p>
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+                <p className="text-sm text-red-700 font-medium">
+                  ⚠️ {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
+                  <span className="font-bold">{productCountMap[selectedItem?.id] || 0} sản phẩm</span>
+                </p>
+              </div>
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowDeleteConfirm(false)}>
+            <div className="p-6 bg-gray-50 rounded-b-2xl flex gap-3">
+              <Button variant="outline" className="flex-1 h-11 rounded-xl font-semibold" onClick={() => setShowDeleteConfirm(false)}>
                 Hủy
               </Button>
-              <Button variant="danger" className="flex-1" onClick={confirmDelete}>
-                Xóa
+              <Button variant="danger" className="flex-1 h-11 rounded-xl font-semibold bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md" onClick={confirmDelete}>
+                Xóa ngay
               </Button>
             </div>
           </div>

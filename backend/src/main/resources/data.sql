@@ -280,12 +280,22 @@ TRUNCATE TABLE brands;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- 1. BRANDS & CATEGORIES
-insert ignore into brands ( name ) values ( 'Vinamilk' ),( 'Nestle' ),( 'Coca-Cola' ),( 'Unilever' ),( 'P&G' ),( 'Kinh Do' ),( 'Oishi'
-);
+INSERT IGNORE INTO brands (name) VALUES 
+('Vinamilk'),
+('Nestle'),
+('Coca-Cola'),
+('Unilever'),
+('P&G'),
+('Kinh Do'),
+('Oishi');
 
-insert ignore into categories ( name ) values ( 'Beverages' ),( 'Dairy Products' ),( 'Personal Care' ),( 'Household Items' ),( 'Snacks'
-
-),( 'Health Care' );
+INSERT IGNORE INTO categories (name) VALUES 
+('Beverages'),
+('Dairy Products'),
+('Personal Care'),
+('Household Items'),
+('Snacks'),
+('Health Care');
 
 -- 2. SUPPLIERS (Supplier entity có @CreationTimestamp/@UpdateTimestamp)
 INSERT INTO suppliers (name, tax_code, address, email, phone, contact_person, contract_files, contract_signed_date, contract_expiry, active, notes) VALUES 

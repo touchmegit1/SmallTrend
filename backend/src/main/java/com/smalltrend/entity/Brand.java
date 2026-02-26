@@ -1,11 +1,11 @@
 package com.smalltrend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -22,6 +22,14 @@ public class Brand {
 
     private String name;
 
+    @Column(length = 100)
+    private String country;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
     @OneToMany(mappedBy = "brand")
+    @JsonIgnore
     private List<Product> products;
 }

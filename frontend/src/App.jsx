@@ -22,10 +22,9 @@ function App() {
         <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
             {/* Protected Routes */}
-            <Route path="/" element={<PublicRoute><MainLayout /></PublicRoute>}>
+            <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
                 {/* Redirect root to Dashboard */}
                 <Route index element={<Navigate to="/dashboard" replace />} />
 
@@ -49,15 +48,15 @@ function App() {
                 <Route path="inventory/alerts" element={<div className="p-4">Cảnh báo hết hàng</div>} />
 
                 {/* Module 3: Products (Sản phẩm) */}
-                <Route path="products" element={<PublicRoute> <ProductListScreen /> </PublicRoute>} />
-                <Route path="products/addproduct" element={<PublicRoute> <AddNewProduct /> </PublicRoute>} />
-                <Route path="products/detail/:id" element={<PublicRoute> <ProductDetail /> </PublicRoute>} />
-                <Route path="products/addproduct_variant" element={<PublicRoute> <AddNewProductVariant /> </PublicRoute> } />
-                <Route path="products/categories" element={<PublicRoute> <Category_Brand /> </PublicRoute>} />
-                <Route path="products/suppliers" element={<PublicRoute> <SuppliersScreen /> </PublicRoute>} />
-                <Route path="products/combos" element={<PublicRoute> <ComboManage /> </PublicRoute>} />
-                <Route path="products/create_combo" element={<PublicRoute> <CreateCombo /> </PublicRoute>} />
-                <Route path="products/combo_detail" element={<PublicRoute> <ComboDetail /> </PublicRoute>} />
+                <Route path="products" element={<ProductListScreen />} />
+                <Route path="products/addproduct" element={<AddNewProduct />} />
+                <Route path="products/detail/:id" element={<ProductDetail />} />
+                <Route path="products/addproduct_variant" element={<AddNewProductVariant />} />
+                <Route path="products/categories" element={<Category_Brand />} />
+                <Route path="products/suppliers" element={<SuppliersScreen />} />
+                <Route path="products/combos" element={<ComboManage />} />
+                <Route path="products/create_combo" element={<CreateCombo />} />
+                <Route path="products/combo_detail" element={<ComboDetail />} />
 
                 {/* Module 4: CRM (Khách hàng) */}
                 <Route path="crm" element={<div className="p-4">CRM & Promotion</div>} />

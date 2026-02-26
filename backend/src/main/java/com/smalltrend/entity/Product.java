@@ -39,7 +39,7 @@ public class Product {
 
     @ManyToOne
     @JoinColumn(name = "category_id")
-    private CategoriesResponse category;
+    private Category category;
 
     @ManyToOne
     @JoinColumn(name = "tax_rate_id")
