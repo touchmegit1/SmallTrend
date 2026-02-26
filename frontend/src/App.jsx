@@ -6,8 +6,6 @@ import Dashboard from './pages/Dashboard/Dashboard'
 import POS from './pages/Pos/pos'
 import CRMHomepage from './pages/CRM/homepage'
 import Login from './pages/Auth/Login'
-import ProtectedRoute from './components/common/ProtectedRoute'
-import PublicRoute from './components/common/PublicRoute'
 import UserManagement from './pages/HR/UserManagement'
 import EmployeeList from './pages/HR/EmployeeList'
 import ShiftManagement from './pages/HR/ShiftManagement'
@@ -77,7 +75,7 @@ function App() {
                 <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
                 <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
                 <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
-                <Route path="crm/complain" element={<CRMcomplain />} />
+                <Route path="crm/complain" element={<div className="p-4">Khiếu nại</div>} />
 
                 {/* Dashboard Route - only ADMIN/MANAGER
                 <Route path="dashboard" element={
