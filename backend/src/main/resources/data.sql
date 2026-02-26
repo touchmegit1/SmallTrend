@@ -43,6 +43,26 @@ TRUNCATE TABLE brands;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+-- =============================================================================
+-- ALTER TABLE: Bổ sung cột thiếu cho brands và categories
+-- =============================================================================
+
+-- Add missing columns to brands table
+ALTER TABLE brands 
+ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at,
+ADD COLUMN IF NOT EXISTS description TEXT AFTER name;
+
+-- Update existing records to have updatedAt = createdAt
+UPDATE brands SET updated_at = created_at WHERE updated_at IS NULL;
+
+-- Add code and description columns to categories table
+ALTER TABLE categories 
+ADD COLUMN IF NOT EXISTS code VARCHAR(50) UNIQUE AFTER id,
+ADD COLUMN IF NOT EXISTS description TEXT AFTER name;
+
+-- Update existing categories with default codes if needed
+UPDATE categories SET code = CONCAT('CAT', LPAD(id, 3, '0')) WHERE code IS NULL OR code = '';
+
 -- 1. BRANDS & CATEGORIES
 INSERT IGNORE INTO brands (name) VALUES 
 ('Vinamilk'),
