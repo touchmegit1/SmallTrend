@@ -26,6 +26,12 @@ public class ProductVariant {
     private Product product;
     private String sku;
     private String barcode;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private Unit unit;
+
+    @Column(name = "image_url")
     private String imageUrl;
     private BigDecimal sellPrice;
     private boolean isActive;
