@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  getProducts,
-  getStockMovements,
+  getDashboardProducts,
   getProductBatches,
   getCategories,
   getBrands,
+  getDashboardSummary,
+  getDashboardBatches,
+  getRecentActivities,
+  reseedStock,
 } from "../services/inventoryService";
 import {
   classifyBatch,
@@ -22,6 +25,7 @@ export function useInventoryDashboard() {
   const [batches, setBatches] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
+  const [dashboardSummary, setDashboardSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -36,21 +40,36 @@ export function useInventoryDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsData, movementsData, batchesData, categoriesData, brandsData] =
+        // Try to reseed stock data if missing (one-time fix)
+        try {
+          await reseedStock();
+        } catch (e) {
+          console.warn("⚠️ Reseed stock skipped:", e.message);
+        }
+
+        const [productsData, batchesData, categoriesData, brandsData, summaryData, activitiesData] =
           await Promise.all([
-            getProducts(),
-            getStockMovements(),
-            getProductBatches(),
+            getDashboardProducts(),
+            getDashboardBatches(),
             getCategories(),
             getBrands(),
+            getDashboardSummary(),
+            getRecentActivities().catch(() => []),
           ]);
+        
+        console.log("📊 Dashboard Summary:", summaryData);
+        console.log("📦 Products:", productsData.length);
+        console.log("🏷️ Batches:", batchesData.length);
+        console.log("📋 Activities:", activitiesData.length);
+        
         setProducts(productsData);
-        setStockMovements(movementsData);
         setBatches(batchesData);
         setCategories(categoriesData);
         setBrands(brandsData);
+        setDashboardSummary(summaryData);
+        setStockMovements(activitiesData);
       } catch (err) {
-        console.error("Error fetching inventory data:", err);
+        console.error("❌ Error fetching inventory data:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -81,13 +100,14 @@ export function useInventoryDashboard() {
   // ─── Enriched Batches ──────────────────────────────────────
   const enrichedBatches = useMemo(() => {
     return batches.map((b) => {
-      const product = products.find((p) => p.id === b.product_id);
-      const status = classifyBatch(b.expiry_date);
-      const days = daysUntilExpiry(b.expiry_date);
+      // Use productName from API response (BatchStatusResponse includes it)
+      const productName = b.productName || b.product_name || "N/A";
+      const status = b.status || classifyBatch(b.expiry_date);
+      const days = b.days_until_expiry ?? b.daysUntilExpiry ?? daysUntilExpiry(b.expiry_date);
       return {
         ...b,
-        productName: product?.name || "N/A",
-        productSku: product?.sku || "N/A",
+        productName,
+        productSku: b.batchCode || b.batch_code || "N/A",
         status,
         daysRemaining: b.expiry_date ? days : null,
       };
@@ -144,12 +164,25 @@ export function useInventoryDashboard() {
     return list;
   }, [enrichedBatches, batchTab]);
 
-  // ─── Stats ─────────────────────────────────────────────────
+  // ─── Stats (from backend API) ──────────────────────────────
   const stats = useMemo(() => {
-    const productCount = products.length;
-    const totalStockUnits = products.reduce((s, p) => s + (p.stock_quantity || 0), 0);
-    const totalInventoryValue = enrichedProducts.reduce((s, p) => s + p.inventoryValue, 0);
+    if (!dashboardSummary) {
+      return {
+        productCount: 0,
+        totalStockUnits: 0,
+        totalInventoryValue: 0,
+        outOfStock: 0,
+        criticalStock: 0,
+        lowStock: 0,
+        healthyStock: 0,
+        expiredBatches: 0,
+        expiringBatches: 0,
+        needsAttention: 0,
+      };
+    }
 
+    // Calculate local stats for UI filters
+    const totalStockUnits = products.reduce((s, p) => s + (p.stock_quantity || 0), 0);
     const outOfStock = enrichedProducts.filter(
       (p) => p.stockStatus === STOCK_STATUS.OUT_OF_STOCK
     ).length;
@@ -165,28 +198,19 @@ export function useInventoryDashboard() {
         p.stockStatus === STOCK_STATUS.HEALTHY
     ).length;
 
-    const expiredBatches = enrichedBatches.filter(
-      (b) => b.status === BATCH_STATUS.EXPIRED
-    ).length;
-    const expiringBatches = enrichedBatches.filter(
-      (b) =>
-        b.status === BATCH_STATUS.EXPIRING_CRITICAL ||
-        b.status === BATCH_STATUS.EXPIRING_WARNING
-    ).length;
-
     return {
-      productCount,
+      productCount: dashboardSummary.totalProducts,
       totalStockUnits,
-      totalInventoryValue,
+      totalInventoryValue: dashboardSummary.totalInventoryValue,
       outOfStock,
-      criticalStock,
+      criticalStock: dashboardSummary.lowStockCount,
       lowStock,
       healthyStock,
-      expiredBatches,
-      expiringBatches,
-      needsAttention: outOfStock + criticalStock + expiredBatches,
+      expiredBatches: dashboardSummary.expiredBatchCount,
+      expiringBatches: dashboardSummary.expiringSoonCount,
+      needsAttention: dashboardSummary.needActionCount,
     };
-  }, [products, enrichedProducts, enrichedBatches]);
+  }, [dashboardSummary, products, enrichedProducts]);
 
   // ─── Sort Handler ──────────────────────────────────────────
   const handleSort = useCallback(

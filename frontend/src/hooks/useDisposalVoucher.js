@@ -6,8 +6,8 @@ import {
   validateForConfirm,
   DEFAULT_VOUCHER,
 } from "../utils/disposalVoucher";
-
-const API = "http://localhost:3001";
+import { getProductBatches, getDashboardProducts, getLocations } from "../services/inventoryService";
+import { getDisposalVoucherById, getNextDisposalCode } from "../services/disposalService";
 
 export function useDisposalVoucher(voucherId = null) {
   const [voucher, setVoucher] = useState({ ...DEFAULT_VOUCHER });
@@ -24,24 +24,11 @@ export function useDisposalVoucher(voucherId = null) {
     let cancelled = false;
     const init = async () => {
       try {
-        const urls = [
-          `${API}/product_batches`,
-          `${API}/products`,
-          `${API}/locations`,
-          `${API}/disposal_vouchers`,
-        ];
-        if (voucherId) {
-          urls.push(`${API}/disposal_vouchers/${voucherId}`);
-          urls.push(`${API}/disposal_voucher_items?disposal_voucher_id=${voucherId}`);
-        }
-
-        const responses = await Promise.all(urls.map((u) => fetch(u)));
-        for (const r of responses) {
-          if (!r.ok) throw new Error("Lỗi khi tải dữ liệu");
-        }
-
-        const [batchesData, productsData, locsData, allVouchers, ...rest] =
-          await Promise.all(responses.map((r) => r.json()));
+        const [batchesData, productsData, locsData] = await Promise.all([
+          getProductBatches(),
+          getDashboardProducts(),
+          getLocations(),
+        ]);
 
         if (cancelled) return;
 
@@ -49,11 +36,12 @@ export function useDisposalVoucher(voucherId = null) {
         setProducts(productsData);
         setLocations(locsData.filter((l) => l.status === "ACTIVE"));
 
-        if (voucherId && rest.length === 2) {
-          setVoucher(rest[0]);
-          setItems(rest[1]);
+        if (voucherId) {
+          const voucherData = await getDisposalVoucherById(voucherId);
+          setVoucher(voucherData);
+          setItems(voucherData.items || []);
         } else {
-          const code = generateDVCode(allVouchers);
+          const code = await getNextDisposalCode();
           setVoucher((prev) => ({
             ...prev,
             code,

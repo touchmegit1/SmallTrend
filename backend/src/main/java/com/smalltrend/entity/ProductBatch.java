@@ -1,5 +1,6 @@
 package com.smalltrend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,7 @@ public class ProductBatch {
 
     @ManyToOne
     @JoinColumn(name = "variant_id", nullable = false)
+    @JsonIgnoreProperties({"productBatches", "inventoryStocks"})
     private ProductVariant variant;
 
     private String batchNumber;
@@ -32,5 +34,6 @@ public class ProductBatch {
     private BigDecimal costPrice;
     
     @OneToMany(mappedBy = "batch")
+    @JsonIgnoreProperties({"batch", "variant"})
     private List<InventoryStock> inventoryStocks;
 }

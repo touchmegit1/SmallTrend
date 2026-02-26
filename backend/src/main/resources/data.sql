@@ -545,78 +545,68 @@ INSERT IGNORE INTO salary_configs (
 (4, 'MONTHLY', 13000000.00, NULL, 1.50, 400000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Inventory package (monthly)', NOW(), NOW()),
 (5, 'HOURLY', NULL, 72000.00, 1.50, 450000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Sales package (hourly)', NOW(), NOW());
 
--- 22. PAYROLL CALCULATIONS (Kết quả tính lương mẫu theo tháng)
-INSERT IGNORE INTO payroll_calculations (
-      user_id,
-      pay_period_start,
-      pay_period_end,
-      payment_cycle,
-      total_worked_days,
-      total_worked_minutes,
-      regular_minutes,
-      overtime_minutes,
-      night_shift_minutes,
-      weekend_minutes,
-      holiday_minutes,
-      late_days,
-      absent_days,
-      leave_days,
-      base_pay,
-      overtime_pay,
-      night_shift_bonus,
-      weekend_bonus,
-      holiday_bonus,
-      allowances,
-      commission_amount,
-      bonus_amount,
-      late_penalty,
-      absent_penalty,
-      social_insurance,
-      health_insurance,
-      unemployment_insurance,
-      personal_income_tax,
-      other_deductions,
-      gross_pay,
-      total_deductions,
-      net_pay,
-      status,
-      calculated_by,
-      approved_by,
-      calculated_at,
-      approved_at,
-      paid_at,
-      calculation_details,
-      notes,
-      created_at,
-      updated_at
-) VALUES
-(2, '2026-02-01', '2026-02-28', 'MONTHLY', 24, 10560, 9600, 960, 120, 240, 0, 1, 0, 0, 16800000.00, 1512000.00, 150000.00, 300000.00, 0.00, 1000000.00, 0.00, 500000.00, 200000.00, 0.00, 1411200.00, 264600.00, 176400.00, 750000.00, 0.00, 20262000.00, 2802200.00, 17459800.00, 'APPROVED', 1, 1, NOW(), NOW(), NULL, '{"source":"attendance+shift"}', 'Payroll tháng 02/2026 - manager', NOW(), NOW()),
-(3, '2026-02-01', '2026-02-28', 'MONTHLY', 23, 9840, 9360, 480, 240, 120, 0, 2, 1, 0, 10920000.00, 504000.00, 120000.00, 90000.00, 0.00, 500000.00, 0.00, 200000.00, 250000.00, 560000.00, 780000.00, 146250.00, 97500.00, 250000.00, 0.00, 12334000.00, 2083750.00, 10250250.00, 'CALCULATED', 2, NULL, NOW(), NULL, NULL, '{"source":"attendance+shift"}', 'Payroll tháng 02/2026 - cashier', NOW(), NOW());
+-- Insert Inventory Stock
+INSERT INTO inventory_stock
+(id, variant_id, batch_id, location_id, quantity) VALUES
+(1, 1, 1, 1, 250),
+(2, 2, 2, 1, 180),
+(3, 3, 3, 2, 800),
+(4, 4, 4, 3, 350),
+(5, 5, 5, 4, 220);
 
--- 23. SHIFT SWAP REQUESTS
-INSERT IGNORE INTO shift_swap_requests (
-      request_code,
-      requester_id,
-      original_shift_id,
-      original_shift_date,
-      target_user_id,
-      target_shift_id,
-      target_shift_date,
-      swap_type,
-      reason,
-      status,
-      accepted_by,
-      accepted_at,
-      approved_by,
-      approved_at,
-      rejection_reason,
-      expiry_time,
-      notes,
-      created_at,
-      updated_at
-) VALUES
-('SWAP-REQ-001', 3, 3, '2026-02-24', 2, 2, '2026-02-24', 'DIRECT_SWAP', 'Đổi ca tối để xử lý việc cá nhân buổi tối', 'PENDING', NULL, NULL, NULL, NULL, NULL, '2026-02-26 23:59:59', 'Đang chờ manager duyệt', NOW(), NOW()),
-('SWAP-REQ-002', 2, 2, '2026-02-27', 1, 1, '2026-02-27', 'DIRECT_SWAP', 'Đổi ca để tham gia họp vùng', 'ACCEPTED', 1, NOW(), 1, NOW(), NULL, '2026-02-28 23:59:59', 'Đã duyệt đổi ca', NOW(), NOW());
+-- Insert Purchase Orders
+INSERT INTO purchase_orders
+(id, supplier_id, order_date, status, total_amount, received_by) VALUES
+(1, 1, '2024-01-10', 'COMPLETED', 5000000.00, 2),
+(2, 2, '2024-01-15', 'COMPLETED', 3500000.00, 2),
+(3, 3, '2024-02-01', 'PENDING', 2400000.00, 2),
+(4, 4, '2024-02-05', 'COMPLETED', 1800000.00, 4),
+(5, 5, '2024-02-10', 'PROCESSING', 2200000.00, 4);
+
+-- Insert Purchase Order Items
+INSERT INTO purchase_order_items
+(id, purchase_order_id, variant_id, quantity, unit_price) VALUES
+(1, 1, 1, 250, 20000.00),
+(2, 2, 2, 160, 22000.00),
+(3, 3, 3, 800, 3500.00),
+(4, 4, 4, 200, 9500.00),
+(5, 5, 5, 180, 12000.00);
+
+-- Insert Sales Orders
+INSERT INTO sales_orders
+(id, cashier_id, customer_id, order_date, payment_method, total_amount) VALUES
+(1, 3, 1, '2024-02-20 10:30:00', 'CASH', 175000.00),
+(2, 3, 2, '2024-02-21 14:15:00', 'CREDIT_CARD', 95000.00),
+(3, 5, 3, '2024-02-22 09:45:00', 'BANK_TRANSFER', 58000.00),
+(4, 3, 4, '2024-02-23 16:20:00', 'CASH', 120000.00),
+(5, 5, 5, '2024-02-24 11:10:00', 'QR_CODE', 67000.00);
+
+-- Insert Sales Order Items  
+INSERT INTO sales_order_items
+(id, order_id, variant_id, batch_id, quantity, unit_price, cost_price_at_sale) VALUES
+(1, 1, 1, 1, 7, 25000.00, 20000.00),
+(2, 2, 2, 2, 4, 27000.00, 22000.00),
+(3, 3, 3, 3, 12, 4500.00, 3500.00),
+(4, 4, 4, 4, 10, 12000.00, 9500.00),
+(5, 5, 5, 5, 5, 15000.00, 12000.00);
+
+-- Insert Loyalty History
+INSERT INTO loyalty_history
+(id, customer_id, order_id, points_earned, points_used) VALUES
+(1, 1, 1, 18, 0),
+(2, 2, 2, 10, 0),
+(3, 3, 3, 6, 0),
+(4, 4, 4, 12, 0),
+(5, 5, 5, 7, 0);
+
+-- Insert Promotions
+INSERT INTO promotions
+(id, name, start_date, end_date, is_active) VALUES
+(1, 'Tet Sale 2024', '2024-02-01', '2024-02-29', 1),
+(2, 'Back to School', '2024-08-01', '2024-08-31', 0),
+(3, 'Black Friday', '2024-11-24', '2024-11-30', 0),
+(4, 'Christmas Sale', '2024-12-20', '2024-12-31', 0),
+(5, 'New Year Deal', '2025-01-01', '2025-01-15', 0);
 
 -- 24. PURCHASE ORDERS (Đơn đặt hàng từ nhà cung cấp)
 INSERT IGNORE INTO purchase_orders (

@@ -78,4 +78,10 @@ public class Supplier {
             active = true;
         }
     }
+
+    // Convenience alias used by service layer
+    @Transient
+    public String getContactInfo() {
+        return contactPerson;
+    }
 }

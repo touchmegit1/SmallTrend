@@ -2,6 +2,14 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   getProducts,
   getLocations,
+  getInventoryCounts,
+  getInventoryCountById,
+  getInventoryCountNextCode,
+  saveInventoryCountDraft,
+  updateInventoryCount,
+  confirmInventoryCount,
+  createAndConfirmInventoryCount,
+  cancelInventoryCount,
 } from "../services/inventoryService";
 import {
   IC_STATUS,
@@ -14,8 +22,6 @@ import {
   validateConfirmCount,
   COUNT_ITEM_STATUS,
 } from "../utils/inventoryCount";
-
-const API_BASE = "http://localhost:3001";
 
 /**
  * @param {string|undefined} voucherId - If provided, loads an existing voucher.
@@ -56,31 +62,28 @@ export function useInventoryCount(voucherId) {
 
         if (isCreateMode) {
           // ── CREATE MODE: generate new voucher ───────────
-          const existingCounts = await fetch(`${API_BASE}/inventory_counts`).then(
-            (r) => (r.ok ? r.json() : [])
-          );
+          let code;
+          try {
+            code = await getInventoryCountNextCode();
+          } catch {
+            // Fallback: generate code client-side
+            const existingCounts = await getInventoryCounts();
+            code = generateICCode(existingCounts);
+          }
           if (cancelled) return;
 
-          const code = generateICCode(existingCounts);
           setSession(createDefaultCountSession(code));
 
           const countItems = productsData.map((p) => createCountItem(p));
           setItems(countItems);
         } else {
           // ── VIEW/EDIT MODE: load existing voucher ───────
-          const [sessionRes, itemsRes] = await Promise.all([
-            fetch(`${API_BASE}/inventory_counts/${voucherId}`),
-            fetch(
-              `${API_BASE}/inventory_count_items?inventory_count_id=${voucherId}`
-            ),
-          ]);
-
-          if (!sessionRes.ok) throw new Error("Không tìm thấy phiếu kiểm kho.");
-          const sessionData = await sessionRes.json();
-          const savedItems = await itemsRes.json();
+          const sessionData = await getInventoryCountById(voucherId);
 
           if (cancelled) return;
           setSession(sessionData);
+
+          const savedItems = sessionData.items || [];
 
           // Merge saved items with product info
           const productMap = {};
@@ -258,60 +261,17 @@ export function useInventoryCount(voucherId) {
 
       setSaving(true);
       try {
-        const countedItems = items.filter((i) => i.actual_quantity !== null);
-
-        const sessionPayload = {
-          ...session,
+        const request = {
+          location_id: session.location_id,
+          notes: session.notes,
           status: IC_STATUS.DRAFT,
-          total_shortage_value: stats.totalShortageValue,
-          total_overage_value: stats.totalOverageValue,
-          total_difference_value: stats.totalDifferenceValue,
+          items: items,
         };
 
-        let savedSessionId;
-
         if (isCreateMode) {
-          const res = await fetch(`${API_BASE}/inventory_counts`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(sessionPayload),
-          });
-          const saved = await res.json();
-          savedSessionId = saved.id;
+          await saveInventoryCountDraft(request);
         } else {
-          await fetch(`${API_BASE}/inventory_counts/${voucherId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(sessionPayload),
-          });
-          savedSessionId = voucherId;
-
-          // Delete old items to replace
-          const oldItems = await fetch(
-            `${API_BASE}/inventory_count_items?inventory_count_id=${voucherId}`
-          ).then((r) => r.json());
-          for (const old of oldItems) {
-            await fetch(`${API_BASE}/inventory_count_items/${old.id}`, {
-              method: "DELETE",
-            });
-          }
-        }
-
-        // Save counted items
-        for (const item of countedItems) {
-          await fetch(`${API_BASE}/inventory_count_items`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              inventory_count_id: savedSessionId,
-              product_id: item.product_id,
-              system_quantity: item.system_quantity,
-              actual_quantity: item.actual_quantity,
-              difference_quantity: item.difference_quantity,
-              difference_value: item.difference_value,
-              reason: item.reason || "",
-            }),
-          });
+          await updateInventoryCount(voucherId, request);
         }
 
         alert("Đã lưu phiếu kiểm kho nháp thành công!");
@@ -322,7 +282,7 @@ export function useInventoryCount(voucherId) {
         setSaving(false);
       }
     },
-    [session, items, stats, isCreateMode, voucherId]
+    [session, items, isCreateMode, voucherId]
   );
 
   // ─── Confirm & Adjust Stock ──────────────────────
@@ -345,90 +305,16 @@ export function useInventoryCount(voucherId) {
 
       setSaving(true);
       try {
-        const now = new Date().toISOString();
-
-        const sessionPayload = {
-          ...session,
-          status: IC_STATUS.CONFIRMED,
-          confirmed_by: 1,
-          confirmed_at: now,
-          total_shortage_value: stats.totalShortageValue,
-          total_overage_value: stats.totalOverageValue,
-          total_difference_value: stats.totalDifferenceValue,
+        const request = {
+          location_id: session.location_id,
+          notes: session.notes,
+          items: items,
         };
 
-        let savedSessionId;
-
         if (isCreateMode) {
-          const res = await fetch(`${API_BASE}/inventory_counts`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(sessionPayload),
-          });
-          const saved = await res.json();
-          savedSessionId = saved.id;
+          await createAndConfirmInventoryCount(request);
         } else {
-          await fetch(`${API_BASE}/inventory_counts/${voucherId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(sessionPayload),
-          });
-          savedSessionId = voucherId;
-
-          // Delete old items to replace
-          const oldItems = await fetch(
-            `${API_BASE}/inventory_count_items?inventory_count_id=${voucherId}`
-          ).then((r) => r.json());
-          for (const old of oldItems) {
-            await fetch(`${API_BASE}/inventory_count_items/${old.id}`, {
-              method: "DELETE",
-            });
-          }
-        }
-
-        const countedItems = items.filter((i) => i.actual_quantity !== null);
-
-        for (const item of countedItems) {
-          // Save count item
-          await fetch(`${API_BASE}/inventory_count_items`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              inventory_count_id: savedSessionId,
-              product_id: item.product_id,
-              system_quantity: item.system_quantity,
-              actual_quantity: item.actual_quantity,
-              difference_quantity: item.difference_quantity,
-              difference_value: item.difference_value,
-              reason: item.reason || "",
-            }),
-          });
-
-          // Create adjustment if difference
-          if (item.difference_quantity !== 0) {
-            await fetch(`${API_BASE}/inventory_adjustments`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                reference_id: savedSessionId,
-                reference_type: "INVENTORY_COUNT",
-                product_id: item.product_id,
-                quantity_change: item.difference_quantity,
-                reason: item.reason,
-                created_at: now,
-              }),
-            });
-          }
-
-          // Update product stock
-          await fetch(`${API_BASE}/products/${item.product_id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              stock_quantity: item.actual_quantity,
-              updated_at: now,
-            }),
-          });
+          await confirmInventoryCount(voucherId, request);
         }
 
         alert("Đã xác nhận kiểm kho và cập nhật tồn kho!");
@@ -453,11 +339,7 @@ export function useInventoryCount(voucherId) {
       // If existing voucher, update status
       if (!isCreateMode) {
         try {
-          await fetch(`${API_BASE}/inventory_counts/${voucherId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: IC_STATUS.CANCELLED }),
-          });
+          await cancelInventoryCount(voucherId);
         } catch (err) {
           alert("Lỗi khi hủy: " + err.message);
           return;
