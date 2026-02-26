@@ -31,22 +31,14 @@ function App() {
           </PublicRoute>
         }
       />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <Register />
-          </PublicRoute>
-        }
-      />
 
       {/* Protected Routes */}
       <Route
         path="/"
         element={
-          <PublicRoute>
+          <ProtectedRoute>
             <MainLayout />
-          </PublicRoute>
+          </ProtectedRoute>
         }
       >
         {/* Redirect root to Dashboard */}
