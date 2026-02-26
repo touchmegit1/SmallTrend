@@ -39,31 +39,12 @@ function TransactionHistory() {
   // Lọc và sắp xếp transactions
   const filteredTransactions = transactions
     .filter(t => {
-      // Tìm kiếm theo mã đơn (chỉ tìm trong phần số của mã)
+      // Tìm kiếm theo mã đơn
       const matchSearch = searchTerm === "" ||
         t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.id.replace('#HD', '').includes(searchTerm);
 
-      // Lọc theo ngày - chuyển đổi format để so sánh
-      let matchDate = true;
-      if (selectedDate) {
-        const timeParts = t.time.includes(',')
-          ? t.time.split(', ')
-          : t.time.split(' ');
-
-        const datePart = timeParts.length > 1 ? timeParts[1] : timeParts[0];
-
-        if (datePart && datePart.includes('/')) {
-          // Format: MM/DD/YYYY
-          const [month, day, year] = datePart.split('/');
-
-          const transactionDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-
-          matchDate = transactionDate === selectedDate;
-        }
-      }
-
-      return matchSearch && matchDate;
+      return matchSearch;
     })
     .sort((a, b) => {
       // Sắp xếp theo giá tiền
@@ -182,24 +163,10 @@ function TransactionHistory() {
             <option value="asc">Giá: Thấp → Cao</option>
           </select>
 
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: "8px",
-              border: "1px solid #ddd",
-              background: "white",
-              cursor: "pointer",
-            }}
-          />
-
-          {(searchTerm || selectedDate || sortOrder !== "desc") && (
+          {(searchTerm || sortOrder !== "desc") && (
             <button
               onClick={() => {
                 setSearchTerm("");
-                setSelectedDate("");
                 setSortOrder("desc");
               }}
               style={{
