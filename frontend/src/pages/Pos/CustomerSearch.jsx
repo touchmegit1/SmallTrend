@@ -81,7 +81,7 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
     }
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!phone || !name) {
       alert("Vui lòng nhập đầy đủ thông tin!");
       return;
@@ -91,34 +91,33 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
       return;
     }
     
-    const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const loyaltyPoints = Math.floor(totalAmount / 10000);
-    
-    // Lưu vào localStorage
-    const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-    const newCustomer = {
-      id: Date.now(),
-      phone,
-      name,
-      points: 0,
-      existingPoints: 0,
-      createdAt: new Date().toISOString()
-    };
-    customers.push(newCustomer);
-    localStorage.setItem('customers', JSON.stringify(customers));
-    
-    onSelectCustomer({
-      id: newCustomer.id,
-      phone,
-      name,
-      loyaltyPoints,
-      existingPoints: 0,
-      isNew: true
-    });
-    
-    setPhone("");
-    setName("");
-    setShowRegister(false);
+    setLoading(true);
+    try {
+      // Lưu vào backend CRM
+      const savedCustomer = await customerService.createCustomer(name, phone);
+      
+      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const loyaltyPoints = Math.floor(totalAmount / 10000);
+      
+      onSelectCustomer({
+        id: savedCustomer.id,
+        phone: savedCustomer.phone,
+        name: savedCustomer.name,
+        loyaltyPoints,
+        existingPoints: savedCustomer.loyaltyPoints || 0,
+        isNew: false
+      });
+      
+      setPhone("");
+      setName("");
+      setShowRegister(false);
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      const errorMsg = error.response?.data?.message || error.message || "Không thể kết nối server";
+      alert(`Lỗi: ${errorMsg}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -213,19 +212,19 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
           />
           <button
             onClick={handleRegister}
-            disabled={!phone || !name || phone.length < 10 || phone.length > 11}
+            disabled={!phone || !name || phone.length < 10 || phone.length > 11 || loading}
             style={{
               width: "100%",
               padding: "8px",
-              background: (phone && name && phone.length >= 10 && phone.length <= 11) ? "#17a2b8" : "#6c757d",
+              background: (phone && name && phone.length >= 10 && phone.length <= 11 && !loading) ? "#17a2b8" : "#6c757d",
               color: "white",
               border: "none",
               borderRadius: "4px",
-              cursor: (phone && name && phone.length >= 10 && phone.length <= 11) ? "pointer" : "not-allowed",
+              cursor: (phone && name && phone.length >= 10 && phone.length <= 11 && !loading) ? "pointer" : "not-allowed",
               fontSize: "13px"
             }}
           >
-            Lưu thông tin
+            {loading ? "Đang lưu..." : "Lưu thông tin"}
           </button>
         </div>
       )}

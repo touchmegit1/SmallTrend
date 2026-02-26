@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Invoice from "./Invoice";
+import api from "../../config/axiosConfig";
 
 function TransactionHistory() {
   const navigate = useNavigate();
@@ -13,10 +14,55 @@ function TransactionHistory() {
   const [showActionMenu, setShowActionMenu] = useState(null);
 
   useEffect(() => {
-    // Load transactions from localStorage
-    const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    setTransactions(savedTransactions);
+    const loadAndSaveTransactions = async () => {
+      const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      setTransactions(savedTransactions);
+      
+      // Lưu tất cả transactions có customer vào database
+      for (const transaction of savedTransactions) {
+        if (!transaction.savedToDb && transaction.customer && transaction.status === "Hoàn thành") {
+          await savePurchaseHistory(transaction);
+        }
+      }
+    };
+    
+    loadAndSaveTransactions();
   }, []);
+
+  const savePurchaseHistory = async (transaction) => {
+    if (!transaction.customer) return;
+
+    const items = transaction.cart || transaction.items || [];
+    if (items.length === 0) return;
+
+    try {
+      const request = {
+        customerId: transaction.customer.id,
+        customerName: transaction.customer.name,
+        paymentMethod: transaction.payment,
+        items: items.map(item => ({
+          productId: item.productId || item.id || 0,
+          productName: item.name,
+          quantity: item.qty || item.quantity || 1,
+          price: item.price,
+          subtotal: item.price * (item.qty || item.quantity || 1)
+        }))
+      };
+
+      await api.post('/pos/purchase-history', request);
+      
+      // Đánh dấu đã lưu
+      const updatedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      const index = updatedTransactions.findIndex(t => t.id === transaction.id);
+      if (index !== -1) {
+        updatedTransactions[index].savedToDb = true;
+        localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+        setTransactions(updatedTransactions);
+      }
+    } catch (error) {
+      console.error('Error saving purchase history:', error);
+    }
+  };
 
   const restorePendingOrder = (transaction) => {
     const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');

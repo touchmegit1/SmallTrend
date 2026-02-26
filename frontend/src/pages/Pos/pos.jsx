@@ -7,6 +7,7 @@ import PaymentModal from "./PaymentModal";
 import QRScanner from "./QRScanner";
 import Invoice from "./Invoice";
 import posService from "../../services/posService";
+import api from "../../config/axiosConfig";
 
 export default function POS() {
   const [products, setProducts] = useState([]);
@@ -245,7 +246,7 @@ export default function POS() {
     }
   };
 
-  const completeOrder = (orderData) => {
+  const completeOrder = async (orderData) => {
     // Xóa đơn chờ thanh toán
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const filteredTransactions = transactions.filter(t => t.status !== "Chờ thanh toán");
@@ -285,6 +286,10 @@ export default function POS() {
       payment: orderData.paymentMethod || "Tiền mặt",
       total: `${orderData.total.toLocaleString()} đ`,
       status: "Hoàn thành",
+      cart: orderData.cart.map(item => ({
+        ...item,
+        productId: item.id
+      })),
       items: orderData.cart,
       customer: orderData.customer,
       customerMoney: orderData.customerMoney,
@@ -296,6 +301,27 @@ export default function POS() {
 
     filteredTransactions.unshift(transaction);
     localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
+
+    // Lưu ngay vào database
+    if (transaction.customer && transaction.cart) {
+      try {
+        const request = {
+          customerId: transaction.customer.id,
+          customerName: transaction.customer.name,
+          paymentMethod: transaction.payment,
+          items: transaction.cart.map(item => ({
+            productId: item.productId || item.id,
+            productName: item.name,
+            quantity: item.qty,
+            price: item.price,
+            subtotal: item.price * item.qty
+          }))
+        };
+        await api.post('/pos/purchase-history', request);
+      } catch (error) {
+        console.error('Error saving purchase history:', error);
+      }
+    }
 
     setShowPaymentModal(false);
     setShowSuccessNotification(true);
