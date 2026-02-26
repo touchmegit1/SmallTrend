@@ -1,7 +1,7 @@
 -- =============================================================================
 -- SMALLTREND GROCERY STORE DATABASE - Comprehensive Sample Data
 -- =============================================================================
--- Password for all users: password123
+-- Password for all users: password
 -- Hashed: $2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW
 -- =============================================================================
 
@@ -15,6 +15,9 @@ TRUNCATE TABLE purchase_history;
 TRUNCATE TABLE sale_order_histories;
 TRUNCATE TABLE sale_order_items;
 TRUNCATE TABLE sale_orders;
+TRUNCATE TABLE loyalty_transactions;
+TRUNCATE TABLE coupon_usage;
+TRUNCATE TABLE cash_transactions;
 TRUNCATE TABLE shift_handovers;
 TRUNCATE TABLE shift_swap_requests;
 TRUNCATE TABLE payroll_calculations;
@@ -31,6 +34,7 @@ TRUNCATE TABLE coupons;
 TRUNCATE TABLE campaigns;
 TRUNCATE TABLE work_shift_assignments;
 TRUNCATE TABLE work_shifts;
+TRUNCATE TABLE inventory_stock;
 TRUNCATE TABLE product_batches;
 TRUNCATE TABLE locations;
 TRUNCATE TABLE product_variants;
@@ -43,6 +47,7 @@ TRUNCATE TABLE role_permissions;
 TRUNCATE TABLE permissions;
 TRUNCATE TABLE roles;
 TRUNCATE TABLE tax_rates;
+TRUNCATE TABLE supplier_contracts;
 TRUNCATE TABLE suppliers;
 TRUNCATE TABLE categories;
 TRUNCATE TABLE brands;
@@ -76,6 +81,29 @@ contract_expiry = new_supplier.contract_expiry,
 active = new_supplier.active,
 notes = new_supplier.notes,
 updated_at = NOW();
+
+-- 2.1 SUPPLIER CONTRACTS (hợp đồng nhà cung cấp)
+INSERT IGNORE INTO supplier_contracts (
+      supplier_id,
+      contract_number,
+      title,
+      description,
+      status,
+      start_date,
+      end_date,
+      total_value,
+      currency,
+      payment_terms,
+      delivery_terms,
+      signed_by_supplier,
+      signed_by_company,
+      signed_date,
+      notes,
+      created_at,
+      updated_at
+) VALUES
+(1, 'SC-VM-2026-001', 'Hợp đồng phân phối sữa Vinamilk 2026', 'Hợp đồng cung ứng sữa và chế phẩm sữa cho toàn hệ thống cửa hàng', 'ACTIVE', '2026-01-01', '2026-12-31', 1200000000.00, 'VND', 'Thanh toán 30 ngày kể từ ngày nhận hóa đơn', 'Giao hàng theo lịch tuần', 'Nguyen Van A', 'Tran Thi Manager', '2025-12-20', 'Ưu tiên giao hàng dịp cao điểm lễ tết', NOW(), NOW()),
+(2, 'SC-UL-2026-001', 'Hợp đồng đồ gia dụng Unilever 2026', 'Hợp đồng cung ứng nhóm sản phẩm chăm sóc cá nhân và gia dụng', 'ACTIVE', '2026-01-15', '2026-12-31', 800000000.00, 'VND', 'Thanh toán theo từng lô, tối đa 21 ngày', 'Giao hàng trong 48h sau PO', 'Tran Thi B', 'Tran Thi Manager', '2026-01-10', 'Cam kết đổi trả lô lỗi trong 7 ngày', NOW(), NOW());
 
 -- 3. TAX RATES
 insert ignore into tax_rates (
@@ -138,14 +166,14 @@ insert ignore into role_permissions (
                                                                                                      4 );
 
 -- 5. USERS (Schema mới: username, password trong users table trực tiếp)
--- Password for all users: password123
--- Hashed: $2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW
+-- Password for all users: password
+-- Hashed: $2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG
 INSERT INTO users (username, password, active, full_name, email, phone, address, status, role_id) VALUES
-('admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, HCMC', 'ACTIVE', 1),
-('manager', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, HCMC', 'ACTIVE', 2),
-('cashier', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Le Van Cashier', 'cashier@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3),
-('inventory1', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4),
-('sales1', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5)
+('admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, HCMC', 'ACTIVE', 1),
+('manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, HCMC', 'ACTIVE', 2),
+('cashier', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Le Van Cashier', 'cashier@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3),
+('inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4),
+('sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5)
 AS new_user
 ON DUPLICATE KEY UPDATE
 password = new_user.password,
@@ -171,13 +199,13 @@ INSERT IGNORE INTO customers (name, phone, loyalty_points) VALUES
 ('Le Van C', '0965432109', 2000),
 ('Pham Thi D', '0954321098', 6500);
 
--- 8. PRODUCTS (Product entity KHÔNG có created_at)
-INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_id) VALUES 
-('Fresh Milk 1L', 'Vinamilk Fresh Milk', 1, 2, 2),
-('Dove Soap 90g', 'Dove Beauty Bar', 4, 3, 1),
-('Nescafe 3in1', 'Instant Coffee 20g x 10', 2, 1, 1),
-('Coca Cola 330ml', 'Coca Cola Classic', 3, 1, 1),
-('Oishi Snack', 'Potato Chips 50g', 7, 5, 1);
+-- 8. PRODUCTS (seed đầy đủ cột trạng thái + thời gian)
+INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_id, is_active, created_at, updated_at) VALUES 
+('Fresh Milk 1L', 'Vinamilk Fresh Milk', 1, 2, 2, TRUE, NOW(6), NOW(6)),
+('Dove Soap 90g', 'Dove Beauty Bar', 4, 3, 1, TRUE, NOW(6), NOW(6)),
+('Nescafe 3in1', 'Instant Coffee 20g x 10', 2, 1, 1, TRUE, NOW(6), NOW(6)),
+('Coca Cola 330ml', 'Coca Cola Classic', 3, 1, 1, TRUE, NOW(6), NOW(6)),
+('Oishi Snack', 'Potato Chips 50g', 7, 5, 1, TRUE, NOW(6), NOW(6));
 
 -- 8.1 UNITS (quản lý đơn vị + phân loại vật chất + giá chuẩn)
 INSERT IGNORE INTO units (code, name, material_type, symbol, default_sell_price, default_cost_price) VALUES
@@ -187,13 +215,13 @@ INSERT IGNORE INTO units (code, name, material_type, symbol, default_sell_price,
 ('KG', 'Kilogram', 'SOLID', 'kg', 150000.00, 120000.00),
 ('EA', 'Cái', 'SOLID', 'ea', 8000.00, 6000.00);
 
--- 9. PRODUCT VARIANTS (liên kết unit_id sang bảng units)
-INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active) VALUES 
-(1, 'VMILK-1L', '8901234567890', 1, 25000.00, TRUE),
-(2, 'DOVE-90G', '8901234567891', 3, 15000.00, TRUE),
-(3, 'NESCAFE-200G', '8901234567892', 3, 45000.00, TRUE),
-(4, 'COCA-330ML', '8901234567893', 2, 12000.00, TRUE),
-(5, 'OISHI-50G', '8901234567894', 3, 8000.00, TRUE);
+-- 9. PRODUCT VARIANTS (liên kết unit_id sang bảng units + cột trạng thái/thời gian)
+INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active, created_at, updated_at) VALUES 
+(1, 'VMILK-1L', '8901234567890', 1, 25000.00, TRUE, NOW(6), NOW(6)),
+(2, 'DOVE-90G', '8901234567891', 3, 15000.00, TRUE, NOW(6), NOW(6)),
+(3, 'NESCAFE-200G', '8901234567892', 3, 45000.00, TRUE, NOW(6), NOW(6)),
+(4, 'COCA-330ML', '8901234567893', 2, 12000.00, TRUE, NOW(6), NOW(6)),
+(5, 'OISHI-50G', '8901234567894', 3, 8000.00, TRUE, NOW(6), NOW(6));
 
 -- 10. LOCATIONS (tọa độ ma trận trực quan: zone-row-col-level)
 INSERT IGNORE INTO locations (name, type, zone, grid_row, grid_col, grid_level) VALUES 
@@ -210,6 +238,14 @@ INSERT IGNORE INTO product_batches (variant_id, batch_number, cost_price, mfg_da
 (3, 'NC2026001', 35000.00, '2026-01-20', '2027-01-20'),
 (4, 'CC2026001', 8000.00, '2026-02-10', '2026-08-10'),
 (5, 'OI2026001', 6000.00, '2026-02-01', '2026-06-01');
+
+-- 11.1 INVENTORY STOCK (tồn kho theo lô và vị trí)
+INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity) VALUES
+(1, 1, 1, 420),
+(2, 2, 2, 180),
+(3, 3, 3, 260),
+(4, 4, 4, 510),
+(5, 5, 5, 390);
 
 -- 12. WORK SHIFTS (Ca làm việc mẫu)
 -- JPA tự động tính planned_minutes, break_minutes, working_minutes trong @PrePersist
@@ -382,6 +418,71 @@ INSERT IGNORE INTO sale_order_histories (
 ((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-002', '2026-02-25 20:10:00'),
 ((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán ví điện tử thành công', '2026-02-25 20:15:00'),
 ((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'COMPLETED', 'REFUNDED', 'REFUND_PARTIAL', 2, 'Khách trả lại sản phẩm lỗi', '2026-02-25 21:00:00');
+
+-- 20.1 CASH TRANSACTIONS (giao dịch tiền mặt tại quầy)
+INSERT IGNORE INTO cash_transactions (
+      transaction_code,
+      register_id,
+      transaction_type,
+      amount,
+      balance_before,
+      balance_after,
+      reason,
+      description,
+      order_id,
+      performed_by,
+      approved_by,
+      approved_at,
+      status,
+      receipt_image_url,
+      notes,
+      transaction_time,
+      created_at,
+      updated_at
+) VALUES
+('CT-20260224-001', 1, 'CASH_IN', 53900.00, 5000000.00, 5053900.00, 'SALE', 'Thu tiền mặt từ đơn SO-20260224-001', (SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 3, 2, '2026-02-24 09:35:00', 'COMPLETED', NULL, 'Đã đối soát cuối ca', '2026-02-24 09:31:00', NOW(), NOW()),
+('CT-20260225-001', 2, 'CASH_OUT', 15000.00, 3000000.00, 2985000.00, 'REFUND', 'Hoàn tiền mặt 1 phần cho đơn SO-20260225-001', (SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 3, 2, '2026-02-25 21:05:00', 'COMPLETED', NULL, 'Refund do sản phẩm lỗi', '2026-02-25 21:00:00', NOW(), NOW());
+
+-- 20.2 COUPON USAGE (lịch sử sử dụng coupon)
+INSERT IGNORE INTO coupon_usage (
+      coupon_id,
+      customer_id,
+      order_id,
+      usage_code,
+      order_amount,
+      discount_amount,
+      status,
+      applied_at,
+      redeemed_at,
+      cancel_reason,
+      created_at,
+      updated_at
+) VALUES
+((SELECT id FROM coupons WHERE coupon_code = 'WELCOME10'), 1, (SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 'USAGE-20260224-001', 102300.00, 5000.00, 'REDEEMED', '2026-02-24 19:20:00', '2026-02-24 19:23:00', NULL, NOW(), NOW()),
+((SELECT id FROM coupons WHERE coupon_code = 'FLASH50K'), 3, (SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'USAGE-20260225-001', 35200.00, 0.00, 'CANCELLED', '2026-02-25 20:10:00', NULL, 'Đơn bị hoàn một phần, coupon không ghi nhận', NOW(), NOW());
+
+-- 20.3 LOYALTY TRANSACTIONS (giao dịch điểm khách hàng)
+INSERT IGNORE INTO loyalty_transactions (
+      transaction_code,
+      customer_id,
+      transaction_type,
+      points,
+      balance_before,
+      balance_after,
+      order_id,
+      order_amount,
+      points_multiplier,
+      reason,
+      description,
+      expiry_date,
+      performed_by,
+      status,
+      transaction_time,
+      created_at,
+      updated_at
+) VALUES
+('LT-20260224-001', 2, 'EARN', 54, 746, 800, (SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 53900.00, 1.00, 'PURCHASE', 'Tích điểm từ đơn SO-20260224-001', '2027-02-24 23:59:59', 3, 'COMPLETED', '2026-02-24 09:32:00', NOW(), NOW()),
+('LT-20260224-002', 1, 'EARN', 97, 53, 150, (SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 97300.00, 1.00, 'PURCHASE', 'Tích điểm từ đơn SO-20260224-002', '2027-02-24 23:59:59', 3, 'COMPLETED', '2026-02-24 19:24:00', NOW(), NOW());
 -- 18. TICKETS (Swap Shift, Handover, Refund)
 -- Ticket entity có @CreationTimestamp/@UpdateTimestamp nên JPA tự động set
 INSERT IGNORE INTO tickets (

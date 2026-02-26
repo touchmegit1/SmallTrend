@@ -16,8 +16,8 @@ const Sidebar = () => {
         }));
     };
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         navigate('/crm/homepage');
     };
 
@@ -128,8 +128,8 @@ const Sidebar = () => {
                     <div className="mb-2">
                         <div
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === '/dashboard' || location.pathname.startsWith('/hr/users') || openMenus['admin']
-                                    ? 'bg-indigo-50 text-indigo-700'
-                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                ? 'bg-indigo-50 text-indigo-700'
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                 }`}
                             onClick={() => toggleMenu('admin')}
                         >
