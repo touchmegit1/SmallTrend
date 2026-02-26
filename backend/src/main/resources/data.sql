@@ -452,7 +452,49 @@ INSERT IGNORE INTO shift_swap_requests (
 ('SWAP-REQ-001', 3, 3, '2026-02-24', 2, 2, '2026-02-24', 'DIRECT_SWAP', 'Đổi ca tối để xử lý việc cá nhân buổi tối', 'PENDING', NULL, NULL, NULL, NULL, NULL, '2026-02-26 23:59:59', 'Đang chờ manager duyệt', NOW(), NOW()),
 ('SWAP-REQ-002', 2, 2, '2026-02-27', 1, 1, '2026-02-27', 'DIRECT_SWAP', 'Đổi ca để tham gia họp vùng', 'ACCEPTED', 1, NOW(), 1, NOW(), NULL, '2026-02-28 23:59:59', 'Đã duyệt đổi ca', NOW(), NOW());
 
--- 24. SHIFT HANDOVERS
+-- 24. PURCHASE ORDERS (Đơn đặt hàng từ nhà cung cấp)
+INSERT IGNORE INTO purchase_orders (
+   order_number,
+   supplier_id,
+   created_by,
+   order_date,
+   expected_delivery_date,
+   actual_delivery_date,
+   status,
+   subtotal,
+   tax_amount,
+   discount_amount,
+   total_amount,
+   notes,
+   created_at,
+   updated_at
+) VALUES
+('PO-2026-001', 1, 2, '2026-02-10', '2026-02-15', '2026-02-14', 'RECEIVED', 48000000.00, 4800000.00, 500000.00, 52300000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
+('PO-2026-002', 2, 2, '2026-02-12', '2026-02-18', NULL, 'ORDERED', 25000000.00, 2500000.00, 0.00, 27500000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
+('PO-2026-003', 3, 1, '2026-02-15', '2026-02-20', NULL, 'PENDING', 15000000.00, 1500000.00, 200000.00, 16300000.00, 'Đơn nhập snack Nestle', NOW(), NOW()),
+('PO-2026-004', 4, 2, '2026-02-18', '2026-02-25', NULL, 'DRAFT', 30000000.00, 3000000.00, 1000000.00, 32000000.00, 'Đơn nhập nước ngọt Coca-Cola', NOW(), NOW());
+
+-- 25. PURCHASE ORDER ITEMS (Chi tiết đơn đặt hàng)
+INSERT IGNORE INTO purchase_order_items (
+   purchase_order_id,
+   product_variant_id,
+   quantity,
+   unit_cost,
+   total_cost,
+   received_quantity,
+   notes
+) VALUES
+-- PO-2026-001: Sữa Vinamilk
+(1, 1, 2000, 20000.00, 40000000.00, 2000, 'Đã nhận đủ 2000 hộp'),
+(1, 3, 200, 35000.00, 7000000.00, 200, 'Đã nhận đủ 200 gói'),
+-- PO-2026-002: Unilever
+(2, 2, 1500, 12000.00, 18000000.00, 0, 'Chưa nhận hàng'),
+-- PO-2026-003: Nestle
+(3, 5, 2000, 6000.00, 12000000.00, 0, 'Đang chờ giao'),
+-- PO-2026-004: Coca-Cola
+(4, 4, 3000, 8000.00, 24000000.00, 0, 'Đơn nháp chưa gửi');
+
+-- 26. SHIFT HANDOVERS
 INSERT INTO shift_handovers (
       handover_code,
       shift_id,

@@ -54,6 +54,9 @@ public class Supplier {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL)
+    private List<PurchaseOrder> purchaseOrders;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
