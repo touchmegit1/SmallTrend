@@ -91,14 +91,17 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-6 flex justify-between items-center rounded-t-2xl">
           <div>
-            <h2 className="text-2xl font-bold">Chỉnh sửa sản phẩm</h2>
-            <p className="text-gray-500 text-sm mt-1">Cập nhật thông tin sản phẩm</p>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Chỉnh sửa sản phẩm</h2>
+            <p className="text-gray-600 text-sm mt-1">Cập nhật thông tin sản phẩm</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button 
+            onClick={onClose} 
+            className="text-gray-400 hover:text-gray-600 hover:bg-white rounded-full p-2 transition-all"
+          >
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -106,15 +109,15 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* LEFT */}
-            <Card className="border border-gray-300 rounded-lg bg-white">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold">Thông tin cơ bản</CardTitle>
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-2xl">
+              <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-t-2xl border-b border-gray-200">
+                <CardTitle className="text-xl font-bold text-gray-800">Thông tin cơ bản</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 p-6">
                 <div>
-                  <Label>Tên sản phẩm <span className="text-red-600">*</span></Label>
+                  <Label className="text-sm font-semibold text-gray-700">Tên sản phẩm <span className="text-red-500">*</span></Label>
                   <Input
-                    className="text-md bg-gray-200 border border-gray-200 rounded-lg"
+                    className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Nhập tên sản phẩm"
                     name="name"
                     value={formData.name}
@@ -124,10 +127,10 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 </div>
 
                 <div>
-                  <Label>Danh mục <span className="text-red-600">*</span></Label>
+                  <Label className="text-sm font-semibold text-gray-700">Danh mục <span className="text-red-500">*</span></Label>
                   <select
                     name="category_id"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                    className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={formData.category_id}
                     onChange={handleChange}
                     required
@@ -140,10 +143,10 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 </div>
 
                 <div>
-                  <Label>Thương hiệu</Label>
+                  <Label className="text-sm font-semibold text-gray-700">Thương hiệu</Label>
                   <select
                     name="brand_id"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                    className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={formData.brand_id}
                     onChange={handleChange}
                   >
@@ -155,9 +158,9 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 </div>
 
                 <div>
-                  <Label>Đơn vị <span className="text-red-600">*</span></Label>
+                  <Label className="text-sm font-semibold text-gray-700">Đơn vị <span className="text-red-500">*</span></Label>
                   <Input
-                    className="text-md bg-gray-200 border border-gray-200 rounded-lg"
+                    className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="VD: Chai, Hộp, Gói, Kg..."
                     name="unit"
                     value={formData.unit}
@@ -167,9 +170,9 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 </div>
 
                 <div>
-                  <Label>Mô tả sản phẩm</Label>
+                  <Label className="text-sm font-semibold text-gray-700">Mô tả sản phẩm</Label>
                   <Textarea
-                    className="text-md bg-gray-200 border border-gray-200 rounded-lg"
+                    className="mt-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     name="description"
                     placeholder="Nhập mô tả chi tiết về sản phẩm..."
                     rows={4}
@@ -181,11 +184,11 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
             </Card>
 
             {/* RIGHT */}
-            <Card className="border border-gray-300 rounded-lg bg-white flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold">Hình ảnh sản phẩm</CardTitle>
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col">
+              <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-t-2xl border-b border-gray-200">
+                <CardTitle className="text-xl font-bold text-gray-800">Hình ảnh sản phẩm</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col flex-1 space-y-4">
+              <CardContent className="flex flex-col flex-1 space-y-4 p-6">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -209,12 +212,15 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
-                      isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-500'
+                    className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                      isDragging ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-105' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
                     }`}
                   >
-                    <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
-                    <p className="text-sm text-gray-600">Kéo thả hoặc click để tải ảnh lên</p>
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
+                      <ImageIcon className="w-10 h-10 text-blue-600" />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Kéo thả hoặc click để tải ảnh lên</p>
+                    <p className="text-xs text-gray-500">Hỗ trợ JPG, PNG, GIF</p>
                   </div>
                 ) : (
                   <div
@@ -230,17 +236,17 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`flex-1 min-h-0 border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer ${
-                      isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-500'
+                    className={`flex-1 min-h-0 border-2 border-dashed rounded-2xl p-4 transition-all cursor-pointer ${
+                      isDragging ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-105' : 'border-gray-300 hover:border-blue-400'
                     }`}
                   >
-                    <div className="auto-rows-min">
+                    <div className="grid grid-cols-2 gap-3">
                       {images.map((img, index) => (
                         <div key={index} className="relative group aspect-square">
                           <img
                             src={img.preview}
                             alt={`Preview ${index + 1}`}
-                            className="w-full h-full object-cover rounded-lg"
+                            className="w-full h-full object-cover rounded-xl shadow-md"
                           />
                           <button
                             type="button"
@@ -248,7 +254,7 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                               e.stopPropagation();
                               removeImage(index);
                             }}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-lg"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -260,8 +266,8 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
 
                 <Button
                   type="button"
-                  variant="secondary"
-                  className="w-full"
+                  variant="ghost"
+                  className="w-full border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 rounded-xl h-11"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -273,11 +279,19 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
 
           {/* Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-              <Save className="w-4 h-4 mr-2" />
+            <Button 
+              type="submit" 
+              className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold"
+            >
+              <Save className="w-5 h-5 mr-2" />
               Lưu thay đổi
             </Button>
-            <Button type="button" variant="danger" className="w-full" onClick={onClose}>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold" 
+              onClick={onClose}
+            >
               Hủy
             </Button>
           </div>

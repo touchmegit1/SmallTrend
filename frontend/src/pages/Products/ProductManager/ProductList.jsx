@@ -145,25 +145,31 @@ export function ProductListScreen() {
   if (error) return <p className="text-red-500">{error}</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
       {/* Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 bg-black/50 shadow-xl backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold mb-4">Xác nhận thay đổi trạng thái</h3>
-            <p className="text-gray-600 mb-6">
-              Bạn có muốn sửa trạng thái của sản phẩm này thành {productToToggle?.is_active ? "ngừng bán" : "đang bán"}?
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl transform transition-all">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                <Power className="w-6 h-6 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Xác nhận thay đổi</h3>
+            </div>
+            <p className="text-gray-600 mb-6 ml-15">
+              Bạn có muốn {productToToggle?.is_active ? "ngừng bán" : "kích hoạt"} sản phẩm <span className="font-semibold">{productToToggle?.name}</span>?
             </p>
             <div className="flex gap-3 justify-end">
               <Button
-                variant="danger"
+                variant="ghost"
                 onClick={() => setShowConfirm(false)}
+                className="hover:bg-gray-100"
               >
                 Hủy
               </Button>
               <Button
-                variant="primary"
                 onClick={confirmToggleStatus}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Xác nhận
               </Button>
@@ -174,191 +180,203 @@ export function ProductListScreen() {
 
       {/* Toast Message */}
       {toastMessage && (
-        <div className="fixed top-6 right-6 z-50">
-          <div className="relative flex gap-4 bg-green-50 border border-green-200 rounded-xl px-8 py-5 min-w-105 shadow-lg">
-            <CheckCircle className="text-green-600 w-6 h-6" />
-            <span className="text-base font-semibold text-gray-800">
+        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right duration-300">
+          <div className="flex items-center gap-3 bg-white border-l-4 border-green-500 rounded-xl px-6 py-4 shadow-xl">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="text-green-600 w-5 h-5" />
+            </div>
+            <span className="text-sm font-medium text-gray-800">
               {toastMessage}
             </span>
           </div>
         </div>
       )}
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">
-            Quản lý sản phẩm
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Tổng số: {filteredProducts.length} sản phẩm
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="success">
-            Xuất dữ liệu
-          </Button>
-          <Button
-            onClick={() => navigate("/products/addproduct")}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Thêm sản phẩm mới
-          </Button>
-        </div>
 
-      </div>
-
-      {/* Filters */}
-      <Card className="border border-gray-300 rounded-lg bg-white">
-        <CardContent className="p-4 ">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="relative col-span-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Tìm sản phẩm..."
-                className="pl-9 h-10 text-md bg-gray-200 border border-gray-200 rounded-lg"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <select
-              className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-            >
-              <option value="all">Tất cả danh mục</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
-
-            <select
-              className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="active">Đang bán</option>
-              <option value="inactive">Ngừng bán</option>
-            </select>
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Quản lý sản phẩm
+            </h1>
+            <p className="text-gray-600 mt-2 flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Tổng số: <span className="font-semibold text-blue-600">{filteredProducts.length}</span> sản phẩm
+            </p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex gap-3">
+            <Button className="bg-gradient-to-r from-green-600 to-green-600 hover:from-green-700 hover:to-green-700 text-white shadow-lg shadow-green-500/30">
+              Xuất dữ liệu
+            </Button>
+            <Button
+              onClick={() => navigate("/products/addproduct")}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Thêm sản phẩm mới
+            </Button>
+          </div>
+        </div>
 
-      {/* Table */}
-      <Card className="border border-gray-300 rounded-lg bg-white">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold">Danh sách sản phẩm</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader >
-              <TableRow className="bg-gray-50">
-                <TableHead
-                  className="cursor-pointer hover:bg-gray-100 select-none"
-                  onClick={() => handleSort("name")}
-                >
-                  Sản phẩm {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer hover:bg-gray-100 select-none"
-                  onClick={() => handleSort("brand")}
-                >
-                  Thương hiệu {sortField === "brand" && (sortOrder === "asc" ? "↑" : "↓")}
-                </TableHead>
-                <TableHead>Danh mục</TableHead>
-                <TableHead>Biến thể</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead
-                  className="cursor-pointer hover:bg-gray-100 select-none"
-                  onClick={() => handleSort("created_at")}
-                >
-                  Thời gian tạo {sortField === "created_at" && (sortOrder === "asc" ? "↑" : "↓")}
-                </TableHead>
-                <TableHead className="text-center">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
+        {/* Filters */}
+        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative col-span-2">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  placeholder="Tìm kiếm sản phẩm, thương hiệu..."
+                  className="pl-12 h-12 text-sm border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
 
-            <TableBody>
-              {filteredProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                    Không tìm thấy sản phẩm nào
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProducts.map((product) => (
-                  <TableRow className="hover:bg-gray-200" key={product.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Package className="w-5 h-5 text-gray-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {getBrandName(product.brand_id)}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getBrandName(product.brand_id)}</TableCell>
-                    <TableCell>
-                      <Badge className="bg-neutral-300" variant="secondary">{getCategoryName(product.category_id)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="bg-purple-100 text-purple-700">
-                        {product.variant_count} biến thể
-                      </Badge>
+              <select
+                className="h-12 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+              >
+                <option value="all">Tất cả danh mục</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
 
-                    </TableCell>
-                    <TableCell>
-                      {product.is_active ? (
-                        <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
-                      ) : (
-                        <Badge className="bg-red-100 text-red-700">Ngừng bán</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{product.created_at}</TableCell>
+              <select
+                className="h-12 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="active">Đang bán</option>
+                <option value="inactive">Ngừng bán</option>
+              </select>
+            </div>
+          </CardContent>
+        </Card>
 
-                    <TableCell className="text-center">
-                      <div className="flex justify-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => navigate(`/products/detail/${product.id}`, {
-                            state: { product }
-                          })}
-                          title="Xem chi tiết"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleToggleStatus(product)}
-                          title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
-                        >
-                          <Power className={`w-4 h-4 ${product.is_active ? 'text-green-600' : 'text-gray-400'}`} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditClick(product)}
-                          title="Chỉnh sửa"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+        {/* Table */}
+        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+            <CardTitle className="text-xl font-bold text-gray-800">Danh sách sản phẩm</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gradient-to-r from-gray-50 to-slate-50 border-b-2 border-gray-200">
+                    <TableHead
+                      className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
+                      onClick={() => handleSort("name")}
+                    >
+                      Sản phẩm {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
+                      onClick={() => handleSort("brand")}
+                    >
+                      Thương hiệu {sortField === "brand" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead className="font-semibold">Danh mục</TableHead>
+                    <TableHead className="font-semibold">Biến thể</TableHead>
+                    <TableHead className="font-semibold">Trạng thái</TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
+                      onClick={() => handleSort("created_at")}
+                    >
+                      Thời gian tạo {sortField === "created_at" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead className="text-center font-semibold">Thao tác</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+
+                <TableBody>
+                  {filteredProducts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <Package className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 font-medium">Không tìm thấy sản phẩm nào</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredProducts.map((product) => (
+                      <TableRow className="hover:bg-blue-50/50 transition-colors border-b border-gray-100" key={product.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center shadow-sm">
+                              <Package className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">{product.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {getBrandName(product.brand_id)}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium text-gray-700">{getBrandName(product.brand_id)}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-gradient-to-r from-slate-100 to-gray-100 text-gray-700 border-0 font-medium" variant="secondary">
+                            {getCategoryName(product.category_id)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-0 font-medium">
+                            {product.variant_count} biến thể
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {product.is_active ? (
+                            <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-0 font-medium">Đang bán</Badge>
+                          ) : (
+                            <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-0 font-medium">Ngừng bán</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-gray-600 text-sm">{product.created_at}</TableCell>
+
+                        <TableCell className="text-center">
+                          <div className="flex justify-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => navigate(`/products/detail/${product.id}`, {
+                                state: { product }
+                              })}
+                              className="hover:bg-blue-100 hover:text-blue-600 rounded-lg"
+                              title="Xem chi tiết"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleToggleStatus(product)}
+                              className={`hover:bg-amber-100 rounded-lg ${product.is_active ? 'text-green-600 hover:text-amber-600' : 'text-gray-400 hover:text-green-600'}`}
+                              title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
+                            >
+                              <Power className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditClick(product)}
+                              className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg"
+                              title="Chỉnh sửa"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <EditProductModal
         product={selectedProduct}
