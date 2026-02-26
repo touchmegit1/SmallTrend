@@ -60,12 +60,12 @@ const Sidebar = () => {
     },
     {
       icon: Truck,
-      label: "Supplier",
+      label: "Nhà cung cấp",
       path: "/inventory/suppliers",
     },
     {
       icon: Ticket,
-      label: "Ticket Center",
+      label: "Trung tâm Ticket",
       path: "/ticket-center",
     },
     {
@@ -110,7 +110,7 @@ const Sidebar = () => {
         { label: "Tạo báo cáo", path: "/reports/create" },
         { label: "Quản lý báo cáo", path: "/reports/manage" },
         { label: "AI dự báo", path: "/reports/ai" },
-        { label: "Audit Logs", path: "/reports/audit-logs" },
+        { label: "Nhật ký kiểm toán", path: "/reports/audit-logs" },
         { label: "Nhật ký hoạt động", path: "/reports/logs" },
       ],
     },
@@ -148,10 +148,10 @@ const Sidebar = () => {
           <div className="mb-2">
             <div
               className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === "/dashboard" ||
-                  location.pathname.startsWith("/hr/users") ||
-                  openMenus["admin"]
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                location.pathname.startsWith("/hr/users") ||
+                openMenus["admin"]
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               onClick={() => toggleMenu("admin")}
             >
@@ -194,7 +194,7 @@ const Sidebar = () => {
                     }`
                   }
                 >
-                  UserList
+                  Danh sách người dùng
                 </NavLink>
               </div>
             )}
@@ -206,8 +206,8 @@ const Sidebar = () => {
           <div key={item.label}>
             <div
               className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               onClick={() => {
                 if (item.children?.length) {

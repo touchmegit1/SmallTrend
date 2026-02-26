@@ -128,7 +128,7 @@ function App() {
         } />
 
         {/* Ticket Center */}
-        <Route path="ticket-center" element={<div className="p-4">Ticket Center</div>} />
+        <Route path="ticket-center" element={<div className="p-4">Trung tâm Ticket</div>} />
 
         {/* Module 6: Reports (Báo cáo) */}
         <Route path="reports" element={<div className="p-4">Reports & AI (Báo cáo)</div>} />
@@ -136,7 +136,7 @@ function App() {
         <Route path="reports/manage" element={<div className="p-4">Quản lý báo cáo</div>} />
         <Route path="reports/ai" element={<div className="p-4">AI dự báo</div>} />
         <Route path="reports/ai-chatbot" element={<div className="p-4">AI Chatbot</div>} />
-        <Route path="reports/audit-logs" element={<div className="p-4">Audit Logs</div>} />
+        <Route path="reports/audit-logs" element={<div className="p-4">Nhật ký kiểm toán</div>} />
         <Route path="reports/sales" element={<div className="p-4">Báo cáo doanh thu</div>} />
         <Route path="reports/inventory" element={<div className="p-4">Báo cáo kho</div>} />
         <Route path="reports/logs" element={<div className="p-4">Nhật ký hoạt động</div>} />
