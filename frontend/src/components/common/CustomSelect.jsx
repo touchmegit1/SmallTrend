@@ -1,6 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 
+const STATUS_COLORS = {
+    all: { bg: '#f8fafc', color: '#334155', label: 'Tất cả trạng thái' },
+    ALL: { bg: '#f8fafc', color: '#334155', label: 'Tất cả trạng thái' },
+    active: { bg: '#dcfce7', color: '#166534', label: 'Hoạt động' },
+    ACTIVE: { bg: '#dcfce7', color: '#166534', label: 'Hoạt động' },
+    PRESENT: { bg: '#dcfce7', color: '#166534', label: 'Có mặt' },
+    CONFIRMED: { bg: '#dcfce7', color: '#166534', label: 'Đã xác nhận' },
+    COMPLETED: { bg: '#dcfce7', color: '#166534', label: 'Hoàn thành' },
+    pending: { bg: '#fef3c7', color: '#92400e', label: 'Chờ duyệt' },
+    PENDING: { bg: '#fef3c7', color: '#92400e', label: 'Chờ duyệt' },
+    inactive: { bg: '#fee2e2', color: '#991b1b', label: 'Vô hiệu' },
+    INACTIVE: { bg: '#fee2e2', color: '#991b1b', label: 'Vô hiệu' },
+    LATE: { bg: '#fecaca', color: '#7f1d1d', label: 'Đi muộn' },
+    ABSENT: { bg: '#fef2f2', color: '#b91c1c', label: 'Vắng' },
+    CANCELLED: { bg: '#fee2e2', color: '#991b1b', label: 'Đã hủy' },
+    ASSIGNED: { bg: '#f8fafc', color: '#334155', label: 'Đã phân công' },
+};
+
 const CustomSelect = ({ value, onChange, options, className = '', variant = 'default' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -29,13 +47,7 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
             };
             return roleColors[value] || roleColors[3];
         } else if (variant === 'status') {
-            const statusColors = {
-                'all': { bg: '#f8fafc', color: '#1e293b', label: 'Tất cả trạng thái' },
-                'active': { bg: '#d1fae5', color: '#065f46', label: 'Hoạt động' },
-                'inactive': { bg: '#fee2e2', color: '#991b1b', label: 'Vô hiệu' },
-                'pending': { bg: '#fef3c7', color: '#92400e', label: 'Chờ duyệt' }
-            };
-            return statusColors[value] || statusColors['all'];
+            return STATUS_COLORS[value] || STATUS_COLORS['all'];
         }
         return { bg: '#ffffff', color: '#1e293b' };
     };
@@ -82,11 +94,7 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
                                     5: { bg: '#d1fae5', color: '#065f46' }
                                 }[option.value] || { bg: '#f8fafc', color: '#1e293b' }
                                 : variant === 'status' ?
-                                    {
-                                        'active': { bg: '#d1fae5', color: '#065f46' },
-                                        'inactive': { bg: '#fee2e2', color: '#991b1b' },
-                                        'pending': { bg: '#fef3c7', color: '#92400e' }
-                                    }[option.value] || { bg: '#f8fafc', color: '#1e293b' }
+                                    STATUS_COLORS[option.value] || { bg: '#f8fafc', color: '#334155' }
                                     : { bg: '#f8fafc', color: '#1e293b' };
 
                             return (

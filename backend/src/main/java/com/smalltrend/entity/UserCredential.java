@@ -15,13 +15,16 @@ import lombok.NoArgsConstructor;
 public class UserCredential {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @OneToOne
-    @MapsId
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", unique = true)
     private User user;
 
+    @Column(unique = true, nullable = false)
     private String username;
+
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 }
