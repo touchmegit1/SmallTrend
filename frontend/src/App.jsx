@@ -1,3 +1,4 @@
+import ShiftHandover from './pages/Pos/ShiftHandover'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './components/layout/MainLayout'
 import Dashboard from './pages/Dashboard/Dashboard'
@@ -40,6 +41,7 @@ function App() {
                 } />
                 <Route path="pos/history" element={<TransactionHistory/>} />     
                 <Route path="pos/suspended" element={<ReportforCashier/>} />
+                <Route path="pos/shift-handover" element={<ShiftHandover/>} />
 
                 {/* Module 2: Inventory (Kho) */}
                 <Route path="inventory" element={<div className="p-4">Inventory Management (Kho)</div>} />

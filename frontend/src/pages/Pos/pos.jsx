@@ -250,28 +250,26 @@ export default function POS() {
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const filteredTransactions = transactions.filter(t => t.status !== "Chờ thanh toán");
     
-    // Trừ điểm khách hàng nếu có sử dụng
-    if (orderData.customer && orderData.pointsDiscount > 0) {
-      const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-      const updatedCustomers = customers.map(c => 
-        c.phone === orderData.customer.phone 
-          ? { ...c, points: c.points - (orderData.pointsDiscount / 100) }
-          : c
-      );
-      localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-      orderData.customer.points = orderData.customer.points - (orderData.pointsDiscount / 100);
-    }
-
-    // Cộng điểm tích lũy
+    // Xử lý điểm khách hàng
     if (orderData.customer) {
-      const earnedPoints = Math.floor(orderData.total / 10000);
       const customers = JSON.parse(localStorage.getItem('customers') || '[]');
+      const earnedPoints = Math.floor(orderData.total / 10000);
+      const pointsUsed = orderData.pointsDiscount / 100;
+      
       const updatedCustomers = customers.map(c => 
         c.phone === orderData.customer.phone 
-          ? { ...c, points: (c.points || 0) + earnedPoints }
+          ? { 
+              ...c, 
+              points: (c.points || 0) - pointsUsed + earnedPoints,
+              existingPoints: (c.existingPoints || 0) - pointsUsed + earnedPoints
+            }
           : c
       );
       localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+      
+      // Cập nhật lại customer object
+      orderData.customer.points = (orderData.customer.points || 0) - pointsUsed + earnedPoints;
+      orderData.customer.existingPoints = (orderData.customer.existingPoints || 0) - pointsUsed + earnedPoints;
     }
 
     const transaction = {
@@ -284,7 +282,7 @@ export default function POS() {
         year: 'numeric' 
       }),
       quantity: `${orderData.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
-      payment: "Tiền mặt",
+      payment: orderData.paymentMethod || "Tiền mặt",
       total: `${orderData.total.toLocaleString()} đ`,
       status: "Hoàn thành",
       items: orderData.cart,
@@ -292,6 +290,7 @@ export default function POS() {
       customerMoney: orderData.customerMoney,
       change: orderData.change,
       pointsDiscount: orderData.pointsDiscount,
+      discount: orderData.discount || 0,
       notes: orderData.notes
     };
 
@@ -324,7 +323,7 @@ export default function POS() {
 
   return (
     <div style={{
-      height: "100vh",
+      height: "89vh",
       display: "flex",
       flexDirection: "column",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
@@ -399,7 +398,7 @@ export default function POS() {
           position: "fixed",
           top: "20px",
           right: "20px",
-          background: "#28a745",
+          background: "#007bff",
           color: "white",
           padding: "15px 25px",
           borderRadius: "8px",

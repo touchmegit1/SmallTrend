@@ -128,22 +128,23 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
             {/* Tổng tạm tính */}
             <div style={{
               padding: "12px",
-              background: "#e7f3ff",
+              background: "#d1ecf1",
               borderRadius: "6px",
-              marginBottom: "15px"
+              marginBottom: "15px",
+              border: "1px solid #007bff"
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <span>Tạm tính:</span>
                 <span style={{ fontWeight: "bold" }}>{subtotal.toLocaleString()}đ</span>
               </div>
               {pointsDiscount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "#28a745" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "#17a2b8" }}>
                   <span>Giảm điểm:</span>
                   <span>-{pointsDiscount.toLocaleString()}đ</span>
                 </div>
               )}
               {discount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "#28a745" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "#17a2b8" }}>
                   <span>Giảm giá:</span>
                   <span>-{discount.toLocaleString()}đ</span>
                 </div>
@@ -160,10 +161,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
             {selectedCustomer && (
               <div style={{
                 padding: "12px",
-                background: "#d4edda",
+                background: "#d1ecf1",
                 borderRadius: "6px",
                 marginBottom: "15px",
-                fontSize: "13px"
+                fontSize: "13px",
+                border: "1px solid #007bff"
               }}>
                 <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
                   {selectedCustomer.name} - {selectedCustomer.phone}
@@ -208,7 +210,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                   }}
                   style={{
                     padding: "8px 16px",
-                    background: "#17a2b8",
+                    background: "#007bff",
                     color: "white",
                     border: "none",
                     borderRadius: "4px",
@@ -267,7 +269,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
               <h3 style={{ margin: 0, fontSize: "16px" }}>Khách cần trả</h3>
-              <div style={{ fontSize: "24px", fontWeight: "bold", color: "#17a2b8" }}>
+              <div style={{ fontSize: "24px", fontWeight: "bold", color: "#007bff" }}>
                 {finalTotal.toLocaleString()}đ
               </div>
             </div>
@@ -282,31 +284,31 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                   onClick={() => setPaymentMethod("cash")}
                   style={{
                     padding: "15px",
-                    background: paymentMethod === "cash" ? "#17a2b8" : "white",
+                    background: paymentMethod === "cash" ? "#007bff" : "white",
                     color: paymentMethod === "cash" ? "white" : "#333",
-                    border: "2px solid " + (paymentMethod === "cash" ? "#17a2b8" : "#ddd"),
+                    border: "2px solid " + (paymentMethod === "cash" ? "#007bff" : "#ddd"),
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontSize: "13px",
                     fontWeight: "500"
                   }}
                 >
-                  💵 Tiền mặt
+                   Tiền mặt
                 </button>
                 <button
                   onClick={() => setPaymentMethod("transfer")}
                   style={{
                     padding: "15px",
-                    background: paymentMethod === "transfer" ? "#17a2b8" : "white",
+                    background: paymentMethod === "transfer" ? "#007bff" : "white",
                     color: paymentMethod === "transfer" ? "white" : "#333",
-                    border: "2px solid " + (paymentMethod === "transfer" ? "#17a2b8" : "#ddd"),
+                    border: "2px solid " + (paymentMethod === "transfer" ? "#007bff" : "#ddd"),
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontSize: "13px",
                     fontWeight: "500"
                   }}
                 >
-                  🏦 Chuyển khoản
+                   Chuyển khoản
                 </button>
               </div>
             </div>
@@ -349,7 +351,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                           style={{
                             flex: 1,
                             padding: "8px",
-                            background: "#17a2b8",
+                            background: "#007bff",
                             color: "white",
                             border: "none",
                             borderRadius: "4px",
@@ -368,14 +370,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 {cashAmount && parseFloat(cashAmount) >= finalTotal && (
                   <div style={{
                     padding: "12px",
-                    background: "#d4edda",
+                    background: "#d1ecf1",
                     borderRadius: "6px",
-                    textAlign: "center"
+                    textAlign: "center",
+                    border: "1px solid #007bff"
                   }}>
-                    <div style={{ fontSize: "12px", color: "#155724", marginBottom: "4px" }}>
+                    <div style={{ fontSize: "12px", color: "#0c5460", marginBottom: "4px" }}>
                       Tiền thừa
                     </div>
-                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#28a745" }}>
+                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#007bff" }}>
                       {change.toLocaleString()}đ
                     </div>
                   </div>
@@ -392,7 +395,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 padding: "18px",
                 background: (!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)))
                   ? "#6c757d"
-                  : "#17a2b8",
+                  : "#007bff",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
@@ -401,7 +404,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 cursor: (!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)))
                   ? "not-allowed"
                   : "pointer",
-                boxShadow: "0 4px 12px rgba(23,162,184,0.3)"
+                boxShadow: "0 4px 12px rgba(0,123,255,0.3)"
               }}
             >
               {!paymentMethod

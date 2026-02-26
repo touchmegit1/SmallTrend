@@ -89,7 +89,7 @@ export default function PaymentPanel({ cart, customer, usePoints, onOpenPayment 
         }}
       >
         {cart.length > 0
-          ? `THANH TOÁN ${total.toLocaleString()}Đ`
+          ? `THANH TOÁN `
           : "CHƯA CÓ SẢN PHẨM"}
       </button>
     </div>

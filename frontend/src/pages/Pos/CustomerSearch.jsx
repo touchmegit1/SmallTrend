@@ -8,43 +8,107 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async () => {
-    if (!phone || phone.length < 10) return;
+    if (!phone || phone.length < 10 || phone.length > 11) {
+      alert("Số điện thoại phải có 10-11 số!");
+      return;
+    }
     
     setLoading(true);
     try {
-      const customers = await customerService.searchByPhone(phone);
+      // Tìm trong localStorage trước
+      const localCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
+      const localCustomer = localCustomers.find(c => c.phone === phone);
+      
       const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
       const loyaltyPoints = Math.floor(totalAmount / 10000);
       
-      if (customers && customers.length > 0) {
-        const customer = customers[0];
+      if (localCustomer) {
+        // Tìm thấy trong localStorage
         onSelectCustomer({
-          id: customer.id,
-          phone: customer.phone,
-          name: customer.name,
+          id: localCustomer.id,
+          phone: localCustomer.phone,
+          name: localCustomer.name,
           loyaltyPoints,
-          existingPoints: customer.loyaltyPoints || 0,
+          existingPoints: localCustomer.points || localCustomer.existingPoints || 0,
           isNew: false
         });
         setPhone("");
+        setShowRegister(false);
       } else {
-        setShowRegister(true);
+        // Tìm trong backend
+        const customers = await customerService.searchByPhone(phone);
+        
+        if (customers && customers.length > 0) {
+          const customer = customers[0];
+          onSelectCustomer({
+            id: customer.id,
+            phone: customer.phone,
+            name: customer.name,
+            loyaltyPoints,
+            existingPoints: customer.loyaltyPoints || 0,
+            isNew: false
+          });
+          setPhone("");
+          setShowRegister(false);
+        } else {
+          setShowRegister(true);
+        }
       }
     } catch (error) {
       console.error('Error:', error);
-      setShowRegister(true);
+      // Nếu lỗi backend, vẫn kiểm tra localStorage
+      const localCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
+      const localCustomer = localCustomers.find(c => c.phone === phone);
+      
+      if (localCustomer) {
+        const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const loyaltyPoints = Math.floor(totalAmount / 10000);
+        onSelectCustomer({
+          id: localCustomer.id,
+          phone: localCustomer.phone,
+          name: localCustomer.name,
+          loyaltyPoints,
+          existingPoints: localCustomer.points || localCustomer.existingPoints || 0,
+          isNew: false
+        });
+        setPhone("");
+        setShowRegister(false);
+      } else {
+        setShowRegister(true);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleRegister = () => {
-    if (!phone || !name) return;
+    if (!phone || !name) {
+      alert("Vui lòng nhập đầy đủ thông tin!");
+      return;
+    }
+    if (phone.length < 10 || phone.length > 11) {
+      alert("Số điện thoại phải có 10-11 số!");
+      return;
+    }
     
     const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
     const loyaltyPoints = Math.floor(totalAmount / 10000);
     
+    // Lưu vào localStorage
+    const customers = JSON.parse(localStorage.getItem('customers') || '[]');
+    const newCustomer = {
+      id: Date.now(),
+      phone,
+      name,
+      points: 0,
+      existingPoints: 0,
+      createdAt: new Date().toISOString()
+    };
+    customers.push(newCustomer);
+    localStorage.setItem('customers', JSON.stringify(customers));
+    
     onSelectCustomer({
+      id: newCustomer.id,
       phone,
       name,
       loyaltyPoints,
@@ -62,28 +126,28 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
       <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
         <input
           type="tel"
-          placeholder="Tìm số điện thoại"
+          placeholder="Tìm số điện thoại (10-11 số)"
           value={phone}
           onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
           maxLength={11}
           style={{
             flex: 1,
             padding: "8px 12px",
-            border: "1px solid #ddd",
+            border: phone && (phone.length < 10 || phone.length > 11) ? "1px solid #dc3545" : "1px solid #ddd",
             borderRadius: "6px",
             fontSize: "14px"
           }}
         />
         <button
           onClick={handleSearch}
-          disabled={!phone || loading}
+          disabled={!phone || phone.length < 10 || phone.length > 11 || loading}
           style={{
             padding: "8px 16px",
-            background: "#007bff",
+            background: (phone && phone.length >= 10 && phone.length <= 11) ? "#007bff" : "#6c757d",
             color: "white",
             border: "none",
             borderRadius: "6px",
-            cursor: phone ? "pointer" : "not-allowed",
+            cursor: (phone && phone.length >= 10 && phone.length <= 11) ? "pointer" : "not-allowed",
             fontSize: "14px"
           }}
         >
@@ -93,7 +157,7 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
           onClick={() => setShowRegister(!showRegister)}
           style={{
             padding: "8px 16px",
-            background: "#28a745",
+            background: "#007bff",
             color: "white",
             border: "none",
             borderRadius: "6px",
@@ -115,19 +179,24 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
           <h4 style={{ margin: "0 0 10px 0", fontSize: "14px" }}>Đăng ký thành viên mới</h4>
           <input
             type="tel"
-            placeholder="Số điện thoại"
+            placeholder="Số điện thoại (10-11 số)"
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
             maxLength={11}
             style={{
               width: "100%",
               padding: "8px",
-              border: "1px solid #ddd",
+              border: phone && (phone.length < 10 || phone.length > 11) ? "1px solid #dc3545" : "1px solid #ddd",
               borderRadius: "4px",
               marginBottom: "8px",
               fontSize: "13px"
             }}
           />
+          {phone && (phone.length < 10 || phone.length > 11) && (
+            <div style={{ color: "#dc3545", fontSize: "11px", marginTop: "-6px", marginBottom: "6px" }}>
+              Số điện thoại phải có 10-11 số
+            </div>
+          )}
           <input
             type="text"
             placeholder="Tên khách hàng"
@@ -144,15 +213,15 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
           />
           <button
             onClick={handleRegister}
-            disabled={!phone || !name}
+            disabled={!phone || !name || phone.length < 10 || phone.length > 11}
             style={{
               width: "100%",
               padding: "8px",
-              background: phone && name ? "#28a745" : "#6c757d",
+              background: (phone && name && phone.length >= 10 && phone.length <= 11) ? "#17a2b8" : "#6c757d",
               color: "white",
               border: "none",
               borderRadius: "4px",
-              cursor: phone && name ? "pointer" : "not-allowed",
+              cursor: (phone && name && phone.length >= 10 && phone.length <= 11) ? "pointer" : "not-allowed",
               fontSize: "13px"
             }}
           >

@@ -34,6 +34,7 @@ const Sidebar = () => {
                 { label: 'Giao diện bán hàng', path: '/pos' },
                 { label: 'Lịch sử đơn hàng', path: '/pos/history' },
                 { label: 'Báo cáo doanh thu', path: '/pos/suspended' },
+                { label: 'Chốt ca làm việc', path: '/pos/shift-handover' }
             ]
         },
         {
