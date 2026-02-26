@@ -23,6 +23,9 @@ import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
+import ProductList from "./pages/Products/ProductManager/ProductList";
+import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
+import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import { useAuth } from "./context/AuthContext";
 
 function RootRedirect() {
@@ -93,11 +96,11 @@ function App() {
         {/* Module 3: Products (Sản phẩm) */}
         <Route
           path="products"
-          element={<div className="p-4">Product Management (Sản phẩm)</div>}
+          element={<div className="p-4">{<ProductList/>}</div>}
         />
         <Route
           path="products/categories"
-          element={<div className="p-4">Danh mục & Brand</div>}
+        element={<div className="p-4">{<CategoryAndBrand/>}</div>}
         />
         <Route
           path="products/price-books"
@@ -105,7 +108,7 @@ function App() {
         />
         <Route
           path="products/print-barcodes"
-          element={<div className="p-4">In tem mã vạch</div>}
+          element={<div className="p-4">{<ComboManage/>}</div>}
         />
 
         {/* Module 4: CRM (Khách hàng) */}
