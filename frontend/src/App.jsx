@@ -24,6 +24,9 @@ import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
 import { useAuth } from "./context/AuthContext";
+import TransactionHistory from "./pages/Pos/TransactionHistory";
+import ShiftHandover from "./pages/Pos/ShiftHandover";
+import ReportforCashier from "./pages/Pos/ReportforCashier";
 
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -63,15 +66,18 @@ function App() {
         <Route path="pos" element={<POS />} />
         <Route
           path="pos/history"
-          element={<div className="p-4">Lịch sử đơn hàng</div>}
+          element={<TransactionHistory />}
         />
         <Route
           path="pos/suspended"
-          element={<div className="p-4">Đơn hàng treo</div>}
+          element={<ReportforCashier/>}
         />
-
+        <Route
+          path="pos/shift-handover"
+          element={<ShiftHandover/>}
+        />
         {/* Module 2: Inventory (Kho) */}
-        <Route path="inventory" element={<InventoryDashboard />} />
+        < Route path="inventory" element={<InventoryDashboard />} />
         <Route path="inventory/import" element={<ImportInventory />} />
         <Route path="inventory/import/create" element={<CreateImport />} />
         <Route path="inventory/suppliers" element={<div className="p-4">Quản lý nhà cung cấp (Supplier)</div>} />

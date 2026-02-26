@@ -3,20 +3,15 @@ import TopBar from "./TopBar";
 import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
 import PaymentPanel from "./PaymentPanel";
+import PaymentModal from "./PaymentModal";
 import QRScanner from "./QRScanner";
 import Invoice from "./Invoice";
-
-// Mock data sản phẩm
-const mockProducts = [
-  { id: 1, name: "Coca Cola 330ml", price: 15000, barcode: "123456" },
-  { id: 2, name: "Pepsi 330ml", price: 14000, barcode: "123457" },
-  { id: 3, name: "Sting 330ml", price: 12000, barcode: "123458" },
-  { id: 4, name: "Bánh mì sandwich", price: 25000, barcode: "123459" },
-  { id: 5, name: "Sữa tươi Vinamilk", price: 28000, barcode: "123460" },
-  { id: 6, name: "Nước suối Lavie", price: 8000, barcode: "123461" }
-];
+import posService from "../../services/posService";
+import api from "../../config/axiosConfig";
 
 export default function POS() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState(() => {
     const saved = localStorage.getItem('posOrders');
     return saved ? JSON.parse(saved) : [{ id: 1, cart: [], customer: null, usePoints: false }];
@@ -30,17 +25,75 @@ export default function POS() {
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const activeOrder = orders.find(order => order.id === activeOrderId) || { id: activeOrderId, cart: [], customer: null, usePoints: false };
+
+  // Fetch products from backend
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  // F9 shortcut for payment
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === 'F9' && activeOrder.cart.length > 0 && !showPaymentModal) {
+        e.preventDefault();
+        setShowPaymentModal(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [activeOrder.cart, showPaymentModal]);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await posService.getAllProducts();
+      // Transform backend data to match frontend format
+      const transformedProducts = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: Number(item.sellPrice),
+        barcode: item.barcode || item.sku,
+        sku: item.sku,
+        stock: item.stockQuantity || 0,
+        category: item.categoryName,
+        brand: item.brandName
+      }));
+      setProducts(transformedProducts);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        alert('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
+        window.location.href = '/login';
+      } else {
+        // Fallback to mock data if backend is not available
+        console.warn('Backend not available, using mock data');
+        const mockProducts = [
+          { id: 1, name: "Coca Cola 330ml", price: 15000, barcode: "123456", sku: "COCA-330", stock: 50 },
+          { id: 2, name: "Pepsi 330ml", price: 14000, barcode: "123457", sku: "PEPSI-330", stock: 30 },
+          { id: 3, name: "Sting 330ml", price: 12000, barcode: "123458", sku: "STING-330", stock: 25 },
+          { id: 4, name: "Bánh mì sandwich", price: 25000, barcode: "123459", sku: "BANH-MI", stock: 10 },
+          { id: 5, name: "Sữa tươi Vinamilk", price: 28000, barcode: "123460", sku: "SUA-VNM", stock: 20 },
+          { id: 6, name: "Nước suối Lavie", price: 8000, barcode: "123461", sku: "NUOC-LAVIE", stock: 100 }
+        ];
+        setProducts(mockProducts);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('posOrders', JSON.stringify(orders));
     localStorage.setItem('activeOrderId', activeOrderId.toString());
   }, [orders, activeOrderId]);
 
-  const activeOrder = orders.find(order => order.id === activeOrderId);
-
-  const filteredProducts = mockProducts.filter(product =>
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.barcode.includes(searchTerm)
+    (product.barcode && product.barcode.includes(searchTerm)) ||
+    (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const addToCart = (product) => {
@@ -193,33 +246,31 @@ export default function POS() {
     }
   };
 
-  const completeOrder = (orderData) => {
+  const completeOrder = async (orderData) => {
     // Xóa đơn chờ thanh toán
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const filteredTransactions = transactions.filter(t => t.status !== "Chờ thanh toán");
     
-    // Trừ điểm khách hàng nếu có sử dụng
-    if (orderData.customer && orderData.pointsDiscount > 0) {
-      const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-      const updatedCustomers = customers.map(c => 
-        c.phone === orderData.customer.phone 
-          ? { ...c, points: c.points - (orderData.pointsDiscount / 100) }
-          : c
-      );
-      localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-      orderData.customer.points = orderData.customer.points - (orderData.pointsDiscount / 100);
-    }
-
-    // Cộng điểm tích lũy
+    // Xử lý điểm khách hàng
     if (orderData.customer) {
-      const earnedPoints = Math.floor(orderData.total / 10000);
       const customers = JSON.parse(localStorage.getItem('customers') || '[]');
+      const earnedPoints = Math.floor(orderData.total / 10000);
+      const pointsUsed = orderData.pointsDiscount / 100;
+      
       const updatedCustomers = customers.map(c => 
         c.phone === orderData.customer.phone 
-          ? { ...c, points: (c.points || 0) + earnedPoints }
+          ? { 
+              ...c, 
+              points: (c.points || 0) - pointsUsed + earnedPoints,
+              existingPoints: (c.existingPoints || 0) - pointsUsed + earnedPoints
+            }
           : c
       );
       localStorage.setItem('customers', JSON.stringify(updatedCustomers));
+      
+      // Cập nhật lại customer object
+      orderData.customer.points = (orderData.customer.points || 0) - pointsUsed + earnedPoints;
+      orderData.customer.existingPoints = (orderData.customer.existingPoints || 0) - pointsUsed + earnedPoints;
     }
 
     const transaction = {
@@ -232,20 +283,47 @@ export default function POS() {
         year: 'numeric' 
       }),
       quantity: `${orderData.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
-      payment: "Tiền mặt",
+      payment: orderData.paymentMethod || "Tiền mặt",
       total: `${orderData.total.toLocaleString()} đ`,
       status: "Hoàn thành",
+      cart: orderData.cart.map(item => ({
+        ...item,
+        productId: item.id
+      })),
       items: orderData.cart,
       customer: orderData.customer,
       customerMoney: orderData.customerMoney,
       change: orderData.change,
       pointsDiscount: orderData.pointsDiscount,
+      discount: orderData.discount || 0,
       notes: orderData.notes
     };
 
     filteredTransactions.unshift(transaction);
     localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
 
+    // Lưu ngay vào database
+    if (transaction.customer && transaction.cart) {
+      try {
+        const request = {
+          customerId: transaction.customer.id,
+          customerName: transaction.customer.name,
+          paymentMethod: transaction.payment,
+          items: transaction.cart.map(item => ({
+            productId: item.productId || item.id,
+            productName: item.name,
+            quantity: item.qty,
+            price: item.price,
+            subtotal: item.price * item.qty
+          }))
+        };
+        await api.post('/pos/purchase-history', request);
+      } catch (error) {
+        console.error('Error saving purchase history:', error);
+      }
+    }
+
+    setShowPaymentModal(false);
     setShowSuccessNotification(true);
     setTimeout(() => setShowSuccessNotification(false), 3000);
 
@@ -271,30 +349,63 @@ export default function POS() {
 
   return (
     <div style={{
-      padding: "15px 25px",
+      height: "89vh",
+      display: "flex",
+      flexDirection: "column",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       background: "#f8f9fa",
-      minHeight: "100vh"
+      overflow: "hidden",
+      paddingTop: "20px",     
     }}>
-      <TopBar
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filteredProducts={filteredProducts}
-        addToCart={addToCart}
-        addNewOrder={addNewOrder}
-        orders={orders}
-        activeOrderId={activeOrderId}
-        setActiveOrderId={setActiveOrderId}
-        setShowQRScanner={setShowQRScanner}
-        deleteOrder={deleteOrder}
-        onPrintInvoice={handlePrintLastInvoice}
-      />
+      <div style={{ padding: "10px 20px" }}>
+        <TopBar
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          filteredProducts={filteredProducts}
+          addToCart={addToCart}
+          addNewOrder={addNewOrder}
+          orders={orders}
+          activeOrderId={activeOrderId}
+          setActiveOrderId={setActiveOrderId}
+          setShowQRScanner={setShowQRScanner}
+          deleteOrder={deleteOrder}
+          onPrintInvoice={handlePrintLastInvoice}
+        />
+      </div>
+
+      {showPaymentModal && (
+        <div style={{ marginTop: "20px" }}>
+          <PaymentModal
+            cart={activeOrder.cart}
+            customer={activeOrder.customer}
+            onClose={() => setShowPaymentModal(false)}
+            onComplete={completeOrder}
+          />
+        </div>
+      )}
 
       {showQRScanner && (
         <QRScanner
-          onScan={(barcode) => {
-            const product = mockProducts.find(p => p.barcode === barcode);
-            if (product) addToCart(product);
+          onScan={async (barcode) => {
+            try {
+              const data = await posService.getProductByBarcode(barcode);
+              if (data && data.length > 0) {
+                const product = {
+                  id: data[0].id,
+                  name: data[0].name,
+                  price: Number(data[0].sellPrice),
+                  barcode: data[0].barcode || data[0].sku,
+                  sku: data[0].sku,
+                  stock: data[0].stockQuantity || 0
+                };
+                addToCart(product);
+              } else {
+                alert('Không tìm thấy sản phẩm với mã vạch này!');
+              }
+            } catch (error) {
+              console.error('Error scanning barcode:', error);
+              alert('Lỗi khi quét mã vạch!');
+            }
             setShowQRScanner(false);
           }}
           onClose={() => setShowQRScanner(false)}
@@ -313,7 +424,7 @@ export default function POS() {
           position: "fixed",
           top: "20px",
           right: "20px",
-          background: "#28a745",
+          background: "#007bff",
           color: "white",
           padding: "15px 25px",
           borderRadius: "8px",
@@ -337,26 +448,46 @@ export default function POS() {
         </div>
       )}
 
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "15px"
-      }}>
-        <Cart
-          cart={activeOrder.cart}
-          setCart={updateCart}
-          customer={activeOrder.customer}
-          setCustomer={updateCustomer}
-          usePoints={activeOrder.usePoints}
-          setUsePoints={updateUsePoints}
-        />
-        <PaymentPanel
-          cart={activeOrder.cart}
-          customer={activeOrder.customer}
-          usePoints={activeOrder.usePoints}
-          onCompleteOrder={completeOrder}
-        />
-      </div>
+      {loading ? (
+        <div style={{
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontSize: "16px",
+          color: "#666"
+        }}>
+          Đang tải sản phẩm...
+        </div>
+      ) : (
+        <div style={{
+          flex: 1,
+          padding: "0 20px 10px 20px",
+          overflow: "hidden",
+          display: "flex",
+          paddingTop: "30px"
+        }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "12px",
+            width: "100%",
+            paddingTop: "0px",
+            minHeight: 0
+          }}>
+            <Cart
+              cart={activeOrder.cart}
+              setCart={updateCart}
+            />
+            <PaymentPanel
+              cart={activeOrder.cart}
+              customer={activeOrder.customer}
+              usePoints={activeOrder.usePoints}
+              onOpenPayment={() => setShowPaymentModal(true)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
