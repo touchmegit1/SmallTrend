@@ -9,7 +9,7 @@ export default function CustomerManagement() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [viewMode, setViewMode] = useState("list");
   const [showSettings, setShowSettings] = useState(false);
-  const [loyaltyRate, setLoyaltyRate] = useState(50000);
+  const [loyaltyRate, setLoyaltyRate] = useState(10000);
   const [editForm, setEditForm] = useState({
     name: "",
     phoneNumber: "",
