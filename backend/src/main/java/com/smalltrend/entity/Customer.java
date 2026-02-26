@@ -25,4 +25,8 @@ public class Customer {
     @Builder.Default
     @Column(name = "loyalty_points")
     private Integer loyaltyPoints = 0;
+
+    @Builder.Default
+    @Column(name = "spent_amount")
+    private Long spentAmount = 0L;
 }

@@ -31,7 +31,6 @@ public class CustomerService {
         Customer customer = Customer.builder()
             .name(name)
             .phone(phone)
-            .spentAmount(0L)
             .build();
         Customer savedCustomer = customerRepository.save(customer);
         return mapToResponse(savedCustomer);
