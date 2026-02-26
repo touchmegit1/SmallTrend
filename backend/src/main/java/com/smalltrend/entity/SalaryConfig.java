@@ -1,5 +1,6 @@
 package com.smalltrend.entity;
 
+import com.smalltrend.entity.enums.SalaryType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,7 +25,12 @@ public class SalaryConfig {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "base_salary", precision = 12, scale = 2, nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "salary_type", nullable = false, length = 20)
+    @Builder.Default
+    private SalaryType salaryType = SalaryType.MONTHLY;
+
+    @Column(name = "base_salary", precision = 12, scale = 2)
     private BigDecimal baseSalary;
 
     @Column(name = "hourly_rate", precision = 8, scale = 2)

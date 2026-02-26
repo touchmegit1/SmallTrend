@@ -11,6 +11,9 @@
 -- FULL RESET DATA (seed lại từ đầu)
 SET FOREIGN_KEY_CHECKS = 0;
 
+TRUNCATE TABLE sale_order_histories;
+TRUNCATE TABLE sale_order_items;
+TRUNCATE TABLE sale_orders;
 TRUNCATE TABLE shift_handovers;
 TRUNCATE TABLE shift_swap_requests;
 TRUNCATE TABLE payroll_calculations;
@@ -320,6 +323,64 @@ insert ignore into product_combo_items (
 INSERT IGNORE INTO cash_registers (register_code, register_name, store_name, location, register_type, status, device_id, current_cash, opening_balance, current_operator_id, session_start_time, total_transactions_today, created_at, updated_at) VALUES 
 ('POS-001', 'Quầy 1', 'SmallTrend Store', 'Front Counter', 'MAIN', 'ACTIVE', 'DEV-POS-001', 5000000.00, 2000000.00, 3, NOW(), 0, NOW(), NOW()),
 ('POS-002', 'Quầy 2', 'SmallTrend Store', 'Express Counter', 'EXPRESS', 'ACTIVE', 'DEV-POS-002', 3000000.00, 1000000.00, NULL, NULL, 0, NOW(), NOW());
+
+-- 18. SALE ORDERS (Đơn hàng bán)
+INSERT IGNORE INTO sale_orders (
+      order_code,
+      customer_id,
+      cashier_id,
+      cash_register_id,
+      order_date,
+      subtotal,
+      tax_amount,
+      discount_amount,
+      total_amount,
+      payment_method,
+      status,
+      notes,
+      created_at,
+      updated_at
+) VALUES
+('SO-20260224-001', 2, 3, 1, '2026-02-24 09:30:00', 49000.00, 4900.00, 0.00, 53900.00, 'CASH', 'COMPLETED', 'Đơn mua nhanh buổi sáng', '2026-02-24 09:30:00', '2026-02-24 09:31:00'),
+('SO-20260224-002', 1, 3, 1, '2026-02-24 19:20:00', 93000.00, 9300.00, 5000.00, 97300.00, 'CARD', 'COMPLETED', 'Khách thành viên đổi điểm', '2026-02-24 19:20:00', '2026-02-24 19:23:00'),
+('SO-20260225-001', 3, 3, 2, '2026-02-25 20:10:00', 32000.00, 3200.00, 0.00, 35200.00, 'MOMO', 'REFUNDED', 'Hoàn tiền 1 phần do sản phẩm lỗi', '2026-02-25 20:10:00', '2026-02-25 21:00:00');
+
+-- 19. SALE ORDER ITEMS (Chi tiết đơn bán)
+INSERT IGNORE INTO sale_order_items (
+      sale_order_id,
+      product_variant_id,
+      product_name,
+      sku,
+      quantity,
+      unit_price,
+      line_discount_amount,
+      line_tax_amount,
+      line_total_amount,
+      notes
+) VALUES
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 4, 'Coca Cola 330ml', 'COCA-330ML', 2, 12000.00, 0.00, 2400.00, 26400.00, NULL),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 5, 'Oishi Snack', 'OISHI-50G', 3, 8000.00, 0.00, 2400.00, 26400.00, NULL),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 1, 'Fresh Milk 1L', 'VMILK-1L', 2, 25000.00, 2000.00, 4800.00, 52800.00, NULL),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 3, 'Nescafe 3in1', 'NESCAFE-200G', 1, 45000.00, 3000.00, 4500.00, 46500.00, NULL),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 2, 'Dove Soap 90g', 'DOVE-90G', 2, 15000.00, 0.00, 3000.00, 33000.00, '1 sản phẩm bị lỗi vỏ hộp');
+
+-- 20. SALE ORDER HISTORIES (Lịch sử đơn bán)
+INSERT IGNORE INTO sale_order_histories (
+      sale_order_id,
+      from_status,
+      to_status,
+      action_type,
+      changed_by_user_id,
+      change_notes,
+      changed_at
+) VALUES
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-001', '2026-02-24 09:30:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán tiền mặt thành công', '2026-02-24 09:31:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-001', '2026-02-24 19:20:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán thẻ thành công', '2026-02-24 19:23:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-002', '2026-02-25 20:10:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán ví điện tử thành công', '2026-02-25 20:15:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'COMPLETED', 'REFUNDED', 'REFUND_PARTIAL', 2, 'Khách trả lại sản phẩm lỗi', '2026-02-25 21:00:00');
 -- 18. TICKETS (Swap Shift, Handover, Refund)
 -- Ticket entity có @CreationTimestamp/@UpdateTimestamp nên JPA tự động set
 INSERT IGNORE INTO tickets (
@@ -362,6 +423,7 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 -- 21. SALARY CONFIGS (nhiều cấu hình theo thời điểm cho một nhân viên)
 INSERT IGNORE INTO salary_configs (
       user_id,
+      salary_type,
       base_salary,
       hourly_rate,
       overtime_rate_multiplier,
@@ -374,12 +436,12 @@ INSERT IGNORE INTO salary_configs (
       created_at,
       updated_at
 ) VALUES
-(1, 28000000.00, 165000.00, 1.50, 1200000.00, 4.00, FALSE, '2025-07-01 00:00:00', '2025-12-31 23:59:59', 'Admin package - old cycle', NOW(), NOW()),
-(1, 30000000.00, 180000.00, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL, 'Admin package - current', NOW(), NOW()),
-(2, 18000000.00, 105000.00, 1.50, 1000000.00, 3.00, TRUE, '2026-01-01 00:00:00', NULL, 'Manager package', NOW(), NOW()),
-(3, 12000000.00, 70000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Cashier package', NOW(), NOW()),
-(4, 13000000.00, 75000.00, 1.50, 400000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Inventory package', NOW(), NOW()),
-(5, 12500000.00, 72000.00, 1.50, 450000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Sales package', NOW(), NOW());
+(1, 'MONTHLY', 28000000.00, NULL, 1.50, 1200000.00, 4.00, FALSE, '2025-07-01 00:00:00', '2025-12-31 23:59:59', 'Admin package - old cycle (monthly)', NOW(), NOW()),
+(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL, 'Admin package - current (monthly)', NOW(), NOW()),
+(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, TRUE, '2026-01-01 00:00:00', NULL, 'Manager package (monthly)', NOW(), NOW()),
+(3, 'HOURLY', NULL, 70000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Cashier package (hourly)', NOW(), NOW()),
+(4, 'MONTHLY', 13000000.00, NULL, 1.50, 400000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Inventory package (monthly)', NOW(), NOW()),
+(5, 'HOURLY', NULL, 72000.00, 1.50, 450000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Sales package (hourly)', NOW(), NOW());
 
 -- 22. PAYROLL CALCULATIONS (Kết quả tính lương mẫu theo tháng)
 INSERT IGNORE INTO payroll_calculations (

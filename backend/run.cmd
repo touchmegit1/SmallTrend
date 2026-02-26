@@ -15,13 +15,13 @@ if exist ".env" (
 )
 
 if not exist ".env" (
-	echo [WARN] .env not found. Starting with in-memory H2 fallback profile.
-	set "DB_URL=jdbc:h2:mem:smalltrend;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE"
+	echo [WARN] .env not found. Starting with file-based H2 fallback profile.
+	set "DB_URL=jdbc:h2:file:./.data/smalltrend;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;AUTO_SERVER=TRUE"
 	set "DB_USERNAME=sa"
 	set "DB_PASSWORD="
 	set "SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.h2.Driver"
 	set "SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.H2Dialect"
-	set "SPRING_JPA_DDL_AUTO=create-drop"
+	set "SPRING_JPA_DDL_AUTO=update"
 	set "SPRING_SQL_INIT_MODE=never"
 )
 
