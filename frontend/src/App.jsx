@@ -6,6 +6,10 @@ import Login from "./pages/Auth/Login";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
 import UserManagement from "./pages/HR/UserManagement";
+import EmployeeList from "./pages/HR/EmployeeList";
+import ShiftManagement from "./pages/HR/ShiftManagement";
+import AttendanceManagement from "./pages/HR/AttendanceManagement";
+import PayrollManagement from "./pages/HR/PayrollManagement";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import ImportInventory from "./pages/Inventory/ImportInventory";
 import CreateImport from "./pages/Inventory/CreateImport";
@@ -16,6 +20,8 @@ import DisposalList from "./pages/Inventory/DisposalList";
 import DisposalDetail from "./pages/Inventory/DisposalDetail";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
+import CRMevent from "./pages/CRM/event";
+import CRMloyalty from "./pages/CRM/loyalty";
 function App() {
   return (
     <Routes>
@@ -49,6 +55,7 @@ function App() {
         <Route path="inventory" element={<InventoryDashboard />} />
         <Route path="inventory/import" element={<ImportInventory />} />
         <Route path="inventory/import/create" element={<CreateImport />} />
+        <Route path="inventory/suppliers" element={<div className="p-4">Quản lý nhà cung cấp (Supplier)</div>} />
         <Route
           path="inventory/audit"
           element={<Navigate to="/inventory-counts" replace />}
@@ -84,25 +91,52 @@ function App() {
 
         {/* Module 4: CRM (Khách hàng) */}
         <Route path="crm" element={<div className="p-4">CRM & Promotion</div>} />
+        <Route path="crm/customer" element={<CRMcustomer />} />
+        <Route path="crm/event" element={<CRMevent />} />
+        <Route path="crm/loyalty" element={<CRMloyalty />} />
         <Route path="crm/homepage" element={<CRMcustomer />} />
         <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
         <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
-        <Route path="crm/loyalty" element={<div className="p-4">Tích điểm</div>} />
         <Route path="crm/complain" element={<CRMcomplain />} />
 
         {/* Module 5: HR (Nhân sự) */}
-        <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
+        <Route path="hr" element={<Navigate to="/hr/employees" replace />} />
+        <Route path="hr/employees" element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <EmployeeList />
+          </ProtectedRoute>
+        } />
         <Route path="hr/users" element={
           <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
             <UserManagement />
           </ProtectedRoute>
         } />
-        <Route path="hr/shifts" element={<div className="p-4">Phân ca làm việc</div>} />
-        <Route path="hr/attendance" element={<div className="p-4">Chấm công</div>} />
-        <Route path="hr/payroll" element={<div className="p-4">Tính lương</div>} />
+        <Route path="hr/shifts" element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ShiftManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="hr/attendance" element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <AttendanceManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="hr/payroll" element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <PayrollManagement />
+          </ProtectedRoute>
+        } />
+
+        {/* Ticket Center */}
+        <Route path="ticket-center" element={<div className="p-4">Ticket Center</div>} />
 
         {/* Module 6: Reports (Báo cáo) */}
         <Route path="reports" element={<div className="p-4">Reports & AI (Báo cáo)</div>} />
+        <Route path="reports/create" element={<div className="p-4">Tạo báo cáo</div>} />
+        <Route path="reports/manage" element={<div className="p-4">Quản lý báo cáo</div>} />
+        <Route path="reports/ai" element={<div className="p-4">AI dự báo</div>} />
+        <Route path="reports/ai-chatbot" element={<div className="p-4">AI Chatbot</div>} />
+        <Route path="reports/audit-logs" element={<div className="p-4">Audit Logs</div>} />
         <Route path="reports/sales" element={<div className="p-4">Báo cáo doanh thu</div>} />
         <Route path="reports/inventory" element={<div className="p-4">Báo cáo kho</div>} />
         <Route path="reports/logs" element={<div className="p-4">Nhật ký hoạt động</div>} />

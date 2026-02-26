@@ -5,6 +5,9 @@ import {
   Package,
   LogOut,
   Store,
+  Bot,
+  Ticket,
+  Truck,
   Warehouse,
   Users,
   Clock,
@@ -32,10 +35,6 @@ const Sidebar = () => {
     navigate("/login");
   };
 
-  // Debug: log user info
-  console.log("Sidebar - Current user:", user);
-  console.log("Sidebar - User role:", user?.role);
-
   const navItems = [
     {
       icon: ShoppingCart,
@@ -58,6 +57,16 @@ const Sidebar = () => {
         { label: "Xử lý hàng", path: "/inventory/disposal" },
         { label: "Quản lý vị trí", path: "/inventory/locations" },
       ],
+    },
+    {
+      icon: Truck,
+      label: "Supplier",
+      path: "/inventory/suppliers",
+    },
+    {
+      icon: Ticket,
+      label: "Ticket Center",
+      path: "/ticket-center",
     },
     {
       icon: Package,
@@ -87,7 +96,7 @@ const Sidebar = () => {
       label: "Nhân sự & Ca",
       path: "/hr",
       children: [
-        { label: "Danh sách nhân viên", path: "/hr" },
+        { label: "Danh sách nhân viên", path: "/hr/employees" },
         { label: "Phân ca làm việc", path: "/hr/shifts" },
         { label: "Chấm công", path: "/hr/attendance" },
         { label: "Tính lương", path: "/hr/payroll" },
@@ -102,18 +111,17 @@ const Sidebar = () => {
         { label: "Quản lý báo cáo", path: "/reports/manage" },
         { label: "AI dự báo", path: "/reports/ai" },
         { label: "Audit Logs", path: "/reports/audit-logs" },
+        { label: "Nhật ký hoạt động", path: "/reports/logs" },
       ],
+    },
+    {
+      icon: Bot,
+      label: "AI Chatbot",
+      path: "/reports/ai-chatbot",
     },
   ];
 
-  // Debug: log user info
-  console.log("Sidebar - Current user:", user);
-  console.log("Sidebar - User role:", user?.role);
-  console.log("Sidebar - User full object:", JSON.stringify(user));
-
-  // Admin menu - always show for ROLE_ADMIN
   const isAdmin = user && (user.role === "ROLE_ADMIN" || user.role === "ADMIN");
-  console.log("Sidebar - Is Admin:", isAdmin);
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
@@ -186,7 +194,7 @@ const Sidebar = () => {
                     }`
                   }
                 >
-                  Quản lý người dùng
+                  UserList
                 </NavLink>
               </div>
             )}
@@ -201,7 +209,13 @@ const Sidebar = () => {
                   ? "bg-indigo-50 text-indigo-700"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
-              onClick={() => toggleMenu(item.label)}
+              onClick={() => {
+                if (item.children?.length) {
+                  toggleMenu(item.label);
+                } else {
+                  navigate(item.path);
+                }
+              }}
             >
               <item.icon
                 size={20}
@@ -257,17 +271,6 @@ const Sidebar = () => {
       </div>
     </aside>
   );
-};
-
-const normalizeRole = (role) => {
-  if (!role) return null;
-  return role.startsWith('ROLE_') ? role : `ROLE_${role}`;
-};
-
-const canAccess = (allowedRoles, userRole) => {
-  if (!allowedRoles || allowedRoles.length === 0) return true;
-  if (!userRole) return false;
-  return allowedRoles.includes(userRole);
 };
 
 export default Sidebar;
