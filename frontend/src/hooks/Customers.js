@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../config/axiosConfig';
+import customerService from '../services/customerService';
 
 export const useFetchCustomers = () => {
   const [customers, setCustomers] = useState([]);
@@ -9,9 +9,9 @@ export const useFetchCustomers = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/crm/customers');
-      const data = Array.isArray(response.data) ? response.data : [];
-      setCustomers(data);
+      const data = await customerService.getAllCustomers();
+      const customerList = Array.isArray(data) ? data : [];
+      setCustomers(customerList);
       setError(null);
     } catch (err) {
       console.error('Error fetching customers:', err);

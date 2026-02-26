@@ -19,6 +19,10 @@ public class Customer {
     private Integer id;
 
     private String name;
+
     private String phone;
-    private Integer loyaltyPoints;
+
+    @Builder.Default
+    @Column(name = "loyalty_points")
+    private Integer loyaltyPoints = 0;
 }
