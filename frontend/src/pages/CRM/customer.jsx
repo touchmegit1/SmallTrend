@@ -12,14 +12,14 @@ export default function CustomerManagement() {
   const [loyaltyRate, setLoyaltyRate] = useState(10000);
   const [editForm, setEditForm] = useState({
     name: "",
-    phoneNumber: "",
+    phone: "",
     loyaltyPoints: 0,
   });
 
   const filteredCustomers = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.phoneNumber.includes(searchTerm)
+      c.phone.includes(searchTerm)
   );
 
   const totalCustomers = customers.length;
@@ -35,7 +35,7 @@ export default function CustomerManagement() {
     setSelectedCustomer(customer);
     setEditForm({
       name: customer.name,
-      phoneNumber: customer.phoneNumber,
+      phone: customer.phone,
       loyaltyPoints: customer.loyaltyPoints,
     });
     setViewMode("edit");
@@ -114,7 +114,7 @@ export default function CustomerManagement() {
                   {filteredCustomers.map((c) => (
                     <tr key={c.id} className="border-t">
                       <td className="p-3">{c.name}</td>
-                      <td className="p-3">{c.phoneNumber}</td>
+                      <td className="p-3">{c.phone}</td>
                       <td className="p-3">{c.loyaltyPoints}</td>
                       <td className="p-3">
                         {(c.spentAmount || 0).toLocaleString("vi-VN")} VNĐ
@@ -149,9 +149,9 @@ export default function CustomerManagement() {
             />
             <input
               className="w-full border p-2 mb-3"
-              value={editForm.phoneNumber}
+              value={editForm.phone}
               onChange={(e) =>
-                setEditForm({ ...editForm, phoneNumber: e.target.value })
+                setEditForm({ ...editForm, phone: e.target.value })
               }
             />
             <input
@@ -183,7 +183,7 @@ export default function CustomerManagement() {
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-2xl mb-4">{selectedCustomer.name}</h2>
             <div className="border p-3 rounded mb-2">
-              <div><strong>Phone:</strong> {selectedCustomer.phoneNumber}</div>
+              <div><strong>Phone:</strong> {selectedCustomer.phone}</div>
               <div><strong>Loyalty Points:</strong> {selectedCustomer.loyaltyPoints}</div>
               <div><strong>Total Spend:</strong> {(selectedCustomer.spentAmount || 0).toLocaleString("vi-VN")} VNĐ</div>
             </div>

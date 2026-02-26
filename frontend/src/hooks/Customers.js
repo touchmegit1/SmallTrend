@@ -10,10 +10,12 @@ export const useFetchCustomers = () => {
     setLoading(true);
     try {
       const response = await api.get('/crm/customers');
-      setCustomers(response.data);
+      const data = Array.isArray(response.data) ? response.data : [];
+      setCustomers(data);
       setError(null);
     } catch (err) {
-      setError(err.message || 'Lỗi khi tải khách hàng');
+      console.error('Error fetching customers:', err);
+      setError(err.response?.data?.message || err.message || 'Lỗi khi tải khách hàng');
       setCustomers([]);
     } finally {
       setLoading(false);
@@ -24,5 +26,5 @@ export const useFetchCustomers = () => {
     fetchCustomers();
   }, []);
 
-  return { customers, setCustomers, loading, error };
+  return { customers, setCustomers, loading, error, refetch: fetchCustomers };
 };

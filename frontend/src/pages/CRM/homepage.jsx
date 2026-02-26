@@ -1,5 +1,5 @@
 import React from "react";
-import SideAds from "./component/SideAds";
+import SideAds from "./Component/SideAds";
 import { Link } from "react-router-dom";
 export default function EcommerceUI() {
   const categories = [
