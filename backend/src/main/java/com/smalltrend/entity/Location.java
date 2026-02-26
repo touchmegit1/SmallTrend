@@ -67,6 +67,15 @@ public class Location {
     private List<InventoryStock> stocks;
 
     @Transient
+    public String getType() {
+        return warehouseType;
+    }
+
+    public void setType(String type) {
+        this.warehouseType = type;
+    }
+
+    @Transient
     public String getMatrixCoordinate() {
         return String.format("%s-%02d-%02d-L%s", zone, gridRow, gridCol, gridLevel);
     }

@@ -38,7 +38,7 @@ public class LocationService {
         Location loc = Location.builder()
                 .name(request.getLocationName())
                 .locationCode(request.getLocationCode())
-                .type(request.getLocationType())
+                .warehouseType(request.getLocationType())
                 .address(request.getAddress())
                 .capacity(request.getCapacity() != null ? request.getCapacity() : 0)
                 .description(request.getDescription())

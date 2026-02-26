@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,7 +22,6 @@ public class InventoryDashboardService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductBatchRepository productBatchRepository;
     private final InventoryStockRepository inventoryStockRepository;
-    private final StockMovementRepository stockMovementRepository;
     private final CategoryRepository categoryRepository;
     private final BrandRepository brandRepository;
 
@@ -136,18 +136,9 @@ public class InventoryDashboardService {
     }
 
     // ─── Stock Movements ─────────────────────────────────
+    // TODO: Implement when StockMovement entity is created
     public List<StockMovementResponse> getAllStockMovements() {
-        return stockMovementRepository.findAll().stream()
-                .map(sm -> StockMovementResponse.builder()
-                        .id(sm.getId())
-                        .variantId(sm.getVariant() != null ? sm.getVariant().getId() : null)
-                        .fromBinId(sm.getFromBin() != null ? sm.getFromBin().getId() : null)
-                        .toBinId(sm.getToBin() != null ? sm.getToBin().getId() : null)
-                        .quantity(sm.getQuantity())
-                        .type(sm.getType())
-                        .createdAt(null) // StockMovement entity doesn't have createdAt yet
-                        .build())
-                .collect(Collectors.toList());
+        return new ArrayList<>();
     }
 }
 

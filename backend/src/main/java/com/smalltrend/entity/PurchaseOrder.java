@@ -1,6 +1,5 @@
 package com.smalltrend.entity;
 
-import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -22,53 +21,62 @@ public class PurchaseOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(name = "order_number", unique = true, nullable = false)
-    private String orderNumber;
+    @Column(name = "po_number", unique = true)
+    private String poNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id", nullable = false)
+    @JoinColumn(name = "supplier_id")
     private Supplier supplier;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private Location location;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @Column(name = "order_date", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "received_by")
+    private User receivedBy;
+
+    @Column(name = "order_date")
     private LocalDate orderDate;
 
-    @Column(name = "expected_delivery_date")
-    private LocalDate expectedDeliveryDate;
-
-    @Column(name = "actual_delivery_date")
-    private LocalDate actualDeliveryDate;
-
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private PurchaseOrderStatus status = PurchaseOrderStatus.DRAFT;
+    private String status = "DRAFT";
 
     @Column(name = "subtotal", precision = 15, scale = 2)
     private BigDecimal subtotal;
 
+    @Column(name = "discount", precision = 15, scale = 2)
+    private BigDecimal discount;
+
+    @Column(name = "tax_percent", precision = 15, scale = 2)
+    private BigDecimal taxPercent;
+
     @Column(name = "tax_amount", precision = 15, scale = 2)
     private BigDecimal taxAmount;
 
-    @Column(name = "discount_amount", precision = 15, scale = 2)
-    private BigDecimal discountAmount;
+    @Column(name = "shipping_fee", precision = 15, scale = 2)
+    private BigDecimal shippingFee;
 
-    @Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
+    @Column(name = "total_amount", precision = 15, scale = 2)
     private BigDecimal totalAmount;
+
+    @Column(name = "paid_amount", precision = 15, scale = 2)
+    private BigDecimal paidAmount;
+
+    @Column(name = "remaining_amount", precision = 15, scale = 2)
     private BigDecimal remainingAmount;
-
-    private String notes;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime confirmedAt;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    private LocalDateTime confirmedAt;
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

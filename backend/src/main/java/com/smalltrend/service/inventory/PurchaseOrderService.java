@@ -29,7 +29,6 @@ public class PurchaseOrderService {
     private final ProductBatchRepository productBatchRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final LocationRepository locationRepository;
-    private final ShelfBinRepository shelfBinRepository;
 
     // ─── List All Purchase Orders ────────────────────────────
     public List<PurchaseOrderResponse> getAllOrders() {
@@ -314,28 +313,14 @@ public class PurchaseOrderService {
     }
 
     private void updateInventoryStock(ProductVariant variant, ProductBatch batch, Integer quantity, Integer locationId) {
-        // Find a shelf bin in the given location
         Location location = locationRepository.findById(locationId)
                 .orElseThrow(() -> new RuntimeException("Vị trí kho không tồn tại."));
-
-        List<ShelfBin> bins = location.getShelfBins();
-        ShelfBin targetBin;
-        if (bins != null && !bins.isEmpty()) {
-            targetBin = bins.get(0); // Use first bin in the location
-        } else {
-            // Create a default bin
-            targetBin = ShelfBin.builder()
-                    .location(location)
-                    .binCode("DEFAULT-" + location.getName())
-                    .build();
-            shelfBinRepository.save(targetBin);
-        }
 
         // Create or update inventory stock
         InventoryStock stock = InventoryStock.builder()
                 .variant(variant)
                 .batch(batch)
-                .bin(targetBin)
+                .location(location)
                 .quantity(quantity)
                 .build();
         inventoryStockRepository.save(stock);
