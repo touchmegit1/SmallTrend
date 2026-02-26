@@ -4,12 +4,14 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Đơn hàng
  */
 @Entity
-@Table(name = "orders")
+@Table(name = "sale_orders")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,6 +32,13 @@ public class Order {
     @ManyToOne
     @JoinColumn(name = "cashier_id")
     private User cashier; // Nhân viên thu ngân
+
+    @ManyToOne
+    @JoinColumn(name = "cash_register_id")
+    private CashRegister cashRegister;
+
+    @Column(nullable = false)
+    private LocalDateTime orderDate;
 
     @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal subtotal; // Tổng phụ (trước thuế và giảm giá)
@@ -52,6 +61,14 @@ public class Order {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<OrderItem> items = new ArrayList<>();
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<OrderStatusHistory> statusHistories = new ArrayList<>();
+
     @Column
     private LocalDateTime createdAt;
 
@@ -64,6 +81,9 @@ public class Order {
         updatedAt = LocalDateTime.now();
         if (status == null) {
             status = "PENDING";
+        }
+        if (orderDate == null) {
+            orderDate = LocalDateTime.now();
         }
     }
 

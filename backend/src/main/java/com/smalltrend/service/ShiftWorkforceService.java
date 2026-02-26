@@ -8,6 +8,7 @@ import com.smalltrend.entity.SalaryConfig;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.WorkShift;
 import com.smalltrend.entity.WorkShiftAssignment;
+import com.smalltrend.entity.enums.SalaryType;
 import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.SalaryConfigRepository;
 import com.smalltrend.repository.UserRepository;
@@ -270,6 +271,20 @@ public class ShiftWorkforceService {
         }
         if (salaryConfig.isPresent()) {
             SalaryConfig config = salaryConfig.get();
+            if (config.getSalaryType() != null) {
+                if (config.getSalaryType() == SalaryType.HOURLY
+                        && config.getHourlyRate() != null
+                        && config.getHourlyRate().compareTo(BigDecimal.ZERO) > 0) {
+                    return config.getHourlyRate();
+                }
+
+                if (config.getSalaryType() == SalaryType.MONTHLY
+                        && config.getBaseSalary() != null
+                        && config.getBaseSalary().compareTo(BigDecimal.ZERO) > 0) {
+                    return config.getBaseSalary().divide(BigDecimal.valueOf(208), 2, RoundingMode.HALF_UP);
+                }
+            }
+
             if (config.getHourlyRate() != null && config.getHourlyRate().compareTo(BigDecimal.ZERO) > 0) {
                 return config.getHourlyRate();
             }
