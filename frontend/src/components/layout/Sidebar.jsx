@@ -18,12 +18,8 @@ const Sidebar = () => {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/crm/homepage');
+        navigate('/login');
     };
-
-    // Debug: log user info
-    console.log('Sidebar - Current user:', user);
-    console.log('Sidebar - User role:', user?.role);
 
     const navItems = [
         {
@@ -64,10 +60,12 @@ const Sidebar = () => {
             label: 'Khách hàng & KM',
             path: '/crm',
             children: [
-                { label: 'Danh sách khách hàng', path: '/crm/customer' },
-                { label: 'Khuyến Mãi', path: '/crm/event' },
-                { label: 'Kho quà tặng', path: '/crm/loyalty' },
-                { label: 'Khiếu nại', path: '/crm/complain' },
+                { label: 'Danh sách khách hàng', path: '/crm' },
+                { label: 'Chương trình KM', path: '/crm/promotions' },
+                { label: 'Voucher/Coupon', path: '/crm/vouchers' },
+                { label: 'Tích điểm & Hạng', path: '/crm/loyalty' },
+                { label: 'Khiếu nại', path: '/crm/complaints' },
+                { label: 'Trang chủ', path: '/crm/homepage' },
             ]
         },
         {
@@ -94,21 +92,15 @@ const Sidebar = () => {
         },
     ];
 
-    // Debug: log user info
-    console.log('Sidebar - Current user:', user);
-    console.log('Sidebar - User role:', user?.role);
-    console.log('Sidebar - User full object:', JSON.stringify(user));
-
-    // Admin menu - always show for ROLE_ADMIN
-    const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
-    console.log('Sidebar - Is Admin:', isAdmin);
+    // Admin menu - compatible with new DB role naming
+    const isAdmin = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
             <div
                 className="p-6 border-b border-slate-100 flex items-center gap-3 cursor-pointer hover:bg-slate-50"
                 onClick={() => {
-                    const isAdminRole = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
+                    const isAdminRole = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
                     navigate(isAdminRole ? '/dashboard' : '/pos');
                 }}
                 title="Về trang chính"
