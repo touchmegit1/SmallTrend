@@ -3,6 +3,7 @@ import TopBar from "./TopBar";
 import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
 import PaymentPanel from "./PaymentPanel";
+import PaymentModal from "./PaymentModal";
 import QRScanner from "./QRScanner";
 import Invoice from "./Invoice";
 import posService from "../../services/posService";
@@ -23,11 +24,26 @@ export default function POS() {
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const activeOrder = orders.find(order => order.id === activeOrderId) || { id: activeOrderId, cart: [], customer: null, usePoints: false };
 
   // Fetch products from backend
   useEffect(() => {
     loadProducts();
   }, []);
+
+  // F9 shortcut for payment
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === 'F9' && activeOrder.cart.length > 0 && !showPaymentModal) {
+        e.preventDefault();
+        setShowPaymentModal(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [activeOrder.cart, showPaymentModal]);
 
   const loadProducts = async () => {
     try {
@@ -72,8 +88,6 @@ export default function POS() {
     localStorage.setItem('posOrders', JSON.stringify(orders));
     localStorage.setItem('activeOrderId', activeOrderId.toString());
   }, [orders, activeOrderId]);
-
-  const activeOrder = orders.find(order => order.id === activeOrderId) || { id: activeOrderId, cart: [], customer: null, usePoints: false };
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -284,6 +298,7 @@ export default function POS() {
     filteredTransactions.unshift(transaction);
     localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
 
+    setShowPaymentModal(false);
     setShowSuccessNotification(true);
     setTimeout(() => setShowSuccessNotification(false), 3000);
 
@@ -309,24 +324,40 @@ export default function POS() {
 
   return (
     <div style={{
-      padding: "15px 25px",
+      height: "100vh",
+      display: "flex",
+      flexDirection: "column",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       background: "#f8f9fa",
-      minHeight: "100vh"
+      overflow: "hidden",
+      paddingTop: "20px",     
     }}>
-      <TopBar
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filteredProducts={filteredProducts}
-        addToCart={addToCart}
-        addNewOrder={addNewOrder}
-        orders={orders}
-        activeOrderId={activeOrderId}
-        setActiveOrderId={setActiveOrderId}
-        setShowQRScanner={setShowQRScanner}
-        deleteOrder={deleteOrder}
-        onPrintInvoice={handlePrintLastInvoice}
-      />
+      <div style={{ padding: "10px 20px" }}>
+        <TopBar
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          filteredProducts={filteredProducts}
+          addToCart={addToCart}
+          addNewOrder={addNewOrder}
+          orders={orders}
+          activeOrderId={activeOrderId}
+          setActiveOrderId={setActiveOrderId}
+          setShowQRScanner={setShowQRScanner}
+          deleteOrder={deleteOrder}
+          onPrintInvoice={handlePrintLastInvoice}
+        />
+      </div>
+
+      {showPaymentModal && (
+        <div style={{ marginTop: "20px" }}>
+          <PaymentModal
+            cart={activeOrder.cart}
+            customer={activeOrder.customer}
+            onClose={() => setShowPaymentModal(false)}
+            onComplete={completeOrder}
+          />
+        </div>
+      )}
 
       {showQRScanner && (
         <QRScanner
@@ -394,10 +425,10 @@ export default function POS() {
 
       {loading ? (
         <div style={{
+          flex: 1,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: "400px",
           fontSize: "16px",
           color: "#666"
         }}>
@@ -405,24 +436,31 @@ export default function POS() {
         </div>
       ) : (
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "15px"
+          flex: 1,
+          padding: "0 20px 10px 20px",
+          overflow: "hidden",
+          display: "flex",
+          paddingTop: "30px"
         }}>
-          <Cart
-            cart={activeOrder.cart}
-            setCart={updateCart}
-            customer={activeOrder.customer}
-            setCustomer={updateCustomer}
-            usePoints={activeOrder.usePoints}
-            setUsePoints={updateUsePoints}
-          />
-          <PaymentPanel
-            cart={activeOrder.cart}
-            customer={activeOrder.customer}
-            usePoints={activeOrder.usePoints}
-            onCompleteOrder={completeOrder}
-          />
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "12px",
+            width: "100%",
+            paddingTop: "0px",
+            minHeight: 0
+          }}>
+            <Cart
+              cart={activeOrder.cart}
+              setCart={updateCart}
+            />
+            <PaymentPanel
+              cart={activeOrder.cart}
+              customer={activeOrder.customer}
+              usePoints={activeOrder.usePoints}
+              onOpenPayment={() => setShowPaymentModal(true)}
+            />
+          </div>
         </div>
       )}
     </div>

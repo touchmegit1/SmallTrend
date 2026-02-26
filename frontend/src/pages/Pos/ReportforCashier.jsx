@@ -174,7 +174,7 @@ export default function ReportforCashier() {
 
         <StatCard
           title="Số đơn hàng"
-          value={totalOrders + pendingOrders}
+          value={totalOrders }
           iconBg="#ECFEFF"
           iconColor={COLORS.success}
           onClick={showOrderDetails}
