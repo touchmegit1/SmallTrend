@@ -5,247 +5,10 @@
 -- Hashed: $2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW
 -- =============================================================================
 
--- Compatibility bootstrap for environments where JPA cannot create JSON columns
-CREATE TABLE IF NOT EXISTS suppliers (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      tax_code VARCHAR(255),
-      address VARCHAR(255),
-      email VARCHAR(255),
-      phone VARCHAR(255),
-      contact_person VARCHAR(255),
-      contract_files LONGTEXT,
-      contract_signed_date DATE,
-      contract_expiry DATE,
-      active BIT(1) NOT NULL DEFAULT b'1',
-      notes TEXT,
-      created_at DATETIME,
-      updated_at DATETIME,
-      UNIQUE KEY uk_suppliers_tax_code (tax_code)
-);
+-- JPA/Hibernate là nguồn chân lý schema.
+-- File này chỉ dùng để seed dữ liệu mẫu (idempotent).
 
-CREATE TABLE IF NOT EXISTS shift_handovers (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      handover_code VARCHAR(50) NOT NULL UNIQUE,
-      shift_id INT NOT NULL,
-      from_user_id INT NOT NULL,
-      to_user_id INT NOT NULL,
-      cash_register_id INT,
-      handover_time DATETIME NOT NULL,
-      cash_amount DECIMAL(15,2),
-      expected_cash DECIMAL(15,2),
-      actual_cash DECIMAL(15,2),
-      variance DECIMAL(15,2),
-      cash_breakdown LONGTEXT,
-      total_transactions INT,
-      total_sales DECIMAL(15,2),
-      total_refunds DECIMAL(15,2),
-      total_customers INT,
-      equipment_status LONGTEXT,
-      inventory_notes LONGTEXT,
-      low_stock_items LONGTEXT,
-      issues_reported TEXT,
-      important_notes TEXT,
-      confirmed BIT(1),
-      confirmed_at DATETIME,
-      status VARCHAR(20),
-      dispute_reason TEXT,
-      attachment_url VARCHAR(255),
-      created_at DATETIME,
-      updated_at DATETIME
-);
-
-CREATE TABLE IF NOT EXISTS campaigns (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      campaign_code VARCHAR(50) NOT NULL UNIQUE,
-      campaign_name VARCHAR(200) NOT NULL,
-      campaign_type VARCHAR(50),
-      description TEXT,
-      banner_image_url VARCHAR(255),
-      start_date DATE NOT NULL,
-      end_date DATE NOT NULL,
-      start_time DATETIME,
-      end_time DATETIME,
-      status VARCHAR(20),
-      budget DECIMAL(15,2),
-      actual_spent DECIMAL(15,2),
-      target_revenue DECIMAL(15,2),
-      actual_revenue DECIMAL(15,2),
-      total_orders INT,
-      total_discount DECIMAL(15,2),
-      min_purchase_amount DECIMAL(15,2),
-      target_categories LONGTEXT,
-      is_public BIT(1),
-      created_by INT,
-      approved_by INT,
-      approved_at DATETIME,
-      internal_notes TEXT,
-      created_at DATETIME,
-      updated_at DATETIME
-);
-
-CREATE TABLE IF NOT EXISTS coupons (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      coupon_code VARCHAR(50) NOT NULL UNIQUE,
-      coupon_name VARCHAR(200) NOT NULL,
-      description TEXT,
-      coupon_type VARCHAR(30),
-      campaign_id INT,
-      discount_percent DECIMAL(5,2),
-      discount_amount DECIMAL(15,2),
-      max_discount_amount DECIMAL(15,2),
-      min_purchase_amount DECIMAL(15,2),
-      min_quantity INT,
-      allowed_categories LONGTEXT,
-      start_date DATE,
-      end_date DATE NOT NULL,
-      start_time DATETIME,
-      end_time DATETIME,
-      total_usage_limit INT,
-      usage_per_customer INT,
-      current_usage_count INT,
-      buy_quantity INT,
-      get_quantity INT,
-      status VARCHAR(20),
-      created_by INT,
-      internal_notes TEXT,
-      created_at DATETIME,
-      updated_at DATETIME
-);
-
-CREATE TABLE IF NOT EXISTS tickets (
-      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-      ticket_code VARCHAR(20) NOT NULL UNIQUE,
-      ticket_type VARCHAR(255) NOT NULL,
-      title VARCHAR(200) NOT NULL,
-      description TEXT,
-      status VARCHAR(255) NOT NULL,
-      priority VARCHAR(255),
-      created_by_user_id INT,
-      assigned_to_user_id INT,
-      resolved_by_user_id INT,
-      related_entity_type VARCHAR(50),
-      related_entity_id BIGINT,
-      resolution TEXT,
-      resolved_at DATETIME,
-      created_at DATETIME,
-      updated_at DATETIME
-);
-
-CREATE TABLE IF NOT EXISTS cash_registers (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      register_code VARCHAR(50) NOT NULL UNIQUE,
-      register_name VARCHAR(100) NOT NULL,
-      store_name VARCHAR(100),
-      location VARCHAR(100),
-      register_type VARCHAR(20),
-      status VARCHAR(20),
-      device_id VARCHAR(100),
-      current_cash DECIMAL(15,2),
-      opening_balance DECIMAL(15,2),
-      expected_balance DECIMAL(15,2),
-      variance DECIMAL(15,2),
-      total_transactions_today INT,
-      total_sales_today DECIMAL(15,2),
-      total_cash_today DECIMAL(15,2),
-      total_card_today DECIMAL(15,2),
-      current_operator_id INT,
-      session_start_time DATETIME,
-      last_transaction_time DATETIME,
-      max_cash_limit DECIMAL(15,2),
-      notes TEXT,
-      created_at DATETIME,
-      updated_at DATETIME
-);
-
-CREATE TABLE IF NOT EXISTS salary_configs (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      user_id INT,
-      base_salary DECIMAL(12,2) NOT NULL,
-      hourly_rate DECIMAL(8,2),
-      overtime_rate_multiplier DECIMAL(3,2),
-      allowances DECIMAL(10,2),
-      bonus_percentage DECIMAL(5,2),
-      is_active BIT(1) NOT NULL,
-      effective_from DATETIME NOT NULL,
-      effective_until DATETIME,
-      notes TEXT,
-      created_at DATETIME,
-      updated_at DATETIME,
-      UNIQUE KEY uk_salary_configs_user_id (user_id)
-);
-
-CREATE TABLE IF NOT EXISTS payroll_calculations (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      user_id INT NOT NULL,
-      pay_period_start DATE NOT NULL,
-      pay_period_end DATE NOT NULL,
-      payment_cycle VARCHAR(20) NOT NULL,
-      total_worked_days INT,
-      total_worked_minutes INT,
-      regular_minutes INT,
-      overtime_minutes INT,
-      night_shift_minutes INT,
-      weekend_minutes INT,
-      holiday_minutes INT,
-      late_days INT,
-      absent_days INT,
-      leave_days INT,
-      base_pay DECIMAL(15,2),
-      overtime_pay DECIMAL(15,2),
-      night_shift_bonus DECIMAL(15,2),
-      weekend_bonus DECIMAL(15,2),
-      holiday_bonus DECIMAL(15,2),
-      allowances DECIMAL(15,2),
-      commission_amount DECIMAL(15,2),
-      bonus_amount DECIMAL(15,2),
-      late_penalty DECIMAL(15,2),
-      absent_penalty DECIMAL(15,2),
-      social_insurance DECIMAL(15,2),
-      health_insurance DECIMAL(15,2),
-      unemployment_insurance DECIMAL(15,2),
-      personal_income_tax DECIMAL(15,2),
-      other_deductions DECIMAL(15,2),
-      gross_pay DECIMAL(15,2),
-      total_deductions DECIMAL(15,2),
-      net_pay DECIMAL(15,2),
-      status VARCHAR(20),
-      calculated_by INT,
-      approved_by INT,
-      calculated_at DATETIME,
-      approved_at DATETIME,
-      paid_at DATETIME,
-      calculation_details VARCHAR(2000),
-      notes VARCHAR(1000),
-      created_at DATETIME,
-      updated_at DATETIME
-);
-
-CREATE TABLE IF NOT EXISTS shift_swap_requests (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      request_code VARCHAR(50) NOT NULL UNIQUE,
-      requester_id INT NOT NULL,
-      original_shift_id INT NOT NULL,
-      original_shift_date DATE NOT NULL,
-      target_user_id INT,
-      target_shift_id INT,
-      target_shift_date DATE,
-      swap_type VARCHAR(20) NOT NULL,
-      reason VARCHAR(500),
-      status VARCHAR(20),
-      accepted_by INT,
-      accepted_at DATETIME,
-      approved_by INT,
-      approved_at DATETIME,
-      rejection_reason VARCHAR(500),
-      expiry_time DATETIME,
-      notes TEXT,
-      created_at DATETIME,
-      updated_at DATETIME
-);
-
--- STRICT RESET FOR SEED PROFILE
--- Đảm bảo mỗi lần chạy seed đều về trạng thái sạch và id ổn định
+-- FULL RESET DATA (seed lại từ đầu)
 SET FOREIGN_KEY_CHECKS = 0;
 
 TRUNCATE TABLE shift_handovers;
@@ -265,6 +28,7 @@ TRUNCATE TABLE work_shifts;
 TRUNCATE TABLE product_batches;
 TRUNCATE TABLE locations;
 TRUNCATE TABLE product_variants;
+TRUNCATE TABLE units;
 TRUNCATE TABLE products;
 TRUNCATE TABLE customers;
 TRUNCATE TABLE customer_tiers;
@@ -293,17 +57,18 @@ INSERT INTO suppliers (name, tax_code, address, email, phone, contact_person, co
 ('Unilever Vietnam', '0300491828', '15 Le Duan Blvd, District 1, HCMC', 'contact@unilever.com.vn', '1800-5588', 'Tran Thi B', '["https://res.cloudinary.com/demo/sample_contract2.pdf", "https://res.cloudinary.com/demo/sample_contract2_annex.pdf"]', '2023-03-01', '2024-12-31', TRUE, 'Personal care and household items supplier'),
 ('Nestle Vietnam', '0302127854', 'The Vista Building, 628C Hanoi Highway, HCMC', 'info@nestle.com.vn', '1900-6011', 'Le Van C', '["https://res.cloudinary.com/demo/sample_contract3.pdf"]', '2023-06-01', '2025-06-01', TRUE, 'Beverages and snacks supplier'),
 ('Coca-Cola Vietnam', '0300693409', '124 Kim Ma Street, Ba Dinh, Hanoi', 'vietnam@cocacola.com', '1900-0180', 'Pham Thi D', NULL, NULL, NULL, TRUE, 'Soft drinks supplier - contract pending')
+AS new_supplier
 ON DUPLICATE KEY UPDATE
-name = VALUES(name),
-address = VALUES(address),
-email = VALUES(email),
-phone = VALUES(phone),
-contact_person = VALUES(contact_person),
-contract_files = VALUES(contract_files),
-contract_signed_date = VALUES(contract_signed_date),
-contract_expiry = VALUES(contract_expiry),
-active = VALUES(active),
-notes = VALUES(notes),
+name = new_supplier.name,
+address = new_supplier.address,
+email = new_supplier.email,
+phone = new_supplier.phone,
+contact_person = new_supplier.contact_person,
+contract_files = new_supplier.contract_files,
+contract_signed_date = new_supplier.contract_signed_date,
+contract_expiry = new_supplier.contract_expiry,
+active = new_supplier.active,
+notes = new_supplier.notes,
 updated_at = NOW();
 
 -- 3. TAX RATES
@@ -326,8 +91,9 @@ insert ignore into roles (
 ) values ( 'ADMIN',
            'System Administrator' ),( 'MANAGER',
                                       'Store Manager' ),( 'CASHIER',
-                                                          'Cashier Staff' ),( 'INVENTORY_STAFF',
-                                                                              'Inventory Staff' );
+                                                                                                                   'Cashier Staff' ),( 'INVENTORY_STAFF',
+                                                                                                                                                            'Inventory Staff' ),( 'SALES_STAFF',
+                                                                                                                                                                                                      'Sales Staff' );
 
 insert ignore into permissions (
    name,
@@ -361,7 +127,9 @@ insert ignore into role_permissions (
                                                                        5 ),( 3,
                                                                              4 ),( 4,
                                                                                    2 ),( 4,
-                                                                                         3 );
+                                                                                         3 ),( 5,
+                                                                                               2 ),( 5,
+                                                                                                     4 );
 
 -- 5. USERS (Schema mới: username, password trong users table trực tiếp)
 -- Password for all users: password123
@@ -369,16 +137,19 @@ insert ignore into role_permissions (
 INSERT INTO users (username, password, active, full_name, email, phone, address, status, role_id) VALUES
 ('admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, HCMC', 'ACTIVE', 1),
 ('manager', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, HCMC', 'ACTIVE', 2),
-('cashier', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Le Van Cashier', 'cashier@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3)
+('cashier', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Le Van Cashier', 'cashier@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3),
+('inventory1', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4),
+('sales1', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfuC.eRwNJ5gXvAIEe4iCW', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5)
+AS new_user
 ON DUPLICATE KEY UPDATE
-password = VALUES(password),
-active = VALUES(active),
-full_name = VALUES(full_name),
-email = VALUES(email),
-phone = VALUES(phone),
-address = VALUES(address),
-status = VALUES(status),
-role_id = VALUES(role_id);
+password = new_user.password,
+active = new_user.active,
+full_name = new_user.full_name,
+email = new_user.email,
+phone = new_user.phone,
+address = new_user.address,
+status = new_user.status,
+role_id = new_user.role_id;
 
 -- 6. CUSTOMER TIERS (CustomerTier entity có @PrePersist tự động set created_at/updated_at, KHÔNG insert)
 INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_points, max_points, min_spending, points_multiplier, discount_rate, color, is_active, priority) VALUES 
@@ -402,18 +173,29 @@ INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_
 ('Coca Cola 330ml', 'Coca Cola Classic', 3, 1, 1),
 ('Oishi Snack', 'Potato Chips 50g', 7, 5, 1);
 
--- 9. PRODUCT VARIANTS (ProductVariant entity KHÔNG có created_at, có is_active BOOLEAN)
-INSERT IGNORE INTO product_variants (product_id, sku, barcode, sell_price, is_active) VALUES 
-(1, 'VMILK-1L', '8901234567890', 25000.00, TRUE),
-(2, 'DOVE-90G', '8901234567891', 15000.00, TRUE),
-(3, 'NESCAFE-200G', '8901234567892', 45000.00, TRUE),
-(4, 'COCA-330ML', '8901234567893', 12000.00, TRUE),
-(5, 'OISHI-50G', '8901234567894', 8000.00, TRUE);
+-- 8.1 UNITS (quản lý đơn vị + phân loại vật chất + giá chuẩn)
+INSERT IGNORE INTO units (code, name, material_type, symbol, default_sell_price, default_cost_price) VALUES
+('L', 'Lít', 'LIQUID', 'L', 25000.00, 20000.00),
+('ML', 'Mililit', 'LIQUID', 'ml', 12000.00, 8000.00),
+('G', 'Gram', 'SOLID', 'g', 15000.00, 12000.00),
+('KG', 'Kilogram', 'SOLID', 'kg', 150000.00, 120000.00),
+('EA', 'Cái', 'SOLID', 'ea', 8000.00, 6000.00);
 
--- 10. LOCATIONS (Location entity KHÔNG có created_at)
-INSERT IGNORE INTO locations (name, type) VALUES 
-('Main Warehouse', 'WAREHOUSE'),
-('Store Front', 'SHOWROOM');
+-- 9. PRODUCT VARIANTS (liên kết unit_id sang bảng units)
+INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active) VALUES 
+(1, 'VMILK-1L', '8901234567890', 1, 25000.00, TRUE),
+(2, 'DOVE-90G', '8901234567891', 3, 15000.00, TRUE),
+(3, 'NESCAFE-200G', '8901234567892', 3, 45000.00, TRUE),
+(4, 'COCA-330ML', '8901234567893', 2, 12000.00, TRUE),
+(5, 'OISHI-50G', '8901234567894', 3, 8000.00, TRUE);
+
+-- 10. LOCATIONS (tọa độ ma trận trực quan: zone-row-col-level)
+INSERT IGNORE INTO locations (name, type, zone, grid_row, grid_col, grid_level) VALUES 
+('Main Warehouse A1', 'STORAGE', 'A', 1, 1, 1),
+('Main Warehouse A2', 'STORAGE', 'A', 1, 2, 1),
+('Cold Storage B1', 'STORAGE', 'B', 1, 1, 1),
+('Store Front C1', 'DISPLAY', 'C', 1, 1, 1),
+('POS Display Zone C2', 'DISPLAY', 'C', 1, 2, 1);
 
 -- 11. PRODUCT BATCHES (ProductBatch entity KHÔNG có created_at)
 INSERT IGNORE INTO product_batches (variant_id, batch_number, cost_price, mfg_date, expiry_date) VALUES 
@@ -562,7 +344,9 @@ INSERT IGNORE INTO tickets (
 INSERT IGNORE INTO user_credentials (user_id, username, password_hash) VALUES
 (1, 'admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
 (2, 'manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(3, 'cashier', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
+(3, 'cashier', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(4, 'inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(5, 'sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
 
 -- 20. ATTENDANCE (Chấm công thực tế theo phân ca)
 INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
@@ -573,7 +357,7 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 (3, '2026-02-24', '18:00:00', '23:02:00', 'PRESENT'),
 (3, '2026-02-27', NULL, NULL, 'ABSENT');
 
--- 21. SALARY CONFIGS
+-- 21. SALARY CONFIGS (nhiều cấu hình theo thời điểm cho một nhân viên)
 INSERT IGNORE INTO salary_configs (
       user_id,
       base_salary,
@@ -588,9 +372,12 @@ INSERT IGNORE INTO salary_configs (
       created_at,
       updated_at
 ) VALUES
-(1, 30000000.00, 180000.00, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL, 'Admin package', NOW(), NOW()),
+(1, 28000000.00, 165000.00, 1.50, 1200000.00, 4.00, FALSE, '2025-07-01 00:00:00', '2025-12-31 23:59:59', 'Admin package - old cycle', NOW(), NOW()),
+(1, 30000000.00, 180000.00, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL, 'Admin package - current', NOW(), NOW()),
 (2, 18000000.00, 105000.00, 1.50, 1000000.00, 3.00, TRUE, '2026-01-01 00:00:00', NULL, 'Manager package', NOW(), NOW()),
-(3, 12000000.00, 70000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Cashier package', NOW(), NOW());
+(3, 12000000.00, 70000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Cashier package', NOW(), NOW()),
+(4, 13000000.00, 75000.00, 1.50, 400000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Inventory package', NOW(), NOW()),
+(5, 12500000.00, 72000.00, 1.50, 450000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Sales package', NOW(), NOW());
 
 -- 22. PAYROLL CALCULATIONS (Kết quả tính lương mẫu theo tháng)
 INSERT IGNORE INTO payroll_calculations (
@@ -666,7 +453,7 @@ INSERT IGNORE INTO shift_swap_requests (
 ('SWAP-REQ-002', 2, 2, '2026-02-27', 1, 1, '2026-02-27', 'DIRECT_SWAP', 'Đổi ca để tham gia họp vùng', 'ACCEPTED', 1, NOW(), 1, NOW(), NULL, '2026-02-28 23:59:59', 'Đã duyệt đổi ca', NOW(), NOW());
 
 -- 24. SHIFT HANDOVERS
-INSERT IGNORE INTO shift_handovers (
+INSERT INTO shift_handovers (
       handover_code,
       shift_id,
       from_user_id,
@@ -695,7 +482,34 @@ INSERT IGNORE INTO shift_handovers (
       created_at,
       updated_at
 ) VALUES
-('HANDOVER-001', 3, 3, 2, 1, '2026-02-24 23:10:00', 2500000.00, 2500000.00, 2500000.00, 0.00, '{"500k":2,"200k":5,"100k":5}', 15, 8200000.00, 120000.00, 96, '{"printer":"OK","scanner":"OK"}', '{"note":"Bổ sung nước ngọt tầng 2"}', '[4,5]', 'Không có sự cố lớn', 'Đã bàn giao đầy đủ', TRUE, '2026-02-24 23:15:00', 'CONFIRMED', NULL, NULL, NOW(), NOW());
+('HANDOVER-001', 3, 3, 2, 1, '2026-02-24 23:10:00', 2500000.00, 2500000.00, 2500000.00, 0.00, '{"500k":2,"200k":5,"100k":5}', 15, 8200000.00, 120000.00, 96, '{"printer":"OK","scanner":"OK"}', '{"note":"Bổ sung nước ngọt tầng 2"}', '[4,5]', 'Không có sự cố lớn', 'Đã bàn giao đầy đủ', TRUE, '2026-02-24 23:15:00', 'CONFIRMED', NULL, NULL, NOW(), NOW())
+AS new_handover
+ON DUPLICATE KEY UPDATE
+      shift_id = new_handover.shift_id,
+      from_user_id = new_handover.from_user_id,
+      to_user_id = new_handover.to_user_id,
+      cash_register_id = new_handover.cash_register_id,
+      handover_time = new_handover.handover_time,
+      cash_amount = new_handover.cash_amount,
+      expected_cash = new_handover.expected_cash,
+      actual_cash = new_handover.actual_cash,
+      variance = new_handover.variance,
+      cash_breakdown = new_handover.cash_breakdown,
+      total_transactions = new_handover.total_transactions,
+      total_sales = new_handover.total_sales,
+      total_refunds = new_handover.total_refunds,
+      total_customers = new_handover.total_customers,
+      equipment_status = new_handover.equipment_status,
+      inventory_notes = new_handover.inventory_notes,
+      low_stock_items = new_handover.low_stock_items,
+      issues_reported = new_handover.issues_reported,
+      important_notes = new_handover.important_notes,
+      confirmed = new_handover.confirmed,
+      confirmed_at = new_handover.confirmed_at,
+      status = new_handover.status,
+      dispute_reason = new_handover.dispute_reason,
+      attachment_url = new_handover.attachment_url,
+      updated_at = new_handover.updated_at;
 
 -- =============================================================================
 -- End of SmallTrend Sample Data

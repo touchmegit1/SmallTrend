@@ -56,7 +56,7 @@ public class ShiftHandover {
     private BigDecimal variance; // Chênh lệch
 
     // Chi tiết mệnh giá
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "LONGTEXT")
     private String cashBreakdown; // {"500k": 10, "200k": 5, "100k": 20}
 
     // Thống kê ca làm việc
@@ -73,14 +73,14 @@ public class ShiftHandover {
     private Integer totalCustomers; // Tổng khách hàng
 
     // Tình trạng thiết bị
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "LONGTEXT")
     private String equipmentStatus; // {"printer": "OK", "scanner": "ERROR"}
 
     // Hàng hóa
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "LONGTEXT")
     private String inventoryNotes; // Ghi chú về hàng hóa
 
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "LONGTEXT")
     private String lowStockItems; // Sản phẩm sắp hết: [item_id1, item_id2]
 
     // Vấn đề phát sinh
