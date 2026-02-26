@@ -1,5 +1,6 @@
 import React from "react";
-
+import SideAds from "./component/SideAds";
+import { Link } from "react-router-dom";
 export default function EcommerceUI() {
   const categories = [
     { name: "All Products", active: true },
@@ -144,7 +145,31 @@ export default function EcommerceUI() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 relative">
+
+      {/* Quảng cáo 2 bên */}
+      <SideAds
+        leftImage="https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=400"
+        rightImage="https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=400"
+        leftTitle="Mega Sale 50% OFF"
+        rightTitle="Free Shipping"
+      />
+
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-xl font-bold">SmallTrend</h1>
+
+          <div className="flex items-center gap-4">
+            <a
+              href="/login"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600"
+            >
+              Login
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Banner */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
         <div className="relative rounded-2xl bg-black text-white py-12 text-center">
@@ -211,11 +236,10 @@ export default function EcommerceUI() {
           {categories.map((c, i) => (
             <button
               key={i}
-              className={`px-6 py-2 rounded-full text-sm font-medium ${
-                c.active
+              className={`px-6 py-2 rounded-full text-sm font-medium ${c.active
                   ? "bg-blue-600 text-white"
                   : "border border-gray-300 text-gray-600"
-              }`}
+                }`}
             >
               {c.name}
             </button>

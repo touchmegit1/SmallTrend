@@ -11,16 +11,24 @@ import CRMcomplain from './pages/CRM/complain'
 import CRMcustomer from './pages/CRM/customer'
 import CRMevent from './pages/CRM/event'
 import CRMloyalty from './pages/CRM/loyalty'
+import { useAuth } from './context/AuthContext'
+
+const RootRedirect = () => {
+    const { isAuthenticated } = useAuth();
+    return <Navigate to={isAuthenticated ? '/dashboard' : '/crm/homepage'} replace />;
+}
+
 function App() {
     return (
         <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/crm/homepage" element={<CRMHomepage />} />
 
             {/* Protected Routes */}
             <Route path="/" element={<MainLayout />}>
-                {/* Redirect root to Dashboard */}
-                <Route index element={<Navigate to="/dashboard" replace />} />
+                {/* Redirect root to Dashboard if authenticated, else to CRM Homepage */}
+                <Route index element={<RootRedirect />} />
 
                 {/* Dashboard Route - only ADMIN/MANAGER */}
                 <Route path="dashboard" element={
@@ -49,7 +57,6 @@ function App() {
 
                 {/* Module 4: CRM (Khách hàng) */}
                 <Route path="crm" element={<div className="p-4">CRM & Promotion</div>} />
-                <Route path="crm/homepage" element={<CRMHomepage />} />
                 <Route path="crm/event" element={<CRMevent/>} />
                 <Route path="crm/loyalty" element={<CRMloyalty/>} />
                 <Route path="crm/complain" element={<CRMcomplain/>} />
