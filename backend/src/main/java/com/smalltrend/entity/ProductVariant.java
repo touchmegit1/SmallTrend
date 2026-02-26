@@ -24,7 +24,6 @@ public class ProductVariant {
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
-
     private String sku;
     private String barcode;
     private String imageUrl;

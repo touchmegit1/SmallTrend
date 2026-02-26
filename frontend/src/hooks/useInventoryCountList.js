@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { getInventoryCounts, getLocations, cancelInventoryCount } from "../services/inventoryService";
 import { IC_STATUS, IC_STATUS_CONFIG, formatVNDCount } from "../utils/inventoryCount";
-
-const API_BASE = "http://localhost:3001";
 
 export function useInventoryCountList() {
   const [vouchers, setVouchers] = useState([]);
@@ -24,19 +23,14 @@ export function useInventoryCountList() {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        const [countsRes, locRes] = await Promise.all([
-          fetch(`${API_BASE}/inventory_counts`),
-          fetch(`${API_BASE}/locations`),
+        const [countsData, locsData] = await Promise.all([
+          getInventoryCounts(),
+          getLocations(),
         ]);
-        if (!countsRes.ok) throw new Error("Failed to fetch inventory counts");
-        if (!locRes.ok) throw new Error("Failed to fetch locations");
-
-        const counts = await countsRes.json();
-        const locs = await locRes.json();
 
         if (!cancelled) {
-          setVouchers(counts);
-          setLocations(locs);
+          setVouchers(countsData);
+          setLocations(locsData);
         }
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -52,7 +46,7 @@ export function useInventoryCountList() {
   const locationMap = useMemo(() => {
     const map = {};
     for (const loc of locations) {
-      map[loc.id] = loc.location_name;
+      map[loc.id] = loc.location_name || loc.name;
     }
     return map;
   }, [locations]);
@@ -115,12 +109,7 @@ export function useInventoryCountList() {
     if (!window.confirm("Bạn có chắc muốn hủy phiếu kiểm kho này?")) return;
 
     try {
-      await fetch(`${API_BASE}/inventory_counts/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: IC_STATUS.CANCELLED }),
-      });
-
+      await cancelInventoryCount(id);
       setVouchers((prev) =>
         prev.map((v) =>
           v.id === id ? { ...v, status: IC_STATUS.CANCELLED } : v

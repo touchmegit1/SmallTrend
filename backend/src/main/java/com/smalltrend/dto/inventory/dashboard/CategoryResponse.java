@@ -1,4 +1,4 @@
-package com.smalltrend.dto.inventory;
+package com.smalltrend.dto.inventory.dashboard;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BrandResponse {
+public class CategoryResponse {
     private Integer id;
     private String name;
     private String description;

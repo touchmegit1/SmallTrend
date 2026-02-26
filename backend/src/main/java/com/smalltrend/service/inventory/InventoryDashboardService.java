@@ -1,6 +1,9 @@
 package com.smalltrend.service.inventory;
 
-import com.smalltrend.dto.inventory.*;
+import com.smalltrend.dto.inventory.purchaseorder.*;
+import com.smalltrend.dto.inventory.inventorycount.*;
+import com.smalltrend.dto.inventory.location.*;
+import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
 import com.smalltrend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -147,3 +150,4 @@ public class InventoryDashboardService {
                 .collect(Collectors.toList());
     }
 }
+

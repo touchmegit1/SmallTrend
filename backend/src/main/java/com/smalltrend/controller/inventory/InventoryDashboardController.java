@@ -1,6 +1,9 @@
 package com.smalltrend.controller.inventory;
 
-import com.smalltrend.dto.inventory.*;
+import com.smalltrend.dto.inventory.purchaseorder.*;
+import com.smalltrend.dto.inventory.inventorycount.*;
+import com.smalltrend.dto.inventory.location.*;
+import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.service.inventory.InventoryDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -62,3 +65,4 @@ public class InventoryDashboardController {
         return ResponseEntity.ok(dashboardService.getAllStockMovements());
     }
 }
+

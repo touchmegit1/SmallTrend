@@ -1,7 +1,7 @@
 package com.smalltrend.controller.inventory;
 
-import com.smalltrend.dto.inventory.FullLocationResponse;
-import com.smalltrend.dto.inventory.LocationRequest;
+import com.smalltrend.dto.inventory.location.FullLocationResponse;
+import com.smalltrend.dto.inventory.location.LocationRequest;
 import com.smalltrend.service.inventory.LocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -67,3 +67,4 @@ public class LocationController {
         return ResponseEntity.ok(Map.of("message", "Location deleted successfully"));
     }
 }
+

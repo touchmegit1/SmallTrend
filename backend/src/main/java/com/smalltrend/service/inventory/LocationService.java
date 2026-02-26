@@ -1,7 +1,7 @@
 package com.smalltrend.service.inventory;
 
-import com.smalltrend.dto.inventory.FullLocationResponse;
-import com.smalltrend.dto.inventory.LocationRequest;
+import com.smalltrend.dto.inventory.location.FullLocationResponse;
+import com.smalltrend.dto.inventory.location.LocationRequest;
 import com.smalltrend.entity.Location;
 import com.smalltrend.repository.LocationRepository;
 import lombok.RequiredArgsConstructor;
@@ -91,3 +91,4 @@ public class LocationService {
                 .build();
     }
 }
+

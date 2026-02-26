@@ -2,17 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   getProducts,
   getSuppliers,
-  getPurchaseOrders,
   getLocations,
+  getNextPOCode,
   createPurchaseOrder,
-  createPurchaseOrderItem,
-  updateProductStock,
-  createProductBatch,
-  updatePurchaseOrder,
+  confirmPurchaseOrder,
 } from "../services/inventoryService";
 import {
   PO_STATUS,
-  generatePOCode,
   createDefaultOrder,
   createOrderItem,
   calcItemTotal,
@@ -43,19 +39,18 @@ export function usePurchaseOrder() {
   useEffect(() => {
     const init = async () => {
       try {
-        const [productsData, suppliersData, ordersData, locationsData] =
+        const [productsData, suppliersData, locationsData, nextCode] =
           await Promise.all([
             getProducts(),
             getSuppliers(),
-            getPurchaseOrders(),
             getLocations(),
+            getNextPOCode(),
           ]);
         setProducts(productsData);
         setSuppliers(suppliersData);
-        setLocations(locationsData.filter((l) => l.status === "ACTIVE"));
+        setLocations(locationsData.filter((l) => l.status === "ACTIVE" || !l.status));
 
-        const code = generatePOCode(ordersData);
-        setOrder((prev) => ({ ...prev, po_number: code }));
+        setOrder((prev) => ({ ...prev, po_number: nextCode }));
       } catch (err) {
         console.error("Init error:", err);
         setError(err.message);
@@ -84,7 +79,8 @@ export function usePurchaseOrder() {
     return suppliers.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
-        (s.phone && s.phone.includes(q))
+        (s.phone && s.phone.includes(q)) ||
+        (s.contactInfo && s.contactInfo.toLowerCase().includes(q))
     );
   }, [suppliers, supplierQuery]);
 
@@ -196,22 +192,10 @@ export function usePurchaseOrder() {
           tax_amount: financials.taxAmount,
           total_amount: financials.total,
           remaining_amount: financials.remaining,
-          created_at: new Date().toISOString(),
+          items: items,
         };
 
-        const savedOrder = await createPurchaseOrder(orderData);
-
-        for (const item of items) {
-          await createPurchaseOrderItem({
-            purchase_order_id: savedOrder.id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            discount: item.discount || 0,
-            total: item.total,
-            expiry_date: item.expiry_date || null,
-          });
-        }
+        await createPurchaseOrder(orderData);
 
         alert("Đã lưu phiếu tạm thành công!");
         if (navigate) navigate("/inventory/import");
@@ -242,7 +226,6 @@ export function usePurchaseOrder() {
 
       setSaving(true);
       try {
-        const now = new Date().toISOString();
         const orderData = {
           ...order,
           status: PO_STATUS.CONFIRMED,
@@ -250,47 +233,10 @@ export function usePurchaseOrder() {
           tax_amount: financials.taxAmount,
           total_amount: financials.total,
           remaining_amount: financials.remaining,
-          confirmed_at: now,
-          created_at: now,
+          items: items,
         };
 
-        const savedOrder = await createPurchaseOrder(orderData);
-
-        for (const item of items) {
-          // Save order item
-          await createPurchaseOrderItem({
-            purchase_order_id: savedOrder.id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            discount: item.discount || 0,
-            total: item.total,
-            expiry_date: item.expiry_date || null,
-          });
-
-          // Update product stock
-          const currentProduct = products.find((p) => p.id === item.product_id);
-          if (currentProduct) {
-            await updateProductStock(
-              item.product_id,
-              (currentProduct.stock_quantity || 0) + item.quantity
-            );
-          }
-
-          // Create batches
-          if (item.batches && item.batches.length > 0) {
-            for (const batch of item.batches) {
-              await createProductBatch({
-                batch_code: batch.batch_code,
-                product_id: item.product_id,
-                quantity: batch.quantity,
-                expiry_date: batch.expiry_date || null,
-                received_date: now.split("T")[0],
-                created_at: now,
-              });
-            }
-          }
-        }
+        await confirmPurchaseOrder(orderData);
 
         alert("Đã xác nhận nhập hàng và cập nhật tồn kho thành công!");
         if (navigate) navigate("/inventory/import");
@@ -303,7 +249,7 @@ export function usePurchaseOrder() {
         setSaving(false);
       }
     },
-    [order, items, financials, products]
+    [order, items, financials]
   );
 
   // ─── Cancel Order ──────────────────────────────────────
