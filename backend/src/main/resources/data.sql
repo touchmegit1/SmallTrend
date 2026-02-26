@@ -187,12 +187,12 @@ INSERT INTO product_variants
 
 -- Insert Locations
 INSERT INTO locations
-(id, name, type) VALUES
-(1, 'Main Warehouse', 'WAREHOUSE'),
-(2, 'Showroom A1', 'SHOWROOM'),
-(3, 'Sales Area B', 'SALES_AREA'),
-(4, 'Secondary Warehouse C', 'SECONDARY_WAREHOUSE'),
-(5, 'Display Area D', 'DISPLAY_AREA');
+(id, name, type, location_code, address, capacity, description, status, created_at) VALUES
+(1, 'Kệ hàng chính', 'SHELF', 'KE-001', 'Tầng 1, dãy A', 150, 'Kệ trưng bày hàng hóa chính trong cửa hàng', 'ACTIVE', '2024-01-01 00:00:00'),
+(2, 'Kho phía sau', 'STORAGE', 'KHO-001', 'Phòng kho phía sau', 300, 'Kho lưu trữ hàng tồn, hàng nhập mới', 'ACTIVE', '2024-01-01 00:00:00'),
+(3, 'Khu trưng bày cửa', 'DISPLAY_AREA', 'TB-001', 'Khu vực cửa ra vào', 50, 'Khu vực trưng bày sản phẩm khuyến mãi', 'ACTIVE', '2024-01-01 00:00:00'),
+(4, 'Tủ lạnh / Kho lạnh', 'COLD_STORAGE', 'TL-001', 'Góc phải cửa hàng', 80, 'Tủ lạnh bảo quản đồ tươi sống, sữa, nước giải khát', 'ACTIVE', '2024-01-01 00:00:00'),
+(5, 'Quầy thu ngân', 'CASHIER', 'QTN-001', 'Khu vực cửa ra', 30, 'Khu vực quầy thanh toán, bày kẹo bánh nhỏ', 'ACTIVE', '2024-01-01 00:00:00');
 
 -- Insert Shelf Bins
 INSERT INTO shelves_bins
@@ -223,12 +223,13 @@ INSERT INTO inventory_stock
 
 -- Insert Purchase Orders
 INSERT INTO purchase_orders
-(id, supplier_id, order_date, status, total_amount, received_by) VALUES
-(1, 1, '2024-01-10', 'COMPLETED', 5000000.00, 2),
-(2, 2, '2024-01-15', 'COMPLETED', 3500000.00, 2),
-(3, 3, '2024-02-01', 'PENDING', 2400000.00, 2),
-(4, 4, '2024-02-05', 'COMPLETED', 1800000.00, 4),
-(5, 5, '2024-02-10', 'PROCESSING', 2200000.00, 4);
+(id, po_number, supplier_id, location_id, order_date, status, subtotal, discount, tax_percent, tax_amount, shipping_fee, total_amount, paid_amount, remaining_amount, created_at, confirmed_at, received_by, notes) VALUES
+(1, 'PO-20240110-001', 1, 2, '2024-01-10', 'COMPLETED', 5000000.00, 0.00, 10.00, 500000.00, 0.00, 5500000.00, 5000000.00, 500000.00, '2024-01-10 08:30:00', '2024-01-10 10:00:00', 2, 'Nhap sua Vinamilk dot 1'),
+(2, 'PO-20240115-001', 2, 2, '2024-01-15', 'COMPLETED', 3500000.00, 0.00, 10.00, 350000.00, 0.00, 3850000.00, 3500000.00, 350000.00, '2024-01-15 09:00:00', '2024-01-15 11:00:00', 2, 'Nhap mi Maggi tu Unilever'),
+(3, 'PO-20240201-001', 3, 2, '2024-02-01', 'PENDING', 2400000.00, 0.00, 10.00, 240000.00, 0.00, 2640000.00, 0.00, 2400000.00, '2024-02-01 14:00:00', NULL, 2, 'Nhap nuoc ngot Coca-Cola'),
+(4, 'PO-20240205-001', 4, 2, '2024-02-05', 'COMPLETED', 1800000.00, 0.00, 10.00, 180000.00, 0.00, 1980000.00, 1800000.00, 180000.00, '2024-02-05 10:15:00', '2024-02-05 14:30:00', 4, 'Nhap xa phong Dove'),
+(5, 'PO-20240210-001', 5, 2, '2024-02-10', 'PROCESSING', 2200000.00, 0.00, 10.00, 220000.00, 0.00, 2420000.00, 0.00, 2200000.00, '2024-02-10 08:00:00', NULL, 4, 'Nhap hang tap hoa tong hop');
+
 
 -- Insert Purchase Order Items
 INSERT INTO purchase_order_items

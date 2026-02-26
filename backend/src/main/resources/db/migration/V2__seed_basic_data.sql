@@ -85,12 +85,12 @@ INTO role_permissions
 -- Insert Locations
 INSERT IGNORE
 INTO locations
-(id, name, type) VALUES
-(1, 'Main Warehouse', 'WAREHOUSE'),
-(2, 'Showroom A1', 'SHOWROOM'),
-(3, 'Sales Area B', 'SALES_AREA'),
-(4, 'Secondary Warehouse C', 'SECONDARY_WAREHOUSE'),
-(5, 'Display Area D', 'DISPLAY_AREA');
+(id, name, type, location_code, address, capacity, description, status, created_at) VALUES
+(1, 'Kệ hàng chính', 'SHELF', 'KE-001', 'Tầng 1, dãy A', 150, 'Kệ trưng bày hàng hóa chính trong cửa hàng', 'ACTIVE', '2024-01-01 00:00:00'),
+(2, 'Kho phía sau', 'STORAGE', 'KHO-001', 'Phòng kho phía sau', 300, 'Kho lưu trữ hàng tồn, hàng nhập mới', 'ACTIVE', '2024-01-01 00:00:00'),
+(3, 'Khu trưng bày cửa', 'DISPLAY_AREA', 'TB-001', 'Khu vực cửa ra vào', 50, 'Khu vực trưng bày sản phẩm khuyến mãi', 'ACTIVE', '2024-01-01 00:00:00'),
+(4, 'Tủ lạnh / Kho lạnh', 'COLD_STORAGE', 'TL-001', 'Góc phải cửa hàng', 80, 'Tủ lạnh bảo quản đồ tươi sống, sữa, nước giải khát', 'ACTIVE', '2024-01-01 00:00:00'),
+(5, 'Quầy thu ngân', 'CASHIER', 'QTN-001', 'Khu vực cửa ra', 30, 'Khu vực quầy thanh toán, bày kẹo bánh nhỏ', 'ACTIVE', '2024-01-01 00:00:00');
 
 -- Insert Shelf Bins
 INSERT IGNORE

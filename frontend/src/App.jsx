@@ -44,9 +44,9 @@ function App() {
       <Route
         path="/"
         element={
-          <PublicRoute>
+          <ProtectedRoute>
             <MainLayout />
-          </PublicRoute>
+          </ProtectedRoute>
         }
       >
         {/* Redirect root to Dashboard */}
