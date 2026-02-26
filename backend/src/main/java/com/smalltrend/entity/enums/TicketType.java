@@ -5,5 +5,6 @@ public enum TicketType {
     ISSUE,
     SUPPLIER,
     ORDER,
-    AI_SUGGESTION
+    AI_SUGGESTION,
+    REFUND
 }

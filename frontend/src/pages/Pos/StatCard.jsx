@@ -4,9 +4,11 @@ export default function StatCard({
   sub,
   iconBg = "#EFF6FF",
   iconColor = "#2563EB",
+  onClick,
 }) {
   return (
     <div
+      onClick={onClick}
       style={{
         background: "#FFFFFF",
         padding: "16px",
@@ -16,6 +18,20 @@ export default function StatCard({
         justifyContent: "space-between",
         alignItems: "center",
         fontFamily: "Inter, Segoe UI, Arial, sans-serif",
+        cursor: onClick ? "pointer" : "default",
+        transition: "transform 0.2s, box-shadow 0.2s",
+      }}
+      onMouseEnter={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
+        }
       }}
     >
       <div>
