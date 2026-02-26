@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { Pencil, Trash2, Search, X, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Pencil, Trash2, Search, X, Plus, LogIn } from "lucide-react";
 import { useFetchCustomers } from "../../hooks/Customers";
+import { useAuth } from "../../context/AuthContext";
 import customerService from "../../services/customerService";
 
 export default function CustomerManagement() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { customers, loading, error, refetch } = useFetchCustomers();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -111,6 +115,30 @@ export default function CustomerManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Show Login Page if Not Authenticated */}
+      {!isAuthenticated ? (
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
+            <div className="mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
+                <LogIn size={32} className="text-indigo-600" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-800">Chào mừng!</h1>
+              <p className="text-slate-500 mt-2">Vui lòng đăng nhập để quản lý khách hàng</p>
+            </div>
+            <button
+              onClick={() => navigate("/login")}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-indigo-600/30 transition-all"
+            >
+              Đăng nhập ngay
+            </button>
+            <p className="text-xs text-slate-400 mt-4">
+              Sử dụng thông tin đăng nhập của bạn để tiếp tục
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
@@ -339,6 +367,8 @@ export default function CustomerManagement() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

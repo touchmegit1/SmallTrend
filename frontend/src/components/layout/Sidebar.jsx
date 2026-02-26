@@ -18,7 +18,7 @@ const Sidebar = () => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/crm/homepage');
     };
 
     // Debug: log user info

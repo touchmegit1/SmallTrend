@@ -21,17 +21,36 @@ import DisposalDetail from "./pages/Inventory/DisposalDetail";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
+import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
+import { useAuth } from "./context/AuthContext";
+
+function RootRedirect() {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+  
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
+}
+
 function App() {
   return (
     <Routes>
+      {/* Root Route - Redirect based on authentication */}
+      <Route path="/" element={<RootRedirect />} />
+      
       {/* Public Routes */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/crm/homepage" element={<CRMhomepage />} />
 
       {/* Protected Routes */}
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        {/* Redirect root to Dashboard */}
-        <Route index element={<Navigate to="/dashboard" replace />} />
 
         {/* Dashboard Route - only ADMIN/MANAGER */}
         <Route path="dashboard" element={
@@ -94,7 +113,6 @@ function App() {
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
-        <Route path="crm/homepage" element={<CRMcustomer />} />
         <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
         <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
         <Route path="crm/complain" element={<CRMcomplain />} />
