@@ -11,6 +11,7 @@
 -- FULL RESET DATA (seed lại từ đầu)
 SET FOREIGN_KEY_CHECKS = 0;
 
+TRUNCATE TABLE purchase_history;
 TRUNCATE TABLE sale_order_histories;
 TRUNCATE TABLE sale_order_items;
 TRUNCATE TABLE sale_orders;
@@ -616,6 +617,45 @@ ON DUPLICATE KEY UPDATE
       dispute_reason = new_handover.dispute_reason,
       attachment_url = new_handover.attachment_url,
       updated_at = new_handover.updated_at;
+
+-- 27. PURCHASE HISTORY (Lịch sử mua hàng của khách)
+INSERT IGNORE INTO purchase_history (
+    customer_id,
+    customer_name,
+    product_id,
+    product_name,
+    quantity,
+    price,
+    subtotal,
+    payment_method,
+    created_at
+) VALUES
+-- Đơn 1: Nguyen Van A - Sáng 24/02
+(1, 'Nguyen Van A', 4, 'Coca Cola 330ml', 2, 12000.00, 24000.00, 'CASH', '2026-02-24 09:30:00'),
+(1, 'Nguyen Van A', 5, 'Oishi Snack', 3, 8000.00, 24000.00, 'CASH', '2026-02-24 09:30:00'),
+-- Đơn 2: Tran Thi B - Tối 24/02
+(2, 'Tran Thi B', 1, 'Fresh Milk 1L', 2, 25000.00, 50000.00, 'CARD', '2026-02-24 19:20:00'),
+(2, 'Tran Thi B', 3, 'Nescafe 3in1', 1, 45000.00, 45000.00, 'CARD', '2026-02-24 19:20:00'),
+-- Đơn 3: Le Van C - Tối 25/02
+(3, 'Le Van C', 2, 'Dove Soap 90g', 2, 15000.00, 30000.00, 'MOMO', '2026-02-25 20:10:00'),
+-- Đơn 4: Nguyen Van A - Sáng 26/02
+(1, 'Nguyen Van A', 1, 'Fresh Milk 1L', 1, 25000.00, 25000.00, 'CASH', '2026-02-26 10:15:00'),
+-- Đơn 5: Pham Thi D - Chiều 26/02
+(4, 'Pham Thi D', 4, 'Coca Cola 330ml', 5, 12000.00, 60000.00, 'CASH', '2026-02-26 14:30:00'),
+(4, 'Pham Thi D', 5, 'Oishi Snack', 4, 8000.00, 32000.00, 'CASH', '2026-02-26 14:30:00'),
+-- Đơn 6: Tran Thi B - Sáng 27/02
+(2, 'Tran Thi B', 4, 'Coca Cola 330ml', 3, 12000.00, 36000.00, 'MOMO', '2026-02-27 08:45:00'),
+(2, 'Tran Thi B', 2, 'Dove Soap 90g', 1, 15000.00, 15000.00, 'MOMO', '2026-02-27 08:45:00'),
+-- Đơn 7: Le Van C - Chiều 27/02
+(3, 'Le Van C', 1, 'Fresh Milk 1L', 3, 25000.00, 75000.00, 'CARD', '2026-02-27 15:20:00'),
+(3, 'Le Van C', 3, 'Nescafe 3in1', 2, 45000.00, 90000.00, 'CARD', '2026-02-27 15:20:00'),
+-- Đơn 8: Nguyen Van A - Tối 27/02
+(1, 'Nguyen Van A', 5, 'Oishi Snack', 5, 8000.00, 40000.00, 'CASH', '2026-02-27 20:00:00'),
+-- Đơn 9: Pham Thi D - Sáng 28/02
+(4, 'Pham Thi D', 1, 'Fresh Milk 1L', 2, 25000.00, 50000.00, 'CARD', '2026-02-28 09:10:00'),
+(4, 'Pham Thi D', 2, 'Dove Soap 90g', 3, 15000.00, 45000.00, 'CARD', '2026-02-28 09:10:00'),
+-- Đơn 10: Le Van C - Chiều 28/02
+(3, 'Le Van C', 4, 'Coca Cola 330ml', 6, 12000.00, 72000.00, 'CASH', '2026-02-28 16:30:00');
 
 -- =============================================================================
 -- End of SmallTrend Sample Data

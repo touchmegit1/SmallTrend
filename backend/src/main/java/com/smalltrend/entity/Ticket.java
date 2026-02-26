@@ -3,6 +3,7 @@ package com.smalltrend.entity;
 import com.smalltrend.entity.enums.TicketPriority;
 import com.smalltrend.entity.enums.TicketStatus;
 import com.smalltrend.entity.enums.TicketType;
+import com.smalltrend.entity.enums.TicketTypeConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -26,9 +27,9 @@ public class Ticket {
     @Column(name = "ticket_code", unique = true, nullable = false, length = 20)
     private String ticketCode;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "ticket_type", nullable = false)
-    private TicketType ticketType; // SWAP_SHIFT, HANDOVER, REFUND, COMPLAINT, REQUEST
+    @Convert(converter = TicketTypeConverter.class)
+    @Column(name = "ticket_type", columnDefinition = "VARCHAR(50)")
+    private TicketType ticketType;
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
@@ -81,9 +82,6 @@ public class Ticket {
 
     @PrePersist
     private void prePersist() {
-        if (ticketCode == null) {
-            ticketCode = "TCK-" + System.currentTimeMillis();
-        }
         if (status == null) {
             status = TicketStatus.OPEN;
         }

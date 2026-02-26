@@ -20,4 +20,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByAssignedToId(Integer userId);
 
     List<Ticket> findByTicketCode(String ticketCode);
+
+    long countByTicketType(TicketType ticketType);
 }
