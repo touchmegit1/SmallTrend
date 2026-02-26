@@ -1,5 +1,7 @@
 package com.smalltrend.controller.products;
 
+import com.smalltrend.dto.products.CategoriesRequest;
+import com.smalltrend.dto.products.CategoriesResponse;
 import com.smalltrend.entity.Category;
 import com.smalltrend.service.products.CategoriesService;
 import lombok.RequiredArgsConstructor;
@@ -18,33 +20,29 @@ import java.util.List;
 })
 public class CategoryController {
 
-    private final CategoriesService categoriesService;
+    private final CategoriesService service;
 
     @PostMapping
-    public ResponseEntity<Category> create(@RequestBody Category category) {
-        return ResponseEntity.ok(categoriesService.create(category));
+    public ResponseEntity<CategoriesResponse> create(
+            @RequestBody CategoriesRequest request) {
+        return ResponseEntity.ok(service.create(request));
     }
 
     @GetMapping
-    public ResponseEntity<List<Category>> getAll() {
-        return ResponseEntity.ok(categoriesService.getAll());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Category> getById(@PathVariable Integer id) {
-        return ResponseEntity.ok(categoriesService.getById(id));
+    public ResponseEntity<List<CategoriesResponse>> getAll() {
+        return ResponseEntity.ok(service.getAll());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Category> update(
+    public ResponseEntity<CategoriesResponse> update(
             @PathVariable Integer id,
-            @RequestBody Category category) {
-        return ResponseEntity.ok(categoriesService.update(id, category));
+            @RequestBody CategoriesRequest request) {
+        return ResponseEntity.ok(service.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Integer id) {
-        categoriesService.delete(id);
-        return ResponseEntity.ok("Category deactivated");
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        service.delete(id);
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,17 +1,13 @@
 package com.smalltrend.service.products;
 
-import com.smalltrend.entity.Category;
+import com.smalltrend.dto.products.CategoriesResponse;
+import com.smalltrend.dto.products.CategoriesRequest;
+
 import java.util.List;
 
 public interface CategoriesService {
-
-    Category create(Category category);
-
-    List<Category> getAll();
-
-    Category getById(Integer id);
-
-    Category update(Integer id, Category category);
-
+    CategoriesResponse create(CategoriesRequest request);
+    List<CategoriesResponse> getAll();
+    CategoriesResponse update(Integer id, CategoriesRequest request);
     void delete(Integer id);
 }
