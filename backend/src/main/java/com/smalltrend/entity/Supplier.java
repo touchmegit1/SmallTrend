@@ -37,8 +37,8 @@ public class Supplier {
     @Column(name = "contact_person")
     private String contactPerson;
 
-    // Store contract file URLs as JSON array from Cloudinary
-    @Column(name = "contract_files", columnDefinition = "JSON")
+    // Store contract file URLs as serialized JSON text from Cloudinary
+    @Column(name = "contract_files", columnDefinition = "LONGTEXT")
     private String contractFiles;
 
     @Column(name = "contract_signed_date")

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -263,7 +264,10 @@ public class ShiftWorkforceService {
             return hourlyRateOverride;
         }
 
-        Optional<SalaryConfig> salaryConfig = salaryConfigRepository.findByUserId(userId);
+        Optional<SalaryConfig> salaryConfig = salaryConfigRepository.findActiveConfigByUserId(userId, LocalDateTime.now());
+        if (salaryConfig.isEmpty()) {
+            salaryConfig = salaryConfigRepository.findFirstByUserIdOrderByEffectiveFromDesc(userId);
+        }
         if (salaryConfig.isPresent()) {
             SalaryConfig config = salaryConfig.get();
             if (config.getHourlyRate() != null && config.getHourlyRate().compareTo(BigDecimal.ZERO) > 0) {

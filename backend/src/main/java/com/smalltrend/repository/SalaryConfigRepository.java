@@ -13,7 +13,9 @@ import java.util.Optional;
 @Repository
 public interface SalaryConfigRepository extends JpaRepository<SalaryConfig, Integer> {
 
-    Optional<SalaryConfig> findByUserId(Integer userId);
+    List<SalaryConfig> findByUserIdOrderByEffectiveFromDesc(Integer userId);
+
+    Optional<SalaryConfig> findFirstByUserIdOrderByEffectiveFromDesc(Integer userId);
 
     List<SalaryConfig> findByIsActiveTrue();
 
