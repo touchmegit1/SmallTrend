@@ -19,6 +19,8 @@ TRUNCATE TABLE attendance;
 TRUNCATE TABLE user_credentials;
 TRUNCATE TABLE tickets;
 TRUNCATE TABLE cash_registers;
+TRUNCATE TABLE purchase_order_items;
+TRUNCATE TABLE purchase_orders;
 TRUNCATE TABLE product_combo_items;
 TRUNCATE TABLE product_combos;
 TRUNCATE TABLE coupons;
@@ -462,7 +464,49 @@ INSERT IGNORE INTO shift_swap_requests (
 ('SWAP-REQ-001', 3, 3, '2026-02-24', 2, 2, '2026-02-24', 'DIRECT_SWAP', 'Đổi ca tối để xử lý việc cá nhân buổi tối', 'PENDING', NULL, NULL, NULL, NULL, NULL, '2026-02-26 23:59:59', 'Đang chờ manager duyệt', NOW(), NOW()),
 ('SWAP-REQ-002', 2, 2, '2026-02-27', 1, 1, '2026-02-27', 'DIRECT_SWAP', 'Đổi ca để tham gia họp vùng', 'ACCEPTED', 1, NOW(), 1, NOW(), NULL, '2026-02-28 23:59:59', 'Đã duyệt đổi ca', NOW(), NOW());
 
--- 24. SHIFT HANDOVERS
+-- 24. PURCHASE ORDERS (Đơn đặt hàng từ nhà cung cấp)
+INSERT IGNORE INTO purchase_orders (
+   order_number,
+   supplier_id,
+   created_by,
+   order_date,
+   expected_delivery_date,
+   actual_delivery_date,
+   status,
+   subtotal,
+   tax_amount,
+   discount_amount,
+   total_amount,
+   notes,
+   created_at,
+   updated_at
+) VALUES
+('PO-2026-001', 1, 2, '2026-02-10', '2026-02-15', '2026-02-14', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
+('PO-2026-002', 2, 2, '2026-02-12', '2026-02-18', NULL, 'ORDERED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
+('PO-2026-003', 3, 1, '2026-02-15', '2026-02-20', NULL, 'PENDING', 12000000.00, 1200000.00, 200000.00, 13000000.00, 'Đơn nhập snack Nestle', NOW(), NOW()),
+('PO-2026-004', 4, 2, '2026-02-18', '2026-02-25', NULL, 'DRAFT', 24000000.00, 2400000.00, 1000000.00, 25400000.00, 'Đơn nhập nước ngọt Coca-Cola', NOW(), NOW());
+
+-- 25. PURCHASE ORDER ITEMS (Chi tiết đơn đặt hàng)
+INSERT IGNORE INTO purchase_order_items (
+   purchase_order_id,
+   product_variant_id,
+   quantity,
+   unit_cost,
+   total_cost,
+   received_quantity,
+   notes
+) VALUES
+-- PO-2026-001: Sữa Vinamilk
+((SELECT id FROM purchase_orders WHERE order_number = 'PO-2026-001'), 1, 2000, 20000.00, 40000000.00, 2000, 'Đã nhận đủ 2000 hộp'),
+((SELECT id FROM purchase_orders WHERE order_number = 'PO-2026-001'), 3, 200, 35000.00, 7000000.00, 200, 'Đã nhận đủ 200 gói'),
+-- PO-2026-002: Unilever
+((SELECT id FROM purchase_orders WHERE order_number = 'PO-2026-002'), 2, 1500, 12000.00, 18000000.00, 0, 'Chưa nhận hàng'),
+-- PO-2026-003: Nestle
+((SELECT id FROM purchase_orders WHERE order_number = 'PO-2026-003'), 5, 2000, 6000.00, 12000000.00, 0, 'Đang chờ giao'),
+-- PO-2026-004: Coca-Cola
+((SELECT id FROM purchase_orders WHERE order_number = 'PO-2026-004'), 4, 3000, 8000.00, 24000000.00, 0, 'Đơn nháp chưa gửi');
+
+-- 26. SHIFT HANDOVERS
 INSERT INTO shift_handovers (
       handover_code,
       shift_id,

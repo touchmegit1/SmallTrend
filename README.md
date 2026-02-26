@@ -133,7 +133,6 @@ Mở trình duyệt:
 
 ### 3. **Quản lý Kho (Inventory)**
 -   Nhập kho từ nhà cung cấp
--   Xuất kho khi bán hàng (tự động)
 -   Kiểm kho định kỳ
 -   Cảnh báo sản phẩm sắp hết hàng
 -   Lịch sử nhập/xuất kho

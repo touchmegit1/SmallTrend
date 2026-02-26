@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Package, LogOut, Store, Warehouse, Users, Clock, BarChart3, ChevronRight, Shield, Truck, MessageSquare, Bot } from 'lucide-react';
+import { ShoppingCart, Package, LogOut, Store, Warehouse, Users, Clock, BarChart3, ChevronRight, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
@@ -18,10 +18,12 @@ const Sidebar = () => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/crm/homepage');
     };
 
-    const currentRole = normalizeRole(user?.role);
+    // Debug: log user info
+    console.log('Sidebar - Current user:', user);
+    console.log('Sidebar - User role:', user?.role);
 
     const navItems = [
         {
@@ -53,8 +55,8 @@ const Sidebar = () => {
             children: [
                 { label: 'Danh sách sản phẩm', path: '/products' },
                 { label: 'Danh mục & Brand', path: '/products/categories' },
-                { label: 'Nhà cung cấp', path: '/products/suppliers' },
-                { label: 'Tạo combo', path: '/products/combos' },
+                { label: 'Thiết lập giá', path: '/products/price-books' },
+                { label: 'In tem mã vạch', path: '/products/print-barcodes' },
             ]
         },
         {
@@ -62,53 +64,21 @@ const Sidebar = () => {
             label: 'Khách hàng & KM',
             path: '/crm',
             children: [
-                { label: 'Danh sách khách hàng', path: '/crm' },
-                { label: 'Chương trình KM', path: '/crm/promotions' },
-                { label: 'Voucher/Coupon', path: '/crm/vouchers' },
-                { label: 'Tích điểm & Hạng', path: '/crm/loyalty' },
-                { label: 'Khiếu nại', path: '/crm/complaints' },
-            ]
-        },
-        {
-            icon: Truck,
-            label: 'Nhà cung cấp',
-            path: '/suppliers',
-            children: [
-                { label: 'Danh sách nhà cung cấp', path: '/suppliers' },
-                { label: 'Hợp đồng & SLA', path: '/suppliers/contracts' },
-                { label: 'Đánh giá & Hiệu suất', path: '/suppliers/performance' },
+                { label: 'Danh sách khách hàng', path: '/crm/customer' },
+                { label: 'Khuyến Mãi', path: '/crm/event' },
+                { label: 'Kho quà tặng', path: '/crm/loyalty' },
+                { label: 'Khiếu nại', path: '/crm/complain' },
             ]
         },
         {
             icon: Clock,
             label: 'Nhân sự & Ca',
             path: '/hr',
-            allowedRoles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_CASHIER', 'ROLE_INVENTORY_STAFF', 'ROLE_SALES_STAFF'],
             children: [
                 { label: 'Danh sách nhân viên', path: '/hr' },
-                { label: 'Thời khóa biểu ca', path: '/hr/shifts' },
+                { label: 'Phân ca làm việc', path: '/hr/shifts' },
                 { label: 'Chấm công', path: '/hr/attendance' },
                 { label: 'Tính lương', path: '/hr/payroll' },
-            ]
-        },
-        {
-            icon: MessageSquare,
-            label: 'Ticket Center',
-            path: '/tickets',
-            children: [
-                { label: 'Danh sách ticket', path: '/tickets' },
-                { label: 'Tạo ticket', path: '/tickets/new' },
-                { label: 'Hàng đợi & SLA', path: '/tickets/queue' },
-            ]
-        },
-        {
-            icon: Bot,
-            label: 'AI Chatbot',
-            path: '/ai-chatbot',
-            children: [
-                { label: 'Trợ lý AI', path: '/ai-chatbot' },
-                { label: 'Kịch bản hội thoại', path: '/ai-chatbot/flows' },
-                { label: 'Nhật ký hội thoại', path: '/ai-chatbot/logs' },
             ]
         },
         {
@@ -124,8 +94,14 @@ const Sidebar = () => {
         },
     ];
 
-    const isAdmin = currentRole === 'ROLE_ADMIN';
-    const visibleNavItems = navItems.filter(item => canAccess(item.allowedRoles, currentRole));
+    // Debug: log user info
+    console.log('Sidebar - Current user:', user);
+    console.log('Sidebar - User role:', user?.role);
+    console.log('Sidebar - User full object:', JSON.stringify(user));
+
+    // Admin menu - always show for ROLE_ADMIN
+    const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
+    console.log('Sidebar - Is Admin:', isAdmin);
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
@@ -151,8 +127,8 @@ const Sidebar = () => {
                     <div className="mb-2">
                         <div
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === '/dashboard' || location.pathname.startsWith('/hr/users') || openMenus['admin']
-                                ? 'bg-indigo-50 text-indigo-700'
-                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'bg-indigo-50 text-indigo-700'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                 }`}
                             onClick={() => toggleMenu('admin')}
                         >
@@ -187,7 +163,7 @@ const Sidebar = () => {
                                         }`
                                     }
                                 >
-                                    Tài khoản hệ thống
+                                    Quản lý người dùng
                                 </NavLink>
                             </div>
                         )}
@@ -195,7 +171,7 @@ const Sidebar = () => {
                 )}
 
                 {/* Regular Menu Items */}
-                {visibleNavItems.map((item) => (
+                {navItems.map((item) => (
                     <div key={item.label}>
                         <div
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
@@ -245,17 +221,6 @@ const Sidebar = () => {
             </div>
         </aside>
     );
-};
-
-const normalizeRole = (role) => {
-    if (!role) return null;
-    return role.startsWith('ROLE_') ? role : `ROLE_${role}`;
-};
-
-const canAccess = (allowedRoles, userRole) => {
-    if (!allowedRoles || allowedRoles.length === 0) return true;
-    if (!userRole) return false;
-    return allowedRoles.includes(userRole);
 };
 
 export default Sidebar;

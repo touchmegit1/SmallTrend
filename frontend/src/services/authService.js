@@ -54,6 +54,7 @@ const validateToken = async () => {
 
 const authService = {
     login,
+    register,
     logout,
     getCurrentUser,
     getToken,

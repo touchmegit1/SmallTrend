@@ -184,57 +184,33 @@
   "categories": [
     {
       "id": 1,
-      "code": "FRESH",
       "name": "Thực phẩm tươi sống",
-      "description": "Rau củ quả, thịt cá, sữa",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "description": "Rau củ quả, thịt cá tươi",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 2,
-      "code": "DRINK",
       "name": "Đồ uống",
       "description": "Nước ngọt, bia, nước khoáng",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 3,
-      "code": "SNACK",
       "name": "Bánh kẹo",
-      "description": "Snack, kẹo, socola",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "description": "Bánh snack, kẹo, socola",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 4,
-      "code": "SPICE",
-      "name": "Gia vị",
-      "description": "Muối, đường, hạt nêm",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "name": "Gia vị, hạt nêm",
+      "description": "Muối, đường, gia vị nấu ăn",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 5,
-      "code": "HOUSE",
       "name": "Đồ dùng gia đình",
       "description": "Bột giặt, nước rửa chén",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": 6,
-      "code": "NOODLE",
-      "name": "Mì gói",
-      "description": "Mì ăn liền các loại",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "created_at": "2024-01-01T00:00:00Z"
     }
   ],
   "brands": [
@@ -242,271 +218,185 @@
       "id": 1,
       "name": "Vinamilk",
       "description": "Sữa và sản phẩm từ sữa",
-      "country": "Việt Nam",
-      "logo_url": "",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "logo_url": "https://example.com/vinamilk-logo.png",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 2,
       "name": "Coca-Cola",
       "description": "Nước giải khát",
-      "country": "Hoa Kỳ",
-      "logo_url": "",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "logo_url": "https://example.com/cocacola-logo.png",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 3,
       "name": "Oishi",
       "description": "Bánh snack",
-      "country": "Philippine",
-      "logo_url": "",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "logo_url": "https://example.com/oishi-logo.png",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 4,
       "name": "Ajinomoto",
-      "description": "Gia vị",
-      "country": "Nhật Bản",
-      "logo_url": "",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "description": "Gia vị và hạt nêm",
+      "logo_url": "https://example.com/ajinomoto-logo.png",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 5,
       "name": "OMO",
-      "description": "Bột giặt",
-      "country": "Anh",
-      "logo_url": "",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": 6,
-      "name": "Hảo Hảo",
-      "description": "Mì ăn liền",
-      "country": "Việt Nam",
-      "logo_url": "",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
+      "description": "Bột giặt và sản phẩm giặt tẩy",
+      "logo_url": "https://example.com/omo-logo.png",
+      "created_at": "2024-01-01T00:00:00Z"
     }
   ],
   "products": [
     {
       "id": 1,
-      "name": "Sữa tươi Vinamilk",
-      "description": "Sữa tiệt trùng",
-      "category_id": 1,
-      "brand_id": 1,
-      "image_url": "",
-      "unit": "Chai",
+      "sku": "MILK-VNM-180ML",
+      "name": "Sữa tươi Vinamilk hộp 180ml",
+      "description": "Sữa tươi tiệt trùng không đường",
+      "purchase_price": 6000,
+      "retail_price": 8000,
+      "wholesale_price": 7000,
+      "stock_quantity": 200,
+      "min_stock": 150,
+      "unit": "Hộp",
+      "image_url": "https://example.com/milk-vinamilk.jpg",
       "is_active": true,
-      "variant_count": 2,
-      "total_stock": 250,
+      "category_id": 2,
+      "brand_id": 1,
       "created_at": "2024-01-10T00:00:00Z",
       "updated_at": "2024-01-10T00:00:00Z"
     },
     {
       "id": 2,
-      "name": "Coca-Cola",
-      "description": "Nước ngọt có ga",
+      "sku": "COKE-CAN-330ML",
+      "name": "Coca-Cola lon 330ml",
+      "description": "Nước ngọt có ga vị cola",
+      "purchase_price": 8000,
+      "retail_price": 10000,
+      "wholesale_price": 9000,
+      "stock_quantity": 30,
+      "min_stock": 100,
+      "unit": "Lon",
+      "image_url": "https://example.com/cocacola.jpg",
+      "is_active": true,
       "category_id": 2,
       "brand_id": 2,
-      "image_url": "",
-      "unit": "Chai",
-      "is_active": true,
-      "variant_count": 2,
-      "total_stock": 420,
       "created_at": "2024-01-11T00:00:00Z",
       "updated_at": "2024-01-11T00:00:00Z"
     },
     {
       "id": 3,
-      "name": "Snack Oishi",
-      "description": "Snack giòn tan",
+      "sku": "SNACK-OISHI-80G",
+      "name": "Snack Oishi vị phô mai 80g",
+      "description": "Bánh snack vị phô mai giòn tan",
+      "purchase_price": 10000,
+      "retail_price": 15000,
+      "wholesale_price": 12000,
+      "stock_quantity": 0,
+      "min_stock": 80,
+      "unit": "Gói",
+      "image_url": "https://example.com/oishi-snack.jpg",
+      "is_active": true,
       "category_id": 3,
       "brand_id": 3,
-      "image_url": "",
-      "unit": "Gói",
-      "is_active": true,
-      "variant_count": 2,
-      "total_stock": 150,
       "created_at": "2024-01-12T00:00:00Z",
       "updated_at": "2024-01-12T00:00:00Z"
     },
     {
       "id": 4,
-      "name": "Hạt nêm Aji-ngon",
-      "description": "Gia vị nấu ăn",
+      "sku": "MSG-AJI-400G",
+      "name": "Hạt nêm Aji-ngon gói 400g",
+      "description": "Hạt nêm thịt thăn, xương ống",
+      "purchase_price": 20000,
+      "retail_price": 28000,
+      "wholesale_price": 24000,
+      "stock_quantity": 100,
+      "min_stock": 40,
+      "unit": "Gói",
+      "image_url": "https://example.com/aji-ngon.jpg",
+      "is_active": true,
       "category_id": 4,
       "brand_id": 4,
-      "image_url": "",
-      "unit": "Túi",
-      "is_active": true,
-      "variant_count": 1,
-      "total_stock": 100,
       "created_at": "2024-01-13T00:00:00Z",
       "updated_at": "2024-01-13T00:00:00Z"
     },
     {
       "id": 5,
-      "name": "Bột giặt OMO",
-      "description": "Giặt sạch vượt trội",
+      "sku": "DETERGENT-OMO-3.5KG",
+      "name": "Bột giặt OMO Matic 3.5kg",
+      "description": "Bột giặt cho máy giặt cửa trên",
+      "purchase_price": 110000,
+      "retail_price": 150000,
+      "wholesale_price": 130000,
+      "stock_quantity": 8,
+      "min_stock": 20,
+      "unit": "Túi",
+      "image_url": "https://example.com/omo-detergent.jpg",
+      "is_active": true,
       "category_id": 5,
       "brand_id": 5,
-      "image_url": "",
-      "unit": "Hộp",
-      "is_active": true,
-      "variant_count": 1,
-      "total_stock": 50,
       "created_at": "2024-01-14T00:00:00Z",
       "updated_at": "2024-01-14T00:00:00Z"
-    },
-    {
-      "id": 6,
-      "name": "Mì Hảo Hảo",
-      "description": "Mì tôm chua cay",
-      "category_id": 6,
-      "brand_id": 6,
-      "image_url": "",
-      "unit": "Thùng",
-      "is_active": true,
-      "variant_count": 1,
-      "total_stock": 500,
-      "created_at": "2024-01-15T00:00:00Z",
-      "updated_at": "2024-01-15T00:00:00Z"
     }
   ],
-  "product_variants": [
+  "products_variants": [
     {
       "id": 1,
       "product_id": 1,
-      "sku": "MILK-180ML",
-      "barcode": "893456700001",
-      "attributes": {
-        "size": "180ml",
-        "flavor": "Nguyên bản"
-      },
-      "cost_price": 6000,
+      "sku": "MILK-VNM-180ML-V1",
+      "barcode": "8934567111123",
       "sell_price": 8000,
-      "stock_quantity": 200,
-      "is_active": true
+      "cost_price": 6000,
+      "is_active": true,
+      "size": "180ml",
+      "color": null
     },
     {
       "id": 2,
       "product_id": 1,
-      "sku": "MILK-1L",
-      "barcode": "893456700002",
-      "attributes": {
-        "size": "1L",
-        "flavor": "Nguyên bản"
-      },
-      "cost_price": 28000,
+      "sku": "MILK-VNM-1L-V2",
+      "barcode": "8934567111124",
       "sell_price": 35000,
-      "stock_quantity": 50,
-      "is_active": true
+      "cost_price": 28000,
+      "is_active": true,
+      "size": "1L",
+      "color": null
     },
     {
       "id": 3,
       "product_id": 2,
-      "sku": "COKE-330ML",
-      "barcode": "893456700003",
-      "attributes": {
-        "size": "330ml"
-      },
-      "cost_price": 8000,
+      "sku": "COKE-CAN-330ML-V1",
+      "barcode": "8934567222225",
       "sell_price": 10000,
-      "stock_quantity": 300,
-      "is_active": true
+      "cost_price": 8000,
+      "is_active": true,
+      "size": "330ml",
+      "color": null
     },
     {
       "id": 4,
-      "product_id": 2,
-      "sku": "COKE-1.5L",
-      "barcode": "893456700004",
-      "attributes": {
-        "size": "1.5L"
-      },
-      "cost_price": 15000,
-      "sell_price": 20000,
-      "stock_quantity": 120,
-      "is_active": true
+      "product_id": 3,
+      "sku": "SNACK-OISHI-80G-V1",
+      "barcode": "8934567333326",
+      "sell_price": 15000,
+      "cost_price": 10000,
+      "is_active": true,
+      "size": "80g",
+      "color": null
     },
     {
       "id": 5,
-      "product_id": 3,
-      "sku": "OISHI-80G",
-      "barcode": "893456700005",
-      "attributes": {
-        "size": "80g",
-        "flavor": "Phô mai"
-      },
-      "cost_price": 10000,
-      "sell_price": 15000,
-      "stock_quantity": 150,
-      "is_active": true
-    },
-    {
-      "id": 6,
-      "product_id": 3,
-      "sku": "OISHI-120G",
-      "barcode": "893456700006",
-      "attributes": {
-        "size": "120g",
-        "flavor": "BBQ"
-      },
-      "cost_price": 15000,
-      "sell_price": 20000,
-      "stock_quantity": 0,
-      "is_active": true
-    },
-    {
-      "id": 7,
       "product_id": 4,
-      "sku": "AJI-400G",
-      "barcode": "893456700007",
-      "attributes": {
-        "size": "400g"
-      },
-      "cost_price": 20000,
+      "sku": "MSG-AJI-400G-V1",
+      "barcode": "8934567444427",
       "sell_price": 28000,
-      "stock_quantity": 100,
-      "is_active": true
-    },
-    {
-      "id": 8,
-      "product_id": 5,
-      "sku": "OMO-3.5KG",
-      "barcode": "893456700008",
-      "attributes": {
-        "size": "3.5kg"
-      },
-      "cost_price": 110000,
-      "sell_price": 150000,
-      "stock_quantity": 50,
-      "is_active": true
-    },
-    {
-      "id": 9,
-      "product_id": 6,
-      "sku": "HAOHAO-75G",
-      "barcode": "893456700009",
-      "attributes": {
-        "size": "75g",
-        "flavor": "Chua Cay"
-      },
-      "cost_price": 3000,
-      "sell_price": 5000,
-      "stock_quantity": 500,
-      "is_active": true
+      "cost_price": 20000,
+      "is_active": true,
+      "size": "400g",
+      "color": null
     }
   ],
   "price_history": [
@@ -552,102 +442,192 @@
     }
   ],
   "suppliers": [
-  {
-    "id": 1,
-    "name": "Công ty CP Vinamilk",
-    "contact_person": "Nguyễn Văn Sữa",
-    "phone": "0901234567",
-    "email": "vinamilk@supplier.vn",
-    "address": "Số 10 Tân Trào, P.Tân Phú, Q.7, TP.HCM",
-    "status": "active",
-    "created_at": "2024-01-01T00:00:00Z"
-  },
-  {
-    "id": 2,
-    "name": "Công ty Coca-Cola Việt Nam",
-    "contact_person": "Trần Thị Ngọt",
-    "phone": "0912345678",
-    "email": "cocacola@supplier.vn",
-    "address": "977 Đại lộ Võ Văn Kiệt, Q.5, TP.HCM",
-    "status": "active",
-    "created_at": "2024-01-01T00:00:00Z"
-  },
-  {
-    "id": 3,
-    "name": "Công ty Liwayway (Oishi)",
-    "contact_person": "Lê Văn Giòn",
-    "phone": "0923456789",
-    "email": "oishi@supplier.vn",
-    "address": "Lô D-12C, KCN Tân Bình, Q.Tân Phú, TP.HCM",
-    "status": "active",
-    "created_at": "2024-01-01T00:00:00Z"
-  },
-  {
-    "id": 4,
-    "name": "Công ty TNHH Ajinomoto VN",
-    "contact_person": "Phạm Thị Ngon",
-    "phone": "0934567890",
-    "email": "ajinomoto@supplier.vn",
-    "address": "Lô II-1, KCN Biên Hòa, Đồng Nai",
-    "status": "active",
-    "created_at": "2024-01-01T00:00:00Z"
-  },
-  {
-    "id": 5,
-    "name": "Công ty Unilever Việt Nam (OMO)",
-    "contact_person": "Hoàng Văn Sạch",
-    "phone": "0945678901",
-    "email": "unilever@supplier.vn",
-    "address": "156 Nguyễn Lương Bằng, Q.7, TP.HCM",
-    "status": "active",
-    "created_at": "2024-01-01T00:00:00Z"
-  }
-],
-  "purchase_orders": [
     {
       "id": 1,
-      "po_number": "PO-2024-001",
-      "supplier_id": 1,
-      "creator_id": 4,
-      "total_amount": 6000000,
-      "status": "COMPLETED",
-      "created_at": "2024-01-05T09:00:00Z"
+      "name": "Công ty CP Vinamilk",
+      "contact_person": "Nguyễn Văn Sữa",
+      "phone": "0901234567",
+      "email": "vinamilk@supplier.vn",
+      "address": "Số 10 Tân Trào, P.Tân Phú, Q.7, TP.HCM",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 2,
-      "po_number": "PO-2024-002",
-      "supplier_id": 2,
-      "creator_id": 4,
-      "total_amount": 4800000,
-      "status": "COMPLETED",
-      "created_at": "2024-01-08T09:00:00Z"
+      "name": "Công ty Coca-Cola Việt Nam",
+      "contact_person": "Trần Thị Ngọt",
+      "phone": "0912345678",
+      "email": "cocacola@supplier.vn",
+      "address": "977 Đại lộ Võ Văn Kiệt, Q.5, TP.HCM",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 3,
-      "po_number": "PO-2024-003",
-      "supplier_id": 3,
-      "creator_id": 4,
-      "total_amount": 2000000,
-      "status": "PENDING",
-      "created_at": "2024-01-10T09:00:00Z"
+      "name": "Công ty Liwayway (Oishi)",
+      "contact_person": "Lê Văn Giòn",
+      "phone": "0923456789",
+      "email": "oishi@supplier.vn",
+      "address": "Lô D-12C, KCN Tân Bình, Q.Tân Phú, TP.HCM",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 4,
-      "po_number": "PO-2024-004",
-      "supplier_id": 4,
-      "creator_id": 4,
-      "total_amount": 3200000,
-      "status": "APPROVED",
-      "created_at": "2024-01-12T09:00:00Z"
+      "name": "Công ty TNHH Ajinomoto VN",
+      "contact_person": "Phạm Thị Ngon",
+      "phone": "0934567890",
+      "email": "ajinomoto@supplier.vn",
+      "address": "Lô II-1, KCN Biên Hòa, Đồng Nai",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 5,
-      "po_number": "PO-2024-005",
-      "supplier_id": 5,
+      "name": "Công ty Unilever Việt Nam (OMO)",
+      "contact_person": "Hoàng Văn Sạch",
+      "phone": "0945678901",
+      "email": "unilever@supplier.vn",
+      "address": "156 Nguyễn Lương Bằng, Q.7, TP.HCM",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "purchase_orders": [
+    {
+      "id": 1,
+      "po_number": "NH001",
+      "supplier_id": 1,
+      "supplier_name": "Công ty CP Vinamilk",
+      "location_id": 2,
       "creator_id": 4,
-      "total_amount": 8800000,
-      "status": "COMPLETED",
-      "created_at": "2024-01-15T09:00:00Z"
+      "status": "CONFIRMED",
+      "subtotal": 6000000,
+      "discount": 0,
+      "tax_percent": 10,
+      "tax_amount": 600000,
+      "shipping_fee": 0,
+      "total_amount": 6600000,
+      "paid_amount": 6600000,
+      "remaining_amount": 0,
+      "notes": "",
+      "created_at": "2024-01-05T09:00:00Z",
+      "confirmed_at": "2024-01-05T09:30:00Z"
+    },
+    {
+      "id": 2,
+      "po_number": "NH002",
+      "supplier_id": 2,
+      "supplier_name": "Công ty Coca-Cola Việt Nam",
+      "location_id": 2,
+      "creator_id": 4,
+      "status": "CONFIRMED",
+      "subtotal": 4800000,
+      "discount": 0,
+      "tax_percent": 10,
+      "tax_amount": 480000,
+      "shipping_fee": 50000,
+      "total_amount": 5330000,
+      "paid_amount": 5330000,
+      "remaining_amount": 0,
+      "notes": "",
+      "created_at": "2024-01-08T09:00:00Z",
+      "confirmed_at": "2024-01-08T10:00:00Z"
+    },
+    {
+      "id": 3,
+      "po_number": "NH003",
+      "supplier_id": 3,
+      "supplier_name": "Công ty Liwayway (Oishi)",
+      "location_id": 6,
+      "creator_id": 4,
+      "status": "DRAFT",
+      "subtotal": 2000000,
+      "discount": 100000,
+      "tax_percent": 10,
+      "tax_amount": 190000,
+      "shipping_fee": 30000,
+      "total_amount": 2120000,
+      "paid_amount": 0,
+      "remaining_amount": 2120000,
+      "notes": "Chờ xác nhận từ nhà cung cấp",
+      "created_at": "2024-01-10T09:00:00Z",
+      "confirmed_at": null
+    },
+    {
+      "id": 4,
+      "po_number": "NH004",
+      "supplier_id": 4,
+      "supplier_name": "Công ty TNHH Ajinomoto VN",
+      "location_id": 8,
+      "creator_id": 4,
+      "status": "CONFIRMED",
+      "subtotal": 3200000,
+      "discount": 0,
+      "tax_percent": 10,
+      "tax_amount": 320000,
+      "shipping_fee": 0,
+      "total_amount": 3520000,
+      "paid_amount": 2000000,
+      "remaining_amount": 1520000,
+      "notes": "Thanh toán một phần, còn nợ",
+      "created_at": "2024-01-12T09:00:00Z",
+      "confirmed_at": "2024-01-12T10:00:00Z"
+    },
+    {
+      "id": 5,
+      "po_number": "NH005",
+      "supplier_id": 5,
+      "supplier_name": "Công ty Unilever Việt Nam (OMO)",
+      "location_id": 2,
+      "creator_id": 4,
+      "status": "CANCELLED",
+      "subtotal": 8800000,
+      "discount": 0,
+      "tax_percent": 10,
+      "tax_amount": 880000,
+      "shipping_fee": 0,
+      "total_amount": 9680000,
+      "paid_amount": 0,
+      "remaining_amount": 9680000,
+      "notes": "Đã hủy do thay đổi nhà cung cấp",
+      "created_at": "2024-01-15T09:00:00Z",
+      "confirmed_at": null
+    },
+    {
+      "id": "96f8",
+      "po_number": "NH006",
+      "supplier_id": 1,
+      "supplier_name": "Công ty CP Vinamilk",
+      "location_id": 1,
+      "status": "CONFIRMED",
+      "discount": 0,
+      "tax_percent": 0,
+      "shipping_fee": 0,
+      "paid_amount": 0,
+      "notes": "",
+      "created_by": 1,
+      "created_at": "2026-02-24T07:25:56.006Z",
+      "confirmed_at": "2026-02-24T07:25:56.006Z",
+      "subtotal": 6000,
+      "tax_amount": 0,
+      "total_amount": 6000,
+      "remaining_amount": 6000
+    },
+    {
+      "id": "de43",
+      "po_number": "NH007",
+      "supplier_id": 1,
+      "supplier_name": "Công ty CP Vinamilk",
+      "location_id": 1,
+      "status": "DRAFT",
+      "discount": 0,
+      "tax_percent": 0,
+      "shipping_fee": 0,
+      "paid_amount": 0,
+      "notes": "",
+      "created_by": 1,
+      "created_at": "2026-02-24T07:26:05.688Z",
+      "confirmed_at": null,
+      "subtotal": 6000,
+      "tax_amount": 0,
+      "total_amount": 6000,
+      "remaining_amount": 6000
     }
   ],
   "purchase_order_items": [
@@ -656,40 +636,63 @@
       "purchase_order_id": 1,
       "product_id": 1,
       "quantity": 1000,
-      "unit_cost": 6000,
-      "total_cost": 6000000
+      "unit_price": 6000,
+      "discount": 0,
+      "total": 6000000
     },
     {
       "id": 2,
       "purchase_order_id": 2,
       "product_id": 2,
       "quantity": 600,
-      "unit_cost": 8000,
-      "total_cost": 4800000
+      "unit_price": 8000,
+      "discount": 0,
+      "total": 4800000
     },
     {
       "id": 3,
       "purchase_order_id": 3,
       "product_id": 3,
       "quantity": 200,
-      "unit_cost": 10000,
-      "total_cost": 2000000
+      "unit_price": 10000,
+      "discount": 0,
+      "total": 2000000
     },
     {
       "id": 4,
       "purchase_order_id": 4,
       "product_id": 4,
       "quantity": 160,
-      "unit_cost": 20000,
-      "total_cost": 3200000
+      "unit_price": 20000,
+      "discount": 0,
+      "total": 3200000
     },
     {
       "id": 5,
       "purchase_order_id": 5,
       "product_id": 5,
       "quantity": 80,
-      "unit_cost": 110000,
-      "total_cost": 8800000
+      "unit_price": 110000,
+      "discount": 0,
+      "total": 8800000
+    },
+    {
+      "id": "2218",
+      "purchase_order_id": "96f8",
+      "product_id": 1,
+      "quantity": 1,
+      "unit_price": 6000,
+      "discount": 0,
+      "total": 6000
+    },
+    {
+      "id": "9549",
+      "purchase_order_id": "de43",
+      "product_id": 1,
+      "quantity": 1,
+      "unit_price": 6000,
+      "discount": 0,
+      "total": 6000
     }
   ],
   "product_batches": [
@@ -697,8 +700,8 @@
       "id": 1,
       "batch_code": "BATCH-MILK-2024-01",
       "product_id": 1,
-      "quantity": 1000,
-      "expiry_date": "2024-02-15",
+      "quantity": 200,
+      "expiry_date": "2026-02-20",
       "received_date": "2024-01-06",
       "created_at": "2024-01-06T10:00:00Z"
     },
@@ -706,8 +709,8 @@
       "id": 2,
       "batch_code": "BATCH-COKE-2024-01",
       "product_id": 2,
-      "quantity": 600,
-      "expiry_date": "2025-06-30",
+      "quantity": 30,
+      "expiry_date": "2026-03-01",
       "received_date": "2024-01-09",
       "created_at": "2024-01-09T10:00:00Z"
     },
@@ -715,8 +718,8 @@
       "id": 3,
       "batch_code": "BATCH-OISHI-2024-01",
       "product_id": 3,
-      "quantity": 200,
-      "expiry_date": "2024-07-01",
+      "quantity": 0,
+      "expiry_date": "2026-03-15",
       "received_date": "2024-01-11",
       "created_at": "2024-01-11T10:00:00Z"
     },
@@ -724,8 +727,8 @@
       "id": 4,
       "batch_code": "BATCH-AJI-2024-01",
       "product_id": 4,
-      "quantity": 160,
-      "expiry_date": "2025-12-31",
+      "quantity": 60,
+      "expiry_date": "2026-04-10",
       "received_date": "2024-01-13",
       "created_at": "2024-01-13T10:00:00Z"
     },
@@ -733,37 +736,109 @@
       "id": 5,
       "batch_code": "BATCH-OMO-2024-01",
       "product_id": 5,
-      "quantity": 80,
+      "quantity": 8,
       "expiry_date": null,
       "received_date": "2024-01-15",
       "created_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 6,
+      "batch_code": "BATCH-AJI-2024-02",
+      "product_id": 4,
+      "quantity": 40,
+      "expiry_date": "2027-06-30",
+      "received_date": "2024-02-01",
+      "created_at": "2024-02-01T10:00:00Z"
     }
   ],
   "locations": [
     {
       "id": 1,
-      "name": "Kho chính",
-      "type": "WAREHOUSE"
+      "location_code": "KT-CHINH-01",
+      "location_name": "Khu trưng bày chính",
+      "location_type": "DISPLAY_AREA",
+      "address": "Khu vực trung tâm cửa hàng",
+      "capacity": 30,
+      "status": "ACTIVE",
+      "description": "Khu vực trưng bày sản phẩm nổi bật và khuyến mãi",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 2,
-      "name": "Kho lạnh",
-      "type": "WAREHOUSE"
+      "location_code": "KLT-SAU-01",
+      "location_name": "Kho lưu trữ phía sau",
+      "location_type": "STORAGE",
+      "address": "Phía sau quầy thu ngân",
+      "capacity": 20,
+      "status": "ACTIVE",
+      "description": "Kho lưu trữ hàng dự trữ và hàng tồn kho",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 3,
-      "name": "Quầy thu ngân 1",
-      "type": "RETAIL"
+      "location_code": "TL-001",
+      "location_name": "Tủ lạnh số 1",
+      "location_type": "COLD_STORAGE",
+      "address": "Góc phải cửa hàng",
+      "capacity": 8,
+      "status": "ACTIVE",
+      "description": "Tủ lạnh trưng bày đồ uống và thực phẩm tươi sống",
+      "created_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": 4,
-      "name": "Quầy thu ngân 2",
-      "type": "RETAIL"
+      "location_code": "TL-002",
+      "location_name": "Tủ đông kem",
+      "location_type": "COLD_STORAGE",
+      "address": "Gần khu thanh toán",
+      "capacity": 5,
+      "status": "ACTIVE",
+      "description": "Tủ đông chuyên dụng cho kem và thực phẩm đông lạnh",
+      "created_at": "2024-01-05T00:00:00Z"
     },
     {
       "id": 5,
-      "name": "Khu vực trưng bày",
-      "type": "RETAIL"
+      "location_code": "QUAY-01",
+      "location_name": "Quầy thu ngân 1",
+      "location_type": "CASHIER",
+      "address": "Lối vào chính",
+      "capacity": 3,
+      "status": "ACTIVE",
+      "description": "Quầy thu ngân chính, phục vụ thanh toán nhanh",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 6,
+      "location_code": "KE-A01",
+      "location_name": "Kệ hàng A1 - Snack & Bánh kẹo",
+      "location_type": "SHELF",
+      "address": "Dãy kệ bên trái",
+      "capacity": 10,
+      "status": "ACTIVE",
+      "description": "Kệ trưng bày snack, bánh kẹo và đồ ăn vặt",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 7,
+      "location_code": "KE-B01",
+      "location_name": "Kệ hàng B1 - Đồ uống",
+      "location_type": "SHELF",
+      "address": "Dãy kệ giữa",
+      "capacity": 12,
+      "status": "ACTIVE",
+      "description": "Kệ trưng bày nước ngọt, nước khoáng, bia",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 8,
+      "location_code": "KE-C01",
+      "location_name": "Kệ hàng C1 - Gia vị",
+      "location_type": "SHELF",
+      "address": "Dãy kệ bên phải",
+      "capacity": 8,
+      "status": "ACTIVE",
+      "description": "Kệ trưng bày gia vị, hạt nêm, đồ khô",
+      "created_at": "2024-01-01T00:00:00Z"
     }
   ],
   "shelves_bins": [
@@ -931,7 +1006,7 @@
       "description": "Giảm giá 10% toàn bộ sản phẩm",
       "start_date": "2024-02-01",
       "end_date": "2024-02-15",
-      "discount_percent": 10.0,
+      "discount_percent": 10,
       "discount_amount": null,
       "is_active": true,
       "created_at": "2024-01-25T00:00:00Z"
@@ -953,7 +1028,7 @@
       "description": "Giảm 20% bánh snack các loại",
       "start_date": "2024-02-10",
       "end_date": "2024-02-11",
-      "discount_percent": 20.0,
+      "discount_percent": 20,
       "discount_amount": null,
       "is_active": false,
       "created_at": "2024-01-27T00:00:00Z"
@@ -975,7 +1050,7 @@
       "description": "Giảm 15% cho bột giặt các loại",
       "start_date": "2024-02-20",
       "end_date": "2024-02-28",
-      "discount_percent": 15.0,
+      "discount_percent": 15,
       "discount_amount": null,
       "is_active": false,
       "created_at": "2024-01-29T00:00:00Z"
@@ -986,7 +1061,7 @@
       "id": 1,
       "promotion_id": 1,
       "min_order_value": 50000,
-      "discount_percent": 10.0
+      "discount_percent": 10
     },
     {
       "id": 2,
@@ -998,19 +1073,19 @@
       "id": 3,
       "promotion_id": 3,
       "min_order_value": 30000,
-      "discount_percent": 20.0
+      "discount_percent": 20
     },
     {
       "id": 4,
       "promotion_id": 5,
       "min_order_value": 100000,
-      "discount_percent": 15.0
+      "discount_percent": 15
     },
     {
       "id": 5,
       "promotion_id": 1,
       "min_order_value": 100000,
-      "discount_percent": 15.0
+      "discount_percent": 15
     }
   ],
   "sales_orders": [
@@ -1358,31 +1433,31 @@
     {
       "id": 1,
       "name": "VAT 10%",
-      "rate": 10.0,
+      "rate": 10,
       "is_active": true
     },
     {
       "id": 2,
       "name": "VAT 8%",
-      "rate": 8.0,
+      "rate": 8,
       "is_active": true
     },
     {
       "id": 3,
       "name": "VAT 5%",
-      "rate": 5.0,
+      "rate": 5,
       "is_active": true
     },
     {
       "id": 4,
       "name": "Không VAT",
-      "rate": 0.0,
+      "rate": 0,
       "is_active": true
     },
     {
       "id": 5,
       "name": "VAT 15% (cũ)",
-      "rate": 15.0,
+      "rate": 15,
       "is_active": false
     }
   ],
@@ -1469,5 +1544,150 @@
       "performed_by": "admin",
       "performed_at": "2024-01-25T09:00:00Z"
     }
-  ]
+  ],
+  "inventory_counts": [
+    {
+      "id": 1,
+      "code": "IC-2024-0001",
+      "location_id": 2,
+      "status": "CONFIRMED",
+      "total_shortage_value": 100000,
+      "total_overage_value": 0,
+      "total_difference_value": -100000,
+      "created_by": 4,
+      "confirmed_by": 2,
+      "created_at": "2024-01-20T08:00:00Z",
+      "confirmed_at": "2024-01-20T12:00:00Z",
+      "notes": "Kiểm kho định kỳ tháng 1/2024"
+    },
+    {
+      "id": "8e2d",
+      "code": "IC-2026-0001",
+      "location_id": 1,
+      "status": "CONFIRMED",
+      "notes": "",
+      "created_by": 1,
+      "confirmed_by": 1,
+      "created_at": "2026-02-24T07:38:39.049Z",
+      "confirmed_at": "2026-02-24T07:39:06.623Z",
+      "total_shortage_value": 0,
+      "total_overage_value": 0,
+      "total_difference_value": 0
+    }
+  ],
+  "inventory_count_items": [
+    {
+      "id": 1,
+      "inventory_count_id": 1,
+      "product_id": 1,
+      "system_quantity": 200,
+      "actual_quantity": 200,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": 2,
+      "inventory_count_id": 1,
+      "product_id": 2,
+      "system_quantity": 30,
+      "actual_quantity": 30,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": 3,
+      "inventory_count_id": 1,
+      "product_id": 3,
+      "system_quantity": 0,
+      "actual_quantity": 0,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": 4,
+      "inventory_count_id": 1,
+      "product_id": 4,
+      "system_quantity": 100,
+      "actual_quantity": 95,
+      "difference_quantity": -5,
+      "difference_value": -100000,
+      "reason": "SHRINKAGE"
+    },
+    {
+      "id": 5,
+      "inventory_count_id": 1,
+      "product_id": 5,
+      "system_quantity": 8,
+      "actual_quantity": 8,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "a1b9",
+      "inventory_count_id": "8e2d",
+      "product_id": 1,
+      "system_quantity": 200,
+      "actual_quantity": 200,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "38ae",
+      "inventory_count_id": "8e2d",
+      "product_id": 2,
+      "system_quantity": 30,
+      "actual_quantity": 30,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "1b73",
+      "inventory_count_id": "8e2d",
+      "product_id": 3,
+      "system_quantity": 0,
+      "actual_quantity": 0,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "b5b4",
+      "inventory_count_id": "8e2d",
+      "product_id": 4,
+      "system_quantity": 100,
+      "actual_quantity": 100,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    },
+    {
+      "id": "4972",
+      "inventory_count_id": "8e2d",
+      "product_id": 5,
+      "system_quantity": 8,
+      "actual_quantity": 8,
+      "difference_quantity": 0,
+      "difference_value": 0,
+      "reason": ""
+    }
+  ],
+  "inventory_adjustments": [
+    {
+      "id": 1,
+      "reference_id": 1,
+      "reference_type": "INVENTORY_COUNT",
+      "product_id": 4,
+      "quantity_change": -5,
+      "reason": "SHRINKAGE",
+      "created_at": "2024-01-20T12:00:00Z"
+    }
+  ],
+  "disposal_vouchers": [],
+  "disposal_voucher_items": []
 }

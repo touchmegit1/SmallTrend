@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class AuthResponse {
 
     private String token;
+    @lombok.Builder.Default
     private String type = "Bearer";
     private Integer userId;
     private String username;
