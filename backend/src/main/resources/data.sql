@@ -11,6 +11,9 @@
 -- FULL RESET DATA (seed lại từ đầu)
 SET FOREIGN_KEY_CHECKS = 0;
 
+TRUNCATE TABLE sale_order_histories;
+TRUNCATE TABLE sale_order_items;
+TRUNCATE TABLE sale_orders;
 TRUNCATE TABLE shift_handovers;
 TRUNCATE TABLE shift_swap_requests;
 TRUNCATE TABLE payroll_calculations;
@@ -320,6 +323,64 @@ insert ignore into product_combo_items (
 INSERT IGNORE INTO cash_registers (register_code, register_name, store_name, location, register_type, status, device_id, current_cash, opening_balance, current_operator_id, session_start_time, total_transactions_today, created_at, updated_at) VALUES 
 ('POS-001', 'Quầy 1', 'SmallTrend Store', 'Front Counter', 'MAIN', 'ACTIVE', 'DEV-POS-001', 5000000.00, 2000000.00, 3, NOW(), 0, NOW(), NOW()),
 ('POS-002', 'Quầy 2', 'SmallTrend Store', 'Express Counter', 'EXPRESS', 'ACTIVE', 'DEV-POS-002', 3000000.00, 1000000.00, NULL, NULL, 0, NOW(), NOW());
+
+-- 18. SALE ORDERS (Đơn hàng bán)
+INSERT IGNORE INTO sale_orders (
+      order_code,
+      customer_id,
+      cashier_id,
+      cash_register_id,
+      order_date,
+      subtotal,
+      tax_amount,
+      discount_amount,
+      total_amount,
+      payment_method,
+      status,
+      notes,
+      created_at,
+      updated_at
+) VALUES
+('SO-20260224-001', 2, 3, 1, '2026-02-24 09:30:00', 49000.00, 4900.00, 0.00, 53900.00, 'CASH', 'COMPLETED', 'Đơn mua nhanh buổi sáng', '2026-02-24 09:30:00', '2026-02-24 09:31:00'),
+('SO-20260224-002', 1, 3, 1, '2026-02-24 19:20:00', 93000.00, 9300.00, 5000.00, 97300.00, 'CARD', 'COMPLETED', 'Khách thành viên đổi điểm', '2026-02-24 19:20:00', '2026-02-24 19:23:00'),
+('SO-20260225-001', 3, 3, 2, '2026-02-25 20:10:00', 32000.00, 3200.00, 0.00, 35200.00, 'MOMO', 'REFUNDED', 'Hoàn tiền 1 phần do sản phẩm lỗi', '2026-02-25 20:10:00', '2026-02-25 21:00:00');
+
+-- 19. SALE ORDER ITEMS (Chi tiết đơn bán)
+INSERT IGNORE INTO sale_order_items (
+      sale_order_id,
+      product_variant_id,
+      product_name,
+      sku,
+      quantity,
+      unit_price,
+      line_discount_amount,
+      line_tax_amount,
+      line_total_amount,
+      notes
+) VALUES
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 4, 'Coca Cola 330ml', 'COCA-330ML', 2, 12000.00, 0.00, 2400.00, 26400.00, NULL),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 5, 'Oishi Snack', 'OISHI-50G', 3, 8000.00, 0.00, 2400.00, 26400.00, NULL),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 1, 'Fresh Milk 1L', 'VMILK-1L', 2, 25000.00, 2000.00, 4800.00, 52800.00, NULL),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 3, 'Nescafe 3in1', 'NESCAFE-200G', 1, 45000.00, 3000.00, 4500.00, 46500.00, NULL),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 2, 'Dove Soap 90g', 'DOVE-90G', 2, 15000.00, 0.00, 3000.00, 33000.00, '1 sản phẩm bị lỗi vỏ hộp');
+
+-- 20. SALE ORDER HISTORIES (Lịch sử đơn bán)
+INSERT IGNORE INTO sale_order_histories (
+      sale_order_id,
+      from_status,
+      to_status,
+      action_type,
+      changed_by_user_id,
+      change_notes,
+      changed_at
+) VALUES
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-001', '2026-02-24 09:30:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán tiền mặt thành công', '2026-02-24 09:31:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-001', '2026-02-24 19:20:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán thẻ thành công', '2026-02-24 19:23:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-002', '2026-02-25 20:10:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán ví điện tử thành công', '2026-02-25 20:15:00'),
+((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'COMPLETED', 'REFUNDED', 'REFUND_PARTIAL', 2, 'Khách trả lại sản phẩm lỗi', '2026-02-25 21:00:00');
 -- 18. TICKETS (Swap Shift, Handover, Refund)
 -- Ticket entity có @CreationTimestamp/@UpdateTimestamp nên JPA tự động set
 INSERT IGNORE INTO tickets (
@@ -359,50 +420,28 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 (3, '2026-02-24', '18:00:00', '23:02:00', 'PRESENT'),
 (3, '2026-02-27', NULL, NULL, 'ABSENT');
 
--- Insert Products
-INSERT INTO products
-(id, name, description, image_url, brand_id, category_id, tax_rate_id) VALUES
-(1, 'Fresh Milk 1L', 'Vinamilk Fresh Milk 1 Liter Pack', 'https://example.com/vinamilk1l.jpg', 1, 1, 2),
-(2, 'Maggi Instant Noodles', 'Nestle Maggi 2-Minute Noodles', 'https://example.com/maggi.jpg', 2, 1, 2),
-(3, 'Coca-Cola 330ml', 'Coca-Cola Classic Can 330ml', 'https://example.com/coke330.jpg', 3, 1, 1),
-(4, 'Dove Soap Bar', 'Unilever Dove Beauty Bar 90g', 'https://example.com/dove.jpg', 4, 2, 1),
-(5, 'Head & Shoulders Shampoo', 'P&G Head & Shoulders 400ml', 'https://example.com/hs400.jpg', 5, 2, 1);
-
--- Insert Product Variants
-INSERT INTO product_variants
-(id, product_id, sku, barcode, sell_price, is_active, image_url) VALUES
-(1, 1, 'VMILK-1L-001', '8901234567890', 25000.00, 1, 'https://example.com/vinamilk1l.jpg'),
-(2, 1, 'VMILK-1L-002', '8901234567891', 27000.00, 1, 'https://example.com/vinamilk1l-choc.jpg'),
-(3, 2, 'MAGGI-TOM-001', '8901234567892', 4500.00, 1, 'https://example.com/maggi-tom.jpg'),
-(4, 3, 'COKE-330-001', '8901234567893', 12000.00, 1, 'https://example.com/coke330.jpg'),
-(5, 4, 'DOVE-90G-001', '8901234567894', 15000.00, 1, 'https://example.com/dove90.jpg');
-
--- Insert Locations
-INSERT INTO locations
-(id, name, type) VALUES
-(1, 'Main Warehouse', 'WAREHOUSE'),
-(2, 'Showroom A1', 'SHOWROOM'),
-(3, 'Sales Area B', 'SALES_AREA'),
-(4, 'Secondary Warehouse C', 'SECONDARY_WAREHOUSE'),
-(5, 'Display Area D', 'DISPLAY_AREA');
-
--- Insert Shelf Bins
-INSERT INTO shelves_bins
-(id, location_id, bin_code) VALUES
-(1, 1, 'A-01-001'),
-(2, 1, 'A-01-002'),
-(3, 2, 'B-02-001'),
-(4, 3, 'C-03-001'),
-(5, 4, 'D-04-001');
-
--- Insert Product Batches
-INSERT INTO product_batches
-(id, variant_id, batch_number, cost_price, mfg_date, expiry_date) VALUES
-(1, 1, 'BATCH001', 20000.00, '2024-01-15', '2024-04-15'),
-(2, 2, 'BATCH002', 22000.00, '2024-01-20', '2024-04-20'),
-(3, 3, 'BATCH003', 3500.00, '2024-02-01', '2024-08-01'),
-(4, 4, 'BATCH004', 9500.00, '2024-02-10', '2025-02-10'),
-(5, 5, 'BATCH005', 12000.00, '2024-02-15', '2025-02-15');
+-- 21. SALARY CONFIGS (nhiều cấu hình theo thời điểm cho một nhân viên)
+INSERT IGNORE INTO salary_configs (
+      user_id,
+      salary_type,
+      base_salary,
+      hourly_rate,
+      overtime_rate_multiplier,
+      allowances,
+      bonus_percentage,
+      is_active,
+      effective_from,
+      effective_until,
+      notes,
+      created_at,
+      updated_at
+) VALUES
+(1, 'MONTHLY', 28000000.00, NULL, 1.50, 1200000.00, 4.00, FALSE, '2025-07-01 00:00:00', '2025-12-31 23:59:59', 'Admin package - old cycle (monthly)', NOW(), NOW()),
+(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL, 'Admin package - current (monthly)', NOW(), NOW()),
+(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, TRUE, '2026-01-01 00:00:00', NULL, 'Manager package (monthly)', NOW(), NOW()),
+(3, 'HOURLY', NULL, 70000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Cashier package (hourly)', NOW(), NOW()),
+(4, 'MONTHLY', 13000000.00, NULL, 1.50, 400000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Inventory package (monthly)', NOW(), NOW()),
+(5, 'HOURLY', NULL, 72000.00, 1.50, 450000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL, 'Sales package (hourly)', NOW(), NOW());
 
 -- Insert Inventory Stock
 INSERT INTO inventory_stock
