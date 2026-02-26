@@ -63,9 +63,7 @@ public class ProductVariantService {
         response.setBarcode(variant.getBarcode());
         response.setName(variant.getProduct().getName());
         response.setSellPrice(variant.getSellPrice());
-        response.setCostPrice(variant.getCostPrice());
-        response.setAttributes(variant.getAttributes());
-        response.setIsActive(variant.getIsActive());
+        response.setIsActive(variant.isActive());
         
         // Get stock quantity
         Integer stockQty = inventoryStockRepository.findByVariantId(variant.getId())

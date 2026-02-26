@@ -296,7 +296,7 @@ public class PurchaseOrderService {
                         .orElseThrow(() -> new RuntimeException("Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
                 item.setVariant(variant);
             } else if (itemReq.getProductId() != null) {
-                Product product = productRepository.findById(itemReq.getProductId().longValue())
+                Product product = productRepository.findById(Long.valueOf(itemReq.getProductId()))
                         .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại: " + itemReq.getProductId()));
                 List<ProductVariant> variants = product.getVariants();
                 if (variants != null && !variants.isEmpty()) {
@@ -386,7 +386,7 @@ public class PurchaseOrderService {
             return productVariantRepository.findById(itemReq.getVariantId()).orElse(null);
         }
         if (itemReq.getProductId() != null) {
-            Product product = productRepository.findById(itemReq.getProductId().longValue()).orElse(null);
+            Product product = productRepository.findById(Long.valueOf(itemReq.getProductId())).orElse(null);
             if (product != null && product.getVariants() != null && !product.getVariants().isEmpty()) {
                 return product.getVariants().get(0);
             }
