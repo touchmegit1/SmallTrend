@@ -38,7 +38,7 @@ public class LocationService {
         Location loc = Location.builder()
                 .name(request.getLocationName())
                 .locationCode(request.getLocationCode())
-                .type(request.getLocationType())
+                .warehouseType(request.getLocationType())
                 .address(request.getAddress())
                 .capacity(request.getCapacity() != null ? request.getCapacity() : 0)
                 .description(request.getDescription())
@@ -58,7 +58,7 @@ public class LocationService {
 
         if (request.getLocationName() != null) loc.setName(request.getLocationName());
         if (request.getLocationCode() != null) loc.setLocationCode(request.getLocationCode());
-        if (request.getLocationType() != null) loc.setType(request.getLocationType());
+        if (request.getLocationType() != null) loc.setWarehouseType(request.getLocationType());
         if (request.getAddress() != null) loc.setAddress(request.getAddress());
         if (request.getCapacity() != null) loc.setCapacity(request.getCapacity());
         if (request.getDescription() != null) loc.setDescription(request.getDescription());
@@ -82,7 +82,7 @@ public class LocationService {
                 .id(loc.getId())
                 .locationName(loc.getName())
                 .locationCode(loc.getLocationCode() != null ? loc.getLocationCode() : "")
-                .locationType(loc.getType())
+                .locationType(loc.getWarehouseType())
                 .address(loc.getAddress() != null ? loc.getAddress() : "")
                 .capacity(loc.getCapacity() != null ? loc.getCapacity() : 0)
                 .description(loc.getDescription() != null ? loc.getDescription() : "")

@@ -16,27 +16,44 @@ function getAuthHeaders() {
 
 // List all purchase orders
 export const getPurchaseOrders = async () => {
-  const response = await fetch(`${SPRING_API}/purchase-orders`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to fetch purchase orders");
-  const data = await response.json();
-  // Map backend fields to frontend field names for compatibility
-  return data.map((order) => ({
-    ...order,
-    po_number: order.poNumber,
-    supplier_id: order.supplierId,
-    supplier_name: order.supplierName,
-    location_id: order.locationId,
-    total_amount: order.totalAmount,
-    created_at: order.createdAt,
-    confirmed_at: order.confirmedAt,
-    tax_percent: order.taxPercent,
-    shipping_fee: order.shippingFee,
-    paid_amount: order.paidAmount,
-    remaining_amount: order.remainingAmount,
-    tax_amount: order.taxAmount,
-  }));
+  try {
+    const response = await fetch(`${SPRING_API}/purchase-orders`, {
+      headers: getAuthHeaders(),
+    });
+    
+    if (response.status === 401) {
+      throw new Error("Vui lòng đăng nhập lại");
+    }
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("API Error:", response.status, errorText);
+      throw new Error(`Lỗi ${response.status}: Không thể tải danh sách phiếu nhập`);
+    }
+    
+    const data = await response.json();
+    console.log("✅ Loaded", data.length, "purchase orders");
+    
+    // Map backend fields to frontend field names for compatibility
+    return data.map((order) => ({
+      ...order,
+      po_number: order.poNumber,
+      supplier_id: order.supplierId,
+      supplier_name: order.supplierName,
+      location_id: order.locationId,
+      total_amount: order.totalAmount,
+      created_at: order.createdAt,
+      confirmed_at: order.confirmedAt,
+      tax_percent: order.taxPercent,
+      shipping_fee: order.shippingFee,
+      paid_amount: order.paidAmount,
+      remaining_amount: order.remainingAmount,
+      tax_amount: order.taxAmount,
+    }));
+  } catch (error) {
+    console.error("❌ getPurchaseOrders error:", error);
+    throw error;
+  }
 };
 
 // Get single purchase order detail
@@ -214,7 +231,12 @@ export const getProducts = async () => {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch products");
-  return response.json();
+  const data = await response.json();
+  return data.map((p) => ({
+    ...p,
+    purchase_price: p.purchasePrice || 0,
+    image_url: p.imageUrl,
+  }));
 };
 
 // Locations (Spring Boot)
@@ -257,6 +279,59 @@ export const getDashboardProducts = async () => {
     brand_id: p.brandId,
     brand_name: p.brandName,
   }));
+};
+
+// Dashboard Summary
+export const getDashboardSummary = async () => {
+  const response = await fetch(`${SPRING_API}/dashboard/summary`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to fetch dashboard summary");
+  return response.json();
+};
+
+// Dashboard Batches (batch status list from BatchStatusResponse DTO)
+export const getDashboardBatches = async () => {
+  const response = await fetch(`${SPRING_API}/dashboard/batches`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to fetch dashboard batches");
+  const data = await response.json();
+  return data.map((b) => ({
+    ...b,
+    id: b.batchId,
+    batch_code: b.batchCode,
+    product_name: b.productName,
+    expiry_date: b.expiryDate,
+    days_until_expiry: b.daysUntilExpiry,
+    received_date: b.receivedDate,
+  }));
+};
+
+// Recent Activities
+export const getRecentActivities = async () => {
+  const response = await fetch(`${SPRING_API}/dashboard/recent-activities`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to fetch recent activities");
+  const data = await response.json();
+  return data.map((a) => ({
+    ...a,
+    created_at: a.createdAt,
+    reference_type: a.referenceType,
+    reference_code: a.referenceCode,
+    product_name: a.productName,
+  }));
+};
+
+// Debug: Reseed stock data
+export const reseedStock = async () => {
+  const response = await fetch(`${SPRING_API}/debug/reseed-stock`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to reseed stock");
+  return response.json();
 };
 
 // Categories

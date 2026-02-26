@@ -13,4 +13,6 @@ public class ProductResponse {
     private Integer id;
     private String name;
     private String imageUrl;
+    private String sku;
+    private java.math.BigDecimal purchasePrice;
 }

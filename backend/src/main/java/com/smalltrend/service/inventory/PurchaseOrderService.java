@@ -1,24 +1,27 @@
 package com.smalltrend.service.inventory;
 
 import com.smalltrend.dto.inventory.purchaseorder.*;
-import com.smalltrend.dto.inventory.inventorycount.*;
-import com.smalltrend.dto.inventory.location.*;
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
+import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PurchaseOrderService {
 
     private final PurchaseOrderRepository purchaseOrderRepository;
@@ -29,30 +32,39 @@ public class PurchaseOrderService {
     private final ProductBatchRepository productBatchRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final LocationRepository locationRepository;
-    private final ShelfBinRepository shelfBinRepository;
+    private final StockMovementRepository stockMovementRepository;
+
+    // ═══════════════════════════════════════════════════════════
+    //  Public API
+    // ═══════════════════════════════════════════════════════════
 
     // ─── List All Purchase Orders ────────────────────────────
     public List<PurchaseOrderResponse> getAllOrders() {
-        return purchaseOrderRepository.findAllByOrderByCreatedAtDesc()
+        return purchaseOrderRepository.findAll()
                 .stream()
+                .sorted((a, b) -> {
+                    if (a.getCreatedAt() == null || b.getCreatedAt() == null) return 0;
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                })
                 .map(this::toListResponse)
                 .collect(Collectors.toList());
     }
 
     // ─── Get Single Order Detail ─────────────────────────────
     public PurchaseOrderResponse getOrderById(Integer id) {
-        PurchaseOrder order = purchaseOrderRepository.findById(id)
+        PurchaseOrder order = purchaseOrderRepository.findById(id.longValue())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + id));
         return toDetailResponse(order);
     }
 
     // ─── Generate Next PO Code ───────────────────────────────
     public String generateNextPOCode() {
-        String prefix = "NH";
+        int year = LocalDate.now().getYear();
+        String prefix = "PO-" + year + "-";
         List<PurchaseOrder> allOrders = purchaseOrderRepository.findAll();
         int maxNum = 0;
         for (PurchaseOrder order : allOrders) {
-            String code = order.getPoNumber();
+            String code = order.getOrderNumber();
             if (code != null && code.startsWith(prefix)) {
                 try {
                     int num = Integer.parseInt(code.substring(prefix.length()));
@@ -70,91 +82,108 @@ public class PurchaseOrderService {
         validateDraft(request);
 
         PurchaseOrder order = buildOrderFromRequest(request);
-        order.setStatus("DRAFT");
-        order.setCreatedAt(LocalDateTime.now());
+        order.setStatus(PurchaseOrderStatus.DRAFT);
         order.setOrderDate(LocalDate.now());
 
-        // Generate PO number if not provided
-        if (order.getPoNumber() == null || order.getPoNumber().isBlank()) {
-            order.setPoNumber(generateNextPOCode());
+        if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
+            order.setOrderNumber(generateNextPOCode());
         }
+
+        // Recalculate financials server-side
+        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems() : new ArrayList<>();
+        recalculate(order, itemRequests);
 
         PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
 
-        // Save items
-        if (request.getItems() != null) {
-            saveOrderItems(savedOrder, request.getItems());
+        if (!itemRequests.isEmpty()) {
+            saveOrderItems(savedOrder, itemRequests);
         }
 
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
     }
 
-    // ─── Confirm Order & Update Stock ────────────────────────
+    // ─── Confirm New Order (create + confirm in one step) ────
     @Transactional
     public PurchaseOrderResponse confirmOrder(PurchaseOrderRequest request) {
         validateConfirm(request);
 
         PurchaseOrder order = buildOrderFromRequest(request);
-        order.setStatus("CONFIRMED");
-        order.setCreatedAt(LocalDateTime.now());
-        order.setConfirmedAt(LocalDateTime.now());
+        order.setStatus(PurchaseOrderStatus.CONFIRMED);
         order.setOrderDate(LocalDate.now());
+        order.setConfirmedAt(LocalDateTime.now());
 
-        // Generate PO number if not provided
-        if (order.getPoNumber() == null || order.getPoNumber().isBlank()) {
-            order.setPoNumber(generateNextPOCode());
+        if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
+            order.setOrderNumber(generateNextPOCode());
         }
+
+        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems() : new ArrayList<>();
+        recalculate(order, itemRequests);
 
         PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
 
-        // Save items and update stock
-        if (request.getItems() != null) {
-            saveOrderItems(savedOrder, request.getItems());
-            updateStockForItems(savedOrder, request.getItems(), request.getLocationId());
+        if (!itemRequests.isEmpty()) {
+            saveOrderItems(savedOrder, itemRequests);
+            // ── Stock Update ──
+            updateStock(savedOrder, itemRequests);
         }
 
+        log.info("✅ Purchase Order {} CONFIRMED. Stock updated.", savedOrder.getOrderNumber());
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
     }
 
     // ─── Confirm Existing Draft ──────────────────────────────
     @Transactional
     public PurchaseOrderResponse confirmExistingOrder(Integer orderId) {
-        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId.longValue())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
 
-        if (!"DRAFT".equals(order.getStatus())) {
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT) {
             throw new RuntimeException("Chỉ có thể xác nhận phiếu ở trạng thái Phiếu tạm.");
         }
 
-        order.setStatus("CONFIRMED");
+        if (order.getSupplier() == null) {
+            throw new RuntimeException("Vui lòng chọn nhà cung cấp trước khi xác nhận.");
+        }
+
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            throw new RuntimeException("Phiếu nhập phải có ít nhất 1 sản phẩm.");
+        }
+
+        order.setStatus(PurchaseOrderStatus.CONFIRMED);
         order.setConfirmedAt(LocalDateTime.now());
         purchaseOrderRepository.save(order);
 
-        // Update stock for existing items
-        List<PurchaseOrderItem> items = order.getItems();
-        if (items != null) {
-            for (PurchaseOrderItem item : items) {
-                // Create stock movement records if needed
-                // (items are already saved, just need stock update)
-            }
-        }
+        // ── Stock Update from existing items ──
+        List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
+                .map(item -> PurchaseOrderItemRequest.builder()
+                        .variantId(item.getProductVariant() != null ? item.getProductVariant().getId().intValue() : null)
+                        .productId(item.getProductVariant() != null && item.getProductVariant().getProduct() != null
+                                ? item.getProductVariant().getProduct().getId().intValue() : null)
+                        .quantity(item.getQuantity())
+                        .unitPrice(item.getUnitCost())
+                        .build())
+                .collect(Collectors.toList());
 
+        updateStock(order, itemRequests);
+
+        log.info("✅ Existing Draft {} CONFIRMED. Stock updated.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
     // ─── Cancel Order ────────────────────────────────────────
     @Transactional
     public PurchaseOrderResponse cancelOrder(Integer orderId) {
-        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId.longValue())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
 
-        if (!"DRAFT".equals(order.getStatus())) {
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT) {
             throw new RuntimeException("Chỉ có thể hủy phiếu ở trạng thái Phiếu tạm.");
         }
 
-        order.setStatus("CANCELLED");
+        order.setStatus(PurchaseOrderStatus.CANCELLED);
         purchaseOrderRepository.save(order);
 
+        log.info("❌ Purchase Order {} CANCELLED.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -164,30 +193,29 @@ public class PurchaseOrderService {
                 .map(s -> SupplierResponse.builder()
                         .id(s.getId())
                         .name(s.getName())
-                        .contactInfo(s.getContactInfo())
+                        .contactInfo(s.getContactPerson())
                         .build())
                 .collect(Collectors.toList());
     }
 
-    // ─── Get All Products (for search) ───────────────────────
+    // ─── Get All Products (with variant info for PO creation) ─
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
-                .map(p -> ProductResponse.builder()
-                        .id(p.getId())
-                        .name(p.getName())
-                        .imageUrl(p.getImageUrl())
-                        .build())
-                .collect(Collectors.toList());
-    }
+                .map(p -> {
+                    ProductResponse.ProductResponseBuilder builder = ProductResponse.builder()
+                            .id(p.getId())
+                            .name(p.getName())
+                            .imageUrl(p.getImageUrl());
 
-    // ─── Get All Locations ───────────────────────────────────
-    public List<LocationResponse> getAllLocations() {
-        return locationRepository.findAll().stream()
-                .map(l -> LocationResponse.builder()
-                        .id(l.getId())
-                        .name(l.getName())
-                        .type(l.getType())
-                        .build())
+                    // Get first variant's SKU and price
+                    if (p.getVariants() != null && !p.getVariants().isEmpty()) {
+                        ProductVariant v = p.getVariants().get(0);
+                        builder.sku(v.getSku());
+                        builder.purchasePrice(v.getSellPrice());
+                    }
+
+                    return builder.build();
+                })
                 .collect(Collectors.toList());
     }
 
@@ -195,11 +223,11 @@ public class PurchaseOrderService {
     //  Private helpers
     // ═══════════════════════════════════════════════════════════
 
+    // ─── Build Order from Request ────────────────────────────
     private PurchaseOrder buildOrderFromRequest(PurchaseOrderRequest request) {
         PurchaseOrder order = PurchaseOrder.builder()
-                .poNumber(request.getPoNumber())
-                .status(request.getStatus())
-                .discount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
+                .orderNumber(request.getPoNumber())
+                .discountAmount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
                 .taxPercent(request.getTaxPercent() != null ? request.getTaxPercent() : BigDecimal.ZERO)
                 .shippingFee(request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO)
                 .paidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO)
@@ -210,43 +238,71 @@ public class PurchaseOrderService {
                 .notes(request.getNotes())
                 .build();
 
-        // Set supplier
         if (request.getSupplierId() != null) {
             Supplier supplier = supplierRepository.findById(request.getSupplierId())
                     .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
             order.setSupplier(supplier);
         }
 
-        // Set location
-        if (request.getLocationId() != null) {
-            Location location = locationRepository.findById(request.getLocationId())
-                    .orElseThrow(() -> new RuntimeException("Vị trí kho không tồn tại."));
-            order.setLocation(location);
-        }
-
         return order;
     }
 
+    // ─── Recalculate Financials Server-side ───────────────────
+    private void recalculate(PurchaseOrder order, List<PurchaseOrderItemRequest> items) {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (PurchaseOrderItemRequest item : items) {
+            BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+            int qty = item.getQuantity() != null ? item.getQuantity() : 0;
+            BigDecimal itemDiscount = item.getDiscount() != null ? item.getDiscount() : BigDecimal.ZERO;
+            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(qty)).subtract(itemDiscount);
+            if (lineTotal.compareTo(BigDecimal.ZERO) < 0) lineTotal = BigDecimal.ZERO;
+            subtotal = subtotal.add(lineTotal);
+        }
+        order.setSubtotal(subtotal);
+
+        BigDecimal afterDiscount = subtotal.subtract(
+                order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO);
+        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) afterDiscount = BigDecimal.ZERO;
+
+        BigDecimal taxPercent = order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO;
+        BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        order.setTaxAmount(taxAmount);
+
+        BigDecimal shippingFee = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
+        BigDecimal total = afterDiscount.add(taxAmount).add(shippingFee);
+        order.setTotalAmount(total);
+
+        BigDecimal paidAmount = order.getPaidAmount() != null ? order.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal remaining = total.subtract(paidAmount);
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+        order.setRemainingAmount(remaining);
+    }
+
+    // ─── Save Order Items ────────────────────────────────────
     private void saveOrderItems(PurchaseOrder savedOrder, List<PurchaseOrderItemRequest> itemRequests) {
         for (PurchaseOrderItemRequest itemReq : itemRequests) {
+            BigDecimal unitPrice = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO;
+            int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 0;
+            BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(qty));
+
             PurchaseOrderItem item = PurchaseOrderItem.builder()
                     .purchaseOrder(savedOrder)
-                    .quantity(itemReq.getQuantity())
-                    .unitPrice(itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO)
+                    .quantity(qty)
+                    .unitCost(unitPrice)
+                    .totalCost(totalCost)
                     .build();
 
-            // Try to find variant by ID or by product
+            // Resolve product variant
             if (itemReq.getVariantId() != null) {
-                ProductVariant variant = productVariantRepository.findById(itemReq.getVariantId().longValue())
+                ProductVariant variant = productVariantRepository.findById(itemReq.getVariantId())
                         .orElseThrow(() -> new RuntimeException("Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
-                item.setVariant(variant);
+                item.setProductVariant(variant);
             } else if (itemReq.getProductId() != null) {
-                // If no variant ID, find first variant of the product
                 Product product = productRepository.findById(itemReq.getProductId().longValue())
                         .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại: " + itemReq.getProductId()));
                 List<ProductVariant> variants = product.getVariants();
                 if (variants != null && !variants.isEmpty()) {
-                    item.setVariant(variants.get(0));
+                    item.setProductVariant(variants.get(0));
                 } else {
                     throw new RuntimeException("Sản phẩm \"" + product.getName() + "\" chưa có phiên bản.");
                 }
@@ -256,89 +312,96 @@ public class PurchaseOrderService {
         }
     }
 
-    private void updateStockForItems(PurchaseOrder savedOrder, List<PurchaseOrderItemRequest> itemRequests, Integer locationId) {
+    // ─── Update Stock (on CONFIRM) ───────────────────────────
+    private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests) {
+        // Get a default location
+        Location defaultLocation = locationRepository.findAll().stream()
+                .findFirst()
+                .orElse(null);
+
         for (PurchaseOrderItemRequest itemReq : itemRequests) {
-            // Create batch if batch data provided
-            if (itemReq.getBatches() != null && !itemReq.getBatches().isEmpty()) {
-                for (BatchRequest batchReq : itemReq.getBatches()) {
-                    ProductVariant variant = resolveVariant(itemReq);
-                    ProductBatch batch = ProductBatch.builder()
-                            .variant(variant)
-                            .batchNumber(batchReq.getBatchCode())
-                            .mfgDate(LocalDate.now())
-                            .expiryDate(batchReq.getExpiryDate() != null && !batchReq.getExpiryDate().isBlank()
-                                    ? LocalDate.parse(batchReq.getExpiryDate())
-                                    : null)
-                            .costPrice(itemReq.getUnitPrice())
-                            .build();
-                    productBatchRepository.save(batch);
+            // 1. Resolve variant
+            ProductVariant variant = resolveVariant(itemReq);
+            if (variant == null) continue;
 
-                    // Update inventory stock
-                    if (locationId != null) {
-                        updateInventoryStock(variant, batch, batchReq.getQuantity(), locationId);
-                    }
-                }
-            } else {
-                // No batch data - create a default batch
-                ProductVariant variant = resolveVariant(itemReq);
-                String defaultBatchCode = "BATCH-" + savedOrder.getPoNumber() + "-" + System.currentTimeMillis();
-                ProductBatch batch = ProductBatch.builder()
-                        .variant(variant)
-                        .batchNumber(defaultBatchCode)
-                        .mfgDate(LocalDate.now())
-                        .costPrice(itemReq.getUnitPrice())
-                        .build();
-                productBatchRepository.save(batch);
+            int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 0;
+            if (qty <= 0) continue;
 
-                if (locationId != null) {
-                    updateInventoryStock(variant, batch, itemReq.getQuantity(), locationId);
+            BigDecimal costPrice = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO;
+
+            // 2. Parse expiry date (if provided)
+            LocalDate expiryDate = null;
+            if (itemReq.getExpiryDate() != null && !itemReq.getExpiryDate().isBlank()) {
+                try {
+                    expiryDate = LocalDate.parse(itemReq.getExpiryDate());
+                } catch (Exception e) {
+                    try {
+                        expiryDate = LocalDate.parse(itemReq.getExpiryDate(), DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                    } catch (Exception ignored) {}
                 }
             }
+            // Default expiry: 1 year from now
+            if (expiryDate == null) {
+                expiryDate = LocalDate.now().plusYears(1);
+            }
+
+            // 3. Create ProductBatch
+            String batchNumber = generateBatchNumber(variant);
+            ProductBatch batch = ProductBatch.builder()
+                    .variant(variant)
+                    .batchNumber(batchNumber)
+                    .mfgDate(LocalDate.now())
+                    .expiryDate(expiryDate)
+                    .costPrice(costPrice)
+                    .build();
+            batch = productBatchRepository.save(batch);
+
+            // 4. Create or update InventoryStock
+            InventoryStock stock = InventoryStock.builder()
+                    .variant(variant)
+                    .batch(batch)
+                    .location(defaultLocation)
+                    .quantity(qty)
+                    .build();
+            inventoryStockRepository.save(stock);
+
+            // 5. Create StockMovement for audit
+            StockMovement movement = StockMovement.builder()
+                    .variant(variant)
+                    .batch(batch)
+                    .location(defaultLocation)
+                    .type("IN")
+                    .quantity(qty)
+                    .referenceType("purchase_order")
+                    .referenceId(order.getId())
+                    .notes("Nhập hàng từ PO " + order.getOrderNumber())
+                    .build();
+            stockMovementRepository.save(movement);
+
+            log.info("📦 Stock IN: variant={}, batch={}, qty={}", variant.getSku(), batchNumber, qty);
         }
     }
 
+    // ─── Resolve Variant ─────────────────────────────────────
     private ProductVariant resolveVariant(PurchaseOrderItemRequest itemReq) {
         if (itemReq.getVariantId() != null) {
-            return productVariantRepository.findById(itemReq.getVariantId().longValue())
-                    .orElseThrow(() -> new RuntimeException("Phiên bản sản phẩm không tồn tại."));
-        } else if (itemReq.getProductId() != null) {
-            Product product = productRepository.findById(itemReq.getProductId().longValue())
-                    .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại."));
-            List<ProductVariant> variants = product.getVariants();
-            if (variants != null && !variants.isEmpty()) {
-                return variants.get(0);
-            }
-            throw new RuntimeException("Sản phẩm chưa có phiên bản.");
+            return productVariantRepository.findById(itemReq.getVariantId()).orElse(null);
         }
-        throw new RuntimeException("Thiếu thông tin sản phẩm.");
+        if (itemReq.getProductId() != null) {
+            Product product = productRepository.findById(itemReq.getProductId().longValue()).orElse(null);
+            if (product != null && product.getVariants() != null && !product.getVariants().isEmpty()) {
+                return product.getVariants().get(0);
+            }
+        }
+        return null;
     }
 
-    private void updateInventoryStock(ProductVariant variant, ProductBatch batch, Integer quantity, Integer locationId) {
-        // Find a shelf bin in the given location
-        Location location = locationRepository.findById(locationId)
-                .orElseThrow(() -> new RuntimeException("Vị trí kho không tồn tại."));
-
-        List<ShelfBin> bins = location.getShelfBins();
-        ShelfBin targetBin;
-        if (bins != null && !bins.isEmpty()) {
-            targetBin = bins.get(0); // Use first bin in the location
-        } else {
-            // Create a default bin
-            targetBin = ShelfBin.builder()
-                    .location(location)
-                    .binCode("DEFAULT-" + location.getName())
-                    .build();
-            shelfBinRepository.save(targetBin);
-        }
-
-        // Create or update inventory stock
-        InventoryStock stock = InventoryStock.builder()
-                .variant(variant)
-                .batch(batch)
-                .bin(targetBin)
-                .quantity(quantity)
-                .build();
-        inventoryStockRepository.save(stock);
+    // ─── Generate Batch Number ───────────────────────────────
+    private String generateBatchNumber(ProductVariant variant) {
+        String prefix = variant.getSku() != null ? variant.getSku().substring(0, Math.min(2, variant.getSku().length())).toUpperCase() : "BT";
+        int year = LocalDate.now().getYear();
+        long count = productBatchRepository.count() + 1;
+        return prefix + year + String.format("%03d", count);
     }
 
     // ─── Validation ──────────────────────────────────────────
@@ -349,7 +412,7 @@ public class PurchaseOrderService {
         }
         for (PurchaseOrderItemRequest item : request.getItems()) {
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new RuntimeException("Số lượng sản phẩm \"" + item.getName() + "\" phải > 0.");
+                throw new RuntimeException("Số lượng sản phẩm phải > 0.");
             }
         }
     }
@@ -359,59 +422,50 @@ public class PurchaseOrderService {
         if (request.getSupplierId() == null) {
             throw new RuntimeException("Vui lòng chọn nhà cung cấp trước khi xác nhận.");
         }
-        if (request.getLocationId() == null) {
-            throw new RuntimeException("Vui lòng chọn vị trí nhập kho.");
-        }
     }
 
     // ─── Mappers ─────────────────────────────────────────────
 
     private PurchaseOrderResponse toListResponse(PurchaseOrder order) {
         return PurchaseOrderResponse.builder()
-                .id(order.getId())
-                .poNumber(order.getPoNumber())
+                .id(order.getId() != null ? order.getId().intValue() : null)
+                .poNumber(order.getOrderNumber())
                 .supplierId(order.getSupplier() != null ? order.getSupplier().getId() : null)
                 .supplierName(order.getSupplier() != null ? order.getSupplier().getName() : "")
-                .locationId(order.getLocation() != null ? order.getLocation().getId() : null)
-                .locationName(order.getLocation() != null ? order.getLocation().getName() : "")
-                .status(order.getStatus())
+                .status(order.getStatus() != null ? order.getStatus().name() : "DRAFT")
                 .orderDate(order.getOrderDate())
                 .createdAt(order.getCreatedAt())
                 .confirmedAt(order.getConfirmedAt())
-                .totalAmount(order.getTotalAmount())
                 .subtotal(order.getSubtotal())
-                .discount(order.getDiscount())
+                .discount(order.getDiscountAmount())
                 .taxPercent(order.getTaxPercent())
                 .taxAmount(order.getTaxAmount())
                 .shippingFee(order.getShippingFee())
                 .paidAmount(order.getPaidAmount())
+                .totalAmount(order.getTotalAmount())
                 .remainingAmount(order.getRemainingAmount())
                 .notes(order.getNotes())
-                .receivedByName(order.getReceivedBy() != null ? order.getReceivedBy().getFullName() : null)
                 .build();
     }
 
     private PurchaseOrderResponse toDetailResponse(PurchaseOrder order) {
         PurchaseOrderResponse response = toListResponse(order);
 
-        // Include items
         if (order.getItems() != null) {
             List<PurchaseOrderItemResponse> itemResponses = order.getItems().stream()
                     .map(item -> PurchaseOrderItemResponse.builder()
-                            .id(item.getId())
-                            .variantId(item.getVariant() != null ? item.getVariant().getId() : null)
-                            .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                                    ? item.getVariant().getProduct().getId() : null)
-                            .sku(item.getVariant() != null ? item.getVariant().getSku() : "")
-                            .name(item.getVariant() != null && item.getVariant().getProduct() != null
-                                    ? item.getVariant().getProduct().getName() : "")
-                            .imageUrl(item.getVariant() != null ? item.getVariant().getImageUrl() : null)
+                            .id(item.getId() != null ? item.getId().intValue() : null)
+                            .variantId(item.getProductVariant() != null ? item.getProductVariant().getId().intValue() : null)
+                            .productId(item.getProductVariant() != null && item.getProductVariant().getProduct() != null
+                                    ? item.getProductVariant().getProduct().getId().intValue() : null)
+                            .sku(item.getProductVariant() != null ? item.getProductVariant().getSku() : "")
+                            .name(item.getProductVariant() != null && item.getProductVariant().getProduct() != null
+                                    ? item.getProductVariant().getProduct().getName() : "")
+                            .imageUrl(item.getProductVariant() != null ? item.getProductVariant().getImageUrl() : null)
                             .quantity(item.getQuantity())
-                            .unitPrice(item.getUnitPrice())
+                            .unitPrice(item.getUnitCost())
                             .discount(BigDecimal.ZERO)
-                            .total(item.getUnitPrice() != null && item.getQuantity() != null
-                                    ? item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
-                                    : BigDecimal.ZERO)
+                            .total(item.getTotalCost())
                             .build())
                     .collect(Collectors.toList());
             response.setItems(itemResponses);
@@ -422,4 +476,3 @@ public class PurchaseOrderService {
         return response;
     }
 }
-

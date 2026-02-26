@@ -1,10 +1,6 @@
 package com.smalltrend.dto.inventory.dashboard;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -12,13 +8,14 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductBatchResponse {
-    private Integer id;
+public class BatchStatusResponse {
+    private Integer batchId;
     private String batchCode;
-    private Integer productId;
     private String productName;
     private Integer quantity;
     private LocalDate expiryDate;
+    private String status; // EXPIRED, EXPIRING_SOON, SAFE
+    private Integer daysUntilExpiry;
+    private BigDecimal value;
     private LocalDate receivedDate;
-    private BigDecimal costPrice;
 }

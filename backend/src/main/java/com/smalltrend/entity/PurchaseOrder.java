@@ -28,7 +28,7 @@ public class PurchaseOrder {
     private String orderNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id", nullable = false)
+    @JoinColumn(name = "supplier_id")
     private Supplier supplier;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -38,37 +38,48 @@ public class PurchaseOrder {
     @Column(name = "order_date", nullable = false)
     private LocalDate orderDate;
 
-    @Column(name = "expected_delivery_date")
-    private LocalDate expectedDeliveryDate;
-
-    @Column(name = "actual_delivery_date")
-    private LocalDate actualDeliveryDate;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private PurchaseOrderStatus status = PurchaseOrderStatus.DRAFT;
 
     @Column(name = "subtotal", precision = 15, scale = 2)
-    private BigDecimal subtotal;
-
-    @Column(name = "tax_amount", precision = 15, scale = 2)
-    private BigDecimal taxAmount;
+    @Builder.Default
+    private BigDecimal subtotal = BigDecimal.ZERO;
 
     @Column(name = "discount_amount", precision = 15, scale = 2)
-    private BigDecimal discountAmount;
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "tax_percent", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal taxPercent = BigDecimal.ZERO;
+
+    @Column(name = "tax_amount", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal taxAmount = BigDecimal.ZERO;
+
+    @Column(name = "shipping_fee", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal shippingFee = BigDecimal.ZERO;
 
     @Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
-    private BigDecimal totalAmount;
-    private BigDecimal remainingAmount;
+    @Builder.Default
+    private BigDecimal totalAmount = BigDecimal.ZERO;
 
-    private String notes;
+    @Column(name = "paid_amount", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal paidAmount = BigDecimal.ZERO;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime confirmedAt;
+    @Column(name = "remaining_amount", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal remainingAmount = BigDecimal.ZERO;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @Column(name = "confirmed_at")
+    private LocalDateTime confirmedAt;
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

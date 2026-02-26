@@ -445,7 +445,7 @@ INSERT IGNORE INTO salary_configs (
 
 -- Insert Inventory Stock
 INSERT INTO inventory_stock
-(id, variant_id, batch_id, bin_id, quantity) VALUES
+(id, variant_id, batch_id, location_id, quantity) VALUES
 (1, 1, 1, 1, 250),
 (2, 2, 2, 1, 180),
 (3, 3, 3, 2, 800),
