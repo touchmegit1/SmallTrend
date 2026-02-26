@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  getProducts,
+  getDashboardProducts,
   getStockMovements,
   getProductBatches,
   getCategories,
@@ -38,7 +38,7 @@ export function useInventoryDashboard() {
       try {
         const [productsData, movementsData, batchesData, categoriesData, brandsData] =
           await Promise.all([
-            getProducts(),
+            getDashboardProducts(),
             getStockMovements(),
             getProductBatches(),
             getCategories(),
