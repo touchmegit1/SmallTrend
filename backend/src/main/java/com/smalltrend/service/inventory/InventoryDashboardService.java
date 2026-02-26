@@ -284,10 +284,10 @@ public class InventoryDashboardService {
                 }
                 activities.add(RecentActivityResponse.builder()
                     .type(type)
-                    .productName("PO " + (po.getOrderNumber() != null ? po.getOrderNumber() : "#" + po.getId()))
+                    .productName("PO " + (po.getPoNumber() != null ? po.getPoNumber() : "#" + po.getId()))
                     .quantity(totalQty)
                     .referenceType("PurchaseOrder")
-                    .referenceCode(po.getOrderNumber())
+                    .referenceCode(po.getPoNumber())
                     .createdAt(po.getCreatedAt())
                     .build());
             }

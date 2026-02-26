@@ -28,7 +28,6 @@ public class PurchaseOrder {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id")
-    @JoinColumn(name = "supplier_id")
     private Supplier supplier;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -49,7 +48,7 @@ public class PurchaseOrder {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private String status = "DRAFT";
+    private PurchaseOrderStatus status = PurchaseOrderStatus.DRAFT;
 
     @Column(name = "subtotal", precision = 15, scale = 2)
     @Builder.Default
