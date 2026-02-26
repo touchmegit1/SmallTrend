@@ -21,8 +21,31 @@ public class Location {
     private Integer id;
 
     private String name;
-    private String type;
+
+    @Column(name = "type", nullable = false, length = 30)
+    private String warehouseType;
+
+    @Column(name = "zone", nullable = false, length = 30)
+    @Builder.Default
+    private String zone = "A";
+
+    @Column(name = "grid_row", nullable = false)
+    @Builder.Default
+    private Integer gridRow = 1;
+
+    @Column(name = "grid_col", nullable = false)
+    @Builder.Default
+    private Integer gridCol = 1;
+
+    @Column(name = "grid_level", nullable = false)
+    @Builder.Default
+    private Integer gridLevel = 1;
 
     @OneToMany(mappedBy = "location")
-    private List<ShelfBin> shelfBins;
+    private List<InventoryStock> stocks;
+
+    @Transient
+    public String getMatrixCoordinate() {
+        return String.format("%s-%02d-%02d-L%s", zone, gridRow, gridCol, gridLevel);
+    }
 }

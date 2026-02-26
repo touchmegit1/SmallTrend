@@ -1,12 +1,20 @@
 package com.smalltrend.entity;
 
-import jakarta.persistence.*;
+import java.util.List;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Entity
 @Table(name = "products")
@@ -21,6 +29,7 @@ public class Product {
     private Integer id;
 
     private String name;
+    @Column(name = "image_url")
     private String imageUrl;
     private String description;
 
@@ -38,7 +47,4 @@ public class Product {
 
     @OneToMany(mappedBy = "product")
     private List<ProductVariant> variants;
-
-    @OneToMany(mappedBy = "product")
-    private List<PriceHistory> priceHistories;
 }

@@ -1,9 +1,9 @@
 package com.smalltrend.repository;
 
-import com.smalltrend.entity.SalesOrder;
+import com.smalltrend.entity.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface OrderRepository extends JpaRepository<SalesOrder, Integer> {
+public interface OrderRepository extends JpaRepository<Order, Integer> {
 }
