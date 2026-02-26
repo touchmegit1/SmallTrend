@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../config/axiosConfig';
+import customerService from '../services/customerService';
 
 export const useFetchCustomers = () => {
   const [customers, setCustomers] = useState([]);
@@ -9,11 +9,13 @@ export const useFetchCustomers = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/crm/customers');
-      setCustomers(response.data);
+      const data = await customerService.getAllCustomers();
+      const customerList = Array.isArray(data) ? data : [];
+      setCustomers(customerList);
       setError(null);
     } catch (err) {
-      setError(err.message || 'Lỗi khi tải khách hàng');
+      console.error('Error fetching customers:', err);
+      setError(err.response?.data?.message || err.message || 'Lỗi khi tải khách hàng');
       setCustomers([]);
     } finally {
       setLoading(false);
@@ -24,5 +26,5 @@ export const useFetchCustomers = () => {
     fetchCustomers();
   }, []);
 
-  return { customers, setCustomers, loading, error };
+  return { customers, setCustomers, loading, error, refetch: fetchCustomers };
 };

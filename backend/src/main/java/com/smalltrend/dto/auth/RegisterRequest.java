@@ -9,35 +9,42 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers and underscores")
+    @NotBlank(message = "Tên đăng nhập không được để trống")
+    @Size(min = 3, max = 50, message = "Tên đăng nhập phải từ 3-50 ký tự")
+    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Tên đăng nhập chỉ chứa chữ, số và dấu gạch dưới")
     private String username;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    @NotBlank(message = "Mật khẩu không được để trống")
+    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
     private String password;
 
-    @NotBlank(message = "Full name is required")
-    @Size(min = 2, message = "Full name must be at least 2 characters")
+    @NotBlank(message = "Họ tên không được để trống")
+    @Size(min = 2, message = "Họ tên phải có ít nhất 2 ký tự")
     private String fullName;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+    @NotBlank(message = "Email không được để trống")
+    @Email(message = "Email không đúng định dạng")
     private String email;
 
-    @Pattern(regexp = "^[0-9]{10,11}$", message = "Phone must be 10-11 digits")
+    @Pattern(regexp = "^[0-9]{10,11}$", message = "Số điện thoại phải có 10-11 số")
     private String phone;
 
     private String address;
     private Integer roleId;
 
-    @Pattern(regexp = "^(active|inactive|pending|ACTIVE|INACTIVE|PENDING)$", message = "Status must be active, inactive, or pending")
+    @Pattern(regexp = "^(ACTIVE|INACTIVE|PENDING|LOCKED)$", message = "Trạng thái không hợp lệ")
     private String status;
+
+    // Salary-related fields
+    private String salaryType; // "HOURLY" or "MONTHLY"
+    private BigDecimal baseSalary;
+    private BigDecimal hourlyRate;
 }

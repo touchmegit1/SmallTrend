@@ -23,8 +23,8 @@ public class InventoryStock {
     private ProductVariant variant;
 
     @ManyToOne
-    @JoinColumn(name = "bin_id", nullable = false)
-    private ShelfBin bin;
+    @JoinColumn(name = "location_id")
+    private Location location;
 
     @ManyToOne
     @JoinColumn(name = "batch_id", nullable = false)

@@ -18,7 +18,7 @@ const Sidebar = () => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/crm/homepage');
     };
 
     // Debug: log user info
@@ -33,8 +33,7 @@ const Sidebar = () => {
             children: [
                 { label: 'Giao diện bán hàng', path: '/pos' },
                 { label: 'Lịch sử đơn hàng', path: '/pos/history' },
-                { label: 'Báo cáo doanh thu', path: '/pos/suspended' },
-                { label: 'Chốt ca làm việc', path: '/pos/shift-handover' }
+                { label: 'Đơn hàng treo', path: '/pos/suspended' },
             ]
         },
         {
@@ -66,10 +65,9 @@ const Sidebar = () => {
             path: '/crm',
             children: [
                 { label: 'Danh sách khách hàng', path: '/crm/customer' },
-                { label: 'Chương trình KM', path: '/crm/event' },
+                { label: 'Khuyến Mãi', path: '/crm/event' },
                 { label: 'Kho quà tặng', path: '/crm/loyalty' },
                 { label: 'Khiếu nại', path: '/crm/complain' },
-                { label: 'Trang chủ', path: '/crm/homepage' },
             ]
         },
         {

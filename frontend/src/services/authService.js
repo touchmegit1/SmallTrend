@@ -9,6 +9,24 @@ const login = async (username, password) => {
         }
         return response.data;
     } catch (error) {
+        // Extract error message from backend response
+        const errorMessage = error.response?.data?.message ||
+            error.response?.data?.error ||
+            error.message ||
+            'Đăng nhập thất bại';
+        throw new Error(errorMessage);
+    }
+};
+
+const register = async (userData) => {
+    try {
+        const response = await api.post('/auth/register', userData);
+        if (response.data.token) {
+            localStorage.setItem('user', JSON.stringify(response.data));
+            localStorage.setItem('token', response.data.token);
+        }
+        return response.data;
+    } catch (error) {
         throw error.response?.data || error;
     }
 };
@@ -49,6 +67,7 @@ const validateToken = async () => {
 
 const authService = {
     login,
+    register,
     logout,
     getCurrentUser,
     getToken,
