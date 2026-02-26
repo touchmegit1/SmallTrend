@@ -15,5 +15,15 @@ if exist ".env" (
 	)
 )
 
+set "APP_PORT=%SERVER_PORT%"
+if not defined APP_PORT set "APP_PORT=8081"
+
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":%APP_PORT% .*LISTENING"') do (
+	echo [WARN] Port %APP_PORT% is in use by PID %%P. Stopping old process...
+	taskkill /PID %%P /F >nul 2>nul
+)
+
 set "SPRING_PROFILES_ACTIVE=seed"
+set "SPRING_JPA_DDL_AUTO=create-drop"
+set "SPRING_SQL_INIT_MODE=always"
 call mvnw.cmd spring-boot:run
