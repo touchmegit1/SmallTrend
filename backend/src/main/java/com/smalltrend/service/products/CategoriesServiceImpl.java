@@ -1,6 +1,9 @@
 package com.smalltrend.service.products;
 
+import com.smalltrend.dto.products.CategoriesRequest;
+import com.smalltrend.dto.products.CategoriesResponse;
 import com.smalltrend.entity.Category;
+import com.smalltrend.mapper.CategoryMapper;
 import com.smalltrend.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -11,33 +14,38 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoriesServiceImpl implements CategoriesService {
 
-    private final CategoryRepository categoryRepository;
+    private final CategoryRepository repository;
+    private final CategoryMapper mapper;
 
     @Override
-    public Category create(Category category) {
-        return categoryRepository.save(category);
+    public CategoriesResponse create(CategoriesRequest request) {
+        Category category = mapper.toEntity(request);
+        return mapper.toResponse(repository.save(category));
     }
 
     @Override
-    public List<Category> getAll() {
-        return categoryRepository.findAll();
+    public List<CategoriesResponse> getAll() {
+        return repository.findAll()
+                .stream()
+                .map(mapper::toResponse)
+                .toList();
     }
 
     @Override
-    public Category getById(Integer id) {
-        return categoryRepository.findById(id)
+    public CategoriesResponse update(Integer id, CategoriesRequest request) {
+
+        Category existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
-    }
 
-    @Override
-    public Category update(Integer id, Category category) {
-        Category existing = getById(id);
-        existing.setName(category.getName());
-        return categoryRepository.save(existing);
+        existing.setCode(request.getCode());
+        existing.setName(request.getName());
+        existing.setDescription(request.getDescription());
+
+        return mapper.toResponse(repository.save(existing));
     }
 
     @Override
     public void delete(Integer id) {
-        categoryRepository.deleteById(id);
+        repository.deleteById(id);
     }
 }

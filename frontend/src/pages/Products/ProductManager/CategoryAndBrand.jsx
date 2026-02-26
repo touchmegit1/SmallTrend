@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, Search, CheckCircle, Tag, FolderTree, X, Filter, ArrowUpDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, CheckCircle, Tag, FolderTree, X, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
@@ -20,15 +20,17 @@ const Category_Brand = () => {
   const [countryFilter, setCountryFilter] = useState("");
   const [sortOrder, setSortOrder] = useState('desc');
   const [toastMessage, setToastMessage] = useState("");
+  const [expandedRow, setExpandedRow] = useState(null);
   const [formData, setFormData] = useState({
+    code: '',
     name: '',
     description: '',
     country: ''
   });
 
 
-  const { categories, loading: catLoading, error: catError } = useFetchCategories();
-  const { brands, loading: brandLoading, error: brandError } = useFetchBrands();
+  const { categories, loading: catLoading, error: catError, createCategory, updateCategory, deleteCategory } = useFetchCategories();
+  const { brands, loading: brandLoading, error: brandError, createBrand, updateBrand, deleteBrand } = useFetchBrands();
   const { products } = useFetchProducts();
 
   const productCountMap = useMemo(() => {
@@ -50,6 +52,7 @@ const Category_Brand = () => {
   const handleAdd = () => {
     setModalMode('add');
     setFormData({
+      code: '',
       name: '',
       description: '',
       country: ''
@@ -63,6 +66,7 @@ const Category_Brand = () => {
     setModalMode('edit');
     setSelectedItem(item);
     setFormData({
+      code: item.code || '',
       name: item.name,
       description: item.description || '',
       country: item.country || ''
@@ -76,17 +80,55 @@ const Category_Brand = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = () => {
-    setToastMessage(`Xóa ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} thành công!`);
-    setTimeout(() => setToastMessage(""), 3000);
-    setShowDeleteConfirm(false);
-    setSelectedItem(null);
+  const confirmDelete = async () => {
+    try {
+      await (activeTab === 'categories' ? deleteCategory : deleteBrand)(selectedItem.id);
+      setToastMessage(`Xóa ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} thành công!`);
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (error) {
+      setToastMessage(`Lỗi: ${error.response?.data?.message || 'Không thể xóa'}`);
+      setTimeout(() => setToastMessage(""), 3000);
+    } finally {
+      setShowDeleteConfirm(false);
+      setSelectedItem(null);
+    }
   };
 
-  const handleSave = () => {
-    setToastMessage(`${modalMode === 'add' ? 'Thêm' : 'Cập nhật'} ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} thành công!`);
-    setTimeout(() => setToastMessage(""), 3000);
-    setShowModal(false);
+  const handleSave = async () => {
+    // Validation
+    if (!formData.name?.trim()) {
+      setToastMessage('Vui lòng nhập tên!');
+      setTimeout(() => setToastMessage(""), 3000);
+      return;
+    }
+
+    if (activeTab === 'categories' && !formData.code?.trim()) {
+      setToastMessage('Vui lòng nhập mã danh mục!');
+      setTimeout(() => setToastMessage(""), 3000);
+      return;
+    }
+
+    try {
+      if (activeTab === 'categories') {
+        if (modalMode === 'add') {
+          await createCategory(formData);
+        } else {
+          await updateCategory(selectedItem.id, formData);
+        }
+      } else {
+        if (modalMode === 'add') {
+          await createBrand(formData);
+        } else {
+          await updateBrand(selectedItem.id, formData);
+        }
+      }
+      setToastMessage(`${modalMode === 'add' ? 'Thêm' : 'Cập nhật'} ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} thành công!`);
+      setTimeout(() => setToastMessage(""), 3000);
+      setShowModal(false);
+    } catch (error) {
+      setToastMessage(`Lỗi: ${error.response?.data?.message || 'Không thể lưu'}`);
+      setTimeout(() => setToastMessage(""), 3000);
+    }
   };
 
   const data = activeTab === 'categories' ? (categories || []) : (brands || []);
@@ -223,31 +265,58 @@ const Category_Brand = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
+                {activeTab === "categories" && (
+                  <TableHead className="font-bold text-gray-700">Mã</TableHead>
+                )}
                 <TableHead className="font-bold text-gray-700">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</TableHead>
                 {activeTab === "brands" && (
                   <TableHead className="font-bold text-gray-700">Quốc gia</TableHead>
                 )}
                 <TableHead className="font-bold text-gray-700">Số sản phẩm</TableHead>
                 <TableHead className="font-bold text-gray-700">Thời gian tạo</TableHead>
+                <TableHead className="font-bold text-gray-700">Cập nhật lần cuối</TableHead>
                 <TableHead className="text-center font-bold text-gray-700">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredData.map((item) => (
-                <TableRow key={item.id} className="hover:bg-blue-50 transition-colors border-b border-gray-100">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-sm ${activeTab === 'categories' ? 'bg-gradient-to-br from-purple-100 to-purple-200' : 'bg-gradient-to-br from-blue-100 to-blue-200'
-                        }`}>
-                        {activeTab === 'categories' ? (
-                          <FolderTree className="w-5 h-5 text-purple-600" />
-                        ) : (
-                          <Tag className="w-5 h-5 text-blue-600" />
-                        )}
+                <>
+                  <TableRow key={item.id} className="hover:bg-blue-50 transition-colors border-b border-gray-100">
+                    {activeTab === "categories" && (
+                      <TableCell>
+                        <Badge className="bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 font-mono font-semibold px-3 py-1">
+                          {item.code || '-'}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-sm ${activeTab === 'categories' ? 'bg-gradient-to-br from-purple-100 to-purple-200' : 'bg-gradient-to-br from-blue-100 to-blue-200'
+                          }`}>
+                          {activeTab === 'categories' ? (
+                            <FolderTree className="w-5 h-5 text-purple-600" />
+                          ) : (
+                            <Tag className="w-5 h-5 text-blue-600" />
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <button
+                            onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)}
+                            className="flex items-center gap-2 text-left group"
+                          >
+                            <span className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{item.name}</span>
+                            {item.description && (
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedRow === item.id ? 'rotate-180' : ''}`} />
+                            )}
+                          </button>
+                          {expandedRow === item.id && item.description && (
+                            <div className="mt-2 text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg animate-in slide-in-from-top-2 duration-200">
+                              {item.description}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-semibold text-gray-800">{item.name}</span>
-                    </div>
-                  </TableCell>
+                    </TableCell>
                   {activeTab === "brands" && (
                     <TableCell>
                       <span className="text-gray-600">{item.country}</span>
@@ -257,7 +326,28 @@ const Category_Brand = () => {
                   <TableCell>
                     <Badge className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold px-3 py-1">{productCountMap[item.id] || 0} sản phẩm</Badge>
                   </TableCell>
-                  <TableCell>{item.created_at}</TableCell>
+                  <TableCell>
+                    <span className="text-gray-600 text-sm">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-gray-600 text-sm">
+                      {item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : '-'}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
                       <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} title="Chỉnh sửa" className="hover:bg-blue-100 text-blue-600">
@@ -268,7 +358,8 @@ const Category_Brand = () => {
                       </Button>
                     </div>
                   </TableCell>
-                </TableRow>
+                  </TableRow>
+                </>
               ))}
             </TableBody>
           </Table>
@@ -281,13 +372,26 @@ const Category_Brand = () => {
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
             <div className="relative p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
               <h2 className="text-2xl font-bold text-gray-900">
-                {modalMode === 'add' ? '✨ Thêm mới' : '✏️ Chỉnh sửa'} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
+                {modalMode === 'add' ? 'Thêm mới' : 'Chỉnh sửa'} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
               </h2>
               <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-5">
+              {activeTab === 'categories' && (
+                <div>
+                  <Label className="text-sm font-semibold text-gray-700">Mã danh mục <span className="text-red-500">*</span></Label>
+                  <Input
+                    className="mt-2 h-11 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    placeholder="VD: FRESH, DRINK, SNACK"
+                    maxLength={50}
+                  />
+                </div>
+              )}
+
               <div>
                 <Label className="text-sm font-semibold text-gray-700">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} <span className="text-red-500">*</span></Label>
                 <Input
@@ -331,7 +435,7 @@ const Category_Brand = () => {
                 Hủy
               </Button>
               <Button className="flex-1 h-11 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md" onClick={handleSave}>
-                {modalMode === 'add' ? '✓ Thêm mới' : '✓ Cập nhật'}
+                {modalMode === 'add' ? 'Thêm mới' : 'Cập nhật'}
               </Button>
             </div>
           </div>

@@ -6,7 +6,7 @@ export const useFetchBrands = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchBrands= async () => {
+  const fetchBrands = async () => {
     setLoading(true);
     try {
       const response = await api.get('product/brands');
@@ -17,12 +17,41 @@ export const useFetchBrands = () => {
       setError(err.response?.data?.message || 'Lỗi khi tải thương hiệu');
       setBrands([]);
     } finally {
-      setLoading(false);    }
+      setLoading(false);
+    }
+  };
+
+  const createBrand = async (data) => {
+    const response = await api.post('product/brands', data);
+    setBrands(prev => [...prev, response.data]);
+    return response.data;
+  };
+
+  const updateBrand = async (id, data) => {
+    const response = await api.put(`product/brands/${id}`, data);
+    setBrands(prev => prev.map(brand => 
+      brand.id === id ? response.data : brand
+    ));
+    return response.data;
+  };
+
+  const deleteBrand = async (id) => {
+    await api.delete(`product/brands/${id}`);
+    setBrands(prev => prev.filter(brand => brand.id !== id));
   };
 
   useEffect(() => {
     fetchBrands();
   }, []);
 
-  return { brands, setBrands, loading, error, fetchBrands };
+  return { 
+    brands, 
+    setBrands, 
+    loading, 
+    error, 
+    fetchBrands,
+    createBrand,
+    updateBrand,
+    deleteBrand
+  };
 };

@@ -86,46 +86,16 @@ function App() {
                 <Route path="crm/complaints" element={<div className="p-4">Khiếu nại</div>} />
 
                 {/* Module 5: HR (Nhân sự) */}
-                <Route
-                    path="hr"
-                    element={
-                        <ProtectedRoute allowedRoles={HR_ROLES}>
-                            <EmployeeList />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="hr/users"
-                    element={
-                        <ProtectedRoute allowedRoles={ADMIN_ONLY}>
-                            <UserManagement />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="hr/shifts"
-                    element={
-                        <ProtectedRoute allowedRoles={HR_ROLES}>
-                            <ShiftManagement />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="hr/attendance"
-                    element={
-                        <ProtectedRoute allowedRoles={HR_ROLES}>
-                            <AttendanceManagement />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="hr/payroll"
-                    element={
-                        <ProtectedRoute allowedRoles={HR_ROLES}>
-                            <PayrollManagement />
-                        </ProtectedRoute>
-                    }
-                />
+               <Route path="hr" element={<div className="p-4">HR & Shift (Nhân sự)</div>} />
+                <Route path="hr/users" element={
+                    <PublicRoute allowedRoles={['ROLE_ADMIN']}>
+                        <UserManagement />
+                    </PublicRoute>
+                } />
+                <Route path="hr/shifts" element={<div className="p-4">Phân ca làm việc</div>} />
+                <Route path="hr/attendance" element={<div className="p-4">Chấm công</div>} />
+                <Route path="hr/payroll" element={<div className="p-4">Tính lương</div>} />
+                
 
                 {/* Module 6: Suppliers (Nhà cung cấp) */}
                 <Route path="suppliers" element={<div className="p-4">Danh sách nhà cung cấp</div>} />
