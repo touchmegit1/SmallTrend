@@ -54,7 +54,7 @@ public class Coupon {
     @Column
     private Integer minQuantity; // Số lượng sản phẩm tối thiểu
 
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "LONGTEXT")
     private String allowedCategories; // [1, 2, 3]
     private LocalDate startDate;
 

@@ -75,7 +75,7 @@ public class Campaign {
     @Column(precision = 15, scale = 2)
     private BigDecimal minPurchaseAmount; // Giá trị đơn hàng tối thiểu
 
-    @Column(columnDefinition = "JSON")
+    @Column(columnDefinition = "LONGTEXT")
     private String targetCategories; // [1, 2, 3] - Category IDs áp dụng
 
     @Column
