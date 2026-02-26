@@ -26,6 +26,9 @@ import CRMloyalty from "./pages/CRM/loyalty";
 import { useAuth } from "./context/AuthContext";
 import TransactionHistory from "./pages/Pos/Transition_History";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
+import TicketCenter from "./pages/Admin/TicketCenter";
+import AuditLogPage from "./pages/Admin/AuditLogPage";
+import AiChatPage from "./pages/Admin/AiChatPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -218,7 +221,29 @@ function App() {
         {/* Ticket Center */}
         <Route
           path="ticket-center"
-          element={<div className="p-4">Trung tâm Ticket</div>}
+          element={
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+              <TicketCenter />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="admin/ticket-center"
+          element={
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+              <TicketCenter />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="admin/audit-logs"
+          element={
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+              <AuditLogPage />
+            </ProtectedRoute>
+          }
         />
 
         {/* Module 6: Reports (Báo cáo) */}
@@ -239,8 +264,12 @@ function App() {
           element={<div className="p-4">AI dự báo</div>}
         />
         <Route
-          path="reports/ai-chatbot"
-          element={<div className="p-4">AI Chatbot</div>}
+          path="reports/ai-chat"
+          element={
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
+              <AiChatPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="reports/audit-logs"

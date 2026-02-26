@@ -42,6 +42,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/files/**").permitAll()
                 .requestMatchers("/api/debug/**").permitAll()
+                .requestMatchers("/api/ai/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

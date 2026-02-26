@@ -81,13 +81,10 @@ const Sidebar = () => {
         },
         {
             icon: BarChart3,
-            label: 'Báo cáo & AI',
+            label: 'AI',
             path: '/reports',
             children: [
-                { label: 'Tạo báo cáo', path: '/reports/create' },
-                { label: 'Quản lý báo cáo', path: '/reports/manage' },
-                { label: 'AI dự báo', path: '/reports/ai' },
-                { label: 'Audit Logs', path: '/reports/audit-logs' },
+                { label: 'AI dự báo', path: '/reports/ai-chat' },
             ]
         },
     ];
@@ -156,6 +153,28 @@ const Sidebar = () => {
                                     }
                                 >
                                     Quản lý người dùng
+                                </NavLink>
+                                <NavLink
+                                    to="/admin/ticket-center"
+                                    className={({ isActive }) =>
+                                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                                            ? 'bg-indigo-100 text-indigo-700 font-medium'
+                                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                        }`
+                                    }
+                                >
+                                    Trung tâm Báo cáo
+                                </NavLink>
+                                <NavLink
+                                    to="/admin/audit-logs"
+                                    className={({ isActive }) =>
+                                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                                            ? 'bg-indigo-100 text-indigo-700 font-medium'
+                                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                        }`
+                                    }
+                                >
+                                    Nhật ký Audit
                                 </NavLink>
                             </div>
                         )}
