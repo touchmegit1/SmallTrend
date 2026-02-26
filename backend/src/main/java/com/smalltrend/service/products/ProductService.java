@@ -1,12 +1,19 @@
 package com.smalltrend.service.products;
 
-import com.smalltrend.entity.Product;
+import com.smalltrend.dto.products.CreateProductRequest;
+import com.smalltrend.dto.products.ProductResponse;
 import java.util.List;
 
 public interface ProductService {
-    List<Product> getAll();
-    Product getById(Integer id);
-    Product create(Product product);
-    Product update(Integer id, Product product);
+    List<ProductResponse> getAll();
+
+    ProductResponse getById(Integer id);
+
+    ProductResponse create(CreateProductRequest request);
+
+    ProductResponse update(Integer id, CreateProductRequest request);
+
     void delete(Integer id);
+
+    void toggleStatus(Integer id);
 }

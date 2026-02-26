@@ -1,48 +1,125 @@
 package com.smalltrend.service.products;
 
+import com.smalltrend.dto.products.CreateProductRequest;
+import com.smalltrend.dto.products.ProductResponse;
+import com.smalltrend.entity.Brand;
+import com.smalltrend.entity.Category;
 import com.smalltrend.entity.Product;
+import com.smalltrend.entity.TaxRate;
+import com.smalltrend.repository.BrandRepository;
+import com.smalltrend.repository.CategoryRepository;
 import com.smalltrend.repository.ProductRepository;
+import com.smalltrend.repository.TaxRateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
+    private final BrandRepository brandRepository;
+    private final CategoryRepository categoryRepository;
+    private final TaxRateRepository taxRateRepository;
 
-    @Override
-    public List<Product> getAll() {
-        return productRepository.findAll();
+    private ProductResponse mapToResponse(Product product) {
+        return ProductResponse.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .image_url(product.getImageUrl())
+                .description(product.getDescription())
+                .brand_id(product.getBrand() != null ? product.getBrand().getId() : null)
+                .brand_name(product.getBrand() != null ? product.getBrand().getName() : null)
+                .category_id(product.getCategory() != null ? product.getCategory().getId() : null)
+                .category_name(product.getCategory() != null ? product.getCategory().getName() : null)
+                .tax_rate_id(product.getTaxRate() != null ? product.getTaxRate().getId() : null)
+                .tax_rate_name(product.getTaxRate() != null ? product.getTaxRate().getName() : null)
+                .is_active(product.getIsActive())
+                .created_at(product.getCreatedAt())
+                .updated_at(product.getUpdatedAt())
+                .variant_count(product.getVariants() != null ? product.getVariants().size() : 0)
+                .build();
     }
 
     @Override
-    public Product getById(Integer id) {
-        return productRepository.findById(id)
+    public List<ProductResponse> getAll() {
+        return productRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public ProductResponse getById(Integer id) {
+        Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        return mapToResponse(product);
     }
 
     @Override
-    public Product create(Product product) {
-        return productRepository.save(product);
+    @Transactional
+    public ProductResponse create(CreateProductRequest request) {
+        Product product = new Product();
+        applyRequestToProduct(request, product);
+        Product saved = productRepository.save(product);
+        return mapToResponse(saved);
     }
 
     @Override
-    public Product update(Integer id, Product product) {
-        Product existing = getById(id);
-        existing.setName(product.getName());
-        existing.setDescription(product.getDescription());
-        existing.setImageUrl(product.getImageUrl());
-        existing.setBrand(product.getBrand());
-        existing.setCategory(product.getCategory());
-        existing.setTaxRate(product.getTaxRate());
-        return productRepository.save(existing);
+    @Transactional
+    public ProductResponse update(Integer id, CreateProductRequest request) {
+        Product existing = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        applyRequestToProduct(request, existing);
+        Product saved = productRepository.save(existing);
+        return mapToResponse(saved);
+    }
+
+    private void applyRequestToProduct(CreateProductRequest request, Product product) {
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setImageUrl(request.getImageUrl());
+
+        if (request.getCategoryId() != null) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+            product.setCategory(category);
+        } else {
+            product.setCategory(null);
+        }
+
+        if (request.getBrandId() != null) {
+            Brand brand = brandRepository.findById(request.getBrandId())
+                    .orElseThrow(() -> new RuntimeException("Brand not found with id: " + request.getBrandId()));
+            product.setBrand(brand);
+        } else {
+            product.setBrand(null);
+        }
+
+        if (request.getTaxRateId() != null) {
+            TaxRate taxRate = taxRateRepository.findById(request.getTaxRateId())
+                    .orElseThrow(() -> new RuntimeException("TaxRate not found with id: " + request.getTaxRateId()));
+            product.setTaxRate(taxRate);
+        } else {
+            product.setTaxRate(null);
+        }
     }
 
     @Override
+    @Transactional
     public void delete(Integer id) {
         productRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void toggleStatus(Integer id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        product.setIsActive(!product.getIsActive());
+        productRepository.save(product);
     }
 }

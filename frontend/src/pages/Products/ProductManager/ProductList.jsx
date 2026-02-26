@@ -10,12 +10,14 @@ import EditProductModal from "./EditProductModal";
 import { useFetchProducts } from "../../../hooks/products";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
+import { useFetchTaxRates } from "../../../hooks/taxRates";
 import api from "../../../config/axiosConfig";
 
 
 export function ProductListScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterTaxRate, setFilterTaxRate] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
@@ -29,6 +31,7 @@ export function ProductListScreen() {
   const { products, loading, error, fetchProducts } = useFetchProducts();
   const { categories } = useFetchCategories();
   const { brands } = useFetchBrands();
+  const { taxRates } = useFetchTaxRates();
 
   // Helper functions để lấy tên từ ID
   const getCategoryName = (categoryId) => {
@@ -62,12 +65,15 @@ export function ProductListScreen() {
       const matchesCategory =
         filterCategory === "all" || categoryName === filterCategory;
 
+      const matchesTaxRate =
+        filterTaxRate === "all" || String(product.tax_rate_id) === filterTaxRate;
+
       const matchesStatus =
         filterStatus === "all" ||
         (filterStatus === "active" && product.is_active) ||
         (filterStatus === "inactive" && !product.is_active);
 
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesCategory && matchesTaxRate && matchesStatus;
     })
     .sort((a, b) => {
       if (!sortField) return 0;
@@ -77,9 +83,9 @@ export function ProductListScreen() {
       if (sortField === "brand") {
         aValue = getBrandName(a.brand_id);
         bValue = getBrandName(b.brand_id);
-      } else if (sortField === "created_at") {
-        aValue = new Date(a.created_at);
-        bValue = new Date(b.created_at);
+      } else if (sortField === "created_at" || sortField === "updated_at") {
+        aValue = new Date(a[sortField]);
+        bValue = new Date(b[sortField]);
       } else {
         aValue = a[sortField];
         bValue = b[sortField];
@@ -221,7 +227,7 @@ export function ProductListScreen() {
         {/* Filters */}
         <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="relative col-span-2">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
@@ -240,6 +246,17 @@ export function ProductListScreen() {
                 <option value="all">Tất cả danh mục</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+
+              <select
+                className="h-12 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                value={filterTaxRate}
+                onChange={(e) => setFilterTaxRate(e.target.value)}
+              >
+                <option value="all">Tất cả thuế</option>
+                {taxRates.map((tax) => (
+                  <option key={tax.id} value={String(tax.id)}>{tax.name} ({tax.rate}%)</option>
                 ))}
               </select>
 
@@ -279,6 +296,7 @@ export function ProductListScreen() {
                       Thương hiệu {sortField === "brand" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead className="font-semibold">Danh mục</TableHead>
+                    <TableHead className="font-semibold">Thuế</TableHead>
                     <TableHead className="font-semibold">Biến thể</TableHead>
                     <TableHead className="font-semibold">Trạng thái</TableHead>
                     <TableHead
@@ -287,6 +305,12 @@ export function ProductListScreen() {
                     >
                       Thời gian tạo {sortField === "created_at" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
+                      onClick={() => handleSort("updated_at")}
+                    >
+                      Cập nhật lần cuối {sortField === "updated_at" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
                     <TableHead className="text-center font-semibold">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -294,7 +318,7 @@ export function ProductListScreen() {
                 <TableBody>
                   {filteredProducts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
+                      <TableCell colSpan={9} className="text-center py-12">
                         <Package className="w-16 h-16 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500 font-medium">Không tìm thấy sản phẩm nào</p>
                       </TableCell>
@@ -304,9 +328,17 @@ export function ProductListScreen() {
                       <TableRow className="hover:bg-blue-50/50 transition-colors border-b border-gray-100" key={product.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center shadow-sm">
-                              <Package className="w-6 h-6 text-blue-600" />
-                            </div>
+                            {product.image_url ? (
+                              <img
+                                src={product.image_url}
+                                alt={product.name}
+                                className="w-12 h-12 rounded-xl object-cover shadow-sm border border-gray-100"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center shadow-sm">
+                                <Package className="w-6 h-6 text-blue-600" />
+                              </div>
+                            )}
                             <div>
                               <p className="text-sm font-semibold text-gray-900">{product.name}</p>
                               <p className="text-xs text-gray-500">
@@ -318,7 +350,12 @@ export function ProductListScreen() {
                         <TableCell className="font-medium text-gray-700">{getBrandName(product.brand_id)}</TableCell>
                         <TableCell>
                           <Badge className="bg-gradient-to-r from-slate-100 to-gray-100 text-gray-700 border-0 font-medium" variant="secondary">
-                            {getCategoryName(product.category_id)}
+                            {product.category_name || 'N/A'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 border-0 font-medium" variant="secondary">
+                            {product.tax_rate_name || 'N/A'}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -333,8 +370,12 @@ export function ProductListScreen() {
                             <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-0 font-medium">Ngừng bán</Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-gray-600 text-sm">{product.created_at}</TableCell>
-
+                        <TableCell className="text-gray-600 text-sm">
+                          {product.created_at ? new Date(product.created_at).toLocaleString('vi-VN') : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-gray-600 text-sm">
+                          {product.updated_at ? new Date(product.updated_at).toLocaleString('vi-VN') : 'N/A'}
+                        </TableCell>
                         <TableCell className="text-center">
                           <div className="flex justify-center gap-1">
                             <Button

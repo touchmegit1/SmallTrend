@@ -22,5 +22,7 @@ public class TaxRate {
 
     private String name;
     private BigDecimal rate;
+
+    @Column(name = "is_active")
     private boolean isActive;
 }

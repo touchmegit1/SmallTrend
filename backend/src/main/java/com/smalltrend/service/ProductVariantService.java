@@ -46,6 +46,16 @@ public class ProductVariantService {
             .collect(Collectors.toList());
     }
     
+    public List<ProductVariantRespone> getVariantsByProductId(Integer productId) {
+        List<ProductVariant> variants = productVariantRepository.findAll().stream()
+            .filter(v -> v.getProduct().getId().equals(productId))
+            .collect(Collectors.toList());
+        
+        return variants.stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+    }
+    
     private ProductVariantRespone mapToResponse(ProductVariant variant) {
         ProductVariantRespone response = new ProductVariantRespone();
         response.setId(variant.getId());
@@ -53,6 +63,9 @@ public class ProductVariantService {
         response.setBarcode(variant.getBarcode());
         response.setName(variant.getProduct().getName());
         response.setSellPrice(variant.getSellPrice());
+        response.setCostPrice(variant.getCostPrice());
+        response.setAttributes(variant.getAttributes());
+        response.setIsActive(variant.getIsActive());
         
         // Get stock quantity
         Integer stockQty = inventoryStockRepository.findByVariantId(variant.getId())

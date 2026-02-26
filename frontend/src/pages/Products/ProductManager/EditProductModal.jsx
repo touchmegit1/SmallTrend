@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Save, Image as ImageIcon, Plus } from "lucide-react";
+import { X, Save, Image as ImageIcon, Upload } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
@@ -7,19 +7,22 @@ import { Textarea } from "../ProductComponents/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
+import { useFetchTaxRates } from "../../../hooks/taxRates";
 import api from "../../../config/axiosConfig";
 
 export function EditProductModal({ product, isOpen, onClose, onSave }) {
   const { categories } = useFetchCategories();
   const { brands } = useFetchBrands();
+  const { taxRates } = useFetchTaxRates();
   const [formData, setFormData] = useState({
     name: "",
-    brand_id: "",
-    category_id: "",
-    unit: "",
+    brandId: "",
+    categoryId: "",
+    taxRateId: "",
     description: "",
   });
-  const [images, setImages] = useState([]);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -27,11 +30,13 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
     if (product && isOpen) {
       setFormData({
         name: product.name || "",
-        brand_id: product.brand_id || "",
-        category_id: product.category_id || "",
-        unit: product.unit || "",
+        brandId: product.brand_id || "",
+        categoryId: product.category_id || "",
+        taxRateId: product.tax_rate_id || "",
         description: product.description || "",
       });
+      setImagePreview(product.image_url || null);
+      setImageFile(null);
     }
   }, [product, isOpen]);
 
@@ -42,17 +47,16 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageUpload = (files) => {
-    const newImages = Array.from(files).map(file => ({
-      file,
-      preview: URL.createObjectURL(file)
-    }));
-    setImages(prev => [...prev, ...newImages]);
+  const handleImageSelect = (file) => {
+    if (file && file.type.startsWith("image/")) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
   };
 
   const handleFileSelect = (e) => {
-    if (e.target.files?.length) {
-      handleImageUpload(e.target.files);
+    if (e.target.files?.[0]) {
+      handleImageSelect(e.target.files[0]);
     }
   };
 
@@ -69,20 +73,54 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files?.length) {
-      handleImageUpload(e.dataTransfer.files);
+    if (e.dataTransfer.files?.[0]) {
+      handleImageSelect(e.dataTransfer.files[0]);
     }
   };
 
-  const removeImage = (index) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return null;
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", imageFile);
+      const response = await api.post("/upload/image", formDataUpload, {
+        headers: { "Content-Type": undefined },
+      });
+      return response.data.url;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.put(`/products/${product.id}`, formData);
-      onSave({ ...product, ...formData });
+      let imageUrl = imagePreview;
+
+      // Only upload if a new file was selected
+      if (imageFile) {
+        imageUrl = await uploadImage();
+      }
+
+      const payload = {
+        name: formData.name,
+        description: formData.description || null,
+        imageUrl: imageUrl || null,
+        categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
+        brandId: formData.brandId ? parseInt(formData.brandId) : null,
+        taxRateId: formData.taxRateId ? parseInt(formData.taxRateId) : null,
+      };
+      await api.put(`/products/${product.id}`, payload);
+      onSave({ ...product, ...payload });
       onClose();
     } catch (error) {
       console.error("Error updating product:", error);
@@ -98,8 +136,8 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Chỉnh sửa sản phẩm</h2>
             <p className="text-gray-600 text-sm mt-1">Cập nhật thông tin sản phẩm</p>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-gray-400 hover:text-gray-600 hover:bg-white rounded-full p-2 transition-all"
           >
             <X className="w-6 h-6" />
@@ -129,9 +167,9 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 <div>
                   <Label className="text-sm font-semibold text-gray-700">Danh mục <span className="text-red-500">*</span></Label>
                   <select
-                    name="category_id"
+                    name="categoryId"
                     className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={formData.category_id}
+                    value={formData.categoryId}
                     onChange={handleChange}
                     required
                   >
@@ -145,9 +183,9 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 <div>
                   <Label className="text-sm font-semibold text-gray-700">Thương hiệu</Label>
                   <select
-                    name="brand_id"
+                    name="brandId"
                     className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={formData.brand_id}
+                    value={formData.brandId}
                     onChange={handleChange}
                   >
                     <option value="">Chọn thương hiệu</option>
@@ -158,15 +196,18 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-semibold text-gray-700">Đơn vị <span className="text-red-500">*</span></Label>
-                  <Input
-                    className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="VD: Chai, Hộp, Gói, Kg..."
-                    name="unit"
-                    value={formData.unit}
+                  <Label className="text-sm font-semibold text-gray-700">Thuế</Label>
+                  <select
+                    name="taxRateId"
+                    className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={formData.taxRateId}
                     onChange={handleChange}
-                    required
-                  />
+                  >
+                    <option value="">Chọn loại thuế</option>
+                    {taxRates.map((tax) => (
+                      <option key={tax.id} value={tax.id}>{tax.name} ({tax.rate}%)</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -183,44 +224,44 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
               </CardContent>
             </Card>
 
-            {/* RIGHT */}
+            {/* RIGHT - Image */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col">
               <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-t-2xl border-b border-gray-200">
                 <CardTitle className="text-xl font-bold text-gray-800">Hình ảnh sản phẩm</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col flex-1 space-y-4 p-6">
+              <CardContent className="flex flex-col flex-1 p-6">
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  multiple
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                
-                {images.length === 0 ? (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => fileInputRef.current?.click()}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        fileInputRef.current?.click();
-                      }
-                    }}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-                      isDragging ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-105' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
-                    }`}
-                  >
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
-                      <ImageIcon className="w-10 h-10 text-blue-600" />
-                    </div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Kéo thả hoặc click để tải ảnh lên</p>
-                    <p className="text-xs text-gray-500">Hỗ trợ JPG, PNG, GIF</p>
+
+                {imagePreview ? (
+                  <div className="relative flex-1 rounded-2xl overflow-hidden group">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-full object-contain rounded-2xl bg-gray-50"
+                      style={{ minHeight: '280px' }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-2xl" />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-3 right-3 bg-white/90 hover:bg-white text-gray-700 rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg flex items-center gap-2"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Đổi ảnh
+                    </button>
                   </div>
                 ) : (
                   <div
@@ -236,60 +277,36 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`flex-1 min-h-0 border-2 border-dashed rounded-2xl p-4 transition-all cursor-pointer ${
-                      isDragging ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-105' : 'border-gray-300 hover:border-blue-400'
-                    }`}
+                    className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
+                      ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]'
+                      : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
+                      }`}
+                    style={{ minHeight: '280px' }}
                   >
-                    <div className="grid grid-cols-2 gap-3">
-                      {images.map((img, index) => (
-                        <div key={index} className="relative group aspect-square">
-                          <img
-                            src={img.preview}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-full object-cover rounded-xl shadow-md"
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeImage(index);
-                            }}
-                            className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-lg"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
+                      <ImageIcon className="w-10 h-10 text-blue-600" />
                     </div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Kéo thả hoặc click để tải ảnh lên</p>
+                    <p className="text-xs text-gray-500">Hỗ trợ JPG, PNG, GIF</p>
                   </div>
                 )}
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 rounded-xl h-11"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Thêm ảnh
-                </Button>
               </CardContent>
             </Card>
           </div>
 
           {/* Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold"
             >
               <Save className="w-5 h-5 mr-2" />
               Lưu thay đổi
             </Button>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold" 
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold"
               onClick={onClose}
             >
               Hủy

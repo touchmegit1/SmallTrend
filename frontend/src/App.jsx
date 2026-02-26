@@ -24,6 +24,8 @@ import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
 import ProductList from "./pages/Products/ProductManager/ProductList";
+import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
+import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import { useAuth } from "./context/AuthContext";
@@ -33,7 +35,7 @@ import ReportforCashier from "./pages/Pos/ReportforCashier";
 
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -41,7 +43,7 @@ function RootRedirect() {
       </div>
     );
   }
-  
+
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
 }
 
@@ -50,7 +52,7 @@ function App() {
     <Routes>
       {/* Root Route - Redirect based on authentication */}
       <Route path="/" element={<RootRedirect />} />
-      
+
       {/* Public Routes */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/crm/homepage" element={<CRMhomepage />} />
@@ -73,11 +75,11 @@ function App() {
         />
         <Route
           path="pos/suspended"
-          element={<ReportforCashier/>}
+          element={<ReportforCashier />}
         />
         <Route
           path="pos/shift-handover"
-          element={<ShiftHandover/>}
+          element={<ShiftHandover />}
         />
         {/* Module 2: Inventory (Kho) */}
         < Route path="inventory" element={<InventoryDashboard />} />
@@ -102,11 +104,19 @@ function App() {
         {/* Module 3: Products (Sản phẩm) */}
         <Route
           path="products"
-          element={<div className="p-4">{<ProductList/>}</div>}
+          element={<div className="p-4">{<ProductList />}</div>}
+        />
+        <Route
+          path="products/addproduct"
+          element={<AddNewProduct />}
+        />
+        <Route
+          path="products/detail/:id"
+          element={<ProductDetail />}
         />
         <Route
           path="products/categories"
-        element={<div className="p-4">{<CategoryAndBrand/>}</div>}
+          element={<div className="p-4">{<CategoryAndBrand />}</div>}
         />
         <Route
           path="products/price-books"
@@ -114,7 +124,7 @@ function App() {
         />
         <Route
           path="products/print-barcodes"
-          element={<div className="p-4">{<ComboManage/>}</div>}
+          element={<div className="p-4">{<ComboManage />}</div>}
         />
 
         {/* Module 4: CRM (Khách hàng) */}
