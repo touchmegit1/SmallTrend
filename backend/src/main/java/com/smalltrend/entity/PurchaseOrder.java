@@ -1,6 +1,5 @@
 package com.smalltrend.entity;
 
-import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -22,26 +21,35 @@ public class PurchaseOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(name = "order_number", unique = true, nullable = false)
-    private String orderNumber;
+    @Column(name = "po_number", unique = true)
+    private String poNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id")
+    @JoinColumn(name = "supplier_id")
     private Supplier supplier;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private Location location;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @Column(name = "order_date", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "received_by")
+    private User receivedBy;
+
+    @Column(name = "order_date")
     private LocalDate orderDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private PurchaseOrderStatus status = PurchaseOrderStatus.DRAFT;
+    private String status = "DRAFT";
 
     @Column(name = "subtotal", precision = 15, scale = 2)
     @Builder.Default
