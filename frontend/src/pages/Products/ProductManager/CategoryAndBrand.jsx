@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, Search, CheckCircle, Tag, FolderTree, X, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, CheckCircle, XCircle, Tag, FolderTree, X, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
@@ -132,7 +132,7 @@ const Category_Brand = () => {
   };
 
   const data = activeTab === 'categories' ? (categories || []) : (brands || []);
-  
+
   const uniqueCountries = useMemo(() => {
     if (activeTab !== 'brands') return [];
     const countries = brands?.map(b => b.country).filter(Boolean) || [];
@@ -163,9 +163,16 @@ const Category_Brand = () => {
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right">
-          <div className="flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg px-6 py-4 shadow-lg">
-            <CheckCircle className="w-5 h-5" />
-            <span className="font-medium">{toastMessage}</span>
+          <div className={`flex items-center gap-3 text-white rounded-xl px-6 py-4 shadow-2xl transition-all duration-300 ${toastMessage.startsWith("Lỗi") || toastMessage.startsWith("Vui lòng")
+              ? "bg-gradient-to-r from-red-500 to-rose-500 ring-4 ring-red-500/20"
+              : "bg-gradient-to-r from-green-500 to-emerald-500 ring-4 ring-green-500/20"
+            }`}>
+            {toastMessage.startsWith("Lỗi") || toastMessage.startsWith("Vui lòng") ? (
+              <XCircle className="w-6 h-6" />
+            ) : (
+              <CheckCircle className="w-6 h-6" />
+            )}
+            <span className="font-semibold text-base">{toastMessage}</span>
           </div>
         </div>
       )}
@@ -225,7 +232,7 @@ const Category_Brand = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            
+
             {activeTab === 'brands' && (
               <div className="relative min-w-[200px]">
                 <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -241,7 +248,7 @@ const Category_Brand = () => {
                 </select>
               </div>
             )}
-            
+
             <Button
               variant="outline"
               className="h-12 px-4 rounded-xl border-gray-200 hover:bg-gray-100"
@@ -317,47 +324,47 @@ const Category_Brand = () => {
                         </div>
                       </div>
                     </TableCell>
-                  {activeTab === "brands" && (
-                    <TableCell>
-                      <span className="text-gray-600">{item.country}</span>
-                    </TableCell>
-                  )}
+                    {activeTab === "brands" && (
+                      <TableCell>
+                        <span className="text-gray-600">{item.country}</span>
+                      </TableCell>
+                    )}
 
-                  <TableCell>
-                    <Badge className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold px-3 py-1">{productCountMap[item.id] || 0} sản phẩm</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-gray-600 text-sm">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', { 
-                        year: 'numeric', 
-                        month: '2-digit', 
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : '-'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-gray-600 text-sm">
-                      {item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN', { 
-                        year: 'numeric', 
-                        month: '2-digit', 
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : '-'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} title="Chỉnh sửa" className="hover:bg-blue-100 text-blue-600">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} title="Xóa" className="hover:bg-red-100 text-red-600">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                    <TableCell>
+                      <Badge className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold px-3 py-1">{productCountMap[item.id] || 0} sản phẩm</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-gray-600 text-sm">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-gray-600 text-sm">
+                        {item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex justify-center gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} title="Chỉnh sửa" className="hover:bg-blue-100 text-blue-600">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} title="Xóa" className="hover:bg-red-100 text-red-600">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 </>
               ))}

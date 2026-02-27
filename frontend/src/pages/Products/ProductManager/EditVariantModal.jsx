@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/c
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
-export function EditVariantModal({ variant, isOpen, onClose, onSave }) {
+export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSave }) {
   const { units, loading: unitsLoading } = useFetchUnits();
 
   const [formData, setFormData] = useState({
@@ -35,13 +35,13 @@ export function EditVariantModal({ variant, isOpen, onClose, onSave }) {
         unit_id: variant.unit_id ? String(variant.unit_id) : "",
         unit_value: variant.unit_value != null ? String(variant.unit_value) : "",
         sell_price: variant.sell_price != null ? String(variant.sell_price) : "",
-        is_active: variant.is_active ?? true,
+        is_active: parentProduct?.is_active === false ? false : (variant.is_active ?? true),
       });
       setImageFile(null);
       setImagePreview(variant.image_url ? `http://localhost:8081${variant.image_url}` : null);
       setErrorMsg("");
     }
-  }, [variant, isOpen]);
+  }, [variant, isOpen, parentProduct]);
 
   if (!isOpen) return null;
 
@@ -286,7 +286,7 @@ export function EditVariantModal({ variant, isOpen, onClose, onSave }) {
                 <Label>Trạng thái</Label>
                 <select
                   name="is_active"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white disabled:bg-gray-100 disabled:text-gray-500"
                   value={formData.is_active}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -294,10 +294,16 @@ export function EditVariantModal({ variant, isOpen, onClose, onSave }) {
                       is_active: e.target.value === "true",
                     }))
                   }
+                  disabled={parentProduct?.is_active === false}
                 >
                   <option value="true">Đang bán</option>
                   <option value="false">Ngưng bán</option>
                 </select>
+                {parentProduct?.is_active === false && (
+                  <p className="text-xs text-red-500 mt-1">
+                    Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt biến thể.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

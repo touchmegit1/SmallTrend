@@ -21,7 +21,7 @@ const AddNewProductVariant = () => {
     unit_id: "",
     unit_value: "",
     sell_price: "",
-    is_active: true,
+    is_active: product?.is_active === false ? false : true,
   });
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -297,7 +297,7 @@ const AddNewProductVariant = () => {
                     <Label className="text-sm font-semibold text-gray-700">Trạng thái</Label>
                     <select
                       name="is_active"
-                      className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                       value={formData.is_active}
                       onChange={(e) =>
                         setFormData((prev) => ({
@@ -305,10 +305,16 @@ const AddNewProductVariant = () => {
                           is_active: e.target.value === "true",
                         }))
                       }
+                      disabled={product?.is_active === false}
                     >
-                      <option value="true">Đang hoạt động</option>
+                      {product?.is_active !== false && <option value="true">Đang hoạt động</option>}
                       <option value="false">Ngừng hoạt động</option>
                     </select>
+                    {product?.is_active === false && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Sản phẩm gốc đang ngừng hoạt động, không thể tạo biến thể kích hoạt.
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

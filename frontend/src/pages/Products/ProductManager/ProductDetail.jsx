@@ -401,9 +401,10 @@ function ProductDetail() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          title={variant.is_active ? "Ngưng bán" : "Bật bán"}
+                          title={variant.is_active ? "Ngưng bán" : (product?.is_active === false ? "Sản phẩm gốc ngưng bán" : "Bật bán")}
                           onClick={() => handleToggleStatus(variant)}
-                          className="hover:bg-gray-100"
+                          disabled={!variant.is_active && product?.is_active === false}
+                          className="hover:bg-gray-100 disabled:opacity-50"
                         >
                           <Power className={`w-4 h-4 ${variant.is_active ? 'text-green-600' : 'text-gray-400'}`} />
                         </Button>
@@ -444,6 +445,7 @@ function ProductDetail() {
 
       <EditVariantModal
         variant={selectedVariant}
+        parentProduct={product}
         isOpen={isEditVariantModalOpen}
         onClose={() => setIsEditVariantModalOpen(false)}
         onSave={handleSaveVariant}

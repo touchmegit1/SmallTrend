@@ -69,6 +69,11 @@ public class ProductVariantService {
         Unit unit = unitRepository.findById(request.getUnitId())
                 .orElseThrow(() -> new RuntimeException("Unit not found with id: " + request.getUnitId()));
 
+        boolean isVariantActive = request.getIsActive() != null ? request.getIsActive() : true;
+        if (isVariantActive && (product.getIsActive() != null && !product.getIsActive())) {
+            throw new RuntimeException("Không thể tạo biến thể đang bán vì sản phẩm gốc đang ngừng bán!");
+        }
+
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .sku(request.getSku())
@@ -77,7 +82,7 @@ public class ProductVariantService {
                 .unitValue(request.getUnitValue())
                 .sellPrice(request.getSellPrice())
                 .imageUrl(request.getImageUrl())
-                .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+                .isActive(isVariantActive)
                 .build();
 
         ProductVariant saved = productVariantRepository.save(variant);
@@ -100,6 +105,10 @@ public class ProductVariantService {
             variant.setImageUrl(request.getImageUrl());
         }
         if (request.getIsActive() != null) {
+            if (request.getIsActive()
+                    && (variant.getProduct().getIsActive() != null && !variant.getProduct().getIsActive())) {
+                throw new RuntimeException("Không thể bật trạng thái hoạt động vì sản phẩm gốc đang ngừng bán!");
+            }
             variant.setActive(request.getIsActive());
         }
 
@@ -110,7 +119,13 @@ public class ProductVariantService {
     public void toggleVariantStatus(Integer variantId) {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new RuntimeException("Variant not found with id: " + variantId));
-        variant.setActive(!variant.isActive());
+
+        boolean willBeActive = !variant.isActive();
+        if (willBeActive && (variant.getProduct().getIsActive() != null && !variant.getProduct().getIsActive())) {
+            throw new RuntimeException("Không thể bật trạng thái hoạt động vì sản phẩm gốc đang ngừng bán!");
+        }
+
+        variant.setActive(willBeActive);
         productVariantRepository.save(variant);
     }
 
