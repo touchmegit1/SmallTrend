@@ -61,15 +61,7 @@ function RootRedirect() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/crm/homepage" replace />;
-  }
-
-  const privilegedRoles = [...ADMIN_ROLES, ...MANAGER_ROLES];
-  const currentRole = user?.role;
-  return privilegedRoles.includes(currentRole)
-    ? <Navigate to="/dashboard" replace />
-    : <Navigate to="/pos" replace />;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
 }
 
 function App() {
@@ -174,21 +166,13 @@ function App() {
         />
 
         {/* Module 4: CRM (Khách hàng) */}
-        <Route
-          path="crm"
-          element={<CRMcustomer />}
-        />
+        <Route path="crm" element={<div className="p-4">CRM &amp; Promotion</div>} />
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
-        <Route
-          path="crm/promotions"
-          element={<div className="p-4">Chương trình KM</div>}
-        />
-        <Route
-          path="crm/vouchers"
-          element={<div className="p-4">Voucher/Coupon</div>}
-        />
+        <Route path="crm/report" element={<CRMreport />} />
+        <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
+        <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
         <Route path="crm/complain" element={<CRMcomplain />} />
         <Route path="crm/complaints" element={<CRMcomplain />} />
 
