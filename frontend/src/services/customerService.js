@@ -28,6 +28,11 @@ const customerService = {
     const response = await api.delete(`/crm/customers/${id}`);
     return response.data;
   },
+
+  searchByPhone: async (phone) => {
+    const response = await api.get(`/crm/customers/search?phone=${phone}`);
+    return response.data;
+  },
 };
 
 export default customerService;

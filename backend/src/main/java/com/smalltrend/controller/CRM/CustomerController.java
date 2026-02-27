@@ -43,6 +43,12 @@ public class CustomerController {
         }
     }
 
+    @GetMapping("/customers/search")
+    public ResponseEntity<CustomerResponse> searchCustomerByPhone(@RequestParam String phone) {
+        CustomerResponse customer = customerService.getCustomerByPhone(phone);
+        return ResponseEntity.ok(customer);
+    }
+
     @PostMapping("/customers")
     public ResponseEntity<CustomerResponse> createCustomer(@RequestBody CreateCustomerRequest request) {
         CustomerResponse customer = customerService.createCustomer(request.getName(), request.getPhone());
@@ -56,7 +62,8 @@ public class CustomerController {
         CustomerResponse customer = customerService.updateCustomer(
             id, 
             request.getName(), 
-            request.getPhone()
+            request.getPhone(),
+            request.getLoyaltyPoints()
         );
         return ResponseEntity.ok(customer);
     }

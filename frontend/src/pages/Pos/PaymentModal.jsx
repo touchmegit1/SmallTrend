@@ -1,5 +1,6 @@
 import { useState } from "react";
 import CustomerSearch from "./CustomerSearch";
+import api from "../../config/axiosConfig";
 
 export default function PaymentModal({ cart, customer, onClose, onComplete }) {
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
@@ -11,7 +12,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
   const [cashAmount, setCashAmount] = useState("");
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const pointsDiscount = usePoints && selectedCustomer ? Math.min(selectedCustomer.existingPoints * 100, subtotal) : 0;
+  const currentLoyaltyPoints = selectedCustomer?.loyaltyPoints || 0;
+  const pointsDiscount = usePoints && selectedCustomer ? Math.min(currentLoyaltyPoints * 100, subtotal) : 0;
   const totalDiscount = pointsDiscount + discount;
   const finalTotal = subtotal - totalDiscount;
   const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
@@ -26,15 +28,44 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
     ];
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)) {
       alert("Số tiền không đủ!");
       return;
     }
 
+    let customerToUpdate = selectedCustomer;
+    
+    // Cập nhật điểm trung thành trong bảng customers
+    if (selectedCustomer && selectedCustomer.id) {
+      try {
+        const earnedPoints = Math.floor(finalTotal / 10000); // 1 điểm/10,000đ
+        const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
+        const currentPoints = selectedCustomer.loyaltyPoints || 0;
+        
+        // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
+        const newPoints = currentPoints - pointsUsed + earnedPoints;
+
+        // Lưu vào cột loyalty_points trong bảng customers
+        await api.put(`/crm/customers/${selectedCustomer.id}`, {
+          name: selectedCustomer.name,
+          phone: selectedCustomer.phone,
+          loyaltyPoints: newPoints
+        });
+
+        customerToUpdate = {
+          ...selectedCustomer,
+          loyaltyPoints: newPoints
+        };
+      } catch (error) {
+        console.error('Error updating customer loyalty points:', error);
+        alert('Không thể cập nhật điểm khách hàng');
+      }
+    }
+
     onComplete({
       cart,
-      customer: selectedCustomer,
+      customer: customerToUpdate,
       total: finalTotal,
       customerMoney: paymentMethod === "cash" ? parseFloat(cashAmount) : finalTotal,
       change: paymentMethod === "cash" ? change : 0,
@@ -170,15 +201,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
                   {selectedCustomer.name} - {selectedCustomer.phone}
                 </div>
-                <div>Điểm hiện tại: {selectedCustomer.existingPoints}</div>
-                {selectedCustomer.existingPoints > 0 && (
+                <div>Điểm hiện tại: {currentLoyaltyPoints}</div>
+                {currentLoyaltyPoints > 0 && (
                   <label style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px", cursor: "pointer" }}>
                     <input
                       type="checkbox"
                       checked={usePoints}
                       onChange={(e) => setUsePoints(e.target.checked)}
                     />
-                    <span>Sử dụng điểm (-{Math.min(selectedCustomer.existingPoints * 100, subtotal).toLocaleString()}đ)</span>
+                    <span>Sử dụng điểm (-{Math.min(currentLoyaltyPoints * 100, subtotal).toLocaleString()}đ)</span>
                   </label>
                 )}
               </div>

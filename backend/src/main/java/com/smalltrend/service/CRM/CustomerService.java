@@ -36,12 +36,15 @@ public class CustomerService {
         return mapToResponse(savedCustomer);
     }
 
-    public CustomerResponse updateCustomer(Integer id, String name, String phone) {
+    public CustomerResponse updateCustomer(Integer id, String name, String phone, Integer loyaltyPoints) {
         Customer customer = customerRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Customer not found"));
         
         customer.setName(name);
         customer.setPhone(phone);
+        if (loyaltyPoints != null) {
+            customer.setLoyaltyPoints(loyaltyPoints);
+        }
         
         Customer updatedCustomer = customerRepository.save(customer);
         return mapToResponse(updatedCustomer);
