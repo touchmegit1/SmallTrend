@@ -32,6 +32,12 @@ const loyaltyService = {
             giftId
         });
         return response.data;
+    },
+
+    // Get redemption history for a customer
+    getCustomerHistory: async (customerId) => {
+        const response = await api.get(`/crm/loyalty-gifts/history/${customerId}`);
+        return response.data;
     }
 };
 

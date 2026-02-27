@@ -67,11 +67,9 @@ const Sidebar = () => {
             children: [
                 { label: 'Danh sách khách hàng', path: '/crm/customer' },
                 { label: 'Khuyến Mãi', path: '/crm/event' },
-                { label: 'Chương trình KM', path: '/crm/promotions' },
-                { label: 'Voucher/Coupon', path: '/crm/vouchers' },
-                { label: 'Tích điểm & Hạng', path: '/crm/loyalty' },
-                { label: 'Khiếu nại', path: '/crm/complaints' },
-                { label: 'Trang chủ CRM', path: '/crm/homepage' },
+                { label: 'Kho quà tặng', path: '/crm/loyalty' },
+                { label: 'Khiếu nại', path: '/crm/complain' },
+                { label: 'Báo Cáo Thống Kê', path: '/crm/report' },
             ]
         },
         {
