@@ -29,7 +29,8 @@ import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import { useAuth } from "./context/AuthContext";
-import TransactionHistory from "./pages/Pos/Transition_History";
+import TransactionHistory from "./pages/Pos/TransactionHistory";
+import ShiftHandover from "./pages/Pos/ShiftHandover";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import TicketCenter from "./pages/Admin/TicketCenter";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
@@ -116,6 +117,10 @@ function App() {
         <Route
           path="pos/suspended"
           element={<ReportforCashier />}
+        />
+        <Route
+          path="pos/shift-handover"
+          element={<ShiftHandover />}
         />
         {/* Module 2: Inventory (Kho) */}
         < Route path="inventory" element={<InventoryDashboard />} />
