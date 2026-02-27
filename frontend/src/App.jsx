@@ -38,6 +38,7 @@ import ReportforCashier from "./pages/Pos/ReportforCashier";
 import TicketCenter from "./pages/Admin/TicketCenter";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
+import CRMreport from "./pages/CRM/report";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
