@@ -1,5 +1,10 @@
 import api from '../config/axiosConfig';
 
+const clearAuthData = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+};
+
 const login = async (username, password) => {
     try {
         const response = await api.post('/auth/login', { username, password });
@@ -31,14 +36,15 @@ const register = async (userData) => {
     }
 };
 
-const logout = async () => {
+const logout = async (callApi = true) => {
     try {
-        await api.post('/auth/logout');
+        if (callApi) {
+            await api.post('/auth/logout');
+        }
     } catch (error) {
         console.error('Logout error:', error);
     } finally {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        clearAuthData();
     }
 };
 
@@ -69,6 +75,7 @@ const authService = {
     login,
     register,
     logout,
+    clearAuthData,
     getCurrentUser,
     getToken,
     validateToken

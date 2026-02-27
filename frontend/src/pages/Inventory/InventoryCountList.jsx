@@ -7,6 +7,7 @@ import {
   Eye,
   Pencil,
   XCircle,
+  Trash2,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
@@ -39,6 +40,7 @@ function InventoryCountList() {
     setPage,
     totalPages,
     cancelVoucher,
+    deleteVoucher,
   } = useInventoryCountList();
 
   // ─── Loading ─────────────────────────────────────
@@ -322,17 +324,33 @@ function InventoryCountList() {
                               >
                                 <XCircle size={14} />
                               </button>
+                              <button
+                                onClick={() => deleteVoucher(v.id)}
+                                title="Xóa phiếu"
+                                className="p-1.5 rounded-lg hover:bg-red-100 text-red-600 transition"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             </>
                           ) : (
-                            <button
-                              onClick={() =>
-                                navigate(`/inventory-counts/${v.id}`)
-                              }
-                              title="Xem chi tiết"
-                              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition"
-                            >
-                              <Eye size={14} />
-                            </button>
+                            <>
+                              <button
+                                onClick={() =>
+                                  navigate(`/inventory-counts/${v.id}`)
+                                }
+                                title="Xem chi tiết"
+                                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition"
+                              >
+                                <Eye size={14} />
+                              </button>
+                              <button
+                                onClick={() => deleteVoucher(v.id)}
+                                title="Xóa phiếu"
+                                className="p-1.5 rounded-lg hover:bg-red-100 text-red-600 transition"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
