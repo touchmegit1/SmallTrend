@@ -53,9 +53,7 @@ public class ProductVariantService {
     }
 
     public List<ProductVariantRespone> getVariantsByProductId(Integer productId) {
-        List<ProductVariant> variants = productVariantRepository.findAll().stream()
-                .filter(v -> v.getProduct().getId().equals(productId))
-                .collect(Collectors.toList());
+        List<ProductVariant> variants = productVariantRepository.findByProductId(productId);
 
         return variants.stream()
                 .map(this::mapToResponse)
@@ -144,7 +142,7 @@ public class ProductVariantService {
         String unitName = variant.getUnit() != null ? variant.getUnit().getName() : null;
         java.math.BigDecimal unitValue = variant.getUnitValue();
 
-        StringBuilder nameBuilder = new StringBuilder(productName);
+        StringBuilder nameBuilder = new StringBuilder(productName != null ? productName : "");
         if (unitValue != null || (unitName != null && !unitName.isEmpty())) {
             nameBuilder.append(" - ");
             if (unitValue != null) {
@@ -174,7 +172,7 @@ public class ProductVariantService {
         // Get stock quantity
         Integer stockQty = inventoryStockRepository.findByVariantId(variant.getId())
                 .stream()
-                .mapToInt(InventoryStock::getQuantity)
+                .mapToInt(stock -> stock.getQuantity() != null ? stock.getQuantity() : 0)
                 .sum();
         response.setStockQuantity(stockQty);
 

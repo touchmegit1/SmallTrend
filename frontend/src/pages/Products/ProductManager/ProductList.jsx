@@ -151,7 +151,7 @@ export function ProductListScreen() {
   if (error) return <p className="text-red-500">{error}</p>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+    <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
@@ -198,7 +198,7 @@ export function ProductListScreen() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -279,142 +279,128 @@ export function ProductListScreen() {
             <CardTitle className="text-xl font-bold text-gray-800">Danh sách sản phẩm</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gradient-to-r from-gray-50 to-slate-50 border-b-2 border-gray-200">
-                    <TableHead
-                      className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
-                      onClick={() => handleSort("name")}
-                    >
-                      Sản phẩm {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
-                      onClick={() => handleSort("brand")}
-                    >
-                      Thương hiệu {sortField === "brand" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead className="font-semibold">Danh mục</TableHead>
-                    <TableHead className="font-semibold">Thuế</TableHead>
-                    <TableHead className="font-semibold">Biến thể</TableHead>
-                    <TableHead className="font-semibold">Trạng thái</TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
-                      onClick={() => handleSort("created_at")}
-                    >
-                      Thời gian tạo {sortField === "created_at" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
-                      onClick={() => handleSort("updated_at")}
-                    >
-                      Cập nhật lần cuối {sortField === "updated_at" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead className="text-center font-semibold">Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gradient-to-r from-gray-50 to-slate-50 border-b-2 border-gray-200">
+                  <TableHead
+                    className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
+                    onClick={() => handleSort("name")}
+                  >
+                    Sản phẩm {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
+                  </TableHead>
+                  <TableHead className="font-semibold">Danh mục</TableHead>
+                  <TableHead className="font-semibold">Thuế</TableHead>
+                  <TableHead className="font-semibold">Biến thể</TableHead>
+                  <TableHead className="font-semibold">Trạng thái</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
+                    onClick={() => handleSort("updated_at")}
+                  >
+                    Cập nhật {sortField === "updated_at" && (sortOrder === "asc" ? "↑" : "↓")}
+                  </TableHead>
+                  <TableHead className="text-center font-semibold">Thao tác</TableHead>
+                </TableRow>
+              </TableHeader>
 
-                <TableBody>
-                  {filteredProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12">
-                        <Package className="w-16 h-16 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 font-medium">Không tìm thấy sản phẩm nào</p>
+              <TableBody>
+                {filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <Package className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">Không tìm thấy sản phẩm nào</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <TableRow className="hover:bg-blue-50/50 transition-colors border-b border-gray-100" key={product.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8081${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`}
+                              alt={product.name}
+                              className="w-9 h-9 rounded-lg object-cover shadow-sm border border-gray-100"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center shadow-sm">
+                              <Package className="w-5 h-5 text-blue-600" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{product.name}</p>
+                            <p className="text-xs text-gray-500">{getBrandName(product.brand_id)}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-gradient-to-r from-slate-100 to-gray-100 text-gray-700 border-0 font-medium" variant="secondary">
+                          {product.category_name || 'N/A'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 border-0 font-medium" variant="secondary">
+                          {product.tax_rate_name || 'N/A'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-0 font-medium">
+                          {product.variant_count} biến thể
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {product.is_active ? (
+                          <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-0 font-medium">Đang bán</Badge>
+                        ) : (
+                          <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-0 font-medium">Ngừng bán</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-gray-600 text-xs">
+                        {product.updated_at ? new Date(product.updated_at).toLocaleString('vi-VN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '-'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center gap-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => navigate(`/products/detail/${product.id}`, {
+                              state: { product }
+                            })}
+                            className="hover:bg-blue-100 hover:text-blue-600 rounded-lg p-1"
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleToggleStatus(product)}
+                            className={`hover:bg-amber-100 rounded-lg p-1 ${product.is_active ? 'text-green-600 hover:text-amber-600' : 'text-gray-400 hover:text-green-600'}`}
+                            title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
+                          >
+                            <Power className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditClick(product)}
+                            className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg p-1"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    filteredProducts.map((product) => (
-                      <TableRow className="hover:bg-blue-50/50 transition-colors border-b border-gray-100" key={product.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            {product.image_url ? (
-                              <img
-                                src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8081${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`}
-                                alt={product.name}
-                                className="w-12 h-12 rounded-xl object-cover shadow-sm border border-gray-100"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center shadow-sm">
-                                <Package className="w-6 h-6 text-blue-600" />
-                              </div>
-                            )}
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900">{product.name}</p>
-                              <p className="text-xs text-gray-500">
-                                {getBrandName(product.brand_id)}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium text-gray-700">{getBrandName(product.brand_id)}</TableCell>
-                        <TableCell>
-                          <Badge className="bg-gradient-to-r from-slate-100 to-gray-100 text-gray-700 border-0 font-medium" variant="secondary">
-                            {product.category_name || 'N/A'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className="bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 border-0 font-medium" variant="secondary">
-                            {product.tax_rate_name || 'N/A'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-0 font-medium">
-                            {product.variant_count} biến thể
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {product.is_active ? (
-                            <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-0 font-medium">Đang bán</Badge>
-                          ) : (
-                            <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-0 font-medium">Ngừng bán</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-gray-600 text-sm">
-                          {product.created_at ? new Date(product.created_at).toLocaleString('vi-VN') : 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-gray-600 text-sm">
-                          {product.updated_at ? new Date(product.updated_at).toLocaleString('vi-VN') : 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex justify-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => navigate(`/products/detail/${product.id}`, {
-                                state: { product }
-                              })}
-                              className="hover:bg-blue-100 hover:text-blue-600 rounded-lg"
-                              title="Xem chi tiết"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleToggleStatus(product)}
-                              className={`hover:bg-amber-100 rounded-lg ${product.is_active ? 'text-green-600 hover:text-amber-600' : 'text-gray-400 hover:text-green-600'}`}
-                              title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
-                            >
-                              <Power className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleEditClick(product)}
-                              className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg"
-                              title="Chỉnh sửa"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
