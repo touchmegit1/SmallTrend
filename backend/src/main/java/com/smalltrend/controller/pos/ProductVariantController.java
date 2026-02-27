@@ -1,6 +1,7 @@
 package com.smalltrend.controller.pos;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,11 +14,14 @@ import com.smalltrend.service.Module1.ProductVariantService;
 
 @RestController
 @RequestMapping("/api/pos")
-@RequiredArgsConstructor
 @CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class ProductVariantController {
 
     private final ProductVariantService productService;
+
+    public ProductVariantController(@Qualifier("variantCouponService") ProductVariantService productService) {
+        this.productService = productService;
+    }
 
     /** Lấy tất cả product variants */
     @GetMapping("/product")

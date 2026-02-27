@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import java.math.BigDecimal;
 import java.util.List;
 
-@Service
+@Service("variantCouponService")
 @RequiredArgsConstructor
 public class ProductVariantService {
 
