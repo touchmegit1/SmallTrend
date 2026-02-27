@@ -34,7 +34,7 @@ function ProductDetail() {
 
   const confirmToggleStatus = async () => {
     try {
-      await api.put(`/product-variants/${selectedVariant.id}/toggle-status`);
+      await api.put(`/products/variants/${selectedVariant.id}/toggle-status`);
       setToastMessage(`Đã ${selectedVariant.is_active ? 'ngừng' : 'kích hoạt'} bán biến thể!`);
       fetchVariants();
       setTimeout(() => setToastMessage(""), 3000);
@@ -351,9 +351,11 @@ function ProductDetail() {
               <TableHeader>
                 <TableRow className="bg-gray-50">
                   <TableHead className="w-16">STT</TableHead>
+                  <TableHead className="w-16">Ảnh</TableHead>
                   <TableHead>Tên biến thể</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead>Barcode</TableHead>
+                  <TableHead>Giá vốn</TableHead>
                   <TableHead>Giá bán</TableHead>
                   <TableHead>Tồn kho</TableHead>
                   <TableHead>Trạng thái</TableHead>
@@ -364,9 +366,23 @@ function ProductDetail() {
                 {variants.map((variant, index) => (
                   <TableRow key={variant.id} className="hover:bg-gray-50 transition-colors">
                     <TableCell className="font-medium text-gray-500">{index + 1}</TableCell>
+                    <TableCell>
+                      {variant.image_url ? (
+                        <img
+                          src={`http://localhost:8081${variant.image_url}`}
+                          alt={variant.name}
+                          className="w-10 h-10 object-cover rounded-lg border border-gray-200"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Package className="w-5 h-5 text-gray-300" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-semibold text-gray-900">{variant.name || "—"}</TableCell>
                     <TableCell className="font-mono text-sm text-gray-700">{variant.sku || "—"}</TableCell>
                     <TableCell className="font-mono text-sm text-gray-600">{variant.barcode || "—"}</TableCell>
+                    <TableCell className="text-gray-700">{variant.cost_price != null ? variant.cost_price.toLocaleString('vi-VN') + "đ" : "—"}</TableCell>
                     <TableCell className="font-semibold text-gray-900">{variant.sell_price?.toLocaleString('vi-VN') || "0"}đ</TableCell>
                     <TableCell>
                       <Badge className={variant.stock_quantity > 0 ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}>

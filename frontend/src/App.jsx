@@ -27,6 +27,7 @@ import ProductList from "./pages/Products/ProductManager/ProductList";
 import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
+import AddNewProductVariant from "./pages/Products/ProductManager/AddNewProductVariant";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import { useAuth } from "./context/AuthContext";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
@@ -132,6 +133,10 @@ function App() {
         <Route
           path="products/detail/:id"
           element={<ProductDetail />}
+        />
+        <Route
+          path="products/addproduct_variant"
+          element={<AddNewProductVariant />}
         />
         <Route
           path="products/categories"

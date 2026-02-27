@@ -1,10 +1,17 @@
 package com.smalltrend.service;
 
 import com.smalltrend.repository.ProductVariantRepository;
+import com.smalltrend.repository.ProductRepository;
+import com.smalltrend.repository.UnitRepository;
 import com.smalltrend.repository.InventoryStockRepository;
+import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.entity.ProductVariant;
+import com.smalltrend.entity.Product;
+import com.smalltrend.entity.Unit;
 import com.smalltrend.entity.InventoryStock;
+import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.dto.pos.ProductVariantRespone;
+import com.smalltrend.dto.products.CreateVariantRequest;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -16,18 +23,19 @@ import java.util.stream.Collectors;
 public class ProductVariantService {
 
     private final ProductVariantRepository productVariantRepository;
+    private final ProductRepository productRepository;
+    private final UnitRepository unitRepository;
     private final InventoryStockRepository inventoryStockRepository;
+    private final ProductBatchRepository productBatchRepository;
 
     public List<ProductVariantRespone> getAllProductVariants(String search, String barcode) {
         List<ProductVariant> variants;
 
         if (barcode != null && !barcode.isEmpty()) {
-            // Search by barcode
             variants = productVariantRepository.findAll().stream()
                     .filter(v -> v.getBarcode() != null && v.getBarcode().contains(barcode))
                     .collect(Collectors.toList());
         } else if (search != null && !search.isEmpty()) {
-            // Search by name or SKU
             String searchLower = search.toLowerCase();
             variants = productVariantRepository.findAll().stream()
                     .filter(v -> (v.getProduct().getName() != null
@@ -36,7 +44,6 @@ public class ProductVariantService {
                             (v.getBarcode() != null && v.getBarcode().contains(search)))
                     .collect(Collectors.toList());
         } else {
-            // Get all products
             variants = productVariantRepository.findAll();
         }
 
@@ -55,6 +62,62 @@ public class ProductVariantService {
                 .collect(Collectors.toList());
     }
 
+    public ProductVariantRespone createVariant(Integer productId, CreateVariantRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+
+        Unit unit = unitRepository.findById(request.getUnitId())
+                .orElseThrow(() -> new RuntimeException("Unit not found with id: " + request.getUnitId()));
+
+        ProductVariant variant = ProductVariant.builder()
+                .product(product)
+                .sku(request.getSku())
+                .barcode(request.getBarcode())
+                .unit(unit)
+                .unitValue(request.getUnitValue())
+                .sellPrice(request.getSellPrice())
+                .imageUrl(request.getImageUrl())
+                .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+                .build();
+
+        ProductVariant saved = productVariantRepository.save(variant);
+        return mapToResponse(saved);
+    }
+
+    public ProductVariantRespone updateVariant(Integer variantId, CreateVariantRequest request) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Variant not found with id: " + variantId));
+
+        Unit unit = unitRepository.findById(request.getUnitId())
+                .orElseThrow(() -> new RuntimeException("Unit not found with id: " + request.getUnitId()));
+
+        variant.setSku(request.getSku());
+        variant.setBarcode(request.getBarcode());
+        variant.setUnit(unit);
+        variant.setUnitValue(request.getUnitValue());
+        variant.setSellPrice(request.getSellPrice());
+        if (request.getImageUrl() != null) {
+            variant.setImageUrl(request.getImageUrl());
+        }
+        if (request.getIsActive() != null) {
+            variant.setActive(request.getIsActive());
+        }
+
+        ProductVariant saved = productVariantRepository.save(variant);
+        return mapToResponse(saved);
+    }
+
+    public void toggleVariantStatus(Integer variantId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Variant not found with id: " + variantId));
+        variant.setActive(!variant.isActive());
+        productVariantRepository.save(variant);
+    }
+
+    public List<Unit> getAllUnits() {
+        return unitRepository.findAll();
+    }
+
     private ProductVariantRespone mapToResponse(ProductVariant variant) {
         ProductVariantRespone response = new ProductVariantRespone();
         response.setId(variant.getId());
@@ -70,7 +133,6 @@ public class ProductVariantService {
         if (unitValue != null || (unitName != null && !unitName.isEmpty())) {
             nameBuilder.append(" - ");
             if (unitValue != null) {
-                // Show as integer if no decimals (90 instead of 90.00)
                 if (unitValue.stripTrailingZeros().scale() <= 0) {
                     nameBuilder.append(unitValue.toBigInteger().toString());
                 } else {
@@ -86,6 +148,11 @@ public class ProductVariantService {
         }
         response.setName(nameBuilder.toString());
         response.setUnitName(unitName);
+        if (variant.getUnit() != null) {
+            response.setUnitId(variant.getUnit().getId());
+        }
+        response.setUnitValue(variant.getUnitValue());
+        response.setImageUrl(variant.getImageUrl());
         response.setSellPrice(variant.getSellPrice());
         response.setIsActive(variant.isActive());
 
@@ -95,6 +162,14 @@ public class ProductVariantService {
                 .mapToInt(InventoryStock::getQuantity)
                 .sum();
         response.setStockQuantity(stockQty);
+
+        // Get cost price from latest batch
+        List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());
+        if (batches != null && !batches.isEmpty()) {
+            // Get the latest batch's cost price
+            ProductBatch latestBatch = batches.get(batches.size() - 1);
+            response.setCostPrice(latestBatch.getCostPrice());
+        }
 
         // Get category and brand names
         if (variant.getProduct().getCategory() != null) {
