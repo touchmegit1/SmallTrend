@@ -29,12 +29,28 @@ import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import { useAuth } from "./context/AuthContext";
-import TransactionHistory from "./pages/Pos/TransactionHistory";
-import ShiftHandover from "./pages/Pos/ShiftHandover";
+import TransactionHistory from "./pages/Pos/Transition_History";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
+import TicketCenter from "./pages/Admin/TicketCenter";
+import AuditLogPage from "./pages/Admin/AuditLogPage";
+import AiChatPage from "./pages/Admin/AiChatPage";
+
+const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
+const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
+const CASHIER_ROLES = ["CASHIER", "ROLE_CASHIER"];
+const INVENTORY_ROLES = ["INVENTORY_STAFF", "ROLE_INVENTORY_STAFF"];
+const SALES_ROLES = ["SALES_STAFF", "ROLE_SALES_STAFF"];
+
+const ALL_APP_ROLES = [
+  ...ADMIN_ROLES,
+  ...MANAGER_ROLES,
+  ...CASHIER_ROLES,
+  ...INVENTORY_ROLES,
+  ...SALES_ROLES,
+];
 
 function RootRedirect() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -43,8 +59,16 @@ function RootRedirect() {
       </div>
     );
   }
-  
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
+
+  if (!isAuthenticated) {
+    return <Navigate to="/crm/homepage" replace />;
+  }
+
+  const privilegedRoles = [...ADMIN_ROLES, ...MANAGER_ROLES];
+  const currentRole = user?.role;
+  return privilegedRoles.includes(currentRole)
+    ? <Navigate to="/dashboard" replace />
+    : <Navigate to="/pos" replace />;
 }
 
 function App() {
@@ -77,7 +101,7 @@ function App() {
         <Route
           path="dashboard"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
               <Dashboard />
             </ProtectedRoute>
           }
@@ -93,14 +117,12 @@ function App() {
           path="pos/suspended"
           element={<ReportforCashier />}
         />
-        <Route
-          path="pos/shift-handover"
-          element={<ShiftHandover />}
-        />
         {/* Module 2: Inventory (Kho) */}
         < Route path="inventory" element={<InventoryDashboard />} />
         <Route path="inventory/import" element={<ImportInventory />} />
         <Route path="inventory/import/create" element={<CreateImport />} />
+        <Route path="inventory/export" element={<DisposalList />} />
+        <Route path="inventory/alerts" element={<InventoryCountList />} />
         <Route
           path="inventory/suppliers"
           element={<div className="p-4">Quản lý nhà cung cấp (Supplier)</div>}
@@ -149,7 +171,7 @@ function App() {
         {/* Module 4: CRM (Khách hàng) */}
         <Route
           path="crm"
-          element={<div className="p-4">CRM & Promotion</div>}
+          element={<CRMcustomer />}
         />
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
@@ -163,13 +185,14 @@ function App() {
           element={<div className="p-4">Voucher/Coupon</div>}
         />
         <Route path="crm/complain" element={<CRMcomplain />} />
+        <Route path="crm/complaints" element={<CRMcomplain />} />
 
         {/* Module 5: HR (Nhân sự) */}
         <Route path="hr" element={<Navigate to="/hr/employees" replace />} />
         <Route
           path="hr/employees"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
               <EmployeeList />
             </ProtectedRoute>
           }
@@ -177,7 +200,7 @@ function App() {
         <Route
           path="hr/users"
           element={
-            <ProtectedRoute allowedRoles={["ROLE_ADMIN"]}>
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
               <UserManagement />
             </ProtectedRoute>
           }
@@ -185,7 +208,7 @@ function App() {
         <Route
           path="hr/shifts"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
               <ShiftManagement />
             </ProtectedRoute>
           }
@@ -193,7 +216,7 @@ function App() {
         <Route
           path="hr/attendance"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
               <AttendanceManagement />
             </ProtectedRoute>
           }
@@ -201,7 +224,7 @@ function App() {
         <Route
           path="hr/payroll"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
               <PayrollManagement />
             </ProtectedRoute>
           }
@@ -210,7 +233,29 @@ function App() {
         {/* Ticket Center */}
         <Route
           path="ticket-center"
-          element={<div className="p-4">Trung tâm Ticket</div>}
+          element={
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+              <TicketCenter />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="admin/ticket-center"
+          element={
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+              <TicketCenter />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="admin/audit-logs"
+          element={
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+              <AuditLogPage />
+            </ProtectedRoute>
+          }
         />
 
         {/* Module 6: Reports (Báo cáo) */}
@@ -231,8 +276,12 @@ function App() {
           element={<div className="p-4">AI dự báo</div>}
         />
         <Route
-          path="reports/ai-chatbot"
-          element={<div className="p-4">AI Chatbot</div>}
+          path="reports/ai-chat"
+          element={
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
+              <AiChatPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="reports/audit-logs"
@@ -250,7 +299,11 @@ function App() {
           path="reports/logs"
           element={<div className="p-4">Nhật ký hoạt động</div>}
         />
+
+        <Route path="*" element={<Navigate to="/pos" replace />} />
       </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
