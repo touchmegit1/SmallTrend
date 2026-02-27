@@ -38,7 +38,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         is_active: parentProduct?.is_active === false ? false : (variant.is_active ?? true),
       });
       setImageFile(null);
-      setImagePreview(variant.image_url ? `http://localhost:8081${variant.image_url}` : null);
+      setImagePreview(variant.image_url ? (variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`) : null);
       setErrorMsg("");
     }
   }, [variant, isOpen, parentProduct]);

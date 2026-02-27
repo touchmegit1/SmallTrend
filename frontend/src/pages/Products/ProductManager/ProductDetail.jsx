@@ -16,8 +16,8 @@ function ProductDetail() {
   const { id: productId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const product = location.state?.product;
-
+  const [product, setProduct] = useState(location.state?.product || null);
+  const [productLoading, setProductLoading] = useState(!location.state?.product);
   const { variants, loading, error, fetchVariants } =
     useFetchVariants(productId);
 
@@ -48,6 +48,7 @@ function ProductDetail() {
   };
 
   const handleSaveProduct = (updatedProduct) => {
+    setProduct(updatedProduct);
     setToastMessage("Cập nhật sản phẩm thành công!");
     setIsEditModalOpen(false);
     setTimeout(() => setToastMessage(""), 3000);
@@ -147,6 +148,19 @@ function ProductDetail() {
       setTimeout(() => setToastMessage(""), 3000);
     }
   }, [location.state]);
+
+  React.useEffect(() => {
+    if (!product && productId) {
+      api.get(`/products/${productId}`)
+        .then(res => setProduct(res.data))
+        .catch(err => console.error("Error fetching product:", err))
+        .finally(() => setProductLoading(false));
+    }
+  }, [productId, product]);
+
+  if (productLoading) {
+    return <div className="p-6">Đang tải thông tin sản phẩm...</div>;
+  }
 
   if (!product) {
     return (
@@ -264,7 +278,7 @@ function ProductDetail() {
           <div className="aspect-video bg-gray-50 rounded-xl flex items-center justify-center">
             {product.image_url ? (
               <img
-                src={`http://localhost:8081${product.image_url}`}
+                src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8081${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`}
                 alt={product.name}
                 className="w-full h-full object-contain rounded-xl"
               />
@@ -369,7 +383,7 @@ function ProductDetail() {
                     <TableCell>
                       {variant.image_url ? (
                         <img
-                          src={`http://localhost:8081${variant.image_url}`}
+                          src={variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`}
                           alt={variant.name}
                           className="w-10 h-10 object-cover rounded-lg border border-gray-200"
                         />
