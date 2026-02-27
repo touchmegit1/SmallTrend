@@ -113,13 +113,10 @@ public class TicketService {
      * Finds the first stock record for the variant and increases its quantity.
      */
     private void restockInventory(Integer variantId, Integer quantity) {
-        List<InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
-        if (!stocks.isEmpty()) {
-            // Add to the first stock record found for this variant
-            InventoryStock stock = stocks.get(0);
+        inventoryStockRepository.findByVariantId(variantId).ifPresent(stock -> {
             stock.setQuantity(stock.getQuantity() + quantity);
             inventoryStockRepository.save(stock);
-        }
+        });
     }
 
     /**

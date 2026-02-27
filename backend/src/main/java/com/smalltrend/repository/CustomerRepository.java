@@ -12,6 +12,9 @@ import org.springframework.stereotype.Repository;
 public interface CustomerRepository extends JpaRepository<Customer, Integer> {
 
     Optional<Customer> findByPhone(String phone);
+    
+    @Query("SELECT c FROM Customer c WHERE REPLACE(c.phone, ' ', '') = REPLACE(:phone, ' ', '')")
+    Optional<Customer> findByPhoneIgnoreSpaces(String phone);
 
     @Query("SELECT COUNT(c) FROM Customer c")
     Long countTotalCustomers();

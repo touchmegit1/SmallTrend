@@ -222,7 +222,7 @@ export const getProducts = async () => {
 
 // Locations
 export const getLocations = async () => {
-  const response = await fetch(`${JSON_API}/locations`, {
+  const response = await fetch(`${SPRING_API}/locations`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch locations");
@@ -387,7 +387,14 @@ export const createLocation = async (locationData) => {
     }),
   });
   if (!response.ok) throw new Error("Failed to create location");
-  return response.json();
+  const data = await response.json();
+  return {
+    ...data,
+    location_name: data.locationName,
+    location_code: data.locationCode,
+    location_type: data.locationType,
+    created_at: data.createdAt,
+  };
 };
 
 export const updateLocation = async (id, locationData) => {
@@ -404,7 +411,14 @@ export const updateLocation = async (id, locationData) => {
     }),
   });
   if (!response.ok) throw new Error("Failed to update location");
-  return response.json();
+  const data = await response.json();
+  return {
+    ...data,
+    location_name: data.locationName,
+    location_code: data.locationCode,
+    location_type: data.locationType,
+    created_at: data.createdAt,
+  };
 };
 
 export const deleteLocation = async (id) => {
