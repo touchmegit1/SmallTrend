@@ -1,7 +1,17 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import SideAds from "./Component/SideAds";
 import { Link } from "react-router-dom";
+import eventService from "../../services/eventService";
+
 export default function EcommerceUI() {
+  const [activeCampaign, setActiveCampaign] = useState(null);
+
+  useEffect(() => {
+    eventService.getActiveCampaigns()
+      .then(data => { if (Array.isArray(data) && data.length > 0) setActiveCampaign(data[0]); })
+      .catch(() => { });
+  }, []);
+
   const categories = [
     { name: "All Products", active: true },
     { name: "Electronics", active: false },
@@ -147,13 +157,13 @@ export default function EcommerceUI() {
   return (
     <div className="min-h-screen bg-gray-100 relative">
 
-      {/* Quảng cáo 2 bên */}
+      {/* Quảng cáo 2 bên
       <SideAds
         leftImage="https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=400"
         rightImage="https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=400"
         leftTitle="Mega Sale 50% OFF"
         rightTitle="Free Shipping"
-      />
+      /> */}
 
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -170,17 +180,37 @@ export default function EcommerceUI() {
         </div>
       </div>
 
-      {/* Banner */}
+      {/* Banner - Hiển thị sự kiện đang ACTIVE từ API */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="relative rounded-2xl bg-black text-white py-12 text-center">
-          <span className="absolute top-6 left-1/2 -translate-x-1/2 bg-red-600 px-4 py-1 text-sm rounded-full">
-            Limited Time Offer
-          </span>
-          <h1 className="text-4xl font-bold mt-6">Spring Sale Event</h1>
-          <p className="mt-2 text-lg opacity-90">
-            Up to 40% OFF on selected items
-          </p>
-        </div>
+        {activeCampaign ? (
+          <div
+            className="relative rounded-2xl text-white py-14 text-center overflow-hidden"
+            style={{
+              background: activeCampaign.bannerImageUrl
+                ? `linear-gradient(rgba(0,0,0,0.52), rgba(0,0,0,0.52)), url('${activeCampaign.bannerImageUrl}') center/cover no-repeat`
+                : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'
+            }}
+          >
+            <span className="inline-block bg-red-500 px-4 py-1 text-sm rounded-full mb-3 font-semibold">
+              {activeCampaign.campaignType || 'SALE'} · Đang diễn ra
+            </span>
+            <h1 className="text-4xl font-bold mt-2">{activeCampaign.campaignName}</h1>
+            {activeCampaign.description && (
+              <p className="mt-2 text-lg opacity-90 max-w-xl mx-auto">{activeCampaign.description}</p>
+            )}
+            {activeCampaign.endDate && (
+              <p className="mt-3 text-sm opacity-75">Kết thúc: {activeCampaign.endDate}</p>
+            )}
+          </div>
+        ) : (
+          <div className="relative rounded-2xl bg-gradient-to-r from-blue-900 to-blue-600 text-white py-12 text-center">
+            <span className="absolute top-5 left-1/2 -translate-x-1/2 bg-red-600 px-4 py-1 text-sm rounded-full">
+              Limited Time Offer
+            </span>
+            <h1 className="text-4xl font-bold mt-6">SmallTrend Store</h1>
+            <p className="mt-2 text-lg opacity-90">Khám phá các ưu đãi hấp dẫn</p>
+          </div>
+        )}
       </div>
 
       {/* Event Promotion */}
@@ -237,8 +267,8 @@ export default function EcommerceUI() {
             <button
               key={i}
               className={`px-6 py-2 rounded-full text-sm font-medium ${c.active
-                  ? "bg-blue-600 text-white"
-                  : "border border-gray-300 text-gray-600"
+                ? "bg-blue-600 text-white"
+                : "border border-gray-300 text-gray-600"
                 }`}
             >
               {c.name}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import loyaltyService from '../../services/loyaltyService';
 import ticketService from '../../services/ticketService'; // Reuse variant lookup
+import { useFetchCustomers } from '../../hooks/Customers';
 
 const GiftRewardManagement = () => {
   // --- STATES THAO TÁC ---
@@ -12,6 +13,9 @@ const GiftRewardManagement = () => {
   const [redemptionHistory, setRedemptionHistory] = useState([]);
   const [searchError, setSearchError] = useState('');
   const [searchingCustomer, setSearchingCustomer] = useState(false);
+
+  // Hook lấy danh sách customer để tìm kiếm local theo SĐT
+  const { findByPhone } = useFetchCustomers();
 
   // Modal Quản lý kho quà
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,16 +52,32 @@ const GiftRewardManagement = () => {
     try {
       setSearchingCustomer(true);
       setSearchError('');
-      const customer = await loyaltyService.getCustomerByPhone(searchPhone);
+
+      // Ưu tiên tìm trong danh sách đã fetch từ hook (nhanh, không tốn thêm API call)
+      let customer = findByPhone(searchPhone);
+
+      // Nếu không tìm thấy local, fallback gọi API trực tiếp
+      if (!customer) {
+        customer = await loyaltyService.getCustomerByPhone(searchPhone);
+      }
+
+      if (!customer) {
+        throw new Error('Không tìm thấy khách hàng với số điện thoại này!');
+      }
+
       setCurrentCustomer(customer);
 
-      // Fetch history
+      // Lấy lịch sử đổi quà
       const history = await loyaltyService.getCustomerHistory(customer.id);
       setRedemptionHistory(history);
     } catch (err) {
       setCurrentCustomer(null);
       setRedemptionHistory([]);
-      setSearchError(err?.response?.data?.message || 'Không tìm thấy khách hàng với số điện thoại này!');
+      setSearchError(
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không tìm thấy khách hàng với số điện thoại này!'
+      );
     } finally {
       setSearchingCustomer(false);
     }
