@@ -1,4 +1,5 @@
-const SPRING_API = "http://localhost:8081/api/inventory/disposal-vouchers";
+const JSON_API = "http://localhost:3001";
+const SPRING_API = `${JSON_API}/disposal_vouchers`;
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token");
@@ -8,72 +9,51 @@ function getAuthHeaders() {
   };
 }
 
-// Get all disposal vouchers
 export const getDisposalVouchers = async () => {
-  const response = await fetch(SPRING_API, {
-    headers: getAuthHeaders(),
-  });
+  const response = await fetch(SPRING_API, { headers: getAuthHeaders() });
   if (!response.ok) throw new Error("Failed to fetch disposal vouchers");
   return response.json();
 };
 
-// Get disposal voucher by ID
 export const getDisposalVoucherById = async (id) => {
-  const response = await fetch(`${SPRING_API}/${id}`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await fetch(`${SPRING_API}/${id}`, { headers: getAuthHeaders() });
   if (!response.ok) throw new Error("Failed to fetch disposal voucher");
   return response.json();
 };
 
-// Get next disposal code
 export const getNextDisposalCode = async () => {
-  const response = await fetch(`${SPRING_API}/next-code`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to get next code");
-  const data = await response.json();
-  return data.code;
+  return "DSP-" + Date.now();
 };
 
-// Get expired batches
 export const getExpiredBatches = async (locationId) => {
-  const url = locationId 
-    ? `${SPRING_API}/expired-batches?locationId=${locationId}`
-    : `${SPRING_API}/expired-batches`;
-  const response = await fetch(url, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to fetch expired batches");
-  return response.json();
+  return []; // Mock
 };
 
-// Save draft
 export const saveDisposalDraft = async (voucherData, userId) => {
-  const response = await fetch(`${SPRING_API}/draft?userId=${userId}`, {
+  const response = await fetch(SPRING_API, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify(voucherData),
+    body: JSON.stringify({...voucherData, status: "DRAFT", _userId: userId, created_at: new Date().toISOString()}),
   });
   if (!response.ok) throw new Error("Failed to save draft");
   return response.json();
 };
 
-// Confirm disposal voucher
 export const confirmDisposalVoucher = async (id, userId) => {
-  const response = await fetch(`${SPRING_API}/${id}/confirm?userId=${userId}`, {
-    method: "PUT",
+  const response = await fetch(`${SPRING_API}/${id}`, {
+    method: "PATCH",
     headers: getAuthHeaders(),
+    body: JSON.stringify({ status: "CONFIRMED", confirmed_at: new Date().toISOString() }),
   });
   if (!response.ok) throw new Error("Failed to confirm disposal voucher");
   return response.json();
 };
 
-// Cancel disposal voucher
 export const cancelDisposalVoucher = async (id) => {
-  const response = await fetch(`${SPRING_API}/${id}/cancel`, {
-    method: "PUT",
+  const response = await fetch(`${SPRING_API}/${id}`, {
+    method: "PATCH",
     headers: getAuthHeaders(),
+    body: JSON.stringify({ status: "CANCELLED" }),
   });
   if (!response.ok) throw new Error("Failed to cancel disposal voucher");
   return response.json();

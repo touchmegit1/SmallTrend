@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { getInventoryCounts, getLocations, cancelInventoryCount } from "../services/inventoryService";
+import { getInventoryCounts, getLocations, cancelInventoryCount, deleteInventoryCount } from "../services/inventoryService";
 import { IC_STATUS, IC_STATUS_CONFIG, formatVNDCount } from "../utils/inventoryCount";
 
 export function useInventoryCountList() {
@@ -120,6 +120,18 @@ export function useInventoryCountList() {
     }
   }, []);
 
+  // ─── Delete voucher ──────────────────────────────
+  const deleteVoucher = useCallback(async (id) => {
+    if (!window.confirm("Bạn có chắc muốn XÓA VĨNH VIỄN phiếu kiểm kho này?")) return;
+
+    try {
+      await deleteInventoryCount(id);
+      setVouchers((prev) => prev.filter((v) => v.id !== id));
+    } catch (err) {
+      alert("Lỗi khi xóa phiếu: " + err.message);
+    }
+  }, []);
+
   // ─── Toggle sort ─────────────────────────────────
   const toggleSort = useCallback(
     (field) => {
@@ -158,5 +170,6 @@ export function useInventoryCountList() {
 
     // Actions
     cancelVoucher,
+    deleteVoucher,
   };
 }
