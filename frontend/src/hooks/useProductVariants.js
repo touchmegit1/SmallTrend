@@ -25,16 +25,5 @@ export const useProductVariants = () => {
         fetchVariants();
     }, []);
 
-    // Tìm kiếm theo tên hoặc SKU (local filter)
-    const searchVariants = (keyword) => {
-        if (!keyword) return variants;
-        const kw = keyword.toLowerCase().trim();
-        return variants.filter(
-            (v) =>
-                v.name?.toLowerCase().includes(kw) ||
-                v.sku?.toLowerCase().includes(kw)
-        );
-    };
-
-    return { variants, loading, error, refetch: fetchVariants, searchVariants };
+    return { variants, setVariants, loading, error, refetch: fetchVariants };
 };

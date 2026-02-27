@@ -74,9 +74,9 @@ const EventManagement = () => {
   const [savingCoupon, setSavingCoupon] = useState(false);
 
   // ── Products tab ──
-  const { variants, loading: loadingVariants } = useProductVariants();
+  const { variants, loading: loadingVariants, refetch: refetchVariants } = useProductVariants();
   const [variantSearch, setVariantSearch] = useState('');
-  const [appliedCoupons, setAppliedCoupons] = useState({}); // { sku: couponId }
+  const [savingVariant, setSavingVariant] = useState(null); // sku đang được lưu
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -203,15 +203,27 @@ const EventManagement = () => {
   };
 
   // ── Product coupon apply ───────────────────────────────────────────────────────
-  const handleApplyCoupon = (sku, couponId) => {
-    setAppliedCoupons(prev => ({ ...prev, [sku]: couponId || null }));
+  const handleApplyCoupon = async (sku, couponId) => {
+    setSavingVariant(sku);
+    try {
+      if (couponId) {
+        await eventService.applyCouponToVariant(sku, couponId);
+      } else {
+        await eventService.removeCouponFromVariant(sku);
+      }
+      await refetchVariants(); // Sync lại từ DB
+    } catch (err) {
+      alert('Lỗi áp dụng coupon: ' + (err?.response?.data?.message || err.message));
+    } finally {
+      setSavingVariant(null);
+    }
   };
 
   // ─── TABS ──────────────────────────────────────────────────────────────────────
   const tabs = [
-    { key: 'campaigns', label: '🎯 Sự kiện / Chiến dịch' },
-    { key: 'coupons', label: '🎟️ Coupon' },
-    { key: 'products', label: '🏷️ Áp dụng theo Sản phẩm' },
+    { key: 'campaigns', label: 'Sự kiện / Chiến dịch' },
+    { key: 'coupons', label: 'Coupon' },
+    { key: 'products', label: 'Áp dụng theo Sản phẩm' },
   ];
 
   return (
@@ -238,8 +250,8 @@ const EventManagement = () => {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-5 py-2.5 font-medium text-sm rounded-t-lg transition-colors ${activeTab === tab.key
-                ? 'bg-white border border-b-white border-gray-300 -mb-px text-blue-600'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              ? 'bg-white border border-b-white border-gray-300 -mb-px text-blue-600'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
           >
             {tab.label}
@@ -448,22 +460,42 @@ const EventManagement = () => {
               </thead>
               <tbody>
                 {filteredVariants.map(v => {
-                  const appliedId = appliedCoupons[v.sku];
-                  const appliedCoupon = coupons.find(c => c.id === appliedId);
+                  const isSaving = savingVariant === v.sku;
                   return (
-                    <tr key={v.sku} className="border-t hover:bg-gray-50">
+                    <tr key={v.sku} className={`border-t hover:bg-gray-50 ${isSaving ? 'opacity-60' : ''}`}>
                       <td className="px-4 py-3">
-                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">{v.sku}</span>
+                        <div className="flex items-center gap-2">
+                          {v.imageUrl ? (
+                            <img src={v.imageUrl} alt={v.name} className="w-10 h-10 object-cover rounded border flex-shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 bg-gray-100 rounded border flex items-center justify-center text-gray-300 flex-shrink-0">📦</div>
+                          )}
+                          <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">{v.sku}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-800">{v.name}</td>
-                      <td className="px-4 py-3 font-bold text-gray-700">
-                        {v.sellPrice ? Number(v.sellPrice).toLocaleString('vi-VN') + 'đ' : '-'}
+                      <td className="px-4 py-3">
+                        {v.couponId && v.discountedPrice != null ? (
+                          <div>
+                            <span className="line-through text-gray-400 text-xs mr-1">
+                              {Number(v.sellPrice).toLocaleString('vi-VN')}đ
+                            </span>
+                            <span className="font-bold text-red-500">
+                              {Number(v.discountedPrice).toLocaleString('vi-VN')}đ
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-bold text-gray-700">
+                            {v.sellPrice ? Number(v.sellPrice).toLocaleString('vi-VN') + 'đ' : '-'}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <select
-                          value={appliedId || ''}
+                          value={v.couponId || ''}
+                          disabled={isSaving}
                           onChange={e => handleApplyCoupon(v.sku, e.target.value ? Number(e.target.value) : null)}
-                          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full disabled:bg-gray-100"
                         >
                           <option value="">-- Không áp dụng --</option>
                           {activeCoupons.map(c => (
@@ -475,11 +507,14 @@ const EventManagement = () => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          {appliedId ? (
+                          {isSaving ? (
+                            <span className="text-xs text-blue-500 animate-pulse">Đang lưu...</span>
+                          ) : v.couponId ? (
                             <>
-                              <span className="text-xs text-green-600 font-medium mr-1">
-                                {appliedCoupon?.couponType === 'PERCENTAGE' ? `-${appliedCoupon?.discountPercent}%` : ''}
-                                {appliedCoupon?.couponType === 'FIXED_AMOUNT' ? `-${Number(appliedCoupon?.discountAmount).toLocaleString('vi-VN')}đ` : ''}
+                              <span className="text-xs text-green-600 font-medium mr-1 bg-green-50 px-2 py-0.5 rounded">
+                                {v.couponType === 'PERCENTAGE' ? `-${v.discountPercent}%` : ''}
+                                {v.couponType === 'FIXED_AMOUNT' ? `-${Number(v.discountAmount).toLocaleString('vi-VN')}đ` : ''}
+                                {v.couponType === 'FREE_SHIPPING' ? 'Free ship' : ''}
                               </span>
                               <button
                                 onClick={() => handleApplyCoupon(v.sku, null)}
@@ -502,6 +537,7 @@ const EventManagement = () => {
           )}
         </div>
       )}
+
 
       {/* ═══ MODAL: CAMPAIGN ═══ */}
       {isCampaignModalOpen && (

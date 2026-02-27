@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -36,6 +37,12 @@ public class ProductVariant {
     private String imageUrl;
     private BigDecimal sellPrice;
     private boolean isActive;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id", nullable = true)
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    private Coupon coupon;
 
     @OneToMany(mappedBy = "variant")
     private List<ProductBatch> productBatches;

@@ -1,174 +1,145 @@
 import React, { useState, useEffect } from "react";
-import SideAds from "./Component/SideAds";
 import { Link } from "react-router-dom";
 import eventService from "../../services/eventService";
 
+// ─── PLACEHOLDER IMAGE ────────────────────────────────────────────────────────
+const PLACEHOLDER = "https://placehold.co/400x300?text=No+Image";
+
+// ─── DISCOUNT BADGE helper ────────────────────────────────────────────────────
+function DiscountBadge({ couponType, discountPercent, discountAmount }) {
+  if (couponType === "PERCENTAGE" && discountPercent)
+    return (
+      <span className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 text-xs rounded font-bold shadow">
+        -{discountPercent}% OFF
+      </span>
+    );
+  if (couponType === "FIXED_AMOUNT" && discountAmount)
+    return (
+      <span className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-0.5 text-xs rounded font-bold shadow">
+        -{Number(discountAmount).toLocaleString("vi-VN")}đ
+      </span>
+    );
+  if (couponType === "FREE_SHIPPING")
+    return (
+      <span className="absolute top-2 left-2 bg-teal-600 text-white px-2 py-0.5 text-xs rounded font-bold shadow">
+        Free Ship
+      </span>
+    );
+  return null;
+}
+
+// ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
+const fmt = (v) => (v != null ? Number(v).toLocaleString("vi-VN") + "đ" : "-");
+
+function ProductCard({ v, highlight = false }) {
+  return (
+    <div
+      className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col ${highlight ? "ring-2 ring-red-400" : ""
+        }`}
+    >
+      <div className="relative">
+        <img
+          src={v.imageUrl || PLACEHOLDER}
+          className="h-48 w-full object-cover"
+          alt={v.name}
+          onError={(e) => {
+            e.target.src = PLACEHOLDER;
+          }}
+        />
+        <DiscountBadge
+          couponType={v.couponType}
+          discountPercent={v.discountPercent}
+          discountAmount={v.discountAmount}
+        />
+        {v.couponCode && (
+          <span className="absolute top-2 right-2 bg-purple-700 text-white px-1.5 py-0.5 text-xs rounded font-mono shadow">
+            {v.couponCode}
+          </span>
+        )}
+      </div>
+      <div className="p-3 flex-1 flex flex-col justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 mb-0.5">
+            {v.name}
+          </h3>
+          {v.sku && (
+            <p className="text-xs text-gray-400 font-mono mb-1">{v.sku}</p>
+          )}
+        </div>
+        <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+          <span className="text-base font-bold text-gray-900">
+            {fmt(v.discountedPrice ?? v.sellPrice)}
+          </span>
+          {v.discountedPrice != null && (
+            <span className="text-xs text-gray-400 line-through">
+              {fmt(v.sellPrice)}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+const PAGE_SIZE = 3; // Số sp hiển thị mỗi "trang" trong slider
+
 export default function EcommerceUI() {
   const [activeCampaign, setActiveCampaign] = useState(null);
+  const [discountedVariants, setDiscountedVariants] = useState([]);
+  const [allVariants, setAllVariants] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Slider state (Event Promotion)
+  const [sliderPage, setSliderPage] = useState(0);
+
+  // Modal "View All" state
+  const [showViewAll, setShowViewAll] = useState(false);
+  const [modalSearch, setModalSearch] = useState("");
 
   useEffect(() => {
-    eventService.getActiveCampaigns()
-      .then(data => { if (Array.isArray(data) && data.length > 0) setActiveCampaign(data[0]); })
+    eventService
+      .getActiveCampaigns()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setActiveCampaign(data[0]);
+      })
       .catch(() => { });
+
+    setLoadingProducts(true);
+    Promise.all([
+      eventService.getVariantsWithCoupon(),
+      eventService.getAllVariants(),
+    ])
+      .then(([withCoupon, all]) => {
+        setDiscountedVariants(Array.isArray(withCoupon) ? withCoupon : []);
+        setAllVariants(Array.isArray(all) ? all : []);
+      })
+      .catch(() => { })
+      .finally(() => setLoadingProducts(false));
   }, []);
 
-  const categories = [
-    { name: "All Products", active: true },
-    { name: "Electronics", active: false },
-    { name: "Fashion", active: false },
-    { name: "Groceries", active: false },
-    { name: "Home & Living", active: false },
-    { name: "Sports", active: false },
-    { name: "Beauty", active: false },
-  ];
+  // ── Slider logic ──────────────────────────────────────────────────────────
+  const totalPages = Math.ceil(discountedVariants.length / PAGE_SIZE);
+  const visibleItems = discountedVariants.slice(
+    sliderPage * PAGE_SIZE,
+    sliderPage * PAGE_SIZE + PAGE_SIZE
+  );
 
-  const eventProducts = [
-    {
-      id: 1,
-      name: "Premium Wireless Headphones",
-      price: 79.99,
-      originalPrice: 122.99,
-      discount: 40,
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
-    },
-    {
-      id: 2,
-      name: "Organic Fresh Vegetables Bundle",
-      price: 24.99,
-      originalPrice: 34.99,
-      discount: 30,
-      image:
-        "https://images.unsplash.com/photo-1591206369811-4eeb2f18e6e2?w=500&h=500&fit=crop",
-    },
-    {
-      id: 3,
-      name: "Designer Fashion Clothing",
-      price: 89.99,
-      originalPrice: 149.99,
-      discount: 40,
-      image:
-        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=500&h=500&fit=crop",
-    },
-  ];
+  const prevSlide = () => setSliderPage((p) => Math.max(0, p - 1));
+  const nextSlide = () => setSliderPage((p) => Math.min(totalPages - 1, p + 1));
 
-  const bestSellerProducts = [
-    {
-      id: 4,
-      name: "Premium Wireless Headphones",
-      price: 79.99,
-      originalPrice: 122.99,
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
-    },
-    {
-      id: 5,
-      name: "Organic Fresh Vegetables Bundle",
-      price: 24.99,
-      originalPrice: 34.99,
-      image:
-        "https://images.unsplash.com/photo-1591206369811-4eeb2f18e6e2?w=500&h=500&fit=crop",
-    },
-    {
-      id: 6,
-      name: "Designer Fashion Clothing",
-      price: 89.99,
-      originalPrice: 149.99,
-      image:
-        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=500&h=500&fit=crop",
-    },
-  ];
-
-  const allProducts = [
-    {
-      id: 7,
-      name: "Premium Wireless Headphones",
-      price: 79.99,
-      originalPrice: 122.99,
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
-    },
-    {
-      id: 8,
-      name: "Organic Fresh Vegetables Bundle",
-      price: 24.99,
-      originalPrice: 34.99,
-      image:
-        "https://images.unsplash.com/photo-1591206369811-4eeb2f18e6e2?w=500&h=500&fit=crop",
-    },
-    {
-      id: 9,
-      name: "Designer Fashion Clothing",
-      price: 89.99,
-      originalPrice: 149.99,
-      image:
-        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=500&h=500&fit=crop",
-    },
-    {
-      id: 10,
-      name: "Smart Watch Series 7",
-      price: 299.99,
-      originalPrice: 399.99,
-      image:
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop",
-    },
-    {
-      id: 11,
-      name: "Professional Camera",
-      price: 899.99,
-      originalPrice: 1199.99,
-      image:
-        "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&h=500&fit=crop",
-    },
-    {
-      id: 12,
-      name: "Leather Backpack",
-      price: 69.99,
-      originalPrice: 99.99,
-      image:
-        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&h=500&fit=crop",
-    },
-    {
-      id: 13,
-      name: "Running Shoes",
-      price: 119.99,
-      originalPrice: 159.99,
-      image:
-        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop",
-    },
-    {
-      id: 14,
-      name: "Skincare Set",
-      price: 49.99,
-      originalPrice: 79.99,
-      image:
-        "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=500&h=500&fit=crop",
-    },
-    {
-      id: 15,
-      name: "Coffee Maker",
-      price: 89.99,
-      originalPrice: 129.99,
-      image:
-        "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=500&h=500&fit=crop",
-    },
-  ];
+  // ── Modal search filter ───────────────────────────────────────────────────
+  const modalItems = discountedVariants.filter((v) => {
+    const kw = modalSearch.toLowerCase().trim();
+    return !kw || v.name?.toLowerCase().includes(kw) || v.sku?.toLowerCase().includes(kw);
+  });
 
   return (
-    <div className="min-h-screen bg-gray-100 relative">
-
-      {/* Quảng cáo 2 bên
-      <SideAds
-        leftImage="https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=400"
-        rightImage="https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=400"
-        leftTitle="Mega Sale 50% OFF"
-        rightTitle="Free Shipping"
-      /> */}
-
+    <div className="min-h-screen bg-gray-100">
+      {/* ── NAVBAR ── */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold">SmallTrend</h1>
-
           <div className="flex items-center gap-4">
             <a
               href="/login"
@@ -180,7 +151,7 @@ export default function EcommerceUI() {
         </div>
       </div>
 
-      {/* Banner - Hiển thị sự kiện đang ACTIVE từ API */}
+      {/* ── BANNER ── */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
         {activeCampaign ? (
           <div
@@ -188,18 +159,22 @@ export default function EcommerceUI() {
             style={{
               background: activeCampaign.bannerImageUrl
                 ? `linear-gradient(rgba(0,0,0,0.52), rgba(0,0,0,0.52)), url('${activeCampaign.bannerImageUrl}') center/cover no-repeat`
-                : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'
+                : "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
             }}
           >
             <span className="inline-block bg-red-500 px-4 py-1 text-sm rounded-full mb-3 font-semibold">
-              {activeCampaign.campaignType || 'SALE'} · Đang diễn ra
+              {activeCampaign.campaignType || "SALE"} · Đang diễn ra
             </span>
             <h1 className="text-4xl font-bold mt-2">{activeCampaign.campaignName}</h1>
             {activeCampaign.description && (
-              <p className="mt-2 text-lg opacity-90 max-w-xl mx-auto">{activeCampaign.description}</p>
+              <p className="mt-2 text-lg opacity-90 max-w-xl mx-auto">
+                {activeCampaign.description}
+              </p>
             )}
             {activeCampaign.endDate && (
-              <p className="mt-3 text-sm opacity-75">Kết thúc: {activeCampaign.endDate}</p>
+              <p className="mt-3 text-sm opacity-75">
+                Kết thúc: {activeCampaign.endDate}
+              </p>
             )}
           </div>
         ) : (
@@ -213,134 +188,156 @@ export default function EcommerceUI() {
         )}
       </div>
 
-      {/* Event Promotion */}
-      <Section title="Event Promotion">
-        <Grid>
-          {eventProducts.map((p) => (
-            <Card key={p.id}>
-              <div className="relative">
-                <img
-                  src={p.image}
-                  className="h-56 w-full object-cover"
-                  alt=""
-                />
-                <span className="absolute top-3 left-3 bg-red-600 text-white px-2 py-0.5 text-xs rounded-md font-semibold">
-                  {p.discount}% OFF
-                </span>
-              </div>
-              <CardBody
-                name={p.name}
-                price={p.price}
-                original={p.originalPrice}
-              />
-            </Card>
-          ))}
-        </Grid>
-      </Section>
-
-      {/* Best Seller */}
-      <Section title="Best Seller">
-        <Grid>
-          {bestSellerProducts.map((p) => (
-            <Card key={p.id}>
-              <img
-                src={p.image}
-                className="h-56 w-full object-cover"
-                alt=""
-              />
-              <CardBody
-                name={p.name}
-                price={p.price}
-                original={p.originalPrice}
-              />
-            </Card>
-          ))}
-        </Grid>
-      </Section>
-
-      {/* All Products */}
-      <div className="max-w-7xl mx-auto px-4 mt-10 pb-10">
-        <h2 className="text-2xl font-semibold mb-6">All Products</h2>
-
-        <div className="bg-white rounded-xl p-6 mb-8 flex flex-wrap gap-3">
-          {categories.map((c, i) => (
+      {/* ── EVENT PROMOTION – slider ── */}
+      <div className="max-w-7xl mx-auto px-4 mt-10">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold">Event Promotion</h2>
+          {discountedVariants.length > 0 && (
             <button
-              key={i}
-              className={`px-6 py-2 rounded-full text-sm font-medium ${c.active
-                ? "bg-blue-600 text-white"
-                : "border border-gray-300 text-gray-600"
-                }`}
+              onClick={() => { setShowViewAll(true); setModalSearch(""); }}
+              className="text-blue-600 text-sm font-medium hover:underline"
             >
-              {c.name}
+              View All →
             </button>
-          ))}
+          )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {allProducts.map((p) => (
-            <Card key={p.id}>
-              <img
-                src={p.image}
-                className="h-64 w-full object-cover"
-                alt=""
-              />
-              <CardBody
-                name={p.name}
-                price={p.price}
-                original={p.originalPrice}
-              />
-            </Card>
-          ))}
+        {loadingProducts ? (
+          <div className="text-center py-10 text-gray-400">Đang tải...</div>
+        ) : discountedVariants.length === 0 ? (
+          <div className="text-center py-10 text-gray-400">
+            <div className="text-4xl mb-2">🎟️</div>
+            <p className="text-sm">Chưa có sản phẩm khuyến mãi nào.</p>
+          </div>
+        ) : (
+          <div className="relative">
+            {/* Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {visibleItems.map((v) => (
+                <ProductCard key={v.sku} v={v} highlight />
+              ))}
+            </div>
+
+            {/* Arrow Prev */}
+            {totalPages > 1 && (
+              <>
+                <button
+                  onClick={prevSlide}
+                  disabled={sliderPage === 0}
+                  className={`absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${sliderPage === 0
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white hover:bg-blue-600 hover:text-white text-gray-700"
+                    }`}
+                >
+                  ‹
+                </button>
+                {/* Arrow Next */}
+                <button
+                  onClick={nextSlide}
+                  disabled={sliderPage >= totalPages - 1}
+                  className={`absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${sliderPage >= totalPages - 1
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white hover:bg-blue-600 hover:text-white text-gray-700"
+                    }`}
+                >
+                  ›
+                </button>
+              </>
+            )}
+
+            {/* Dot indicators */}
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-1.5 mt-5">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSliderPage(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${i === sliderPage ? "bg-blue-600 w-5" : "bg-gray-300"
+                      }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── ALL PRODUCTS ── */}
+      <div className="max-w-7xl mx-auto px-4 mt-10 pb-12">
+        <h2 className="text-2xl font-semibold mb-6">Tất cả Sản phẩm</h2>
+
+        {loadingProducts ? (
+          <div className="text-center py-12 text-gray-400">
+            Đang tải sản phẩm...
+          </div>
+        ) : allVariants.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <div className="text-4xl">📦</div>
+            <p className="mt-2">Chưa có sản phẩm nào.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {allVariants.map((v) => (
+              <ProductCard key={v.sku} v={v} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── MODAL: VIEW ALL DISCOUNTED ── */}
+      {showViewAll && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowViewAll(false); }}
+        >
+          <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Modal header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b flex-shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">🎟️ Event Promotion</h2>
+                <p className="text-sm text-gray-500">
+                  {discountedVariants.length} sản phẩm đang khuyến mãi
+                </p>
+              </div>
+              <button
+                onClick={() => setShowViewAll(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-800 text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="px-6 py-3 border-b flex-shrink-0">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Tìm sản phẩm theo tên hoặc SKU..."
+                  value={modalSearch}
+                  onChange={(e) => setModalSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+            </div>
+
+            {/* Grid */}
+            <div className="overflow-y-auto flex-1 p-6">
+              {modalItems.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  Không tìm thấy sản phẩm.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {modalItems.map((v) => (
+                    <ProductCard key={v.sku} v={v} highlight />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* Reusable components */
-
-function Section({ title, children }) {
-  return (
-    <div className="max-w-7xl mx-auto px-4 mt-10">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold">{title}</h2>
-        <a href="#" className="text-blue-600 text-sm font-medium">
-          View All →
-        </a>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Grid({ children }) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {children}
-    </div>
-  );
-}
-
-function Card({ children }) {
-  return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-sm">
-      {children}
-    </div>
-  );
-}
-
-function CardBody({ name, price, original }) {
-  return (
-    <div className="p-3">
-      <h3 className="text-sm font-semibold mb-1 line-clamp-2">
-        {name}
-      </h3>
-      <div className="flex items-center gap-2">
-        <span className="text-lg font-bold">${price}</span>
-        <span className="text-xs text-gray-500 line-through">
-          ${original}
-        </span>
-      </div>
+      )}
     </div>
   );
 }

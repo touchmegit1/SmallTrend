@@ -53,6 +53,22 @@ const eventService = {
         const response = await api.get('/pos/product');
         return response.data;
     },
+
+    getVariantsWithCoupon: async () => {
+        const response = await api.get('/pos/product/with-coupon');
+        return response.data;
+    },
+
+    applyCouponToVariant: async (sku, couponId) => {
+        const response = await api.put(`/pos/product/${encodeURIComponent(sku)}/coupon/${couponId}`);
+        return response.data;
+    },
+
+    removeCouponFromVariant: async (sku) => {
+        const response = await api.delete(`/pos/product/${encodeURIComponent(sku)}/coupon`);
+        return response.data;
+    },
 };
+
 
 export default eventService;
