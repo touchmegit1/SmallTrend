@@ -127,11 +127,10 @@ const Sidebar = () => {
                 {isAdmin && (
                     <div className="mb-2">
                         <div
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${
-                                location.pathname === '/dashboard' || location.pathname.startsWith('/hr/users') || openMenus['admin']
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === '/dashboard' || location.pathname.startsWith('/hr/users') || openMenus['admin']
                                     ? 'bg-indigo-50 text-indigo-700'
                                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                            }`}
+                                }`}
                             onClick={() => toggleMenu('admin')}
                         >
                             <Shield size={20} className={
@@ -198,11 +197,10 @@ const Sidebar = () => {
                 {navItems.map((item) => (
                     <div key={item.label}>
                         <div
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${
-                                location.pathname.startsWith(item.path) || openMenus[item.label]
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
                                     ? 'bg-indigo-50 text-indigo-700'
                                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                            }`}
+                                }`}
                             onClick={() => toggleMenu(item.label)}
                         >
                             <item.icon size={20} className={location.pathname.startsWith(item.path) || openMenus[item.label] ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-700"} />
