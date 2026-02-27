@@ -482,8 +482,28 @@ export const getInventoryCountById = async (id) => {
 };
 
 export const getInventoryCountNextCode = async () => {
-  return "IC-" + Date.now();
+  try {
+    const counts = await getInventoryCounts();
+    return generateICCode(counts);
+  } catch {
+    return "IC-001";
+  }
 };
+
+function generateICCode(existingCounts = []) {
+  const prefix = "IC-";
+  let maxNum = 0;
+  
+  for (const count of existingCounts) {
+    const code = count.code || "";
+    if (code.startsWith(prefix)) {
+      const num = parseInt(code.slice(prefix.length), 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  }
+  
+  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
+}
 
 export const saveInventoryCountDraft = async (request) => {
   const body = mapCountRequestToBackend(request);
@@ -539,13 +559,27 @@ export const cancelInventoryCount = async (id) => {
   return response.json();
 };
 
+export const deleteInventoryCount = async (id) => {
+  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to delete inventory count");
+  return true;
+};
+
 // Map frontend snake_case to backend camelCase
 function mapCountRequestToBackend(request) {
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = currentUser.id || 1;
+  
   return {
     code: request.code,
     locationId: request.location_id || request.locationId,
     notes: request.notes,
     status: request.status,
+    createdBy: userId,
+    createdAt: new Date().toISOString(),
     items: (request.items || [])
       .filter((item) => item.actual_quantity !== null && item.actual_quantity !== undefined)
       .map((item) => ({
