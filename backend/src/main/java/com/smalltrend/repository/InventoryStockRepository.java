@@ -19,8 +19,12 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
 
     @Query("SELECT i FROM InventoryStock i WHERE i.quantity <= :threshold")
     List<InventoryStock> findLowStockItems(@Param("threshold") int threshold);
-    
-    Optional<InventoryStock> findByVariantId(Integer variantId);
-    
+
+    // Tìm tất cả stock records của một variant (dùng variantId)
+    @Query("SELECT i FROM InventoryStock i WHERE i.variant.id = :variantId")
+    List<InventoryStock> findByVariantId(@Param("variantId") Integer variantId);
+
+    // Tìm stock của variant tại một location cụ thể (dùng cho DisposalVoucherService)
     Optional<InventoryStock> findByVariantAndLocation(ProductVariant variant, Location location);
 }
+

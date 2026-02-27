@@ -26,5 +26,11 @@ export const useFetchCustomers = () => {
     fetchCustomers();
   }, []);
 
-  return { customers, setCustomers, loading, error, refetch: fetchCustomers };
+  const findByPhone = (phone) => {
+    if (!phone) return null;
+    const trimmed = phone.trim();
+    return customers.find(c => c.phone === trimmed || c.phone?.includes(trimmed)) || null;
+  };
+
+  return { customers, setCustomers, loading, error, refetch: fetchCustomers, findByPhone };
 };
