@@ -1,5 +1,6 @@
 package com.smalltrend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,5 +41,6 @@ public class Unit {
     private BigDecimal defaultCostPrice;
 
     @OneToMany(mappedBy = "unit")
+    @JsonIgnore
     private List<ProductVariant> variants;
 }

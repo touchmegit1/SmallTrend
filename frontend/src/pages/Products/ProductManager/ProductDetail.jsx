@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft, Package, Edit, Box, TrendingUp, Calendar, Power, Printer } from "lucide-react";
+import { ArrowLeft, Package, Edit, Box, Calendar, Power, Printer } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Card } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
@@ -9,8 +9,7 @@ import { Badge } from "../ProductComponents/badge";
 import EditProductModal from "./EditProductModal";
 import EditVariantModal from "./EditVariantModal";
 import { useFetchVariants } from "../../../hooks/product_variants";
-import { useFetchCategories } from "../../../hooks/categories";
-import { useFetchBrands } from "../../../hooks/brands";
+import api from "../../../config/axiosConfig";
 
 
 function ProductDetail() {
@@ -18,8 +17,6 @@ function ProductDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const product = location.state?.product;
-
-  const [hoveredImage, setHoveredImage] = useState(null);
 
   const { variants, loading, error, fetchVariants } =
     useFetchVariants(productId);
@@ -29,21 +26,6 @@ function ProductDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditVariantModalOpen, setIsEditVariantModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  const { categories } = useFetchCategories();
-  const { brands } = useFetchBrands();
-
-
-  // Helper functions để lấy tên từ ID
-  const getCategoryName = (categoryId) => {
-    const category = categories.find(cat => cat.id == categoryId);
-    return category?.name || 'N/A';
-  };
-
-  const getBrandName = (brandId) => {
-    const brand = brands.find(b => b.id == brandId);
-    return brand?.name || 'N/A';
-  };
-
 
   const handleToggleStatus = (variant) => {
     setSelectedVariant(variant);
@@ -84,16 +66,13 @@ function ProductDetail() {
   };
 
   const handlePrintBarcode = (variant) => {
-  const printWindow = window.open("", "", "width=400,height=300");
+    const printWindow = window.open("", "", "width=400,height=300");
 
-  printWindow.document.write(`
+    printWindow.document.write(`
     <html>
       <head>
-        <title>In tem mã vạch ${product.name} - ${product.unit} ${Object.values(variant.attributes || {})[0] || ""}</title>
-
-        <!-- Import JsBarcode CDN -->
+        <title>In tem mã vạch ${product.name} - ${variant.sku}</title>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
         <style>
           body { 
             font-family: Arial, sans-serif; 
@@ -103,50 +82,41 @@ function ProductDetail() {
             height: 100vh; 
             margin: 0;
           }
-
           .barcode-label {
             text-align: center;
             border: 2px solid #000;
             padding: 15px;
             width: 280px;
           }
-
           .product-name { 
             font-size: 13px; 
             font-weight: bold; 
             margin-bottom: 5px; 
           }
-
           .price { 
             font-size: 16px; 
             font-weight: bold; 
             margin-top: 5px;
           }
-
           .sku { 
             font-size: 11px; 
             color: #666; 
           }
         </style>
       </head>
-
       <body>
         <div class="barcode-label">
           <div class="product-name">
-            ${product.name} - ${product.unit} ${Object.values(variant.attributes || {})[0] || ""}
+            ${product.name}
           </div>
-
           <svg id="barcode"></svg>
-
           <div class="price">
             ${(variant.sell_price || 0).toLocaleString("vi-VN")}đ
           </div>
-
           <div class="sku">
             SKU: ${variant.sku}
           </div>
         </div>
-
         <script>
           JsBarcode("#barcode", "${variant.barcode || variant.sku}", {
             format: "CODE128",
@@ -155,7 +125,6 @@ function ProductDetail() {
             displayValue: true,
             fontSize: 14
           });
-
           window.onload = function() {
             setTimeout(function() {
               window.print();
@@ -163,13 +132,12 @@ function ProductDetail() {
             }, 300);
           };
         </script>
-
       </body>
     </html>
   `);
 
-  printWindow.document.close();
-};
+    printWindow.document.close();
+  };
 
 
   // Check for message from AddNewProductVariant
@@ -199,6 +167,17 @@ function ProductDetail() {
   if (loading) return <p>Đang tải biến thể...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleString("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Toast Message */}
@@ -212,74 +191,68 @@ function ProductDetail() {
 
       {/* Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 bg-black/50 shadow-xl backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold mb-4">Xác nhận thay đổi trạng thái</h3>
-            <p className="text-gray-600 mb-6">
-              Bạn có muốn sửa trạng thái của sản phẩm này thành {selectedVariant?.is_active ? "ngưng bán" : "đang bán"}?
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="danger"
-                onClick={() => setShowConfirm(false)}
-              >
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
+            <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Xác nhận thay đổi trạng thái</h3>
+              <p className="text-gray-600">
+                Bạn có muốn sửa trạng thái của biến thể này thành <span className="font-semibold">{selectedVariant?.is_active ? "ngưng bán" : "đang bán"}</span>?
+              </p>
+            </div>
+            <div className="p-6 bg-gray-50 rounded-b-2xl flex gap-3">
+              <Button variant="outline" className="flex-1 h-11 rounded-xl font-semibold" onClick={() => setShowConfirm(false)}>
                 Hủy
               </Button>
-              <Button
-                variant="primary"
-                onClick={confirmToggleStatus}
-              >
+              <Button className="flex-1 h-11 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md" onClick={confirmToggleStatus}>
                 Xác nhận
               </Button>
             </div>
           </div>
         </div>
       )}
+
       {/* Header */}
       <div className="flex justify-between items-start">
         <div className="flex items-start gap-4">
-          <Button variant="ghost" onClick={() => navigate("/products")}>
+          <Button variant="ghost" onClick={() => navigate("/products")} className="hover:bg-white/80 rounded-xl">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900">{product.name}</h1>
-            <p className="text-md text-gray-500 font-semibold">ID: #{product.id}</p>
+            <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-sm text-gray-500">ID: #{product.id}</span>
+              {product.is_active ? (
+                <Badge className="bg-green-100 text-green-700 text-xs">Đang hoạt động</Badge>
+              ) : (
+                <Badge className="bg-red-100 text-red-700 text-xs">Ngừng hoạt động</Badge>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Dashboard Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 rounded-lg">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border border-gray-200 rounded-xl bg-white p-5">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-100 rounded-xl">
               <Box className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Tổng tồn kho</p>
-              <p className="text-2xl font-bold text-gray-900">{product.total_stock}</p>
+              <p className="text-sm text-gray-500">Số biến thể</p>
+              <p className="text-2xl font-bold text-gray-900">{product.variant_count || variants.length}</p>
             </div>
           </div>
         </Card>
-        <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Đã bán (30 ngày)</p>
-              <p className="text-2xl font-bold text-gray-900">342</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-100 rounded-lg">
+        <Card className="border border-gray-200 rounded-xl bg-white p-5">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-green-100 rounded-xl">
               <Calendar className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500">Ngày tạo: {product.created_at}</p>
-              <p className="text-xs text-gray-500">Cập nhật: {product.created_at}</p>
+              <p className="text-sm text-gray-500">Ngày tạo</p>
+              <p className="text-base font-semibold text-gray-900">{formatDate(product.created_at)}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Cập nhật: {formatDate(product.updated_at)}</p>
             </div>
           </div>
         </Card>
@@ -287,56 +260,62 @@ function ProductDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left Column - Product Image */}
-        <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center mb-3">
-            <Package className="w-16 h-16 text-gray-400" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-500">Chưa có hình ảnh</p>
+        <Card className="border border-gray-200 rounded-xl bg-white p-5">
+          <div className="aspect-video bg-gray-50 rounded-xl flex items-center justify-center">
+            {product.image_url ? (
+              <img
+                src={`http://localhost:8081${product.image_url}`}
+                alt={product.name}
+                className="w-full h-full object-contain rounded-xl"
+              />
+            ) : (
+              <div className="text-center">
+                <Package className="w-16 h-16 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">Chưa có hình ảnh</p>
+              </div>
+            )}
           </div>
         </Card>
 
         {/* Right Column - Product Info */}
-        <Card className="border border-gray-300 rounded-lg bg-white">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-bold">Thông tin cơ bản</h2>
+        <Card className="border border-gray-200 rounded-xl bg-white">
+          <div className="p-5 border-b border-gray-100">
+            <h2 className="text-lg font-bold text-gray-800">Thông tin cơ bản</h2>
           </div>
-          <div className="p-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm font-medium text-gray-500">Tên sản phẩm</Label>
                 <p className="text-sm font-semibold text-gray-900 mt-1">{product.name}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Thương hiệu</Label>
-                <p className="text-sm text-gray-900 mt-1">{getBrandName(product.brand_id)}</p>
+                <p className="text-sm text-gray-900 mt-1">{product.brand_name || "—"}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Danh mục</Label>
                 <div className="mt-1">
-                  <Badge className="inline-block px-2 py-1 bg-neutral-300 rounded-full text-xs">{getCategoryName(product.category_id)}</Badge>
+                  <Badge className="inline-block px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs">
+                    {product.category_name || "—"}
+                  </Badge>
                 </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Đơn vị</Label>
-                <p className="text-sm text-gray-900 mt-1">{product.unit}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Thuế</Label>
-                <div className="mt-1">
-                  <Badge className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">10%</Badge>
-                </div>
+                <p className="text-sm text-gray-900 mt-1">{product.tax_rate_name || "—"}</p>
               </div>
             </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-500">Mô tả</Label>
-              <p className="text-sm text-gray-900 mt-1">{product.description}</p>
-            </div>
+            {product.description && (
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Mô tả</Label>
+                <p className="text-sm text-gray-700 mt-1 leading-relaxed">{product.description}</p>
+              </div>
+            )}
           </div>
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-5 border-t border-gray-100">
             <Button
               onClick={() => setIsEditModalOpen(true)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 h-11 rounded-xl font-semibold"
             >
               <Edit className="w-4 h-4" />
               Chỉnh sửa sản phẩm
@@ -344,134 +323,99 @@ function ProductDetail() {
           </div>
         </Card>
       </div>
+
       {/* Variants */}
-      <Card className="border border-gray-300 rounded-lg bg-white">
-        <div className="p-5 border-b border-gray-200 flex justify-between items-center">
+      <Card className="border border-gray-200 rounded-xl bg-white">
+        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold">Biến thể sản phẩm</h2>
-            <span className="text-gray-300">•</span>
+            <h2 className="text-xl font-bold text-gray-800">Biến thể sản phẩm</h2>
             <Badge className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
               {variants.length} biến thể
             </Badge>
           </div>
           <Button
             onClick={() => navigate("/products/addproduct_variant", { state: { product } })}
-            className="bg-blue-600 hover:bg-blue-700 text-white">
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
             Thêm biến thể
           </Button>
         </div>
         <div className="p-6">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="w-16">STT</TableHead>
-                <TableHead>Tên biến thể</TableHead>
-                <TableHead>Thuộc tính</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Barcode</TableHead>
-                <TableHead>Giá nhập</TableHead>
-                <TableHead>Giá bán</TableHead>
-                <TableHead>Tồn kho</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className="text-center">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {variants.map((variant, index) => (
-                <TableRow key={variant.id} className="hover:bg-gray-100">
-                  <TableCell className="font-medium">{index + 1}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        className="relative w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer border-0 p-0"
-                        onMouseEnter={() => setHoveredImage(variant.id)}
-                        onMouseLeave={() => setHoveredImage(null)}
-                        aria-label="Xem ảnh biến thể"
-                      >
-                        <Package className="w-5 h-5 text-gray-400" />
-                        {hoveredImage === variant.id && (
-                          <div className="absolute left-12 top-0 z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2">
-                            <div className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <Package className="w-24 h-24 text-gray-400" />
-                            </div>
-                          </div>
-                        )}
-                      </button>
-                      <div className="flex flex-col">
-                        <span className="font-semibold">
-                          {`${product.unit} ${Object.values(variant.attributes || {})[0] || ""}`}
-                        </span>
-
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      <div className="space-y-1 text-sm">
-                        {Object.entries(variant.attributes).map(([key, value]) => (
-                          <div key={key}>
-                            <span className="text-gray-400 mr-1 capitalize">
-                              {key}:
-                            </span>
-                            <span className="font-medium text-gray-700">
-                              {value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </Badge>
-
-                  </TableCell>
-
-                  <TableCell className="text-gray-600">{variant.sku}</TableCell>
-                  <TableCell className="text-gray-600">{variant.barcode}</TableCell>
-                  <TableCell>{(variant.cost_price || 0).toLocaleString('vi-VN')}đ</TableCell>
-                  <TableCell className="font-semibold">{variant.sell_price?.toLocaleString('vi-VN') || "0"}đ</TableCell>
-                  <TableCell>
-                    <Badge className={variant.stock_quantity > 0 ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}>
-                      {variant.stock_quantity}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {variant.is_active ? (
-                      <Badge className="bg-green-200 text-green-700">Đang bán</Badge>
-                    ) : (
-                      <Badge className="bg-red-200 text-red-800">Ngưng bán</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title={variant.is_active ? "Ngưng bán" : "Bật bán"}
-                        onClick={() => handleToggleStatus(variant)}
-                      >
-                        <Power className={`w-4 h-4 ${variant.is_active ? 'text-green-600' : 'text-gray-400'}`} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="Chỉnh sửa"
-                        onClick={() => handleEditVariant(variant)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="In tem mã vạch"
-                        onClick={() => handlePrintBarcode(variant)}
-                      >
-                        <Printer className="w-4 h-4 text-blue-600" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {variants.length === 0 ? (
+            <div className="text-center py-12">
+              <Box className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">Chưa có biến thể nào</p>
+              <p className="text-sm text-gray-400 mt-1">Nhấn "Thêm biến thể" để bắt đầu</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="w-16">STT</TableHead>
+                  <TableHead>Tên biến thể</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Barcode</TableHead>
+                  <TableHead>Giá bán</TableHead>
+                  <TableHead>Tồn kho</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead className="text-center">Thao tác</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {variants.map((variant, index) => (
+                  <TableRow key={variant.id} className="hover:bg-gray-50 transition-colors">
+                    <TableCell className="font-medium text-gray-500">{index + 1}</TableCell>
+                    <TableCell className="font-semibold text-gray-900">{variant.name || "—"}</TableCell>
+                    <TableCell className="font-mono text-sm text-gray-700">{variant.sku || "—"}</TableCell>
+                    <TableCell className="font-mono text-sm text-gray-600">{variant.barcode || "—"}</TableCell>
+                    <TableCell className="font-semibold text-gray-900">{variant.sell_price?.toLocaleString('vi-VN') || "0"}đ</TableCell>
+                    <TableCell>
+                      <Badge className={variant.stock_quantity > 0 ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}>
+                        {variant.stock_quantity ?? 0}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {variant.is_active ? (
+                        <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
+                      ) : (
+                        <Badge className="bg-red-100 text-red-700">Ngưng bán</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex justify-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title={variant.is_active ? "Ngưng bán" : "Bật bán"}
+                          onClick={() => handleToggleStatus(variant)}
+                          className="hover:bg-gray-100"
+                        >
+                          <Power className={`w-4 h-4 ${variant.is_active ? 'text-green-600' : 'text-gray-400'}`} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="Chỉnh sửa"
+                          onClick={() => handleEditVariant(variant)}
+                          className="hover:bg-blue-50"
+                        >
+                          <Edit className="w-4 h-4 text-blue-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="In tem mã vạch"
+                          onClick={() => handlePrintBarcode(variant)}
+                          className="hover:bg-blue-50"
+                        >
+                          <Printer className="w-4 h-4 text-blue-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </Card>
 

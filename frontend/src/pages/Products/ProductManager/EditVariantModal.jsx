@@ -36,7 +36,7 @@ export function EditVariantModal({ variant, isOpen, onClose, onSave }) {
           });
         }
       }
-      
+
       setFormData({
         variant_name: variant.variant_name || "",
         sku: variant.sku || "",
@@ -120,9 +120,9 @@ export function EditVariantModal({ variant, isOpen, onClose, onSave }) {
       .filter(attr => attr.key && attr.value)
       .map(attr => `${attr.key}: ${attr.value}`)
       .join(', ');
-    
-    onSave({ 
-      ...variant, 
+
+    onSave({
+      ...variant,
       ...formData,
       attributes: attributesString
     });
@@ -308,9 +308,8 @@ export function EditVariantModal({ variant, isOpen, onClose, onSave }) {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
-                      isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500"
-                    }`}
+                    className={`flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500"
+                      }`}
                   >
                     <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
                     <p className="text-sm text-gray-600">Kéo thả hoặc click để tải ảnh lên</p>
@@ -329,9 +328,8 @@ export function EditVariantModal({ variant, isOpen, onClose, onSave }) {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`flex-1 min-h-0 border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer ${
-                      isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500"
-                    }`}
+                    className={`flex-1 min-h-0 border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer ${isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500"
+                      }`}
                   >
                     <div className="">
                       {images.map((img, index) => (

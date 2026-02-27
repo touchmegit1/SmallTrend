@@ -43,7 +43,7 @@ function RootRedirect() {
       </div>
     );
   }
-  
+
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
 }
 
@@ -138,11 +138,11 @@ function App() {
           element={<div className="p-4">{<CategoryAndBrand />}</div>}
         />
         <Route
-          path="products/price-books"
-          element={<div className="p-4">Thiết lập giá</div>}
+          path="products/supplier"
+          element={<div className="p-4">{ }</div>}
         />
         <Route
-          path="products/print-barcodes"
+          path="products/combo"
           element={<div className="p-4">{<ComboManage />}</div>}
         />
 

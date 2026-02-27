@@ -1,4 +1,5 @@
 package com.smalltrend.dto.pos;
+
 import lombok.Data;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -14,6 +15,7 @@ public class ProductVariantRespone {
     private Integer stockQuantity;
     private String categoryName;
     private String brandName;
+    private String unitName;
     private Map<String, String> attributes;
     private Boolean isActive;
 }

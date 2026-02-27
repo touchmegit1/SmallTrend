@@ -66,8 +66,8 @@ const Sidebar = () => {
       children: [
         { label: "Danh sách sản phẩm", path: "/products" },
         { label: "Danh mục & Brand", path: "/products/categories" },
-        { label: "Thiết lập giá", path: "/products/price-books" },
-        { label: "In tem mã vạch", path: "/products/print-barcodes" },
+        { label: "Nhà Cung Cấp", path: "/products/supplier" },
+        { label: "Quản lý Combo", path: "/products/combo" },
       ],
     },
     {
@@ -138,21 +138,20 @@ const Sidebar = () => {
         {isAdmin && (
           <div className="mb-2">
             <div
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${
-                location.pathname === "/dashboard" ||
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === "/dashboard" ||
                 location.pathname.startsWith("/hr/users") ||
                 openMenus["admin"]
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
               onClick={() => toggleMenu("admin")}
             >
               <Shield
                 size={20}
                 className={
                   location.pathname === "/dashboard" ||
-                  location.pathname.startsWith("/hr/users") ||
-                  openMenus["admin"]
+                    location.pathname.startsWith("/hr/users") ||
+                    openMenus["admin"]
                     ? "text-indigo-600"
                     : "text-slate-500 group-hover:text-slate-700"
                 }
@@ -169,10 +168,9 @@ const Sidebar = () => {
                 <NavLink
                   to="/dashboard"
                   className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${
-                      isActive
-                        ? "bg-indigo-100 text-indigo-700 font-medium"
-                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                      ? "bg-indigo-100 text-indigo-700 font-medium"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                     }`
                   }
                 >
@@ -181,10 +179,9 @@ const Sidebar = () => {
                 <NavLink
                   to="/hr/users"
                   className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${
-                      isActive
-                        ? "bg-indigo-100 text-indigo-700 font-medium"
-                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                      ? "bg-indigo-100 text-indigo-700 font-medium"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                     }`
                   }
                 >
@@ -199,18 +196,17 @@ const Sidebar = () => {
         {navItems.map((item) => (
           <div key={item.label}>
             <div
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${
-                location.pathname.startsWith(item.path) || openMenus[item.label]
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
               onClick={() => toggleMenu(item.label)}
             >
               <item.icon
                 size={20}
                 className={
                   location.pathname.startsWith(item.path) ||
-                  openMenus[item.label]
+                    openMenus[item.label]
                     ? "text-indigo-600"
                     : "text-slate-500 group-hover:text-slate-700"
                 }
@@ -233,10 +229,9 @@ const Sidebar = () => {
                     key={child.path}
                     to={child.path}
                     className={({ isActive }) =>
-                      `block px-3 py-2 rounded-md text-sm transition-colors ${
-                        isActive
-                          ? "bg-indigo-100 text-indigo-700 font-medium"
-                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                      `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                        ? "bg-indigo-100 text-indigo-700 font-medium"
+                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                       }`
                     }
                     end={child.path === item.path}

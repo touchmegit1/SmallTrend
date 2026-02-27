@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Save, Image as ImageIcon, X, Upload } from "lucide-react";
+import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
@@ -12,8 +12,8 @@ import { useFetchTaxRates } from "../../../hooks/taxRates";
 import api from "../../../config/axiosConfig";
 
 const AddNewProduct = () => {
-  const { categories } = useFetchCategories();
-  const { brands } = useFetchBrands();
+  const { categories, createCategory } = useFetchCategories();
+  const { brands, createBrand } = useFetchBrands();
   const { taxRates } = useFetchTaxRates();
 
   const [formData, setFormData] = useState({
@@ -22,6 +22,7 @@ const AddNewProduct = () => {
     brandId: "",
     taxRateId: "",
     description: "",
+    isActive: "true",
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -29,6 +30,14 @@ const AddNewProduct = () => {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Modal states for adding new category/brand
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [newCategory, setNewCategory] = useState({ code: "", name: "", description: "" });
+  const [newBrand, setNewBrand] = useState({ name: "", description: "", country: "" });
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [creatingBrand, setCreatingBrand] = useState(false);
 
   const navigate = useNavigate();
 
@@ -94,6 +103,40 @@ const AddNewProduct = () => {
     }
   };
 
+  // Handle creating new category
+  const handleCreateCategory = async () => {
+    if (!newCategory.name.trim()) return;
+    setCreatingCategory(true);
+    try {
+      const created = await createCategory(newCategory);
+      setFormData((prev) => ({ ...prev, categoryId: String(created.id) }));
+      setNewCategory({ code: "", name: "", description: "" });
+      setShowCategoryModal(false);
+    } catch (error) {
+      console.error("Error creating category:", error);
+      alert("Tạo danh mục thất bại!");
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
+
+  // Handle creating new brand
+  const handleCreateBrand = async () => {
+    if (!newBrand.name.trim()) return;
+    setCreatingBrand(true);
+    try {
+      const created = await createBrand(newBrand);
+      setFormData((prev) => ({ ...prev, brandId: String(created.id) }));
+      setNewBrand({ name: "", description: "", country: "" });
+      setShowBrandModal(false);
+    } catch (error) {
+      console.error("Error creating brand:", error);
+      alert("Tạo thương hiệu thất bại!");
+    } finally {
+      setCreatingBrand(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -111,6 +154,7 @@ const AddNewProduct = () => {
         categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
         brandId: formData.brandId ? parseInt(formData.brandId) : null,
         taxRateId: formData.taxRateId ? parseInt(formData.taxRateId) : null,
+        isActive: formData.isActive === "true",
       };
 
       await api.post("/products", payload);
@@ -178,22 +222,34 @@ const AddNewProduct = () => {
                     />
                   </div>
 
+                  {/* Category with Add New */}
                   <div>
                     <Label className="text-sm font-semibold text-gray-700">
                       Danh mục <span className="text-red-500">*</span>
                     </Label>
-                    <select
-                      name="categoryId"
-                      className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={formData.categoryId}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Chọn danh mục</option>
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
+                    <div className="flex gap-2 mt-2">
+                      <select
+                        name="categoryId"
+                        className="flex-1 h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={formData.categoryId}
+                        onChange={handleChange}
+                        required
+                      >
+                        <option value="">Chọn danh mục</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowCategoryModal(true)}
+                        className="h-11 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl flex items-center gap-1.5 text-sm font-medium transition-all duration-200 shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 whitespace-nowrap"
+                        title="Thêm danh mục mới"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Thêm mới
+                      </button>
+                    </div>
                   </div>
 
                   <div>
@@ -213,18 +269,43 @@ const AddNewProduct = () => {
                     </select>
                   </div>
 
+                  {/* Brand with Add New */}
                   <div>
                     <Label className="text-sm font-semibold text-gray-700">Thương hiệu</Label>
+                    <div className="flex gap-2 mt-2">
+                      <select
+                        name="brandId"
+                        className="flex-1 h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={formData.brandId}
+                        onChange={handleChange}
+                      >
+                        <option value="">Chọn thương hiệu</option>
+                        {brands.map((brand) => (
+                          <option key={brand.id} value={brand.id}>{brand.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowBrandModal(true)}
+                        className="h-11 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl flex items-center gap-1.5 text-sm font-medium transition-all duration-200 shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 whitespace-nowrap"
+                        title="Thêm thương hiệu mới"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Thêm mới
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-700">Trạng thái</Label>
                     <select
-                      name="brandId"
+                      name="isActive"
                       className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={formData.brandId}
+                      value={formData.isActive}
                       onChange={handleChange}
                     >
-                      <option value="">Chọn thương hiệu</option>
-                      {brands.map((brand) => (
-                        <option key={brand.id} value={brand.id}>{brand.name}</option>
-                      ))}
+                      <option value="true">Đang hoạt động</option>
+                      <option value="false">Ngừng hoạt động</option>
                     </select>
                   </div>
 
@@ -344,6 +425,123 @@ const AddNewProduct = () => {
           </div>
         </form>
       </div>
+
+      {/* Modal: Add New Category */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
+            <div className="relative p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Thêm mới danh mục
+              </h2>
+              <button onClick={() => setShowCategoryModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Mã danh mục <span className="text-red-500">*</span></Label>
+                <Input
+                  className="mt-2 h-11 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+                  value={newCategory.code}
+                  onChange={(e) => setNewCategory((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                  placeholder="VD: FRESH, DRINK, SNACK"
+                  maxLength={50}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Tên danh mục <span className="text-red-500">*</span></Label>
+                <Input
+                  className="mt-2 h-11 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nhập tên danh mục"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Mô tả</Label>
+                <textarea
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 mt-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={4}
+                  value={newCategory.description}
+                  onChange={(e) => setNewCategory((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Nhập mô tả chi tiết..."
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+              <Button variant="outline" className="flex-1 h-11 rounded-xl font-semibold" onClick={() => setShowCategoryModal(false)}>
+                Hủy
+              </Button>
+              <Button
+                className="flex-1 h-11 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md"
+                onClick={handleCreateCategory}
+                disabled={creatingCategory || !newCategory.name.trim()}
+              >
+                {creatingCategory ? "Đang tạo..." : "Thêm mới"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add New Brand */}
+      {showBrandModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
+            <div className="relative p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Thêm mới thương hiệu
+              </h2>
+              <button onClick={() => setShowBrandModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Tên thương hiệu <span className="text-red-500">*</span></Label>
+                <Input
+                  className="mt-2 h-11 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={newBrand.name}
+                  onChange={(e) => setNewBrand((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nhập tên thương hiệu"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Quốc gia</Label>
+                <Input
+                  className="mt-2 h-11 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={newBrand.country}
+                  onChange={(e) => setNewBrand((prev) => ({ ...prev, country: e.target.value }))}
+                  placeholder="VD: Việt Nam, Mỹ, Thái Lan..."
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Mô tả</Label>
+                <textarea
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 mt-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={4}
+                  value={newBrand.description}
+                  onChange={(e) => setNewBrand((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Nhập mô tả chi tiết..."
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+              <Button variant="outline" className="flex-1 h-11 rounded-xl font-semibold" onClick={() => setShowBrandModal(false)}>
+                Hủy
+              </Button>
+              <Button
+                className="flex-1 h-11 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md"
+                onClick={handleCreateBrand}
+                disabled={creatingBrand || !newBrand.name.trim()}
+              >
+                {creatingBrand ? "Đang tạo..." : "Thêm mới"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
