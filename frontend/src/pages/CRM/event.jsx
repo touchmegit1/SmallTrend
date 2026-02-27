@@ -227,31 +227,36 @@ const EventManagement = () => {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Quản lý Sự kiện & Khuyến Mãi</h1>
-        {activeTab === 'campaigns' && (
-          <button onClick={() => openCampaignModal()} className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 font-medium text-sm flex items-center gap-2">
-            + Thêm Sự kiện
-          </button>
-        )}
-        {activeTab === 'coupons' && (
-          <button onClick={() => openCouponModal()} className="bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 font-medium text-sm flex items-center gap-2">
-            + Thêm Coupon
-          </button>
-        )}
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Quản lý Sự kiện &amp; Khuyến Mãi</h1>
+          <p className="text-slate-500 mt-1">Quản lý chính sách khuyến mãi, sự kiện và coupon.</p>
+        </div>
+        <div className="flex gap-2">
+          {activeTab === 'campaigns' && (
+            <button onClick={() => openCampaignModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/30 transition-all text-sm font-medium">
+              + Thêm Sự kiện
+            </button>
+          )}
+          {activeTab === 'coupons' && (
+            <button onClick={() => openCouponModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/30 transition-all text-sm font-medium">
+              + Thêm Coupon
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-300 mb-6 gap-1">
+      <div className="flex border-b border-slate-200 gap-1">
         {tabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-5 py-2.5 font-medium text-sm rounded-t-lg transition-colors ${activeTab === tab.key
-              ? 'bg-white border border-b-white border-gray-300 -mb-px text-blue-600'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            className={`px-5 py-2.5 font-medium text-sm transition-colors border-b-2 ${activeTab === tab.key
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
           >
             {tab.label}
@@ -261,29 +266,29 @@ const EventManagement = () => {
 
       {/* ═══ TAB 1: CAMPAIGNS / SỰ KIỆN ═══ */}
       {activeTab === 'campaigns' && (
-        <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           {loadingCampaigns ? (
-            <div className="text-center py-12 text-gray-500">Đang tải...</div>
+            <div className="text-center py-12 text-slate-400">Đang tải...</div>
           ) : campaigns.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-slate-400">
               <div className="text-4xl mb-2">🎯</div>
               <p>Chưa có sự kiện nào. Tạo sự kiện đầu tiên!</p>
             </div>
           ) : (
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Mã / Tên Sự kiện</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Loại</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Thời gian</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Trạng thái</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Ngân sách</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Hành động</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Mã / Tên Sự kiện</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Loại</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Thời gian</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Trạng thái</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Ngân sách</th>
+                  <th className="px-5 py-3 text-center text-xs font-semibold text-slate-600">Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {campaigns.map(c => (
-                  <tr key={c.id} className="border-t hover:bg-gray-50">
+                  <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {c.bannerImageUrl ? (

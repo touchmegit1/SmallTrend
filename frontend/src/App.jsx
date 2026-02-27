@@ -23,11 +23,12 @@ import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
+import CRMreport from "./pages/CRM/report";
 import { useAuth } from "./context/AuthContext";
 
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -35,7 +36,7 @@ function RootRedirect() {
       </div>
     );
   }
-  
+
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
 }
 
@@ -44,7 +45,7 @@ function App() {
     <Routes>
       {/* Root Route - Redirect based on authentication */}
       <Route path="/" element={<RootRedirect />} />
-      
+
       {/* Public Routes */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/crm/homepage" element={<CRMhomepage />} />
@@ -109,10 +110,11 @@ function App() {
         />
 
         {/* Module 4: CRM (Khách hàng) */}
-        <Route path="crm" element={<div className="p-4">CRM & Promotion</div>} />
+        <Route path="crm" element={<div className="p-4">CRM &amp; Promotion</div>} />
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
+        <Route path="crm/report" element={<CRMreport />} />
         <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
         <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
         <Route path="crm/complain" element={<CRMcomplain />} />
