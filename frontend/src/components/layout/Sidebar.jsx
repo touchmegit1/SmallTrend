@@ -16,14 +16,10 @@ const Sidebar = () => {
         }));
     };
 
-    const handleLogout = () => {
-        logout();
-        navigate('/crm/homepage');
+    const handleLogout = async () => {
+        await logout();
+        navigate('/login');
     };
-
-    // Debug: log user info
-    console.log('Sidebar - Current user:', user);
-    console.log('Sidebar - User role:', user?.role);
 
     const navItems = [
         {
@@ -34,6 +30,7 @@ const Sidebar = () => {
                 { label: 'Giao diện bán hàng', path: '/pos' },
                 { label: 'Lịch sử đơn hàng', path: '/pos/history' },
                 { label: 'Đơn hàng treo', path: '/pos/suspended' },
+                { label: 'Giao ca', path: '/pos/shift-handover' },
             ]
         },
         {
@@ -43,9 +40,10 @@ const Sidebar = () => {
             children: [
                 { label: 'Tổng quan kho', path: '/inventory' },
                 { label: 'Nhập kho', path: '/inventory/import' },
-                { label: 'Xuất kho', path: '/inventory/export' },
                 { label: 'Kiểm kê', path: '/inventory/audit' },
-                { label: 'Cảnh báo hết hàng', path: '/inventory/alerts' },
+                { label: 'Quản lý vị trí', path: '/inventory/locations' },
+                { label: 'Xuất hủy', path: '/inventory/disposal' },
+                { label: 'Nhà cung cấp', path: '/inventory/suppliers' },
             ]
         },
         {
@@ -54,9 +52,10 @@ const Sidebar = () => {
             path: '/products',
             children: [
                 { label: 'Danh sách sản phẩm', path: '/products' },
+                { label: 'Thêm sản phẩm', path: '/products/addproduct' },
                 { label: 'Danh mục & Brand', path: '/products/categories' },
                 { label: 'Thiết lập giá', path: '/products/price-books' },
-                { label: 'In tem mã vạch', path: '/products/print-barcodes' },
+                { label: 'Combo sản phẩm', path: '/products/print-barcodes' },
             ]
         },
         {
@@ -89,27 +88,24 @@ const Sidebar = () => {
             children: [
                 { label: 'Tạo báo cáo', path: '/reports/create' },
                 { label: 'Quản lý báo cáo', path: '/reports/manage' },
-                { label: 'AI dự báo', path: '/reports/ai' },
-                { label: 'Audit Logs', path: '/reports/audit-logs' },
+                { label: 'AI dự báo', path: '/reports/ai-chat' },
+                { label: 'Báo cáo doanh thu', path: '/reports/sales' },
+                { label: 'Báo cáo kho', path: '/reports/inventory' },
+                { label: 'Nhật ký kiểm toán', path: '/reports/audit-logs' },
+                { label: 'Nhật ký hoạt động', path: '/reports/logs' },
             ]
         },
     ];
 
-    // Debug: log user info
-    console.log('Sidebar - Current user:', user);
-    console.log('Sidebar - User role:', user?.role);
-    console.log('Sidebar - User full object:', JSON.stringify(user));
-
-    // Admin menu - always show for ROLE_ADMIN
-    const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
-    console.log('Sidebar - Is Admin:', isAdmin);
+    // Admin menu - compatible with new DB role naming
+    const isAdmin = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
             <div
                 className="p-6 border-b border-slate-100 flex items-center gap-3 cursor-pointer hover:bg-slate-50"
                 onClick={() => {
-                    const isAdminRole = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
+                    const isAdminRole = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
                     navigate(isAdminRole ? '/dashboard' : '/pos');
                 }}
                 title="Về trang chính"
@@ -166,6 +162,28 @@ const Sidebar = () => {
                                 >
                                     Quản lý người dùng
                                 </NavLink>
+                                <NavLink
+                                    to="/admin/ticket-center"
+                                    className={({ isActive }) =>
+                                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                                            ? 'bg-indigo-100 text-indigo-700 font-medium'
+                                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                        }`
+                                    }
+                                >
+                                    Trung tâm Báo cáo
+                                </NavLink>
+                                <NavLink
+                                    to="/admin/audit-logs"
+                                    className={({ isActive }) =>
+                                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                                            ? 'bg-indigo-100 text-indigo-700 font-medium'
+                                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                        }`
+                                    }
+                                >
+                                    Nhật ký Audit
+                                </NavLink>
                             </div>
                         )}
                     </div>
@@ -176,8 +194,8 @@ const Sidebar = () => {
                     <div key={item.label}>
                         <div
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
-                                ? 'bg-indigo-50 text-indigo-700'
-                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'bg-indigo-50 text-indigo-700'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                 }`}
                             onClick={() => toggleMenu(item.label)}
                         >

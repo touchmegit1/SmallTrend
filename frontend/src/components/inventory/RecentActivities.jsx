@@ -11,11 +11,16 @@ const MOVEMENT_ICONS = {
   OUT: ArrowUpRight,
   TRANSFER: Repeat,
   ADJUSTMENT: Settings,
+  ADJUST: Settings,
 };
 
 export default function RecentActivities({ stockMovements }) {
   const recentMovements = [...stockMovements]
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .sort(
+      (a, b) =>
+        new Date(b.created_at || b.createdAt) -
+        new Date(a.created_at || a.createdAt),
+    )
     .slice(0, 8);
 
   return (
@@ -35,13 +40,18 @@ export default function RecentActivities({ stockMovements }) {
             Chưa có hoạt động nào
           </div>
         ) : (
-          recentMovements.map((movement) => {
+          recentMovements.map((movement, index) => {
             const cfg =
               MOVEMENT_CONFIG[movement.type] || MOVEMENT_CONFIG.TRANSFER;
             const Icon = MOVEMENT_ICONS[movement.type] || Repeat;
+            const refCode =
+              movement.reference_code || movement.referenceCode || "";
+            const productName =
+              movement.product_name || movement.productName || "";
+            const createdAt = movement.created_at || movement.createdAt;
             return (
               <div
-                key={movement.id}
+                key={`${movement.type}-${refCode}-${index}`}
                 className="px-5 py-3 flex items-center gap-4 hover:bg-slate-50/50 transition-colors"
               >
                 <div className={`p-2 rounded-lg ${cfg.bg}`}>
@@ -54,18 +64,14 @@ export default function RecentActivities({ stockMovements }) {
                     >
                       {cfg.label}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">
-                      #{String(movement.id).padStart(4, "0")}
-                    </span>
+                    {refCode && (
+                      <span className="text-xs text-slate-400 font-mono">
+                        {refCode}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 truncate">
-                    {movement.from_bin_id != null &&
-                      `Từ bin #${movement.from_bin_id}`}
-                    {movement.from_bin_id != null &&
-                      movement.to_bin_id != null &&
-                      " → "}
-                    {movement.to_bin_id != null &&
-                      `Đến bin #${movement.to_bin_id}`}
+                    {productName}
                   </p>
                 </div>
                 <div className="text-right">
@@ -74,7 +80,7 @@ export default function RecentActivities({ stockMovements }) {
                     {formatNumber(movement.quantity)}
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    {formatDateTime(movement.created_at)}
+                    {formatDateTime(createdAt)}
                   </p>
                 </div>
               </div>

@@ -1,11 +1,13 @@
 package com.smalltrend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -20,6 +22,7 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(name = "name")
     private String name;
 
     @Column(name = "type", nullable = false, length = 30)
@@ -41,8 +44,36 @@ public class Location {
     @Builder.Default
     private Integer gridLevel = 1;
 
+    @Column(name = "location_code")
+    private String locationCode;
+
+    @Column(name = "address")
+    private String address;
+
+    @Column(name = "capacity")
+    private Integer capacity;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "status")
+    private String status;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @JsonIgnore
     @OneToMany(mappedBy = "location")
     private List<InventoryStock> stocks;
+
+    @Transient
+    public String getType() {
+        return warehouseType;
+    }
+
+    public void setType(String type) {
+        this.warehouseType = type;
+    }
 
     @Transient
     public String getMatrixCoordinate() {

@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { DV_STATUS } from "../utils/disposalVoucher";
-
-const API_BASE = "http://localhost:3001";
+import { getDisposalVouchers, cancelDisposalVoucher } from "../services/disposalService";
+import { getLocations } from "../services/inventoryService";
 
 export function useDisposalList() {
   const [vouchers, setVouchers] = useState([]);
@@ -24,15 +23,10 @@ export function useDisposalList() {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        const [vouchersRes, locRes] = await Promise.all([
-          fetch(`${API_BASE}/disposal_vouchers`),
-          fetch(`${API_BASE}/locations`),
+        const [vouchersData, locsData] = await Promise.all([
+          getDisposalVouchers(),
+          getLocations(),
         ]);
-        if (!vouchersRes.ok) throw new Error("Lỗi khi tải phiếu xử lý");
-        if (!locRes.ok) throw new Error("Lỗi khi tải danh sách kho");
-
-        const vouchersData = await vouchersRes.json();
-        const locsData = await locRes.json();
 
         if (!cancelled) {
           setVouchers(vouchersData);
@@ -52,7 +46,7 @@ export function useDisposalList() {
   const locationMap = useMemo(() => {
     const map = {};
     for (const loc of locations) {
-      map[loc.id] = loc.location_name;
+      map[loc.id] = loc.location_name || loc.name;
     }
     return map;
   }, [locations]);
@@ -71,14 +65,14 @@ export function useDisposalList() {
         (v) =>
           (v.code || "").toLowerCase().includes(term) ||
           (v.notes || "").toLowerCase().includes(term) ||
-          (locationMap[v.location_id] || "").toLowerCase().includes(term)
+          (v.locationName || "").toLowerCase().includes(term)
       );
     }
 
     result.sort((a, b) => {
       let aVal = a[sortField];
       let bVal = b[sortField];
-      if (sortField === "created_at" || sortField === "confirmed_at") {
+      if (sortField === "createdAt" || sortField === "confirmedAt") {
         aVal = aVal ? new Date(aVal).getTime() : 0;
         bVal = bVal ? new Date(bVal).getTime() : 0;
       }
@@ -90,7 +84,7 @@ export function useDisposalList() {
     });
 
     return result;
-  }, [vouchers, statusFilter, searchTerm, sortField, sortDir, locationMap]);
+  }, [vouchers, statusFilter, searchTerm, sortField, sortDir]);
 
   // ─── Pagination ──────────────────────────────────
   const totalPages = Math.ceil(filteredVouchers.length / perPage);
@@ -102,7 +96,8 @@ export function useDisposalList() {
   // ─── Stats by status ────────────────────────────
   const statusCounts = useMemo(() => {
     const counts = { ALL: vouchers.length };
-    for (const s of Object.values(DV_STATUS)) {
+    const statuses = ["DRAFT", "CONFIRMED", "CANCELLED"];
+    for (const s of statuses) {
       counts[s] = vouchers.filter((v) => v.status === s).length;
     }
     return counts;
@@ -110,18 +105,11 @@ export function useDisposalList() {
 
   // ─── Cancel voucher ──────────────────────────────
   const cancelVoucher = useCallback(async (id) => {
-    if (!window.confirm("Bạn có chắc muốn hủy phiếu xử lý này?")) return;
-
     try {
-      await fetch(`${API_BASE}/disposal_vouchers/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: DV_STATUS.CANCELLED }),
-      });
-
+      await cancelDisposalVoucher(id);
       setVouchers((prev) =>
         prev.map((v) =>
-          v.id === id ? { ...v, status: DV_STATUS.CANCELLED } : v
+          v.id === id ? { ...v, status: "CANCELLED" } : v
         )
       );
     } catch (err) {

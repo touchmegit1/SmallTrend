@@ -7,6 +7,13 @@ const api = axios.create({
     },
 });
 
+const isAuthEndpoint = (url = '') => {
+    return url.includes('/auth/login')
+        || url.includes('/auth/logout')
+        || url.includes('/auth/validate')
+        || url.includes('/auth/me');
+};
+
 // Request interceptor - add JWT token to every request
 api.interceptors.request.use(
     (config) => {
@@ -25,10 +32,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
+        const requestUrl = error.config?.url || '';
+        if (error.response?.status === 401 && !isAuthEndpoint(requestUrl)) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/crm/homepage';
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }

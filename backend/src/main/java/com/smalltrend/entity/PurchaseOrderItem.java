@@ -15,24 +15,21 @@ public class PurchaseOrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "purchase_order_id", nullable = false)
     private PurchaseOrder purchaseOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id", nullable = false)
-    private ProductVariant productVariant;
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
 
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(name = "unit_cost", precision = 15, scale = 2, nullable = false)
-    private BigDecimal unitCost;
-
-    @Column(name = "total_cost", precision = 15, scale = 2, nullable = false)
-    private BigDecimal totalCost;
+    @Column(name = "unit_price", precision = 15, scale = 2)
+    private BigDecimal unitPrice;
 
     @Column(name = "received_quantity")
     @Builder.Default

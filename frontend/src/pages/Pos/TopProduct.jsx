@@ -1,9 +1,8 @@
 export default function TopProduct({
   rank,
   name,
-  desc,
-  amount,
-  percent,
+  price,
+  code,
 }) {
   return (
     <div
@@ -35,15 +34,12 @@ export default function TopProduct({
 
         <div>
           <strong style={{ color: "#1F2937" }}>{name}</strong>
-          <div style={{ color: "#6B7280", fontSize: "12px" }}>{desc}</div>
+          <div style={{ color: "#9CA3AF", fontSize: "11px" }}>Mã: {code || 'N/A'}</div>
         </div>
       </div>
 
       <div style={{ textAlign: "right" }}>
-        <strong style={{ color: "#2563EB" }}>{amount} đ</strong>
-        <div style={{ color: "#6B7280", fontSize: "12px" }}>
-          {percent}% doanh thu
-        </div>
+        <strong style={{ color: "#2563EB" }}>{price ? price.toLocaleString() : '0'} đ</strong>
       </div>
     </div>
   );
