@@ -36,13 +36,14 @@ public class PurchaseOrderService {
     // ═══════════════════════════════════════════════════════════
     //  Public API
     // ═══════════════════════════════════════════════════════════
-
     // ─── List All Purchase Orders ────────────────────────────
     public List<PurchaseOrderResponse> getAllOrders() {
         return purchaseOrderRepository.findAll()
                 .stream()
                 .sorted((a, b) -> {
-                    if (a.getCreatedAt() == null || b.getCreatedAt() == null) return 0;
+                    if (a.getCreatedAt() == null || b.getCreatedAt() == null) {
+                        return 0;
+                    }
                     return b.getCreatedAt().compareTo(a.getCreatedAt());
                 })
                 .map(this::toListResponse)
@@ -67,7 +68,9 @@ public class PurchaseOrderService {
             if (code != null && code.startsWith(prefix)) {
                 try {
                     int num = Integer.parseInt(code.substring(prefix.length()));
-                    if (num > maxNum) maxNum = num;
+                    if (num > maxNum) {
+                        maxNum = num;
+                    }
                 } catch (NumberFormatException ignored) {
                 }
             }
@@ -155,12 +158,12 @@ public class PurchaseOrderService {
         // ── Stock Update from existing items ──
         List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
                 .map(item -> PurchaseOrderItemRequest.builder()
-                        .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
-                        .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                                ? item.getVariant().getProduct().getId().intValue() : null)
-                        .quantity(item.getQuantity())
-                        .unitPrice(item.getUnitPrice())
-                        .build())
+                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                        ? item.getVariant().getProduct().getId().intValue() : null)
+                .quantity(item.getQuantity())
+                .unitPrice(item.getUnitPrice())
+                .build())
                 .collect(Collectors.toList());
 
         updateStock(order, itemRequests);
@@ -190,10 +193,10 @@ public class PurchaseOrderService {
     public List<SupplierResponse> getAllSuppliers() {
         return supplierRepository.findAll().stream()
                 .map(s -> SupplierResponse.builder()
-                        .id(s.getId())
-                        .name(s.getName())
-                        .contactInfo(s.getContactPerson())
-                        .build())
+                .id(s.getId())
+                .name(s.getName())
+                .contactInfo(s.getContactPerson())
+                .build())
                 .collect(Collectors.toList());
     }
 
@@ -221,7 +224,6 @@ public class PurchaseOrderService {
     // ═══════════════════════════════════════════════════════════
     //  Private helpers
     // ═══════════════════════════════════════════════════════════
-
     // ─── Build Order from Request ────────────────────────────
     private PurchaseOrder buildOrderFromRequest(PurchaseOrderRequest request) {
         PurchaseOrder order = PurchaseOrder.builder()
@@ -254,14 +256,18 @@ public class PurchaseOrderService {
             int qty = item.getQuantity() != null ? item.getQuantity() : 0;
             BigDecimal itemDiscount = item.getDiscount() != null ? item.getDiscount() : BigDecimal.ZERO;
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(qty)).subtract(itemDiscount);
-            if (lineTotal.compareTo(BigDecimal.ZERO) < 0) lineTotal = BigDecimal.ZERO;
+            if (lineTotal.compareTo(BigDecimal.ZERO) < 0) {
+                lineTotal = BigDecimal.ZERO;
+            }
             subtotal = subtotal.add(lineTotal);
         }
         order.setSubtotal(subtotal);
 
         BigDecimal afterDiscount = subtotal.subtract(
                 order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO);
-        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) afterDiscount = BigDecimal.ZERO;
+        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) {
+            afterDiscount = BigDecimal.ZERO;
+        }
 
         BigDecimal taxPercent = order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO;
         BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
@@ -273,7 +279,9 @@ public class PurchaseOrderService {
 
         BigDecimal paidAmount = order.getPaidAmount() != null ? order.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal remaining = total.subtract(paidAmount);
-        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+            remaining = BigDecimal.ZERO;
+        }
         order.setRemainingAmount(remaining);
     }
 
@@ -296,7 +304,7 @@ public class PurchaseOrderService {
                         .orElseThrow(() -> new RuntimeException("Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
                 item.setVariant(variant);
             } else if (itemReq.getProductId() != null) {
-                Product product = productRepository.findById(itemReq.getProductId().longValue())
+                Product product = productRepository.findById(Integer.valueOf(itemReq.getProductId()))
                         .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại: " + itemReq.getProductId()));
                 List<ProductVariant> variants = product.getVariants();
                 if (variants != null && !variants.isEmpty()) {
@@ -320,10 +328,14 @@ public class PurchaseOrderService {
         for (PurchaseOrderItemRequest itemReq : itemRequests) {
             // 1. Resolve variant
             ProductVariant variant = resolveVariant(itemReq);
-            if (variant == null) continue;
+            if (variant == null) {
+                continue;
+            }
 
             int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 0;
-            if (qty <= 0) continue;
+            if (qty <= 0) {
+                continue;
+            }
 
             BigDecimal costPrice = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO;
 
@@ -335,7 +347,8 @@ public class PurchaseOrderService {
                 } catch (Exception e) {
                     try {
                         expiryDate = LocalDate.parse(itemReq.getExpiryDate(), DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
             }
             // Default expiry: 1 year from now
@@ -386,7 +399,7 @@ public class PurchaseOrderService {
             return productVariantRepository.findById(itemReq.getVariantId()).orElse(null);
         }
         if (itemReq.getProductId() != null) {
-            Product product = productRepository.findById(itemReq.getProductId().longValue()).orElse(null);
+            Product product = productRepository.findById(Integer.valueOf(itemReq.getProductId())).orElse(null);
             if (product != null && product.getVariants() != null && !product.getVariants().isEmpty()) {
                 return product.getVariants().get(0);
             }
@@ -403,7 +416,6 @@ public class PurchaseOrderService {
     }
 
     // ─── Validation ──────────────────────────────────────────
-
     private void validateDraft(PurchaseOrderRequest request) {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("Phiếu nhập phải có ít nhất 1 sản phẩm.");
@@ -423,7 +435,6 @@ public class PurchaseOrderService {
     }
 
     // ─── Mappers ─────────────────────────────────────────────
-
     private PurchaseOrderResponse toListResponse(PurchaseOrder order) {
         return PurchaseOrderResponse.builder()
                 .id(order.getId() != null ? order.getId().intValue() : null)
@@ -452,19 +463,19 @@ public class PurchaseOrderService {
         if (order.getItems() != null) {
             List<PurchaseOrderItemResponse> itemResponses = order.getItems().stream()
                     .map(item -> PurchaseOrderItemResponse.builder()
-                            .id(item.getId() != null ? item.getId().intValue() : null)
-                            .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
-                            .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                                    ? item.getVariant().getProduct().getId().intValue() : null)
-                            .sku(item.getVariant() != null ? item.getVariant().getSku() : "")
-                            .name(item.getVariant() != null && item.getVariant().getProduct() != null
-                                    ? item.getVariant().getProduct().getName() : "")
-                            .imageUrl(item.getVariant() != null ? item.getVariant().getImageUrl() : null)
-                            .quantity(item.getQuantity())
-                            .unitPrice(item.getUnitPrice())
-                            .discount(BigDecimal.ZERO)
-                            .total(item.getUnitPrice() != null ? item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO)
-                            .build())
+                    .id(item.getId() != null ? item.getId().intValue() : null)
+                    .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                    .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                            ? item.getVariant().getProduct().getId().intValue() : null)
+                    .sku(item.getVariant() != null ? item.getVariant().getSku() : "")
+                    .name(item.getVariant() != null && item.getVariant().getProduct() != null
+                            ? item.getVariant().getProduct().getName() : "")
+                    .imageUrl(item.getVariant() != null ? item.getVariant().getImageUrl() : null)
+                    .quantity(item.getQuantity())
+                    .unitPrice(item.getUnitPrice())
+                    .discount(BigDecimal.ZERO)
+                    .total(item.getUnitPrice() != null ? item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO)
+                    .build())
                     .collect(Collectors.toList());
             response.setItems(itemResponses);
         } else {

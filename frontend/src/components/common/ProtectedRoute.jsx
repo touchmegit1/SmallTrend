@@ -20,12 +20,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
     if (allowedRoles.length > 0) {
         const userRole = user?.role;
-        const hasAccess = allowedRoles.some(role => {
-            // Accept both "ADMIN" and "ROLE_ADMIN", "MANAGER" and "ROLE_MANAGER", etc.
-            const normalizedUserRole = userRole?.startsWith('ROLE_') ? userRole : `ROLE_${userRole}`;
-            const normalizedAllowedRole = role?.startsWith('ROLE_') ? role : `ROLE_${role}`;
-            return normalizedUserRole === normalizedAllowedRole;
-        });
+        const hasAccess = allowedRoles.includes(userRole);
 
         if (!hasAccess) {
             console.error('Access denied - User role:', userRole, 'Required roles:', allowedRoles);

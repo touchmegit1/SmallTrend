@@ -52,10 +52,10 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserCredential userCredential = userCredentialsRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
-
-        User user = userCredential.getUser();
+        User user = userRepository.findByUsername(username)
+                .orElseGet(() -> userCredentialsRepository.findByUsername(username)
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username)));
         String roleName = user.getRole() != null ? user.getRole().getName() : "ROLE_USER";
 
         // Ensure role has ROLE_ prefix for Spring Security
@@ -67,8 +67,8 @@ public class UserService implements UserDetailsService {
         boolean isEnabled = "ACTIVE".equals(user.getStatus()) && (user.getActive() == null || user.getActive());
 
         return org.springframework.security.core.userdetails.User.builder()
-                .username(userCredential.getUsername())
-                .password(userCredential.getPasswordHash())
+                .username(user.getUsername())
+                .password(user.getPassword())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority(roleName)))
                 .disabled(!isEnabled)
                 .accountLocked(!"ACTIVE".equals(user.getStatus()))
@@ -80,8 +80,8 @@ public class UserService implements UserDetailsService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         // Check if username already exists
-        // Check if username already exists in credentials
-        if (userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
+        if (userRepository.existsByUsername(request.getUsername())
+                || userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
             throw UserException.usernameExists();
         }
 
@@ -140,16 +140,17 @@ public class UserService implements UserDetailsService {
     }
 
     public AuthResponse login(String username) {
-        UserCredential userCredential = userCredentialsRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        User user = userCredential.getUser();
+        User user = userRepository.findByUsername(username)
+                .orElseGet(() -> userCredentialsRepository.findByUsername(username)
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found")));
         String token = jwtUtil.generateToken(username);
 
         return AuthResponse.builder()
                 .token(token)
                 .type("Bearer")
                 .userId(user.getId())
-                .username(userCredential.getUsername())
+                .username(user.getUsername())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .role(user.getRole() != null ? user.getRole().getName() : "ROLE_USER")
@@ -157,9 +158,10 @@ public class UserService implements UserDetailsService {
     }
 
     public User getCurrentUser(String username) {
-        UserCredential userCredential = userCredentialsRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return userCredential.getUser();
+        return userRepository.findByUsername(username)
+                .orElseGet(() -> userCredentialsRepository.findByUsername(username)
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found")));
     }
 
     public List<User> getAllUsers() {
@@ -172,7 +174,8 @@ public class UserService implements UserDetailsService {
     @Transactional
     public UserDTO createEmployee(RegisterRequest request) {
         // Check if username already exists
-        if (userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
+        if (userRepository.existsByUsername(request.getUsername())
+                || userCredentialsRepository.findByUsername(request.getUsername()).isPresent()) {
             throw UserException.usernameExists();
         }
 
@@ -198,6 +201,8 @@ public class UserService implements UserDetailsService {
 
         // Create user
         User user = User.builder()
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .phone(request.getPhone())

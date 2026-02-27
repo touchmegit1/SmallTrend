@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
                         setUser(currentUser);
                         setIsAuthenticated(true);
                     } else {
-                        authService.logout();
+                        authService.clearAuthData();
                         setUser(null);
                         setIsAuthenticated(false);
                     }
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
                 }
             } catch (error) {
                 console.error('Auth initialization error:', error);
-                authService.logout();
+                authService.clearAuthData();
                 setUser(null);
                 setIsAuthenticated(false);
             } finally {

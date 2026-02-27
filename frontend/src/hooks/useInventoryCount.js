@@ -262,6 +262,7 @@ export function useInventoryCount(voucherId) {
       setSaving(true);
       try {
         const request = {
+          code: session.code,
           location_id: session.location_id,
           notes: session.notes,
           status: IC_STATUS.DRAFT,
@@ -306,6 +307,7 @@ export function useInventoryCount(voucherId) {
       setSaving(true);
       try {
         const request = {
+          code: session.code,
           location_id: session.location_id,
           notes: session.notes,
           items: items,
