@@ -16,6 +16,7 @@ public class CategoriesServiceImpl implements CategoriesService {
 
     private final CategoryRepository repository;
     private final CategoryMapper mapper;
+    private final com.smalltrend.repository.ProductRepository productRepository;
 
     @Override
     public CategoriesResponse create(CategoriesRequest request) {
@@ -46,6 +47,9 @@ public class CategoriesServiceImpl implements CategoriesService {
 
     @Override
     public void delete(Integer id) {
+        if (productRepository.existsByCategoryId(id)) {
+            throw new RuntimeException("Không thể xoá danh mục vì đang có sản phẩm thuộc danh mục này");
+        }
         repository.deleteById(id);
     }
 }
