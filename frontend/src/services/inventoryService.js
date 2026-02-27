@@ -17,7 +17,7 @@ function getAuthHeaders() {
 // List all purchase orders
 export const getPurchaseOrders = async () => {
   try {
-    const response = await fetch(`${SPRING_API}/purchase-orders`, {
+    const response = await fetch(`${JSON_API}/purchase_orders`, {
       headers: getAuthHeaders(),
     });
     
@@ -27,129 +27,110 @@ export const getPurchaseOrders = async () => {
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("API Error:", response.status, errorText);
       throw new Error(`Lỗi ${response.status}: Không thể tải danh sách phiếu nhập`);
     }
     
     const data = await response.json();
-    console.log("✅ Loaded", data.length, "purchase orders");
     
-    // Map backend fields to frontend field names for compatibility
     return data.map((order) => ({
       ...order,
-      po_number: order.poNumber,
-      supplier_id: order.supplierId,
-      supplier_name: order.supplierName,
-      location_id: order.locationId,
-      total_amount: order.totalAmount,
-      created_at: order.createdAt,
-      confirmed_at: order.confirmedAt,
-      tax_percent: order.taxPercent,
-      shipping_fee: order.shippingFee,
-      paid_amount: order.paidAmount,
-      remaining_amount: order.remainingAmount,
-      tax_amount: order.taxAmount,
+      po_number: order.poNumber || order.po_number,
+      supplier_id: order.supplierId || order.supplier_id,
+      supplier_name: order.supplierName || order.supplier_name,
+      location_id: order.locationId || order.location_id,
+      total_amount: order.totalAmount || order.total_amount,
+      created_at: order.createdAt || order.created_at,
+      confirmed_at: order.confirmedAt || order.confirmed_at,
+      tax_percent: order.taxPercent || order.tax_percent,
+      shipping_fee: order.shippingFee || order.shipping_fee,
+      paid_amount: order.paidAmount || order.paid_amount,
+      remaining_amount: order.remainingAmount || order.remaining_amount,
+      tax_amount: order.taxAmount || order.tax_amount,
     }));
   } catch (error) {
-    console.error("❌ getPurchaseOrders error:", error);
     throw error;
   }
 };
 
 // Get single purchase order detail
 export const getPurchaseOrderById = async (id) => {
-  const response = await fetch(`${SPRING_API}/purchase-orders/${id}`, {
+  const response = await fetch(`${JSON_API}/purchase_orders/${id}`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch purchase order");
   const order = await response.json();
   return {
     ...order,
-    po_number: order.poNumber,
-    supplier_id: order.supplierId,
-    supplier_name: order.supplierName,
-    location_id: order.locationId,
-    total_amount: order.totalAmount,
-    created_at: order.createdAt,
-    confirmed_at: order.confirmedAt,
-    tax_percent: order.taxPercent,
-    shipping_fee: order.shippingFee,
-    paid_amount: order.paidAmount,
-    remaining_amount: order.remainingAmount,
-    tax_amount: order.taxAmount,
+    po_number: order.poNumber || order.po_number,
+    supplier_id: order.supplierId || order.supplier_id,
+    supplier_name: order.supplierName || order.supplier_name,
+    location_id: order.locationId || order.location_id,
+    total_amount: order.totalAmount || order.total_amount,
+    created_at: order.createdAt || order.created_at,
+    confirmed_at: order.confirmedAt || order.confirmed_at,
+    tax_percent: order.taxPercent || order.tax_percent,
+    shipping_fee: order.shippingFee || order.shipping_fee,
+    paid_amount: order.paidAmount || order.paid_amount,
+    remaining_amount: order.remainingAmount || order.remaining_amount,
+    tax_amount: order.taxAmount || order.tax_amount,
   };
 };
 
 // Get next PO code
 export const getNextPOCode = async () => {
-  const response = await fetch(`${SPRING_API}/purchase-orders/next-code`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to generate PO code");
-  const data = await response.json();
-  return data.code;
+  return "PO-" + Date.now();
 };
 
 // Save draft
 export const createPurchaseOrder = async (orderData) => {
   const payload = mapOrderToBackend(orderData);
-  const response = await fetch(`${SPRING_API}/purchase-orders/draft`, {
+  const response = await fetch(`${JSON_API}/purchase_orders`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+    body: JSON.stringify({...payload, status: "DRAFT"}),
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || "Failed to save draft");
-  }
+  if (!response.ok) throw new Error("Failed to save draft");
   return response.json();
 };
 
 // Confirm order (new)
 export const confirmPurchaseOrder = async (orderData) => {
   const payload = mapOrderToBackend(orderData);
-  const response = await fetch(`${SPRING_API}/purchase-orders/confirm`, {
+  const response = await fetch(`${JSON_API}/purchase_orders`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+    body: JSON.stringify({...payload, status: "CONFIRMED"}),
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || "Failed to confirm order");
-  }
+  if (!response.ok) throw new Error("Failed to confirm order");
   return response.json();
 };
 
 // Confirm existing draft
 export const confirmExistingOrder = async (id) => {
-  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/confirm`, {
-    method: "PUT",
+  const response = await fetch(`${JSON_API}/purchase_orders/${id}`, {
+    method: "PATCH",
     headers: getAuthHeaders(),
+    body: JSON.stringify({ status: "CONFIRMED" }),
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || "Failed to confirm order");
-  }
+  if (!response.ok) throw new Error("Failed to confirm order");
   return response.json();
 };
 
 // Cancel order
 export const cancelPurchaseOrder = async (id) => {
-  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/cancel`, {
-    method: "PUT",
+  const response = await fetch(`${JSON_API}/purchase_orders/${id}`, {
+    method: "PATCH",
     headers: getAuthHeaders(),
+    body: JSON.stringify({ status: "CANCELLED" }),
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || "Failed to cancel order");
-  }
+  if (!response.ok) throw new Error("Failed to cancel order");
   return response.json();
 };
 
 // Update purchase order (legacy compatibility)
 export const updatePurchaseOrder = async (id, orderData) => {
   const payload = mapOrderToBackend(orderData);
-  const response = await fetch(`${SPRING_API}/purchase-orders/${id}`, {
+  const response = await fetch(`${JSON_API}/purchase_orders/${id}`, {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -218,7 +199,7 @@ export const createPurchaseOrderItem = async (itemData) => {
 
 // Suppliers
 export const getSuppliers = async () => {
-  const response = await fetch(`${SPRING_API}/suppliers`, {
+  const response = await fetch(`${JSON_API}/suppliers`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch suppliers");
@@ -227,31 +208,31 @@ export const getSuppliers = async () => {
 
 // Products
 export const getProducts = async () => {
-  const response = await fetch(`${SPRING_API}/products`, {
+  const response = await fetch(`${JSON_API}/products`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch products");
   const data = await response.json();
   return data.map((p) => ({
     ...p,
-    purchase_price: p.purchasePrice || 0,
-    image_url: p.imageUrl,
+    purchase_price: p.purchasePrice || p.purchase_price || 0,
+    image_url: p.imageUrl || p.image_url,
   }));
 };
 
-// Locations (Spring Boot)
+// Locations
 export const getLocations = async () => {
-  const response = await fetch(`${SPRING_API}/locations`, {
+  const response = await fetch(`${JSON_API}/locations`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch locations");
   const data = await response.json();
   return data.map((loc) => ({
     ...loc,
-    location_name: loc.locationName,
-    location_code: loc.locationCode,
-    location_type: loc.locationType,
-    created_at: loc.createdAt,
+    location_name: loc.locationName || loc.location_name,
+    location_code: loc.locationCode || loc.location_code,
+    location_type: loc.locationType || loc.location_type,
+    created_at: loc.createdAt || loc.created_at,
   }));
 };
 
@@ -453,68 +434,63 @@ export const updateProductStock = async (productId, newQuantity) => {
 // ═══════════════════════════════════════════════════════════
 
 export const getInventoryCounts = async () => {
-  const response = await fetch(`${SPRING_API}/inventory-counts`, {
+  const response = await fetch(`${JSON_API}/inventory_counts`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch inventory counts");
   const data = await response.json();
   return data.map((ic) => ({
     ...ic,
-    location_id: ic.locationId,
-    location_name: ic.locationName,
-    total_shortage_value: ic.totalShortageValue,
-    total_overage_value: ic.totalOverageValue,
-    total_difference_value: ic.totalDifferenceValue,
-    created_by: ic.createdBy,
-    confirmed_by: ic.confirmedBy,
-    created_at: ic.createdAt,
-    confirmed_at: ic.confirmedAt,
+    location_id: ic.locationId || ic.location_id,
+    location_name: ic.locationName || ic.location_name,
+    total_shortage_value: ic.totalShortageValue || ic.total_shortage_value,
+    total_overage_value: ic.totalOverageValue || ic.total_overage_value,
+    total_difference_value: ic.totalDifferenceValue || ic.total_difference_value,
+    created_by: ic.createdBy || ic.created_by,
+    confirmed_by: ic.confirmedBy || ic.confirmed_by,
+    created_at: ic.createdAt || ic.created_at,
+    confirmed_at: ic.confirmedAt || ic.confirmed_at,
   }));
 };
 
 export const getInventoryCountById = async (id) => {
-  const response = await fetch(`${SPRING_API}/inventory-counts/${id}`, {
+  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Khong tim thay phieu kiem kho.");
   const ic = await response.json();
   return {
     ...ic,
-    location_id: ic.locationId,
-    location_name: ic.locationName,
-    total_shortage_value: ic.totalShortageValue,
-    total_overage_value: ic.totalOverageValue,
-    total_difference_value: ic.totalDifferenceValue,
-    created_by: ic.createdBy,
-    confirmed_by: ic.confirmedBy,
-    created_at: ic.createdAt,
-    confirmed_at: ic.confirmedAt,
+    location_id: ic.locationId || ic.location_id,
+    location_name: ic.locationName || ic.location_name,
+    total_shortage_value: ic.totalShortageValue || ic.total_shortage_value,
+    total_overage_value: ic.totalOverageValue || ic.total_overage_value,
+    total_difference_value: ic.totalDifferenceValue || ic.total_difference_value,
+    created_by: ic.createdBy || ic.created_by,
+    confirmed_by: ic.confirmedBy || ic.confirmed_by,
+    created_at: ic.createdAt || ic.created_at,
+    confirmed_at: ic.confirmedAt || ic.confirmed_at,
     items: (ic.items || []).map((item) => ({
       ...item,
-      product_id: item.productId,
-      system_quantity: item.systemQuantity,
-      actual_quantity: item.actualQuantity,
-      difference_quantity: item.differenceQuantity,
-      difference_value: item.differenceValue,
+      product_id: item.productId || item.product_id,
+      system_quantity: item.systemQuantity || item.system_quantity,
+      actual_quantity: item.actualQuantity || item.actual_quantity,
+      difference_quantity: item.differenceQuantity || item.difference_quantity,
+      difference_value: item.differenceValue || item.difference_value,
     })),
   };
 };
 
 export const getInventoryCountNextCode = async () => {
-  const response = await fetch(`${SPRING_API}/inventory-counts/next-code`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to get next code");
-  const data = await response.json();
-  return data.code;
+  return "IC-" + Date.now();
 };
 
 export const saveInventoryCountDraft = async (request) => {
   const body = mapCountRequestToBackend(request);
-  const response = await fetch(`${SPRING_API}/inventory-counts/draft`, {
+  const response = await fetch(`${JSON_API}/inventory_counts`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify(body),
+    body: JSON.stringify({...body, status: "DRAFT"}),
   });
   if (!response.ok) throw new Error("Failed to save draft");
   return response.json();
@@ -522,7 +498,7 @@ export const saveInventoryCountDraft = async (request) => {
 
 export const updateInventoryCount = async (id, request) => {
   const body = mapCountRequestToBackend(request);
-  const response = await fetch(`${SPRING_API}/inventory-counts/${id}`, {
+  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify(body),
@@ -533,10 +509,10 @@ export const updateInventoryCount = async (id, request) => {
 
 export const confirmInventoryCount = async (id, request) => {
   const body = mapCountRequestToBackend(request);
-  const response = await fetch(`${SPRING_API}/inventory-counts/${id}/confirm`, {
-    method: "PUT",
+  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
+    method: "PATCH",
     headers: getAuthHeaders(),
-    body: JSON.stringify(body),
+    body: JSON.stringify({...body, status: "CONFIRMED"}),
   });
   if (!response.ok) throw new Error("Failed to confirm inventory count");
   return response.json();
@@ -544,19 +520,20 @@ export const confirmInventoryCount = async (id, request) => {
 
 export const createAndConfirmInventoryCount = async (request) => {
   const body = mapCountRequestToBackend(request);
-  const response = await fetch(`${SPRING_API}/inventory-counts/confirm`, {
+  const response = await fetch(`${JSON_API}/inventory_counts`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify(body),
+    body: JSON.stringify({...body, status: "CONFIRMED"}),
   });
   if (!response.ok) throw new Error("Failed to create and confirm inventory count");
   return response.json();
 };
 
 export const cancelInventoryCount = async (id) => {
-  const response = await fetch(`${SPRING_API}/inventory-counts/${id}/cancel`, {
-    method: "PUT",
+  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
+    method: "PATCH",
     headers: getAuthHeaders(),
+    body: JSON.stringify({ status: "CANCELLED" }),
   });
   if (!response.ok) throw new Error("Failed to cancel inventory count");
   return response.json();
@@ -565,6 +542,7 @@ export const cancelInventoryCount = async (id) => {
 // Map frontend snake_case to backend camelCase
 function mapCountRequestToBackend(request) {
   return {
+    code: request.code,
     locationId: request.location_id || request.locationId,
     notes: request.notes,
     status: request.status,
