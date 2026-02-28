@@ -36,12 +36,15 @@ public class CustomerService {
         return mapToResponse(savedCustomer);
     }
 
-    public CustomerResponse updateCustomer(Integer id, String name, String phone) {
+    public CustomerResponse updateCustomer(Integer id, String name, String phone, Integer loyaltyPoints) {
         Customer customer = customerRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Customer not found"));
         
         customer.setName(name);
         customer.setPhone(phone);
+        if (loyaltyPoints != null) {
+            customer.setLoyaltyPoints(loyaltyPoints);
+        }
         
         Customer updatedCustomer = customerRepository.save(customer);
         return mapToResponse(updatedCustomer);
@@ -54,12 +57,19 @@ public class CustomerService {
         customerRepository.deleteById(id);
     }
 
+    public CustomerResponse getCustomerByPhone(String phone) {
+        String cleanPhone = phone != null ? phone.replaceAll("\\s+", "") : "";
+        Customer customer = customerRepository.findByPhoneIgnoreSpaces(cleanPhone)
+            .orElseThrow(() -> new RuntimeException("Customer not found with phone: " + phone));
+        return mapToResponse(customer);
+    }
+
     private CustomerResponse mapToResponse(Customer customer) {
         CustomerResponse response = new CustomerResponse();
         response.setId(customer.getId());
         response.setName(customer.getName());
         response.setPhone(customer.getPhone());
-        response.setLoyaltyPoints(0);
+        response.setLoyaltyPoints(customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0);
         
         return response;
     }

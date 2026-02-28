@@ -1,7 +1,6 @@
 package com.smalltrend.repository;
 
 import com.smalltrend.entity.PurchaseOrder;
-import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -11,13 +10,15 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Long> {
+public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Integer> {
     
-    Optional<PurchaseOrder> findByOrderNumber(String orderNumber);
+    Optional<PurchaseOrder> findByPoNumber(String poNumber);
     
     List<PurchaseOrder> findBySupplierId(Integer supplierId);
     
-    List<PurchaseOrder> findByStatus(PurchaseOrderStatus status);
+    List<PurchaseOrder> findByStatus(String status);
+    
+    List<PurchaseOrder> findAllByOrderByCreatedAtDesc();
     
     @Query("SELECT po FROM PurchaseOrder po WHERE po.orderDate BETWEEN :startDate AND :endDate")
     List<PurchaseOrder> findByOrderDateBetween(LocalDate startDate, LocalDate endDate);

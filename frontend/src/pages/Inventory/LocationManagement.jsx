@@ -113,8 +113,12 @@ function LocationManagement() {
 
   const filteredLocations = locations.filter(
     (loc) =>
-      loc.location_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      loc.location_code.toLowerCase().includes(searchQuery.toLowerCase()),
+      (loc.location_name || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      (loc.location_code || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()),
   );
 
   const getIcon = (type) => {

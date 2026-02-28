@@ -70,10 +70,9 @@ export const DIFFERENCE_REASONS = [
 ];
 
 // ─── Code Generation ─────────────────────────────────────
-// Format: IC-YYYY-XXXX
+// Format: IC-XXX
 export function generateICCode(existingCounts = []) {
-  const year = new Date().getFullYear();
-  const prefix = `IC-${year}-`;
+  const prefix = "IC-";
 
   let maxNum = 0;
   for (const count of existingCounts) {
@@ -84,7 +83,7 @@ export function generateICCode(existingCounts = []) {
     }
   }
 
-  return `${prefix}${String(maxNum + 1).padStart(4, "0")}`;
+  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
 }
 
 // ─── Item Classification ─────────────────────────────────

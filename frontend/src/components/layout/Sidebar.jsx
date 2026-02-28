@@ -30,6 +30,7 @@ const Sidebar = () => {
                 { label: 'Giao diện bán hàng', path: '/pos' },
                 { label: 'Lịch sử đơn hàng', path: '/pos/history' },
                 { label: 'Đơn hàng treo', path: '/pos/suspended' },
+                { label: 'Giao ca', path: '/pos/shift-handover' },
             ]
         },
         {
@@ -42,6 +43,9 @@ const Sidebar = () => {
 
                 { label: 'Kiểm kê', path: '/inventory/audit' },
                 { label: 'Cảnh báo hết hàng', path: '/inventory/alerts' },
+                { label: 'Quản lý vị trí', path: '/inventory/locations' },
+                { label: 'Xuất hủy', path: '/inventory/disposal' },
+                { label: 'Nhà cung cấp', path: '/inventory/suppliers' },
             ]
         },
         {
@@ -50,9 +54,10 @@ const Sidebar = () => {
             path: '/products',
             children: [
                 { label: 'Danh sách sản phẩm', path: '/products' },
+                { label: 'Thêm sản phẩm', path: '/products/addproduct' },
                 { label: 'Danh mục & Brand', path: '/products/categories' },
-                { label: 'Thiết lập giá', path: '/products/price-books' },
-                { label: 'In tem mã vạch', path: '/products/print-barcodes' },
+                { label: 'Thiết lập giá', path: '/products/price' },
+                { label: 'Combo sản phẩm', path: '/products/combo' },
             ]
         },
         {
@@ -60,12 +65,11 @@ const Sidebar = () => {
             label: 'Khách hàng & KM',
             path: '/crm',
             children: [
-                { label: 'Danh sách khách hàng', path: '/crm' },
-                { label: 'Chương trình KM', path: '/crm/promotions' },
-                { label: 'Voucher/Coupon', path: '/crm/vouchers' },
-                { label: 'Tích điểm & Hạng', path: '/crm/loyalty' },
-                { label: 'Khiếu nại', path: '/crm/complaints' },
-                { label: 'Trang chủ', path: '/crm/homepage' },
+                { label: 'Danh sách khách hàng', path: '/crm/customer' },
+                { label: 'Khuyến Mãi', path: '/crm/event' },
+                { label: 'Kho quà tặng', path: '/crm/loyalty' },
+                { label: 'Khiếu nại', path: '/crm/complain' },
+                { label: 'Báo Cáo Thống Kê', path: '/crm/report' },
             ]
         },
         {
@@ -81,10 +85,16 @@ const Sidebar = () => {
         },
         {
             icon: BarChart3,
-            label: 'AI',
+            label: 'Báo cáo & AI',
             path: '/reports',
             children: [
+                { label: 'Tạo báo cáo', path: '/reports/create' },
+                { label: 'Quản lý báo cáo', path: '/reports/manage' },
                 { label: 'AI dự báo', path: '/reports/ai-chat' },
+                { label: 'Báo cáo doanh thu', path: '/reports/sales' },
+                { label: 'Báo cáo kho', path: '/reports/inventory' },
+                { label: 'Nhật ký kiểm toán', path: '/reports/audit-logs' },
+                { label: 'Nhật ký hoạt động', path: '/reports/logs' },
             ]
         },
     ];

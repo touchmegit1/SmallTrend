@@ -32,6 +32,23 @@ public class CustomerController {
         return ResponseEntity.ok(customer);
     }
 
+    @GetMapping("/customers/phone/{phone}")
+    public ResponseEntity<?> getCustomerByPhone(@PathVariable String phone) {
+        try {
+            CustomerResponse customer = customerService.getCustomerByPhone(phone);
+            return ResponseEntity.ok(customer);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new com.smalltrend.dto.common.MessageResponse(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/customers/search")
+    public ResponseEntity<CustomerResponse> searchCustomerByPhone(@RequestParam String phone) {
+        CustomerResponse customer = customerService.getCustomerByPhone(phone);
+        return ResponseEntity.ok(customer);
+    }
+
     @PostMapping("/customers")
     public ResponseEntity<CustomerResponse> createCustomer(@RequestBody CreateCustomerRequest request) {
         CustomerResponse customer = customerService.createCustomer(request.getName(), request.getPhone());
@@ -45,7 +62,8 @@ public class CustomerController {
         CustomerResponse customer = customerService.updateCustomer(
             id, 
             request.getName(), 
-            request.getPhone()
+            request.getPhone(),
+            request.getLoyaltyPoints()
         );
         return ResponseEntity.ok(customer);
     }
