@@ -5,6 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * DTO (Data Transfer Object) trả về kết quả truy vấn danh mục đơn giản cho Dashboard và Inventory.
+ */
 @Data
 @Builder
 @NoArgsConstructor

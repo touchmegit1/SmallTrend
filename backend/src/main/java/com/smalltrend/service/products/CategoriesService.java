@@ -7,7 +7,10 @@ import java.util.List;
 
 public interface CategoriesService {
     CategoriesResponse create(CategoriesRequest request);
+
     List<CategoriesResponse> getAll();
+
     CategoriesResponse update(Integer id, CategoriesRequest request);
+
     void delete(Integer id);
 }
