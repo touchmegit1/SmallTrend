@@ -120,6 +120,17 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void delete(Integer id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+
+        java.time.LocalDateTime createdAt = product.getCreatedAt();
+        if (createdAt != null) {
+            long minutes = java.time.Duration.between(createdAt, java.time.LocalDateTime.now()).toMinutes();
+            if (minutes >= 2) {
+                throw new RuntimeException("Sản phẩm đã tạo quá 2 phút, bạn không thể xoá sản phẩm này nữa!");
+            }
+        }
+
         productRepository.deleteById(id);
     }
 

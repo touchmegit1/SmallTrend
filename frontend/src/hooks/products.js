@@ -23,9 +23,22 @@ export function useFetchProducts() {
     }
   };
 
+  const deleteProduct = async (id) => {
+    try {
+      await api.delete(`/products/${id}`);
+      // fetchProducts(); (Optional - handle after delete inside the component or here)
+      return true;
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      // Backend có thể ném Exception "Sản phẩm đã tạo quá 2 phút", lấy message từ đây
+      const errorMsg = err.response?.data?.message || err.response?.data || err.message || 'Lỗi khi xóa sản phẩm';
+      throw new Error(errorMsg);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  return { products, loading, error, fetchProducts };
+  return { products, loading, error, fetchProducts, deleteProduct };
 }

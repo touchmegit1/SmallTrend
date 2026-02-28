@@ -4,7 +4,7 @@ import { Input } from "../ProductComponents/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
-import { Plus, Search, Edit, Package, Eye, CheckCircle, Power } from "lucide-react";
+import { Plus, Search, Edit, Package, Eye, CheckCircle, Power, Trash2, AlertTriangle } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditProductModal from "./EditProductModal";
 
@@ -43,8 +43,11 @@ export function ProductListScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [productToToggle, setProductToToggle] = useState(null);
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+
   // --- API HOOKS ---
-  const { products, loading, error, fetchProducts } = useFetchProducts();
+  const { products, loading, error, fetchProducts, deleteProduct } = useFetchProducts();
   const { categories } = useFetchCategories();
   const { brands } = useFetchBrands();
   const { taxRates } = useFetchTaxRates();
@@ -122,6 +125,43 @@ export function ProductListScreen() {
     setIsEditModalOpen(false);
     await fetchProducts();
     setTimeout(() => setToastMessage(""), 3000);
+  };
+
+  /**
+   * Tính toán thời gian tạo để cho phép hiển thị nút xóa
+   */
+  const canDeleteProduct = (createdAt) => {
+    if (!createdAt) return false;
+    const createdTime = new Date(createdAt).getTime();
+    const now = new Date().getTime();
+    // Chấp nhận chênh lệch 2 phút
+    return (now - createdTime) <= 2 * 60 * 1000;
+  };
+
+  /**
+   * Bật popup xác nhận xóa sản phẩm
+   */
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+    setShowDeleteConfirm(true);
+  };
+
+  /**
+   * Submit API để tiến hành xóa sản phẩm
+   */
+  const confirmDeleteProduct = async () => {
+    try {
+      await deleteProduct(productToDelete.id);
+      setToastMessage("Xóa sản phẩm thành công!");
+      await fetchProducts();
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      setToastMessage(err.message || "Lỗi khi xóa sản phẩm!");
+      setTimeout(() => setToastMessage(""), 3000);
+    } finally {
+      setShowDeleteConfirm(false);
+      setProductToDelete(null);
+    }
   };
 
   // --- USE EFFECTS ---
@@ -229,6 +269,39 @@ export function ProductListScreen() {
                 className="bg-blue-600 hover:bg-blue-700 text-white border border-transparent shadow-sm hover:shadow-md"
               >
                 Xác nhận
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KHỐI HIỂN THỊ 1.5: Popup xác nhận xóa */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl transform transition-all">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Xóa sản phẩm mới</h3>
+            </div>
+            <p className="text-gray-600 mb-6 ml-15">
+              Bạn có chắc chắn muốn xóa sản phẩm <span className="font-bold">{productToDelete?.name}</span>?
+              Hành động này <span className="text-red-600 font-semibold">không thể hoàn tác</span>.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="hover:bg-gray-100"
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={confirmDeleteProduct}
+                className="bg-red-600 hover:bg-red-700 text-white border border-transparent shadow-sm hover:shadow-md"
+              >
+                Xác nhận xóa
               </Button>
             </div>
           </div>
@@ -471,6 +544,19 @@ export function ProductListScreen() {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+
+                          {/* Nút Xóa (Dành cho sản phẩm mới tạo < 2 phút) */}
+                          {canDeleteProduct(product.created_at) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteClick(product)}
+                              className="hover:bg-red-100 hover:text-red-600 rounded-lg p-1 text-red-500"
+                              title="Xóa sản phẩm (Trong vòng 2 phút)"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
