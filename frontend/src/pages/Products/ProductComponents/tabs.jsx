@@ -1,9 +1,15 @@
-
-
+/**
+ * tabs.jsx
+ * Component cho hệ thống Giao diện đa Tabs lồng nhau.
+ * Tuỳ chỉnh lại class style từ Primitive thư viện Radix-UI (Unstyled Component logic)
+ */
 import React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { cn } from "./utils";
 
+/**
+ * Vỏ ôm toàn bộ cây xử lý click tab
+ */
 function Tabs({ className, ...props }) {
   return (
     <TabsPrimitive.Root
@@ -14,6 +20,9 @@ function Tabs({ className, ...props }) {
   );
 }
 
+/**
+ * Thanh List Menu Tabs (Tập hợp các lựa chọn Tab).
+ */
 function TabsList({ className, ...props }) {
   return (
     <TabsPrimitive.List
@@ -27,6 +36,10 @@ function TabsList({ className, ...props }) {
   );
 }
 
+/**
+ * Trigger Action Click - Dành cho mỗi Button chọn menu từng loại Tab. 
+ * Đổ css state=active để chỉ báo UI khi được chọn.
+ */
 function TabsTrigger({ className, ...props }) {
   return (
     <TabsPrimitive.Trigger
@@ -40,6 +53,9 @@ function TabsTrigger({ className, ...props }) {
   );
 }
 
+/**
+ * Content panel chứa nội dung hiển thị sẽ kích hoạt ngầm (visible) theo tab Value
+ */
 function TabsContent({ className, ...props }) {
   return (
     <TabsPrimitive.Content
