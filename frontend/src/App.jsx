@@ -27,7 +27,10 @@ import ProductList from "./pages/Products/ProductManager/ProductList";
 import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
+import AddNewProductVariant from "./pages/Products/ProductManager/AddNewProductVariant";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
+import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
+import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
 import { useAuth } from "./context/AuthContext";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
 import ShiftHandover from "./pages/Pos/ShiftHandover";
@@ -35,6 +38,7 @@ import ReportforCashier from "./pages/Pos/ReportforCashier";
 import TicketCenter from "./pages/Admin/TicketCenter";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
+import CRMreport from "./pages/CRM/report";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -61,15 +65,7 @@ function RootRedirect() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/crm/homepage" replace />;
-  }
-
-  const privilegedRoles = [...ADMIN_ROLES, ...MANAGER_ROLES];
-  const currentRole = user?.role;
-  return privilegedRoles.includes(currentRole)
-    ? <Navigate to="/dashboard" replace />
-    : <Navigate to="/pos" replace />;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
 }
 
 function App() {
@@ -150,7 +146,7 @@ function App() {
         {/* Module 3: Products (Sản phẩm) */}
         <Route
           path="products"
-          element={<div className="p-4">{<ProductList />}</div>}
+          element={<ProductList />}
         />
         <Route
           path="products/addproduct"
@@ -161,34 +157,37 @@ function App() {
           element={<ProductDetail />}
         />
         <Route
+          path="products/addproduct_variant"
+          element={<AddNewProductVariant />}
+        />
+        <Route
           path="products/categories"
           element={<div className="p-4">{<CategoryAndBrand />}</div>}
         />
         <Route
-          path="products/price-books"
-          element={<div className="p-4">Thiết lập giá</div>}
+          path="products/price"
+          element={<div className="p-4">{ }</div>}
         />
         <Route
-          path="products/print-barcodes"
+          path="products/combo"
           element={<div className="p-4">{<ComboManage />}</div>}
         />
-
-        {/* Module 4: CRM (Khách hàng) */}
         <Route
-          path="crm"
-          element={<CRMcustomer />}
+          path="products/create_combo"
+          element={<div className="p-4">{<CreateCombo />}</div>}
         />
+        <Route
+          path="products/combo_detail"
+          element={<div className="p-4">{<ComboDetail />}</div>}
+        />
+        {/* Module 4: CRM (Khách hàng) */}
+        <Route path="crm" element={<div className="p-4">CRM &amp; Promotion</div>} />
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
-        <Route
-          path="crm/promotions"
-          element={<div className="p-4">Chương trình KM</div>}
-        />
-        <Route
-          path="crm/vouchers"
-          element={<div className="p-4">Voucher/Coupon</div>}
-        />
+        <Route path="crm/report" element={<CRMreport />} />
+        <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
+        <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
         <Route path="crm/complain" element={<CRMcomplain />} />
         <Route path="crm/complaints" element={<CRMcomplain />} />
 

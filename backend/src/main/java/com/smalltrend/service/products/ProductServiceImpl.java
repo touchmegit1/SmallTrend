@@ -73,7 +73,15 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse update(Integer id, CreateProductRequest request) {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+
+        boolean oldStatus = existing.getIsActive() != null ? existing.getIsActive() : true;
         applyRequestToProduct(request, existing);
+        boolean newStatus = existing.getIsActive() != null ? existing.getIsActive() : true;
+
+        if (oldStatus != newStatus && existing.getVariants() != null) {
+            existing.getVariants().forEach(variant -> variant.setActive(newStatus));
+        }
+
         Product saved = productRepository.save(existing);
         return mapToResponse(saved);
     }
@@ -82,6 +90,7 @@ public class ProductServiceImpl implements ProductService {
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setImageUrl(request.getImageUrl());
+        product.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
@@ -119,7 +128,14 @@ public class ProductServiceImpl implements ProductService {
     public void toggleStatus(Integer id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
-        product.setIsActive(!product.getIsActive());
+
+        boolean newStatus = !product.getIsActive();
+        product.setIsActive(newStatus);
+
+        if (product.getVariants() != null) {
+            product.getVariants().forEach(variant -> variant.setActive(newStatus));
+        }
+
         productRepository.save(product);
     }
 }

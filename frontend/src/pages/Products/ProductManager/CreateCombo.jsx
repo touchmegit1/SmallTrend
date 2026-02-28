@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Save, Plus, X, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
@@ -6,39 +6,48 @@ import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
 import { Textarea } from "../ProductComponents/textarea";
 import { useNavigate } from "react-router-dom";
-
-const mockVariants = [
-  { id: 1, name: "Yaourt Vinamilk 100ml", price: 8000, stock: 500 },
-  { id: 2, name: "Bánh mì que 50g", price: 5000, stock: 300 },
-  { id: 3, name: "Nước cam ép 200ml", price: 12000, stock: 200 },
-  { id: 4, name: "Mì Hảo Hảo tôm chua cay", price: 4000, stock: 800 },
-  { id: 5, name: "Coca Cola 330ml", price: 10000, stock: 600 },
-  { id: 6, name: "Snack Oishi 50g", price: 8000, stock: 400 },
-  { id: 7, name: "Sữa TH True Milk 1L", price: 35000, stock: 150 },
-  { id: 8, name: "Bánh quy Cosy 200g", price: 25000, stock: 250 },
-];
+import axios from "../../../config/axiosConfig";
+import { useProductCombos } from "../../../hooks/product_combos";
 
 const CreateCombo = () => {
   const [formData, setFormData] = useState({
-    name: "",
+    comboName: "",
     description: "",
-    discount_price: "",
-    status: "active",
+    comboPrice: "",
+    isActive: true,
   });
   const [selectedVariants, setSelectedVariants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showVariantPicker, setShowVariantPicker] = useState(false);
+  const [availableVariants, setAvailableVariants] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { createCombo } = useProductCombos();
+
+  useEffect(() => {
+    const fetchVariants = async () => {
+      try {
+        const response = await axios.get('/pos/product');
+        setAvailableVariants(response.data || []);
+      } catch (err) {
+        console.error("Lỗi khi tải danh sách sản phẩm:", err);
+      }
+    };
+    fetchVariants();
+  }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const addVariant = (variant) => {
     const existing = selectedVariants.find(v => v.id === variant.id);
     if (existing) {
-      setSelectedVariants(selectedVariants.map(v => 
+      setSelectedVariants(selectedVariants.map(v =>
         v.id === variant.id ? { ...v, quantity: v.quantity + 1 } : v
       ));
     } else {
@@ -52,37 +61,57 @@ const CreateCombo = () => {
 
   const updateQuantity = (variantId, quantity) => {
     if (quantity < 1) return;
-    setSelectedVariants(selectedVariants.map(v => 
+    setSelectedVariants(selectedVariants.map(v =>
       v.id === variantId ? { ...v, quantity } : v
     ));
   };
 
-  const totalPrice = selectedVariants.reduce((sum, v) => sum + (v.price * v.quantity), 0);
-  const discountAmount = totalPrice - (formData.discount_price || 0);
-  const discountPercent = totalPrice > 0 ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
+  const totalPrice = selectedVariants.reduce((sum, v) => sum + ((v.sellPrice || v.price || 0) * v.quantity), 0);
+  const discountAmount = totalPrice - (formData.comboPrice || 0);
+  const discountPercent = totalPrice > 0 && formData.comboPrice ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
 
-  const filteredVariants = mockVariants.filter(v => 
-    v.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredVariants = availableVariants.filter(v =>
+    v.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    v.sku?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (selectedVariants.length === 0) {
       alert("Vui lòng chọn ít nhất 1 sản phẩm!");
       return;
     }
-    navigate("/products/combos", {
-      state: { message: "Tạo combo thành công!" }
-    });
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        ...formData,
+        comboPrice: Number(formData.comboPrice),
+        originalPrice: totalPrice,
+        isActive: formData.isActive === true || formData.isActive === "true",
+        items: selectedVariants.map(v => ({
+          productVariantId: v.id,
+          quantity: v.quantity
+        }))
+      };
+
+      await createCombo(payload);
+      navigate("/products/combo", {
+        state: { message: "Tạo combo thành công!" }
+      });
+    } catch (err) {
+      alert(err.message || "Có lỗi xảy ra khi tạo combo");
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate("/products/combos")}
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/products/combo")}
             className="hover:bg-white/80 rounded-xl"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -108,8 +137,8 @@ const CreateCombo = () => {
                   <Input
                     className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="VD: Combo Sáng Năng Động"
-                    name="name"
-                    value={formData.name}
+                    name="comboName"
+                    value={formData.comboName}
                     onChange={handleChange}
                     required
                   />
@@ -142,18 +171,18 @@ const CreateCombo = () => {
                       className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       type="number"
                       placeholder="0"
-                      name="discount_price"
-                      value={formData.discount_price}
+                      name="comboPrice"
+                      value={formData.comboPrice}
                       onChange={handleChange}
                       required
                     />
                   </div>
                 </div>
 
-                {formData.discount_price && (
+                {formData.comboPrice && (
                   <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
                     <p className="text-sm text-green-700">
-                       Giảm giá: <span className="font-bold">{discountAmount.toLocaleString()}đ ({discountPercent}%)</span>
+                      Giảm giá: <span className="font-bold">{discountAmount.toLocaleString()}đ ({discountPercent}%)</span>
                     </p>
                   </div>
                 )}
@@ -161,13 +190,13 @@ const CreateCombo = () => {
                 <div>
                   <Label className="text-sm font-semibold text-gray-700">Trạng thái</Label>
                   <select
-                    name="status"
+                    name="isActive"
                     className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={formData.status}
+                    value={formData.isActive}
                     onChange={handleChange}
                   >
-                    <option value="active">Đang bán</option>
-                    <option value="inactive">Ngưng bán</option>
+                    <option value={true}>Đang bán</option>
+                    <option value={false}>Ngưng bán</option>
                   </select>
                 </div>
               </CardContent>
@@ -210,8 +239,8 @@ const CreateCombo = () => {
                           onClick={() => addVariant(variant)}
                           className="w-full text-left px-4 py-3 hover:bg-white rounded-xl flex justify-between items-center transition-all shadow-sm"
                         >
-                          <span className="text-sm font-medium">{variant.name}</span>
-                          <span className="text-sm text-blue-600 font-semibold">{variant.price.toLocaleString()}đ</span>
+                          <span className="text-sm font-medium">{variant.name || variant.productName} {variant.unitValue ? `- ${variant.unitValue} ${variant.unitName}` : ''}</span>
+                          <span className="text-sm text-blue-600 font-semibold">{(variant.sellPrice || variant.price || 0).toLocaleString()}đ</span>
                         </button>
                       ))}
                     </div>
@@ -222,8 +251,8 @@ const CreateCombo = () => {
                   {selectedVariants.map(variant => (
                     <div key={variant.id} className="flex items-center gap-3 p-4 bg-gradient-to-r from-white to-gray-50 rounded-xl border border-gray-200 shadow-sm">
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-800">{variant.name}</p>
-                        <p className="text-xs text-gray-500">{variant.price.toLocaleString()}đ</p>
+                        <p className="text-sm font-semibold text-gray-800">{variant.name || variant.productName} {variant.unitValue ? `- ${variant.unitValue} ${variant.unitName}` : ''}</p>
+                        <p className="text-xs text-gray-500">{(variant.sellPrice || variant.price || 0).toLocaleString()}đ</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -266,18 +295,19 @@ const CreateCombo = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-            <Button 
-              type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold"
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold disabled:opacity-50"
             >
               <Save className="w-5 h-5 mr-2" />
-              Lưu Combo
+              {isSubmitting ? "Đang xử lý..." : "Lưu Combo"}
             </Button>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold" 
-              onClick={() => navigate("/products/combos")}
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold"
+              onClick={() => navigate("/products/combo")}
             >
               Hủy
             </Button>
