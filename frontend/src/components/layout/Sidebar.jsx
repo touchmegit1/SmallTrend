@@ -39,7 +39,7 @@ const Sidebar = () => {
             children: [
                 { label: 'Tổng quan kho', path: '/inventory' },
                 { label: 'Nhập kho', path: '/inventory/import' },
-                { label: 'Xuất kho', path: '/inventory/export' },
+
                 { label: 'Kiểm kê', path: '/inventory/audit' },
                 { label: 'Cảnh báo hết hàng', path: '/inventory/alerts' },
             ]

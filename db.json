@@ -628,6 +628,68 @@
       "tax_amount": 0,
       "total_amount": 6000,
       "remaining_amount": 6000
+    },
+    {
+      "id": "1efd",
+      "poNumber": "PO-1772179919607",
+      "supplierId": "1",
+      "supplierName": "Công ty CP Vinamilk",
+      "locationId": 1,
+      "status": "CONFIRMED",
+      "discount": 0,
+      "taxPercent": 0,
+      "shippingFee": 0,
+      "paidAmount": 0,
+      "subtotal": 8000,
+      "taxAmount": 0,
+      "totalAmount": 8000,
+      "remainingAmount": 8000,
+      "notes": "",
+      "createdBy": 1,
+      "items": [
+        {
+          "productId": "2",
+          "sku": "COKE-CAN-330ML",
+          "name": "Coca-Cola lon 330ml",
+          "quantity": 1,
+          "unitPrice": 8000,
+          "discount": 0,
+          "total": 8000,
+          "expiryDate": "2622-02-06",
+          "batches": []
+        }
+      ]
+    },
+    {
+      "id": "ddf7",
+      "poNumber": "PO-1772183245289",
+      "supplierId": "1",
+      "supplierName": "Công ty CP Vinamilk",
+      "locationId": 1,
+      "status": "CONFIRMED",
+      "discount": 0,
+      "taxPercent": 1,
+      "shippingFee": 1000,
+      "paidAmount": 3,
+      "subtotal": 8000,
+      "taxAmount": 80,
+      "totalAmount": 9080,
+      "remainingAmount": 9077,
+      "notes": "a",
+      "createdBy": 1,
+      "items": [
+        {
+          "productId": "2",
+          "sku": "COKE-CAN-330ML",
+          "name": "Coca-Cola lon 330ml",
+          "quantity": 1,
+          "unitPrice": 8000,
+          "discount": 0,
+          "total": 8000,
+          "expiryDate": "2028-02-02",
+          "batches": []
+        }
+      ]
     }
   ],
   "purchase_order_items": [
