@@ -23,6 +23,7 @@ import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
+import CRMreport from "./pages/CRM/report";
 import ProductList from "./pages/Products/ProductManager/ProductList";
 import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
