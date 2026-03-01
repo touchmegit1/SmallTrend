@@ -1,5 +1,6 @@
 package com.smalltrend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,6 +28,7 @@ public class ProductVariant {
 
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
+    @JsonIgnore
     private Product product;
     private String sku;
     private String barcode;
@@ -38,6 +40,9 @@ public class ProductVariant {
     @Column(name = "image_url")
     private String imageUrl;
     private BigDecimal sellPrice;
+
+    @Column(name = "unit_value")
+    private BigDecimal unitValue;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
@@ -58,8 +63,10 @@ public class ProductVariant {
     private Coupon coupon;
 
     @OneToMany(mappedBy = "variant")
+    @JsonIgnore
     private List<ProductBatch> productBatches;
 
     @OneToMany(mappedBy = "variant")
+    @JsonIgnore
     private List<InventoryStock> inventoryStocks;
 }

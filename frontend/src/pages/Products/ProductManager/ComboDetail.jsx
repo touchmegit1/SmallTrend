@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Label } from "../ProductComponents/label";
 import { Badge } from "../ProductComponents/badge";
 import EditComboModal from "./EditComboModal";
+import { useProductCombos } from "../../../hooks/product_combos";
 
 function ComboDetail() {
   const navigate = useNavigate();
@@ -15,17 +16,24 @@ function ComboDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
+  const { deleteCombo } = useProductCombos();
+
   const handleSaveCombo = (updatedCombo) => {
     setToastMessage("Cập nhật combo thành công!");
     setIsEditModalOpen(false);
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  const handleDeleteCombo = () => {
+  const handleDeleteCombo = async () => {
     if (confirm("Bạn có chắc muốn xóa combo này?")) {
-      navigate("/products/combos", {
-        state: { message: "Xóa combo thành công!" }
-      });
+      try {
+        await deleteCombo(combo.id);
+        navigate("/products/combo", {
+          state: { message: "Xóa combo thành công!" }
+        });
+      } catch (err) {
+        alert(err.message || 'Lỗi khi xóa combo');
+      }
     }
   };
 
@@ -34,7 +42,7 @@ function ComboDetail() {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <p className="text-gray-500 mb-4">Không tìm thấy combo</p>
-          <Button onClick={() => navigate("/products/combos")}>
+          <Button onClick={() => navigate("/products/combo")}>
             Quay lại danh sách
           </Button>
         </div>
@@ -42,7 +50,9 @@ function ComboDetail() {
     );
   }
 
-  const discountPercent = Math.round((1 - combo.discount_price / combo.price) * 100);
+  const discountPercent = combo.originalPrice && combo.originalPrice > 0
+    ? Math.round((1 - combo.comboPrice / combo.originalPrice) * 100)
+    : 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -58,12 +68,12 @@ function ComboDetail() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div className="flex items-start gap-4">
-          <Button variant="ghost" onClick={() => navigate("/products/combos")}>
+          <Button variant="ghost" onClick={() => navigate("/products/combo")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900">{combo.name}</h1>
-            <p className="text-md text-gray-500 font-semibold">ID: #{combo.id}</p>
+            <h1 className="text-3xl font-semibold text-gray-900">{combo.comboName}</h1>
+            <p className="text-md text-gray-500 font-semibold">Mã Combo: {combo.comboCode || `#${combo.id}`}</p>
           </div>
         </div>
         <div className="flex gap-3">
@@ -86,7 +96,7 @@ function ComboDetail() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Sản phẩm trong combo</p>
-              <p className="text-2xl font-bold text-gray-900">{combo.variants.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{combo.items?.length || 0}</p>
             </div>
           </div>
         </Card>
@@ -107,8 +117,8 @@ function ComboDetail() {
               <Calendar className="w-6 h-6 text-purple-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500">Ngày tạo: {combo.created_at}</p>
-              <p className="text-xs text-gray-500">Cập nhật: {combo.created_at}</p>
+              <p className="text-xs text-gray-500">Ngày tạo: {combo.createdAt ? new Date(combo.createdAt).toLocaleDateString("vi-VN") : "-"}</p>
+              <p className="text-xs text-gray-500">Cập nhật: {combo.updatedAt ? new Date(combo.updatedAt).toLocaleDateString("vi-VN") : "-"}</p>
             </div>
           </div>
         </Card>
@@ -134,12 +144,12 @@ function ComboDetail() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm font-medium text-gray-500">Tên Combo</Label>
-                <p className="text-sm font-semibold text-gray-900 mt-1">{combo.name}</p>
+                <p className="text-sm font-semibold text-gray-900 mt-1">{combo.comboName}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Trạng thái</Label>
                 <div className="mt-1">
-                  {combo.status === "active" ? (
+                  {combo.isActive ? (
                     <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
                   ) : (
                     <Badge className="bg-red-100 text-red-700">Ngưng bán</Badge>
@@ -148,11 +158,11 @@ function ComboDetail() {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Giá gốc</Label>
-                <p className="text-sm text-gray-500 line-through mt-1">{combo.price.toLocaleString()}đ</p>
+                <p className="text-sm text-gray-500 line-through mt-1">{combo.originalPrice?.toLocaleString()}đ</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Giá Combo</Label>
-                <p className="text-sm font-bold text-green-600 mt-1">{combo.discount_price.toLocaleString()}đ</p>
+                <p className="text-sm font-bold text-green-600 mt-1">{combo.comboPrice?.toLocaleString()}đ</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Giảm giá</Label>
@@ -195,31 +205,36 @@ function ComboDetail() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {combo.variants.map((variant, index) => (
-                <TableRow key={variant.id} className="hover:bg-gray-100">
-                  <TableCell className="font-medium">{index + 1}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Package2 className="w-5 h-5 text-gray-400" />
+              {combo.items?.map((item, index) => {
+                const totalItems = combo.items.reduce((sum, v) => sum + v.quantity, 0);
+                const averagePricePerUnit = totalItems > 0 ? combo.comboPrice / totalItems : 0;
+
+                return (
+                  <TableRow key={item.id} className="hover:bg-gray-100">
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Package2 className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <span className="font-medium">{item.productVariantName}</span>
                       </div>
-                      <span className="font-medium">{variant.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className="bg-blue-100 text-blue-700">x{variant.quantity}</Badge>
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {(combo.price / combo.variants.reduce((sum, v) => sum + v.quantity, 0)).toFixed(0).toLocaleString()}đ
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    {((combo.price / combo.variants.reduce((sum, v) => sum + v.quantity, 0)) * variant.quantity).toFixed(0).toLocaleString()}đ
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className="bg-blue-100 text-blue-700">x{item.quantity}</Badge>
+                    </TableCell>
+                    <TableCell className="text-gray-600">
+                      {averagePricePerUnit.toFixed(0).toLocaleString()}đ
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {(averagePricePerUnit * item.quantity).toFixed(0).toLocaleString()}đ
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               <TableRow className="bg-gray-50 font-bold">
                 <TableCell colSpan={4} className="text-right">Tổng cộng:</TableCell>
-                <TableCell className="text-green-600">{combo.discount_price.toLocaleString()}đ</TableCell>
+                <TableCell className="text-green-600">{combo.comboPrice?.toLocaleString()}đ</TableCell>
               </TableRow>
             </TableBody>
           </Table>

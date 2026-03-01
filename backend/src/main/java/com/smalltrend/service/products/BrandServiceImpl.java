@@ -12,6 +12,7 @@ import java.util.List;
 public class BrandServiceImpl implements BrandService {
 
     private final BrandRepository brandRepository;
+    private final com.smalltrend.repository.ProductRepository productRepository;
 
     @Override
     public Brand create(Brand brand) {
@@ -40,6 +41,9 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     public void delete(Integer id) {
+        if (productRepository.existsByBrandId(id)) {
+            throw new RuntimeException("Không thể xoá thương hiệu vì đang có sản phẩm thuộc thương hiệu này");
+        }
         brandRepository.deleteById(id);
     }
 }

@@ -8,52 +8,10 @@ import { Plus, Search, Edit, Package2, Eye, CheckCircle, Trash2 } from "lucide-r
 import { useNavigate, useLocation } from "react-router-dom";
 import EditComboModal from "./EditComboModal";
 
-const mockCombos = [
-  {
-    id: 1,
-    name: "Combo Sáng Năng Động",
-    description: "Sữa chua + Bánh mì + Nước cam",
-    variants: [
-      { id: 1, name: "Yaourt Vinamilk 100ml", quantity: 2 },
-      { id: 2, name: "Bánh mì que 50g", quantity: 1 },
-      { id: 3, name: "Nước cam ép 200ml", quantity: 1 }
-    ],
-    price: 45000,
-    discount_price: 39000,
-    status: "active",
-    created_at: "15/01/2025 08:30"
-  },
-  {
-    id: 2,
-    name: "Combo Học Sinh",
-    description: "Mì tôm + Nước ngọt + Snack",
-    variants: [
-      { id: 4, name: "Mì Hảo Hảo tôm chua cay", quantity: 2 },
-      { id: 5, name: "Coca Cola 330ml", quantity: 1 },
-      { id: 6, name: "Snack Oishi 50g", quantity: 1 }
-    ],
-    price: 35000,
-    discount_price: 29000,
-    status: "active",
-    created_at: "16/01/2025 10:15"
-  },
-  {
-    id: 3,
-    name: "Combo Gia Đình",
-    description: "Sữa tươi + Bánh quy + Kẹo",
-    variants: [
-      { id: 7, name: "Sữa TH True Milk 1L", quantity: 2 },
-      { id: 8, name: "Bánh quy Cosy 200g", quantity: 1 },
-      { id: 9, name: "Kẹo Alpenliebe 100g", quantity: 2 }
-    ],
-    price: 120000,
-    discount_price: 99000,
-    status: "inactive",
-    created_at: "17/01/2025 14:20"
-  }
-];
+import { useProductCombos } from "../../../hooks/product_combos";
 
-export function ComboManage() {
+function ComboManage() {
+  const { combos, loading, error, deleteCombo, updateCombo } = useProductCombos();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortField, setSortField] = useState(null);
@@ -73,14 +31,15 @@ export function ComboManage() {
     }
   };
 
-  const filteredCombos = mockCombos
+  const filteredCombos = combos
     .filter((combo) => {
       const matchesSearch =
-        combo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        combo.description.toLowerCase().includes(searchQuery.toLowerCase());
+        combo.comboName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        combo.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
+      const isActiveStr = combo.isActive ? "active" : "inactive";
       const matchesStatus =
-        filterStatus === "all" || combo.status === filterStatus;
+        filterStatus === "all" || isActiveStr === filterStatus;
 
       return matchesSearch && matchesStatus;
     })
@@ -90,19 +49,15 @@ export function ComboManage() {
       let aValue = a[sortField];
       let bValue = b[sortField];
 
-      if (sortField === "created_at") {
-        const [dateA, timeA] = aValue.split(" ");
-        const [dayA, monthA, yearA] = dateA.split("/");
-        const [dateB, timeB] = bValue.split(" ");
-        const [dayB, monthB, yearB] = dateB.split("/");
-        aValue = new Date(`${yearA}-${monthA}-${dayA} ${timeA}`);
-        bValue = new Date(`${yearB}-${monthB}-${dayB} ${timeB}`);
-      } else if (sortField === "price" || sortField === "discount_price") {
+      if (sortField === "createdAt") {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      } else if (sortField === "originalPrice" || sortField === "comboPrice") {
         aValue = Number(aValue);
         bValue = Number(bValue);
       } else {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
+        aValue = String(aValue || "").toLowerCase();
+        bValue = String(bValue || "").toLowerCase();
       }
 
       if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
@@ -110,10 +65,16 @@ export function ComboManage() {
       return 0;
     });
 
-  const handleDeleteCombo = (comboId) => {
+  const handleDeleteCombo = async (comboId) => {
     if (confirm("Bạn có chắc muốn xóa combo này?")) {
-      setToastMessage("Xóa combo thành công!");
-      setTimeout(() => setToastMessage(""), 3000);
+      try {
+        await deleteCombo(comboId);
+        setToastMessage("Xóa combo thành công!");
+        setTimeout(() => setToastMessage(""), 3000);
+      } catch (err) {
+        setToastMessage("Lỗi khi xóa: " + err.message);
+        setTimeout(() => setToastMessage(""), 3000);
+      }
     }
   };
 
@@ -122,10 +83,16 @@ export function ComboManage() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveCombo = (updatedCombo) => {
-    setToastMessage("Cập nhật combo thành công!");
-    setIsEditModalOpen(false);
-    setTimeout(() => setToastMessage(""), 3000);
+  const handleSaveCombo = async (updatedCombo) => {
+    try {
+      await updateCombo(updatedCombo.id, updatedCombo);
+      setToastMessage("Cập nhật combo thành công!");
+      setIsEditModalOpen(false);
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      setToastMessage("Lỗi khi cập nhật: " + err.message);
+      setTimeout(() => setToastMessage(""), 3000);
+    }
   };
 
   useEffect(() => {
@@ -214,38 +181,40 @@ export function ComboManage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-gray-50 to-slate-50 border-b-2 border-gray-200">
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
-                      onClick={() => handleSort("name")}
+                      onClick={() => handleSort("comboName")}
                     >
-                      Tên Combo {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
+                      Tên Combo {sortField === "comboName" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead className="font-semibold">Sản phẩm trong combo</TableHead>
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
-                      onClick={() => handleSort("price")}
+                      onClick={() => handleSort("originalPrice")}
                     >
-                      Giá gốc {sortField === "price" && (sortOrder === "asc" ? "↑" : "↓")}
+                      Giá gốc {sortField === "originalPrice" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
-                      onClick={() => handleSort("discount_price")}
+                      onClick={() => handleSort("comboPrice")}
                     >
-                      Giá combo {sortField === "discount_price" && (sortOrder === "asc" ? "↑" : "↓")}
+                      Giá combo {sortField === "comboPrice" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead className="font-semibold">Trạng thái</TableHead>
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
-                      onClick={() => handleSort("created_at")}
+                      onClick={() => handleSort("createdAt")}
                     >
-                      Thời gian tạo {sortField === "created_at" && (sortOrder === "asc" ? "↑" : "↓")}
+                      Thời gian tạo {sortField === "createdAt" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead className="text-center font-semibold">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {filteredCombos.map((combo) => (
+                  {loading && <TableRow><TableCell colSpan={6} className="text-center py-4">Đang tải...</TableCell></TableRow>}
+                  {error && <TableRow><TableCell colSpan={6} className="text-center py-4 text-red-500">{error}</TableCell></TableRow>}
+                  {!loading && !error && filteredCombos.map((combo) => (
                     <TableRow className="hover:bg-blue-50/50 transition-colors border-b border-gray-100" key={combo.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -253,7 +222,7 @@ export function ComboManage() {
                             <Package2 className="w-6 h-6 text-blue-600" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-900">{combo.name}</p>
+                            <p className="text-sm font-semibold text-gray-900">{combo.comboName}</p>
                             <p className="text-xs text-gray-500">
                               {combo.description}
                             </p>
@@ -262,41 +231,46 @@ export function ComboManage() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          {combo.variants.slice(0, 2).map((variant) => (
-                            <p key={variant.id} className="text-xs text-gray-600">
-                              • {variant.name} <span className="font-semibold text-blue-600">x{variant.quantity}</span>
+                          {combo.items?.slice(0, 2).map((item) => (
+                            <p key={item.id} className="text-xs text-gray-600">
+                              • {item.productVariantName} <span className="font-semibold text-blue-600">x{item.quantity}</span>
                             </p>
                           ))}
-                          {combo.variants.length > 2 && (
+                          {combo.items?.length > 2 && (
                             <p className="text-xs text-blue-600 font-semibold">
-                              +{combo.variants.length - 2} sản phẩm khác
+                              +{combo.items.length - 2} sản phẩm khác
                             </p>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-gray-400 line-through text-sm">
-                          {combo.price.toLocaleString()}đ
+                          {combo.originalPrice?.toLocaleString()}đ
                         </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="text-green-600 font-bold text-sm">
-                            {combo.discount_price.toLocaleString()}đ
+                            {combo.comboPrice?.toLocaleString()}đ
                           </span>
                           <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-0 font-semibold text-xs">
-                            -{Math.round((1 - combo.discount_price / combo.price) * 100)}%
+                            -{Math.round((1 - (combo.comboPrice / combo.originalPrice)) * 100)}%
                           </Badge>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {combo.status === "active" ? (
+                        {combo.isActive ? (
                           <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-0 font-medium">Đang bán</Badge>
                         ) : (
                           <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-0 font-medium">Ngừng bán</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-gray-600 text-sm">{combo.created_at}</TableCell>
+                      <TableCell className="text-gray-600 text-sm">
+                        {combo.createdAt ? new Date(combo.createdAt).toLocaleString('vi-VN', {
+                          year: 'numeric', month: '2-digit', day: '2-digit',
+                          hour: '2-digit', minute: '2-digit'
+                        }) : '-'}
+                      </TableCell>
 
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-1">

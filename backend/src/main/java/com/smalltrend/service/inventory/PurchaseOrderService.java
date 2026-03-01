@@ -34,7 +34,7 @@ public class PurchaseOrderService {
     private final StockMovementRepository stockMovementRepository;
 
     // ═══════════════════════════════════════════════════════════
-    //  Public API
+    // Public API
     // ═══════════════════════════════════════════════════════════
     // ─── List All Purchase Orders ────────────────────────────
     public List<PurchaseOrderResponse> getAllOrders() {
@@ -92,7 +92,8 @@ public class PurchaseOrderService {
         }
 
         // Recalculate financials server-side
-        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems() : new ArrayList<>();
+        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems()
+                : new ArrayList<>();
         recalculate(order, itemRequests);
 
         PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
@@ -118,7 +119,8 @@ public class PurchaseOrderService {
             order.setPoNumber(generateNextPOCode());
         }
 
-        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems() : new ArrayList<>();
+        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems()
+                : new ArrayList<>();
         recalculate(order, itemRequests);
 
         PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
@@ -222,7 +224,7 @@ public class PurchaseOrderService {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  Private helpers
+    // Private helpers
     // ═══════════════════════════════════════════════════════════
     // ─── Build Order from Request ────────────────────────────
     private PurchaseOrder buildOrderFromRequest(PurchaseOrderRequest request) {
@@ -270,7 +272,8 @@ public class PurchaseOrderService {
         }
 
         BigDecimal taxPercent = order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO;
-        BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100), 0,
+                RoundingMode.HALF_UP);
         order.setTaxAmount(taxAmount);
 
         BigDecimal shippingFee = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
@@ -301,7 +304,8 @@ public class PurchaseOrderService {
             // Resolve product variant
             if (itemReq.getVariantId() != null) {
                 ProductVariant variant = productVariantRepository.findById(itemReq.getVariantId())
-                        .orElseThrow(() -> new RuntimeException("Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
+                        .orElseThrow(() -> new RuntimeException(
+                                "Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
                 item.setVariant(variant);
             } else if (itemReq.getProductId() != null) {
                 Product product = productRepository.findById(Integer.valueOf(itemReq.getProductId()))
@@ -409,7 +413,9 @@ public class PurchaseOrderService {
 
     // ─── Generate Batch Number ───────────────────────────────
     private String generateBatchNumber(ProductVariant variant) {
-        String prefix = variant.getSku() != null ? variant.getSku().substring(0, Math.min(2, variant.getSku().length())).toUpperCase() : "BT";
+        String prefix = variant.getSku() != null
+                ? variant.getSku().substring(0, Math.min(2, variant.getSku().length())).toUpperCase()
+                : "BT";
         int year = LocalDate.now().getYear();
         long count = productBatchRepository.count() + 1;
         return prefix + year + String.format("%03d", count);

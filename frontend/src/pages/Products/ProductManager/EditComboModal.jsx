@@ -7,26 +7,29 @@ import { Textarea } from "../ProductComponents/textarea";
 
 const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    name: "",
+    comboName: "",
     description: "",
-    discount_price: "",
-    status: "active",
+    comboPrice: "",
+    isActive: true,
   });
 
   useEffect(() => {
     if (combo) {
       setFormData({
-        name: combo.name || "",
+        comboName: combo.comboName || "",
         description: combo.description || "",
-        discount_price: combo.discount_price || "",
-        status: combo.status || "active",
+        comboPrice: combo.comboPrice || "",
+        isActive: combo.isActive !== undefined ? combo.isActive : true,
       });
     }
   }, [combo]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const handleSubmit = (e) => {
@@ -36,9 +39,9 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
 
   if (!isOpen) return null;
 
-  const totalPrice = combo?.price || 0;
-  const discountAmount = totalPrice - (formData.discount_price || 0);
-  const discountPercent = totalPrice > 0 ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
+  const totalPrice = combo?.originalPrice || 0;
+  const discountAmount = totalPrice - (Number(formData.comboPrice) || 0);
+  const discountPercent = totalPrice > 0 && formData.comboPrice ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
@@ -66,8 +69,8 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
             <Input
               className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Nhập tên combo"
-              name="name"
-              value={formData.name}
+              name="comboName"
+              value={formData.comboName}
               onChange={handleChange}
               required
             />
@@ -102,15 +105,15 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
                 className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 type="number"
                 placeholder="0"
-                name="discount_price"
-                value={formData.discount_price}
+                name="comboPrice"
+                value={formData.comboPrice}
                 onChange={handleChange}
                 required
               />
             </div>
           </div>
 
-          {formData.discount_price && (
+          {formData.comboPrice && (
             <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
               <p className="text-sm text-green-700">
                 💰 Giảm giá: <span className="font-bold">{discountAmount.toLocaleString()}đ ({discountPercent}%)</span>
@@ -121,13 +124,13 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
           <div>
             <Label className="text-sm font-semibold text-gray-700">Trạng thái</Label>
             <select
-              name="status"
+              name="isActive"
               className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={formData.status}
+              value={formData.isActive}
               onChange={handleChange}
             >
-              <option value="active">✅ Đang bán</option>
-              <option value="inactive">❌ Ngưng bán</option>
+              <option value={true}>✅ Đang bán</option>
+              <option value={false}>❌ Ngưng bán</option>
             </select>
           </div>
 

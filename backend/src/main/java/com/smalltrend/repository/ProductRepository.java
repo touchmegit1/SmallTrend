@@ -9,4 +9,7 @@ import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
+    boolean existsByCategoryId(Integer categoryId);
+
+    boolean existsByBrandId(Integer brandId);
 }

@@ -36,21 +36,20 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
         setShowRegister(false);
       } else {
         // Tìm trong backend
-        const customers = await customerService.searchByPhone(phone);
-        
-        if (customers && customers.length > 0) {
-          const customer = customers[0];
+        try {
+          const customer = await customerService.searchByPhone(phone);
+          
           onSelectCustomer({
             id: customer.id,
             phone: customer.phone,
             name: customer.name,
-            loyaltyPoints,
-            existingPoints: customer.loyaltyPoints || 0,
+            loyaltyPoints: customer.loyaltyPoints || 0,
             isNew: false
           });
           setPhone("");
           setShowRegister(false);
-        } else {
+        } catch (error) {
+          // Không tìm thấy -> hiện form đăng ký
           setShowRegister(true);
         }
       }
@@ -96,15 +95,11 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
       // Lưu vào backend CRM
       const savedCustomer = await customerService.createCustomer(name, phone);
       
-      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-      const loyaltyPoints = Math.floor(totalAmount / 10000);
-      
       onSelectCustomer({
         id: savedCustomer.id,
         phone: savedCustomer.phone,
         name: savedCustomer.name,
-        loyaltyPoints,
-        existingPoints: savedCustomer.loyaltyPoints || 0,
+        loyaltyPoints: savedCustomer.loyaltyPoints || 0,
         isNew: false
       });
       
