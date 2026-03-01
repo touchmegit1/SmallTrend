@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import authService from '../services/authService';
+import { shiftService } from '../services/shiftService';
 
 const AuthContext = createContext(null);
 
@@ -46,6 +47,19 @@ export const AuthProvider = ({ children }) => {
             const data = await authService.login(username, password);
             setUser(data);
             setIsAuthenticated(true);
+            
+            // Auto clock in when user logs in
+            try {
+                await shiftService.clockIn({
+                    userId: data.id,
+                    clockInTime: new Date().toISOString(),
+                    location: 'Office' // You can add GPS location here
+                });
+            } catch (clockinError) {
+                console.warn('Failed to auto clock-in:', clockinError.message);
+                // Don't throw error - login should still succeed even if clockin fails
+            }
+            
             return data;
         } catch (error) {
             throw error;
