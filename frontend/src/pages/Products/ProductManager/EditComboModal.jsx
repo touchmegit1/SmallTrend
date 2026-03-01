@@ -5,6 +5,8 @@ import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
 import { Textarea } from "../ProductComponents/textarea";
 
+// Modal Popup dùng chung để sửa thông tin của một Combo đã tồn tại
+// Nhận vào state combo được chọn từ component cha và gọi hàm onSave khi hoàn thành
 const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     comboName: "",
@@ -24,6 +26,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
     }
   }, [combo]);
 
+  // Hàm cập nhật state nội bộ khi người dùng gõ vào form chỉnh sửa
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -32,6 +35,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
     }));
   };
 
+  // Hàm chặn submit mặc định và đẩy dữ liệu chỉnh sửa lên component cha
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave({ ...combo, ...formData });

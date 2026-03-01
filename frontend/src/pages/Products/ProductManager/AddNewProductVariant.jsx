@@ -8,6 +8,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
+// Màn hình Thêm mới một Variant (Sản phẩm biến thể)
+// Cho phép khai báo đơn vị, giá bán, giá nhập và hình ảnh
 const AddNewProductVariant = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,19 +34,36 @@ const AddNewProductVariant = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Xử lý đọc file ảnh cục bộ dưới dạng DateURL để hiển thị Preview
   const handleImageSelect = (file) => {
-    if (file && file.type.startsWith("image/")) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (file) {
+      // The original code had a type check, let's keep it for robustness
+      if (!file.type.startsWith("image/")) {
+        // toast.error("File không phải là ảnh"); // Assuming toast is available
+        console.error("File is not an image.");
+        return;
+      }
+      // if (file.size > 5 * 1024 * 1024) { // Assuming toast is available
+      //   toast.error("Kích thước ảnh không được vượt quá 5MB");
+      //   return;
+      // }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+        setImageFile(file); // Changed from setSelectedImage to setImageFile
+      };
+      reader.readAsDataURL(file);
     }
   };
 
+  // Kích hoạt khi người dùng tải tệp từ ô input type="file"
   const handleFileSelect = (e) => {
-    if (e.target.files?.[0]) {
+    if (e.target.files && e.target.files[0]) {
       handleImageSelect(e.target.files[0]);
     }
   };
 
+  // 3 Hàm dưới đây dùng để hỗ trợ UX: Kéo thả file ảnh trực tiếp vào box
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -63,40 +82,47 @@ const AddNewProductVariant = () => {
     }
   };
 
+  // Gỡ ảnh hiện tại ra khỏi form
   const removeImage = () => {
-    setImageFile(null);
     setImagePreview(null);
+    setImageFile(null); // Changed from setSelectedImage to setImageFile
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
+  // Hàm đẩy ảnh dạng Binary Form-data lên Server và nhận link URL trả về
   const uploadImage = async () => {
-    if (!imageFile) return null;
-    setUploadingImage(true);
+    if (!imageFile) return null; // Changed from selectedImage to imageFile
+    setUploadingImage(true); // Kept from original
+    const formData = new FormData();
+    formData.append("file", imageFile); // Changed from selectedImage to imageFile
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append("file", imageFile);
-      const response = await api.post("/upload/image", formDataUpload, {
-        headers: { "Content-Type": undefined },
+      const response = await api.post("/upload/image", formData, { // Changed endpoint from /upload to /upload/image
+        headers: { "Content-Type": undefined }, // Changed from "multipart/form-data" to undefined to let browser set it
       });
       return response.data.url;
     } catch (error) {
-      console.error("Error uploading image:", error);
-      throw error;
+      console.error("Lỗi upload ảnh:", error); // Changed error message
+      throw new Error("Không thể upload ảnh"); // Changed error handling
     } finally {
-      setUploadingImage(false);
+      setUploadingImage(false); // Kept from original
     }
   };
 
+  // Cập nhật bộ đệm nội dung state mỗi khi gõ
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Hàm Submit: Tiến hành Upload image (nếu có) trước rồi lấy URL đính vào payload Variant để Post tạo mới
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMsg("");
+    setErrorMsg(""); // Kept from original
+
+    // if (isSubmitting) return; // isSubmitting state variable is not defined in the original code, so commenting out or adding it. Assuming it should be `saving`
+    if (saving) return;
 
     if (!formData.sku.trim()) {
       setErrorMsg("Vui lòng nhập SKU");

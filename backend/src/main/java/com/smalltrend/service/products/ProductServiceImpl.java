@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Service implementation xử lý các logic nghiệp vụ cho Product (Sản phẩm)
+ */
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
@@ -26,6 +29,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final TaxRateRepository taxRateRepository;
 
+    // Chuyển đổi Entity Product trong DB sang DTO Response để trả về cho Frontend
     private ProductResponse mapToResponse(Product product) {
         return ProductResponse.builder()
                 .id(product.getId())
@@ -45,6 +49,7 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
+    // Lấy toàn bộ danh sách sản phẩm và map sang DTO
     @Override
     public List<ProductResponse> getAll() {
         return productRepository.findAll().stream()
@@ -52,6 +57,7 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
     }
 
+    // Tìm kiếm và lấy chi tiết một sản phẩm theo khóa chính (ID)
     @Override
     public ProductResponse getById(Integer id) {
         Product product = productRepository.findById(id)
@@ -59,6 +65,7 @@ public class ProductServiceImpl implements ProductService {
         return mapToResponse(product);
     }
 
+    // Tạo mới một bản ghi Sản phẩm vào cơ sở dữ liệu
     @Override
     @Transactional
     public ProductResponse create(CreateProductRequest request) {
@@ -68,6 +75,8 @@ public class ProductServiceImpl implements ProductService {
         return mapToResponse(saved);
     }
 
+    // Sửa thông tin Sản phẩm đã tồn tại. Nếu cập nhật trạng thái (Active)
+    // thì thay đổi sẽ áp dụng lan truyền xuống các Biến thể (Variants) con
     @Override
     @Transactional
     public ProductResponse update(Integer id, CreateProductRequest request) {
@@ -86,6 +95,7 @@ public class ProductServiceImpl implements ProductService {
         return mapToResponse(saved);
     }
 
+    // Hàm tiện ích map các trường từ Request form sang Entity để lưu
     private void applyRequestToProduct(CreateProductRequest request, Product product) {
         product.setName(request.getName());
         product.setDescription(request.getDescription());
@@ -117,6 +127,9 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+    // Xóa một Sản phẩm. Quy định: Chỉ được phép xóa bản ghi vừa tạo trong vòng 2
+    // phút.
+    // Nếu quá 2 phút, ném ra ngoại lệ và chặn việc xoá
     @Override
     @Transactional
     public void delete(Integer id) {
@@ -134,6 +147,8 @@ public class ProductServiceImpl implements ProductService {
         productRepository.deleteById(id);
     }
 
+    // Đảo ngược trạng thái Active/Inactive của Sản phẩm, và áp dụng lây lan xuống
+    // các Biến thể con
     @Override
     @Transactional
     public void toggleStatus(Integer id) {

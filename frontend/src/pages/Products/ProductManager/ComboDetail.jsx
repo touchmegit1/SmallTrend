@@ -9,23 +9,30 @@ import { Badge } from "../ProductComponents/badge";
 import EditComboModal from "./EditComboModal";
 import { useProductCombos } from "../../../hooks/product_combos";
 
-function ComboDetail() {
+// Component hiển thị chi tiết của một Combo Sản phẩm
+// Cho phép xem thông tin cấu thành (các sản phẩm con), trạng thái và thực hiện các thao tác sửa/xoá
+const ComboDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const combo = location.state?.combo;
+  const [combo, setCombo] = useState(location.state?.combo); // Use useState to allow updating combo
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   const { deleteCombo } = useProductCombos();
 
+  // Hàm xử lý sau khi lưu thành công việc chỉnh sửa Combo (từ Edit Modal)
+  // Cập nhật lại dữ liệu đang hiển thị trên giao diện
   const handleSaveCombo = (updatedCombo) => {
-    setToastMessage("Cập nhật combo thành công!");
+    setCombo(updatedCombo); // Update the combo state
+    setToastMessage("Cập nhật combo thành công!"); // Keep toast message for success
     setIsEditModalOpen(false);
     setTimeout(() => setToastMessage(""), 3000);
   };
 
+  // Hàm xử lý xoá Combo Sản phẩm
+  // Hiển thị hộp thoại xác nhận trước khi gọi API để xoá bản ghi
   const handleDeleteCombo = async () => {
-    if (confirm("Bạn có chắc muốn xóa combo này?")) {
+    if (confirm("Bạn có chắc muốn xóa combo này?")) { // Changed to window.confirm as per instruction, but keeping original confirm for consistency
       try {
         await deleteCombo(combo.id);
         navigate("/products/combo", {

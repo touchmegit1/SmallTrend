@@ -10,7 +10,9 @@ import EditComboModal from "./EditComboModal";
 
 import { useProductCombos } from "../../../hooks/product_combos";
 
-function ComboManage() {
+// Component quản lý danh sách các Combo Sản phẩm
+// Nơi hiển thị, lọc, tìm kiếm và thao tác các combo như xoá, sửa
+const ComboManage = () => {
   const { combos, loading, error, deleteCombo, updateCombo } = useProductCombos();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -22,6 +24,8 @@ function ComboManage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCombo, setSelectedCombo] = useState(null);
 
+  // Hàm xử lý việc sắp xếp các cột trong bảng (Tên, Giá, etc.)
+  // Đảo chiều sắp xếp (asc/desc) khi bấm vào tiêu đề cột
   const handleSort = (field) => {
     if (sortField === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -65,6 +69,8 @@ function ComboManage() {
       return 0;
     });
 
+  // Hàm xử lý xoá một Combo Sản phẩm từ danh sách
+  // Cập nhật lại UI thông qua mutate để đồng bộ dữ liệu sau khi API gọi thành công
   const handleDeleteCombo = async (comboId) => {
     if (confirm("Bạn có chắc muốn xóa combo này?")) {
       try {
@@ -78,11 +84,14 @@ function ComboManage() {
     }
   };
 
+  // Bật Modal sửa thông tin khi người dùng nhấn Sửa trên một dòng
   const handleEditCombo = (combo) => {
     setSelectedCombo(combo);
     setIsEditModalOpen(true);
   };
 
+  // Hàm xử lý sau khi lưu thay đổi Combo qua Edit Modal thành công
+  // Gọi API cập nhật và fetch lại danh sách Combo để hiển thị bản ghi mới
   const handleSaveCombo = async (updatedCombo) => {
     try {
       await updateCombo(updatedCombo.id, updatedCombo);

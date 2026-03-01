@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Controller xử lý các HTTP request liên quan đến Product (Sản phẩm)
+ * Cung cấp các RESTful API cho sản phẩm và các biến thể (variants) của nó
+ */
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
@@ -22,21 +26,25 @@ public class ProductController {
     private final ProductService productService;
     private final ProductVariantService productVariantService;
 
+    // Lấy danh sách tất cả sản phẩm
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAll() {
         return ResponseEntity.ok(productService.getAll());
     }
 
+    // Lấy thông tin chi tiết một sản phẩm theo ID
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getById(@PathVariable Integer id) {
         return ResponseEntity.ok(productService.getById(id));
     }
 
+    // Lấy danh sách các biến thể (variants) của một sản phẩm
     @GetMapping("/{id}/variants")
     public ResponseEntity<List<ProductVariantRespone>> getVariantsByProductId(@PathVariable Integer id) {
         return ResponseEntity.ok(productVariantService.getVariantsByProductId(id));
     }
 
+    // Tạo mới một biến thể cho sản phẩm
     @PostMapping("/{id}/variants")
     public ResponseEntity<ProductVariantRespone> createVariant(
             @PathVariable Integer id,
@@ -44,6 +52,7 @@ public class ProductController {
         return ResponseEntity.ok(productVariantService.createVariant(id, request));
     }
 
+    // Cập nhật thông tin của một biến thể
     @PutMapping("/variants/{variantId}")
     public ResponseEntity<ProductVariantRespone> updateVariant(
             @PathVariable Integer variantId,
@@ -51,12 +60,14 @@ public class ProductController {
         return ResponseEntity.ok(productVariantService.updateVariant(variantId, request));
     }
 
+    // Bật/Tắt trạng thái hoạt động (active/inactive) của một biến thể
     @PutMapping("/variants/{variantId}/toggle-status")
     public ResponseEntity<String> toggleVariantStatus(@PathVariable Integer variantId) {
         productVariantService.toggleVariantStatus(variantId);
         return ResponseEntity.ok("Variant status toggled");
     }
 
+    // Lấy danh sách tất cả các đơn vị tính có trong hệ thống
     @GetMapping("/units")
     public ResponseEntity<List<Unit>> getAllUnits() {
         return ResponseEntity.ok(productVariantService.getAllUnits());
@@ -67,17 +78,20 @@ public class ProductController {
         return ResponseEntity.ok(productService.create(request));
     }
 
+    // Cập nhật thông tin của một sản phẩm hiện có
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponse> update(@PathVariable Integer id, @RequestBody CreateProductRequest request) {
         return ResponseEntity.ok(productService.update(id, request));
     }
 
+    // Bật/Tắt trạng thái hoạt động của một sản phẩm
     @PutMapping("/{id}/toggle-status")
     public ResponseEntity<String> toggleStatus(@PathVariable Integer id) {
         productService.toggleStatus(id);
         return ResponseEntity.ok("Product status toggled");
     }
 
+    // Xóa một sản phẩm theo ID
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable Integer id) {
         productService.delete(id);

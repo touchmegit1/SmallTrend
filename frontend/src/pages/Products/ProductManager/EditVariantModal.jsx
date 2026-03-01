@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/c
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
+// Modal Component hiển thị thông tin và cho phép Chỉnh sửa một Variant (Biến thể)
+// Cho phép update giá bán, hình ảnh...
 export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSave }) {
   const { units, loading: unitsLoading } = useFetchUnits();
 
@@ -45,6 +47,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
 
   if (!isOpen) return null;
 
+  // Xử lý tạo URL Preview cho file ảnh được người dùng chọn
   const handleImageSelect = (file) => {
     if (file && file.type.startsWith("image/")) {
       setImageFile(file);
@@ -52,12 +55,14 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     }
   };
 
+  // Catcher khi người dùng click vào ô input file ẩn
   const handleFileSelect = (e) => {
     if (e.target.files?.[0]) {
       handleImageSelect(e.target.files[0]);
     }
   };
 
+  // Sự kiện Kéo và Thả ảnh
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -76,6 +81,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     }
   };
 
+  // Gỡ ảnh hiện tại
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
@@ -84,6 +90,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     }
   };
 
+  // Tải ảnh lên Server (nếu có update) thông qua /upload/image để lấy URL mới trả về
   const uploadImage = async () => {
     if (!imageFile) return null;
     setUploadingImage(true);
@@ -102,13 +109,16 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     }
   };
 
+  // Update state mỗi khi giá trị các field đổi
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Hàm xác nhận Cập nhật thông tin Variant hiện tại
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setErrorMsg("");
 
     if (!formData.sku.trim()) {
