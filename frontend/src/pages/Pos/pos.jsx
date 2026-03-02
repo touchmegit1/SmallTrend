@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import TopBar from "./TopBar";
 import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
@@ -10,6 +10,7 @@ import posService from "../../services/posService";
 import api from "../../config/axiosConfig";
 
 export default function POS() {
+  const searchInputRef = useRef(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState(() => {
@@ -21,6 +22,7 @@ export default function POS() {
     return saved ? parseInt(saved) : 1;
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProductIndex, setSelectedProductIndex] = useState(-1);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -34,12 +36,76 @@ export default function POS() {
     loadProducts();
   }, []);
 
-  // F9 shortcut for payment
+  // Auto focus search input on mount
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
+
+  // Reset selected index when search term changes
+  useEffect(() => {
+    setSelectedProductIndex(-1);
+  }, [searchTerm]);
+
+  // Re-focus when switching orders or closing modals
+  useEffect(() => {
+    if (searchInputRef.current && !showPaymentModal && !showQRScanner && !showInvoice) {
+      searchInputRef.current.focus();
+    }
+  }, [activeOrderId, showPaymentModal, showQRScanner, showInvoice]);
+
+  // Keyboard navigation handler
+  const handleKeyDown = (e) => {
+    if (filteredProducts.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedProductIndex(prev => 
+        prev < filteredProducts.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedProductIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Enter' && selectedProductIndex >= 0) {
+      e.preventDefault();
+      addToCart(filteredProducts[selectedProductIndex]);
+      setSearchTerm('');
+      setSelectedProductIndex(-1);
+    } else if (e.key === '+' && activeOrder.cart.length > 0) {
+      e.preventDefault();
+      const lastItem = activeOrder.cart[activeOrder.cart.length - 1];
+      updateCart(activeOrder.cart.map((item, idx) => 
+        idx === activeOrder.cart.length - 1 ? { ...item, qty: item.qty + 1 } : item
+      ));
+    } else if (e.key === '-' && activeOrder.cart.length > 0) {
+      e.preventDefault();
+      const lastItem = activeOrder.cart[activeOrder.cart.length - 1];
+      if (lastItem.qty > 1) {
+        updateCart(activeOrder.cart.map((item, idx) => 
+          idx === activeOrder.cart.length - 1 ? { ...item, qty: item.qty - 1 } : item
+        ));
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const sortedOrders = [...orders].sort((a, b) => a.id - b.id);
+      const currentIndex = sortedOrders.findIndex(o => o.id === activeOrderId);
+      const nextIndex = e.shiftKey 
+        ? (currentIndex - 1 + sortedOrders.length) % sortedOrders.length
+        : (currentIndex + 1) % sortedOrders.length;
+      setActiveOrderId(sortedOrders[nextIndex].id);
+    }
+  };
+
+  // F9/F10 shortcut for payment
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (e.key === 'F9' && activeOrder.cart.length > 0 && !showPaymentModal) {
+      if ((e.key === 'F9' || e.key === 'F10') && activeOrder.cart.length > 0 && !showPaymentModal) {
         e.preventDefault();
         setShowPaymentModal(true);
+      } else if (e.key === 'F8') {
+        e.preventDefault();
+        addNewOrder();
       }
     };
     window.addEventListener('keydown', handleKeyPress);
@@ -120,6 +186,13 @@ export default function POS() {
       );
     }
     setOrders(updatedOrders);
+    
+    // Focus lại vào search input sau khi thêm sản phẩm
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 0);
     
     // Lưu ngay sau khi cập nhật
     setTimeout(() => {
@@ -359,6 +432,7 @@ export default function POS() {
     }}>
       <div style={{ padding: "10px 20px" }}>
         <TopBar
+          searchInputRef={searchInputRef}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           filteredProducts={filteredProducts}
@@ -370,6 +444,8 @@ export default function POS() {
           setShowQRScanner={setShowQRScanner}
           deleteOrder={deleteOrder}
           onPrintInvoice={handlePrintLastInvoice}
+          onKeyDown={handleKeyDown}
+          selectedProductIndex={selectedProductIndex}
         />
       </div>
 

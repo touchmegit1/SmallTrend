@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 
-export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice }) {
+export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice, onKeyDown, selectedProductIndex }) {
   const scrollContainerRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
@@ -28,15 +28,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && searchTerm) {
-      const product = filteredProducts[0];
-      if (product) {
-        addToCart(product);
-        setSearchTerm("");
-      }
-    }
-  };
+
 
   return (
     <div style={{
@@ -55,10 +47,11 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
       
       <div style={{ position: "relative", flex: 1, maxWidth: "350px" }}>
         <input
+          ref={searchInputRef}
           placeholder="Tìm kiếm sản phẩm theo tên hoặc mã..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={onKeyDown}
           style={{
             padding: "8px 12px",
             width: "100%",
@@ -85,7 +78,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
             overflowY: "auto",
             marginTop: "5px"
           }}>
-            {filteredProducts.map(product => (
+            {filteredProducts.map((product, index) => (
               <div
                 key={product.id}
                 onClick={() => {
@@ -99,10 +92,11 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
                   color: "#333",
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center"
+                  alignItems: "center",
+                  background: selectedProductIndex === index ? "#e3f2fd" : "white"
                 }}
-                onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
-                onMouseLeave={(e) => e.target.style.background = "white"}
+                onMouseEnter={(e) => e.currentTarget.style.background = selectedProductIndex === index ? "#e3f2fd" : "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = selectedProductIndex === index ? "#e3f2fd" : "white"}
               >
                 <div>
                   <div style={{ fontWeight: "600", marginBottom: "2px", fontSize: "13px" }}>

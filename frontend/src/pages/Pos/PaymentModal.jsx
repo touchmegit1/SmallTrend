@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import CustomerSearch from "./CustomerSearch";
 import api from "../../config/axiosConfig";
 
@@ -10,6 +10,16 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [cashAmount, setCashAmount] = useState("");
+  const [focusedField, setFocusedField] = useState("customerSearch");
+  const [suggestedIndex, setSuggestedIndex] = useState(-1);
+  
+  const customerSearchRef = useRef(null);
+  const voucherInputRef = useRef(null);
+  const voucherButtonRef = useRef(null);
+  const notesRef = useRef(null);
+  const cashInputRef = useRef(null);
+  const paymentButtonRef = useRef(null);
+  const suggestedAmountsRef = useRef([]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const currentLoyaltyPoints = selectedCustomer?.loyaltyPoints || 0;
@@ -17,6 +27,125 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
   const totalDiscount = pointsDiscount + discount;
   const finalTotal = subtotal - totalDiscount;
   const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
+
+  useEffect(() => {
+    if (focusedField === "customerSearch" && customerSearchRef.current) {
+      customerSearchRef.current.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // ArrowDown navigation
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (focusedField === "customerSearch") {
+          setFocusedField("voucher");
+          voucherInputRef.current?.focus();
+        } else if (focusedField === "voucher") {
+          setFocusedField("notes");
+          notesRef.current?.focus();
+        } else if (focusedField === "notes") {
+          setFocusedField("paymentMethod");
+        } else if (focusedField === "paymentMethod") {
+          if (paymentMethod === "cash") {
+            setFocusedField("cashAmount");
+            cashInputRef.current?.focus();
+          } else if (paymentMethod === "transfer") {
+            setFocusedField("paymentButton");
+            paymentButtonRef.current?.focus();
+          }
+        } else if (focusedField === "cashAmount") {
+          if (getSuggestedAmounts().length > 0) {
+            setFocusedField("suggestedAmounts");
+            setSuggestedIndex(0);
+          } else {
+            setFocusedField("paymentButton");
+            paymentButtonRef.current?.focus();
+          }
+        } else if (focusedField === "suggestedAmounts") {
+          setFocusedField("paymentButton");
+          paymentButtonRef.current?.focus();
+          setSuggestedIndex(-1);
+        }
+      }
+      // ArrowUp navigation
+      else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (focusedField === "voucher") {
+          setFocusedField("customerSearch");
+          customerSearchRef.current?.focus();
+        } else if (focusedField === "notes") {
+          setFocusedField("voucher");
+          voucherInputRef.current?.focus();
+        } else if (focusedField === "paymentMethod") {
+          setFocusedField("notes");
+          notesRef.current?.focus();
+        } else if (focusedField === "cashAmount") {
+          setFocusedField("paymentMethod");
+        } else if (focusedField === "suggestedAmounts") {
+          setFocusedField("cashAmount");
+          cashInputRef.current?.focus();
+          setSuggestedIndex(-1);
+        } else if (focusedField === "paymentButton") {
+          if (paymentMethod === "cash") {
+            if (getSuggestedAmounts().length > 0) {
+              setFocusedField("suggestedAmounts");
+              setSuggestedIndex(0);
+            } else {
+              setFocusedField("cashAmount");
+              cashInputRef.current?.focus();
+            }
+          } else {
+            setFocusedField("paymentMethod");
+          }
+        }
+      }
+      // ArrowLeft/Right for payment method and suggested amounts
+      else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (focusedField === "paymentMethod") {
+          setPaymentMethod("cash");
+        } else if (focusedField === "suggestedAmounts" && suggestedIndex > 0) {
+          setSuggestedIndex(suggestedIndex - 1);
+        } else if (focusedField === "cashAmount") {
+          setFocusedField("paymentMethod");
+        } else if (focusedField === "paymentButton") {
+          setFocusedField("paymentMethod");
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (focusedField === "paymentMethod") {
+          setPaymentMethod("transfer");
+        } else if (focusedField === "notes") {
+          setFocusedField("paymentMethod");
+        } else if (focusedField === "suggestedAmounts" && suggestedIndex < getSuggestedAmounts().length - 1) {
+          setSuggestedIndex(suggestedIndex + 1);
+        } else if (focusedField === "cashAmount") {
+          setFocusedField("paymentMethod");
+        }
+      }
+      // Enter key actions
+      else if (e.key === 'Enter' || e.key === 'F9' || e.key === 'F10') {
+        if (focusedField === "voucher") {
+          e.preventDefault();
+          voucherButtonRef.current?.click();
+        } else if (focusedField === "suggestedAmounts" && suggestedIndex >= 0) {
+          e.preventDefault();
+          const amounts = getSuggestedAmounts();
+          setCashAmount(amounts[suggestedIndex].toString());
+          setFocusedField("paymentButton");
+          paymentButtonRef.current?.focus();
+          setSuggestedIndex(-1);
+        } else if (focusedField === "paymentButton" || e.key === 'F9' || e.key === 'F10') {
+          e.preventDefault();
+          handlePayment();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedField, paymentMethod, cashAmount, finalTotal, suggestedIndex]);
 
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
@@ -184,8 +313,13 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
 
             {/* Tìm kiếm khách hàng */}
             <CustomerSearch
+              ref={customerSearchRef}
               onSelectCustomer={setSelectedCustomer}
               cart={cart}
+              onNavigateDown={() => {
+                setFocusedField("voucher");
+                voucherInputRef.current?.focus();
+              }}
             />
 
             {/* Thông tin khách hàng */}
@@ -222,19 +356,22 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
               </label>
               <div style={{ display: "flex", gap: "8px" }}>
                 <input
+                  ref={voucherInputRef}
                   type="text"
                   placeholder="Nhập mã voucher"
                   value={voucher}
                   onChange={(e) => setVoucher(e.target.value)}
+                  onFocus={() => setFocusedField("voucher")}
                   style={{
                     flex: 1,
                     padding: "8px",
-                    border: "1px solid #ddd",
+                    border: focusedField === "voucher" ? "2px solid #007bff" : "1px solid #ddd",
                     borderRadius: "4px",
                     fontSize: "13px"
                   }}
                 />
                 <button
+                  ref={voucherButtonRef}
                   onClick={() => {
                     if (voucher === "GIAM10") setDiscount(subtotal * 0.1);
                     else alert("Mã không hợp lệ");
@@ -280,14 +417,16 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 Ghi chú:
               </label>
               <textarea
+                ref={notesRef}
                 placeholder="Thêm ghi chú..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                onFocus={() => setFocusedField("notes")}
                 rows={2}
                 style={{
                   width: "100%",
                   padding: "8px",
-                  border: "1px solid #ddd",
+                  border: focusedField === "notes" ? "2px solid #007bff" : "1px solid #ddd",
                   borderRadius: "4px",
                   fontSize: "13px",
                   resize: "none"
@@ -313,6 +452,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <button
                   onClick={() => setPaymentMethod("cash")}
+                  onFocus={() => setFocusedField("paymentMethod")}
                   style={{
                     padding: "15px",
                     background: paymentMethod === "cash" ? "#007bff" : "white",
@@ -321,13 +461,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontSize: "13px",
-                    fontWeight: "500"
+                    fontWeight: "500",
+                    outline: focusedField === "paymentMethod" && paymentMethod === "cash" ? "3px solid #80bdff" : "none"
                   }}
                 >
                    Tiền mặt
                 </button>
                 <button
                   onClick={() => setPaymentMethod("transfer")}
+                  onFocus={() => setFocusedField("paymentMethod")}
                   style={{
                     padding: "15px",
                     background: paymentMethod === "transfer" ? "#007bff" : "white",
@@ -336,7 +478,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontSize: "13px",
-                    fontWeight: "500"
+                    fontWeight: "500",
+                    outline: focusedField === "paymentMethod" && paymentMethod === "transfer" ? "3px solid #80bdff" : "none"
                   }}
                 >
                    Chuyển khoản
@@ -356,10 +499,12 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                   Tiền khách đưa:
                 </label>
                 <input
+                  ref={cashInputRef}
                   type="number"
                   placeholder="Nhập số tiền"
                   value={cashAmount}
                   onChange={(e) => setCashAmount(e.target.value)}
+                  onFocus={() => setFocusedField("cashAmount")}
                   style={{
                     width: "100%",
                     padding: "12px",
@@ -375,25 +520,29 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                   <div style={{ marginBottom: "10px" }}>
                     <div style={{ fontSize: "12px", marginBottom: "6px", color: "#666" }}>Gợi ý:</div>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      {getSuggestedAmounts().map(amount => (
-                        <button
-                          key={amount}
-                          onClick={() => setCashAmount(amount.toString())}
-                          style={{
-                            flex: 1,
-                            padding: "8px",
-                            background: "#007bff",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            fontSize: "12px",
-                            fontWeight: "500"
-                          }}
-                        >
-                          {amount.toLocaleString()}đ
-                        </button>
-                      ))}
+                      {getSuggestedAmounts().map((amount, index) => {
+                        suggestedAmountsRef.current[index] = amount;
+                        return (
+                          <button
+                            key={amount}
+                            onClick={() => setCashAmount(amount.toString())}
+                            style={{
+                              flex: 1,
+                              padding: "8px",
+                              background: focusedField === "suggestedAmounts" && suggestedIndex === index ? "#0056b3" : "#007bff",
+                              color: "white",
+                              border: focusedField === "suggestedAmounts" && suggestedIndex === index ? "2px solid #fff" : "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "12px",
+                              fontWeight: "500",
+                              outline: focusedField === "suggestedAmounts" && suggestedIndex === index ? "3px solid #80bdff" : "none"
+                            }}
+                          >
+                            {amount.toLocaleString()}đ
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -419,7 +568,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
 
             {/* Nút thanh toán */}
             <button
+              ref={paymentButtonRef}
               onClick={handlePayment}
+              onFocus={() => setFocusedField("paymentButton")}
               disabled={!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal))}
               style={{
                 width: "100%",

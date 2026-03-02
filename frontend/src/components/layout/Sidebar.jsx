@@ -29,7 +29,7 @@ const Sidebar = () => {
             children: [
                 { label: 'Giao diện bán hàng', path: '/pos' },
                 { label: 'Lịch sử đơn hàng', path: '/pos/history' },
-                { label: 'Đơn hàng treo', path: '/pos/suspended' },
+                { label: 'Báo cáo doanh thu', path: '/pos/suspended' },
                 { label: 'Giao ca', path: '/pos/shift-handover' },
             ]
         },
