@@ -20,21 +20,23 @@ export const getPurchaseOrders = async () => {
     const response = await fetch(`${JSON_API}/purchase_orders`, {
       headers: getAuthHeaders(),
     });
-    
+
     if (response.status === 401) {
       throw new Error("Vui lòng đăng nhập lại");
     }
-    
+
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Lỗi ${response.status}: Không thể tải danh sách phiếu nhập`);
+      throw new Error(
+        `Lỗi ${response.status}: Không thể tải danh sách phiếu nhập`,
+      );
     }
-    
+
     const data = await response.json();
-    
+
     return data.map((order) => ({
       ...order,
-      po_number: order.poNumber || order.po_number,
+      order_number: order.orderNumber || order.order_number,
       supplier_id: order.supplierId || order.supplier_id,
       supplier_name: order.supplierName || order.supplier_name,
       location_id: order.locationId || order.location_id,
@@ -61,7 +63,7 @@ export const getPurchaseOrderById = async (id) => {
   const order = await response.json();
   return {
     ...order,
-    po_number: order.poNumber || order.po_number,
+    order_number: order.orderNumber || order.order_number,
     supplier_id: order.supplierId || order.supplier_id,
     supplier_name: order.supplierName || order.supplier_name,
     location_id: order.locationId || order.location_id,
@@ -87,7 +89,7 @@ export const createPurchaseOrder = async (orderData) => {
   const response = await fetch(`${JSON_API}/purchase_orders`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({...payload, status: "DRAFT"}),
+    body: JSON.stringify({ ...payload, status: "DRAFT" }),
   });
   if (!response.ok) throw new Error("Failed to save draft");
   return response.json();
@@ -99,7 +101,7 @@ export const confirmPurchaseOrder = async (orderData) => {
   const response = await fetch(`${JSON_API}/purchase_orders`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({...payload, status: "CONFIRMED"}),
+    body: JSON.stringify({ ...payload, status: "CONFIRMED" }),
   });
   if (!response.ok) throw new Error("Failed to confirm order");
   return response.json();
@@ -142,7 +144,7 @@ export const updatePurchaseOrder = async (id, orderData) => {
 // ─── Helper: map frontend order shape to backend request ──
 function mapOrderToBackend(orderData) {
   return {
-    poNumber: orderData.po_number || orderData.poNumber,
+    orderNumber: orderData.order_number || orderData.orderNumber,
     supplierId: orderData.supplier_id || orderData.supplierId,
     supplierName: orderData.supplier_name || orderData.supplierName,
     locationId: orderData.location_id || orderData.locationId,
@@ -154,7 +156,8 @@ function mapOrderToBackend(orderData) {
     subtotal: orderData.subtotal || 0,
     taxAmount: orderData.tax_amount || orderData.taxAmount || 0,
     totalAmount: orderData.total_amount || orderData.totalAmount || 0,
-    remainingAmount: orderData.remaining_amount || orderData.remainingAmount || 0,
+    remainingAmount:
+      orderData.remaining_amount || orderData.remainingAmount || 0,
     notes: orderData.notes || "",
     createdBy: orderData.created_by || orderData.createdBy || 1,
     items: (orderData.items || []).map((item) => ({
@@ -189,7 +192,9 @@ export const getPurchaseOrderItems = async () => {
 export const createPurchaseOrderItem = async (itemData) => {
   // This is now handled by the order creation endpoint
   // Kept for backward compatibility
-  console.warn("createPurchaseOrderItem is deprecated. Items are now included in order creation.");
+  console.warn(
+    "createPurchaseOrderItem is deprecated. Items are now included in order creation.",
+  );
   return itemData;
 };
 
@@ -368,7 +373,9 @@ export const getProductBatches = async () => {
 
 export const createProductBatch = async (batchData) => {
   // Now handled by the confirm order endpoint
-  console.warn("createProductBatch is deprecated. Batches are now created during order confirmation.");
+  console.warn(
+    "createProductBatch is deprecated. Batches are now created during order confirmation.",
+  );
   return batchData;
 };
 
@@ -439,7 +446,9 @@ export const getInventoryStock = async () => {
 
 // Update product stock (deprecated - now handled by confirm)
 export const updateProductStock = async (productId, newQuantity) => {
-  console.warn("updateProductStock is deprecated. Stock is now updated during order confirmation.");
+  console.warn(
+    "updateProductStock is deprecated. Stock is now updated during order confirmation.",
+  );
   return { id: productId, stock_quantity: newQuantity };
 };
 
@@ -459,7 +468,8 @@ export const getInventoryCounts = async () => {
     location_name: ic.locationName || ic.location_name,
     total_shortage_value: ic.totalShortageValue || ic.total_shortage_value,
     total_overage_value: ic.totalOverageValue || ic.total_overage_value,
-    total_difference_value: ic.totalDifferenceValue || ic.total_difference_value,
+    total_difference_value:
+      ic.totalDifferenceValue || ic.total_difference_value,
     created_by: ic.createdBy || ic.created_by,
     confirmed_by: ic.confirmedBy || ic.confirmed_by,
     created_at: ic.createdAt || ic.created_at,
@@ -479,7 +489,8 @@ export const getInventoryCountById = async (id) => {
     location_name: ic.locationName || ic.location_name,
     total_shortage_value: ic.totalShortageValue || ic.total_shortage_value,
     total_overage_value: ic.totalOverageValue || ic.total_overage_value,
-    total_difference_value: ic.totalDifferenceValue || ic.total_difference_value,
+    total_difference_value:
+      ic.totalDifferenceValue || ic.total_difference_value,
     created_by: ic.createdBy || ic.created_by,
     confirmed_by: ic.confirmedBy || ic.confirmed_by,
     created_at: ic.createdAt || ic.created_at,
@@ -507,7 +518,7 @@ export const getInventoryCountNextCode = async () => {
 function generateICCode(existingCounts = []) {
   const prefix = "IC-";
   let maxNum = 0;
-  
+
   for (const count of existingCounts) {
     const code = count.code || "";
     if (code.startsWith(prefix)) {
@@ -515,7 +526,7 @@ function generateICCode(existingCounts = []) {
       if (!isNaN(num) && num > maxNum) maxNum = num;
     }
   }
-  
+
   return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
 }
 
@@ -524,7 +535,7 @@ export const saveInventoryCountDraft = async (request) => {
   const response = await fetch(`${JSON_API}/inventory_counts`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({...body, status: "DRAFT"}),
+    body: JSON.stringify({ ...body, status: "DRAFT" }),
   });
   if (!response.ok) throw new Error("Failed to save draft");
   return response.json();
@@ -546,7 +557,7 @@ export const confirmInventoryCount = async (id, request) => {
   const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
     method: "PATCH",
     headers: getAuthHeaders(),
-    body: JSON.stringify({...body, status: "CONFIRMED"}),
+    body: JSON.stringify({ ...body, status: "CONFIRMED" }),
   });
   if (!response.ok) throw new Error("Failed to confirm inventory count");
   return response.json();
@@ -557,9 +568,10 @@ export const createAndConfirmInventoryCount = async (request) => {
   const response = await fetch(`${JSON_API}/inventory_counts`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({...body, status: "CONFIRMED"}),
+    body: JSON.stringify({ ...body, status: "CONFIRMED" }),
   });
-  if (!response.ok) throw new Error("Failed to create and confirm inventory count");
+  if (!response.ok)
+    throw new Error("Failed to create and confirm inventory count");
   return response.json();
 };
 
@@ -584,9 +596,9 @@ export const deleteInventoryCount = async (id) => {
 
 // Map frontend snake_case to backend camelCase
 function mapCountRequestToBackend(request) {
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userId = currentUser.id || 1;
-  
+
   return {
     code: request.code,
     locationId: request.location_id || request.locationId,
@@ -595,7 +607,10 @@ function mapCountRequestToBackend(request) {
     createdBy: userId,
     createdAt: new Date().toISOString(),
     items: (request.items || [])
-      .filter((item) => item.actual_quantity !== null && item.actual_quantity !== undefined)
+      .filter(
+        (item) =>
+          item.actual_quantity !== null && item.actual_quantity !== undefined,
+      )
       .map((item) => ({
         productId: item.product_id || item.productId,
         systemQuantity: item.system_quantity ?? item.systemQuantity,

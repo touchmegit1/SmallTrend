@@ -3,6 +3,7 @@ package com.smalltrend.service.inventory;
 import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
+import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +65,7 @@ public class PurchaseOrderService {
         List<PurchaseOrder> allOrders = purchaseOrderRepository.findAll();
         int maxNum = 0;
         for (PurchaseOrder order : allOrders) {
-            String code = order.getPoNumber();
+            String code = order.getOrderNumber();
             if (code != null && code.startsWith(prefix)) {
                 try {
                     int num = Integer.parseInt(code.substring(prefix.length()));
@@ -87,8 +88,8 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.DRAFT);
         order.setOrderDate(LocalDate.now());
 
-        if (order.getPoNumber() == null || order.getPoNumber().isBlank()) {
-            order.setPoNumber(generateNextPOCode());
+        if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
+            order.setOrderNumber(generateNextPOCode());
         }
 
         // Recalculate financials server-side
@@ -111,12 +112,11 @@ public class PurchaseOrderService {
         validateConfirm(request);
 
         PurchaseOrder order = buildOrderFromRequest(request);
-        order.setStatus(PurchaseOrderStatus.CONFIRMED);
+        order.setStatus(PurchaseOrderStatus.ORDERED);
         order.setOrderDate(LocalDate.now());
-        order.setConfirmedAt(LocalDateTime.now());
 
-        if (order.getPoNumber() == null || order.getPoNumber().isBlank()) {
-            order.setPoNumber(generateNextPOCode());
+        if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
+            order.setOrderNumber(generateNextPOCode());
         }
 
         List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems()
@@ -131,7 +131,7 @@ public class PurchaseOrderService {
             updateStock(savedOrder, itemRequests);
         }
 
-        log.info("✅ Purchase Order {} CONFIRMED. Stock updated.", savedOrder.getPoNumber());
+        log.info("✅ Purchase Order {} CONFIRMED. Stock updated.", savedOrder.getOrderNumber());
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
     }
 
@@ -153,8 +153,7 @@ public class PurchaseOrderService {
             throw new RuntimeException("Phiếu nhập phải có ít nhất 1 sản phẩm.");
         }
 
-        order.setStatus(PurchaseOrderStatus.CONFIRMED);
-        order.setConfirmedAt(LocalDateTime.now());
+        order.setStatus(PurchaseOrderStatus.ORDERED);
         purchaseOrderRepository.save(order);
 
         // ── Stock Update from existing items ──
@@ -164,13 +163,14 @@ public class PurchaseOrderService {
                 .productId(item.getVariant() != null && item.getVariant().getProduct() != null
                         ? item.getVariant().getProduct().getId().intValue() : null)
                 .quantity(item.getQuantity())
-                .unitPrice(item.getUnitPrice())
+                .unitCost(item.getUnitCost())
+                .totalCost(item.getTotalCost())
                 .build())
                 .collect(Collectors.toList());
 
         updateStock(order, itemRequests);
 
-        log.info("✅ Existing Draft {} CONFIRMED. Stock updated.", order.getPoNumber());
+        log.info("✅ Existing Draft {} CONFIRMED. Stock updated.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -187,7 +187,7 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.CANCELLED);
         purchaseOrderRepository.save(order);
 
-        log.info("❌ Purchase Order {} CANCELLED.", order.getPoNumber());
+        log.info("❌ Purchase Order {} CANCELLED.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -229,15 +229,12 @@ public class PurchaseOrderService {
     // ─── Build Order from Request ────────────────────────────
     private PurchaseOrder buildOrderFromRequest(PurchaseOrderRequest request) {
         PurchaseOrder order = PurchaseOrder.builder()
-                .poNumber(request.getPoNumber())
-                .discountAmount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
-                .taxPercent(request.getTaxPercent() != null ? request.getTaxPercent() : BigDecimal.ZERO)
-                .shippingFee(request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO)
-                .paidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO)
+                .orderNumber(request.getOrderNumber())
+                .discountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO)
                 .subtotal(request.getSubtotal() != null ? request.getSubtotal() : BigDecimal.ZERO)
                 .taxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO)
                 .totalAmount(request.getTotalAmount() != null ? request.getTotalAmount() : BigDecimal.ZERO)
-                .remainingAmount(request.getRemainingAmount() != null ? request.getRemainingAmount() : BigDecimal.ZERO)
+                .expectedDeliveryDate(request.getExpectedDeliveryDate())
                 .notes(request.getNotes())
                 .build();
 
@@ -254,10 +251,9 @@ public class PurchaseOrderService {
     private void recalculate(PurchaseOrder order, List<PurchaseOrderItemRequest> items) {
         BigDecimal subtotal = BigDecimal.ZERO;
         for (PurchaseOrderItemRequest item : items) {
-            BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
             int qty = item.getQuantity() != null ? item.getQuantity() : 0;
-            BigDecimal itemDiscount = item.getDiscount() != null ? item.getDiscount() : BigDecimal.ZERO;
-            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(qty)).subtract(itemDiscount);
+            BigDecimal lineTotal = unitCost.multiply(BigDecimal.valueOf(qty));
             if (lineTotal.compareTo(BigDecimal.ZERO) < 0) {
                 lineTotal = BigDecimal.ZERO;
             }
@@ -271,34 +267,25 @@ public class PurchaseOrderService {
             afterDiscount = BigDecimal.ZERO;
         }
 
-        BigDecimal taxPercent = order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO;
-        BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100), 0,
-                RoundingMode.HALF_UP);
+        BigDecimal taxAmount = order.getTaxAmount() != null ? order.getTaxAmount() : BigDecimal.ZERO;
         order.setTaxAmount(taxAmount);
 
-        BigDecimal shippingFee = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
-        BigDecimal total = afterDiscount.add(taxAmount).add(shippingFee);
+        BigDecimal total = afterDiscount.add(taxAmount);
         order.setTotalAmount(total);
-
-        BigDecimal paidAmount = order.getPaidAmount() != null ? order.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal remaining = total.subtract(paidAmount);
-        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
-            remaining = BigDecimal.ZERO;
-        }
-        order.setRemainingAmount(remaining);
     }
 
     // ─── Save Order Items ────────────────────────────────────
     private void saveOrderItems(PurchaseOrder savedOrder, List<PurchaseOrderItemRequest> itemRequests) {
         for (PurchaseOrderItemRequest itemReq : itemRequests) {
-            BigDecimal unitPrice = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal unitCost = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
             int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 0;
-            BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(qty));
+            BigDecimal totalCost = unitCost.multiply(BigDecimal.valueOf(qty));
 
             PurchaseOrderItem item = PurchaseOrderItem.builder()
                     .purchaseOrder(savedOrder)
                     .quantity(qty)
-                    .unitPrice(unitPrice)
+                    .unitCost(unitCost)
+                    .totalCost(totalCost)
                     .build();
 
             // Resolve product variant
@@ -341,24 +328,9 @@ public class PurchaseOrderService {
                 continue;
             }
 
-            BigDecimal costPrice = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
 
-            // 2. Parse expiry date (if provided)
-            LocalDate expiryDate = null;
-            if (itemReq.getExpiryDate() != null && !itemReq.getExpiryDate().isBlank()) {
-                try {
-                    expiryDate = LocalDate.parse(itemReq.getExpiryDate());
-                } catch (Exception e) {
-                    try {
-                        expiryDate = LocalDate.parse(itemReq.getExpiryDate(), DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-            // Default expiry: 1 year from now
-            if (expiryDate == null) {
-                expiryDate = LocalDate.now().plusYears(1);
-            }
+            LocalDate expiryDate = LocalDate.now().plusYears(1);
 
             // 3. Create ProductBatch
             String batchNumber = generateBatchNumber(variant);
@@ -389,7 +361,7 @@ public class PurchaseOrderService {
                     .quantity(qty)
                     .referenceType("purchase_order")
                     .referenceId(order.getId() != null ? order.getId().longValue() : null)
-                    .notes("Nhập hàng từ PO " + order.getPoNumber())
+                    .notes("Nhập hàng từ PO " + order.getOrderNumber())
                     .build();
             stockMovementRepository.save(movement);
 
@@ -444,21 +416,16 @@ public class PurchaseOrderService {
     private PurchaseOrderResponse toListResponse(PurchaseOrder order) {
         return PurchaseOrderResponse.builder()
                 .id(order.getId() != null ? order.getId().intValue() : null)
-                .poNumber(order.getPoNumber())
+                .orderNumber(order.getOrderNumber())
                 .supplierId(order.getSupplier() != null ? order.getSupplier().getId() : null)
                 .supplierName(order.getSupplier() != null ? order.getSupplier().getName() : "")
                 .status(order.getStatus() != null ? order.getStatus().name() : "DRAFT")
                 .orderDate(order.getOrderDate())
                 .createdAt(order.getCreatedAt())
-                .confirmedAt(order.getConfirmedAt())
                 .subtotal(order.getSubtotal())
-                .discount(order.getDiscountAmount())
-                .taxPercent(order.getTaxPercent())
+                .discountAmount(order.getDiscountAmount())
                 .taxAmount(order.getTaxAmount())
-                .shippingFee(order.getShippingFee())
-                .paidAmount(order.getPaidAmount())
                 .totalAmount(order.getTotalAmount())
-                .remainingAmount(order.getRemainingAmount())
                 .notes(order.getNotes())
                 .build();
     }
@@ -478,9 +445,8 @@ public class PurchaseOrderService {
                             ? item.getVariant().getProduct().getName() : "")
                     .imageUrl(item.getVariant() != null ? item.getVariant().getImageUrl() : null)
                     .quantity(item.getQuantity())
-                    .unitPrice(item.getUnitPrice())
-                    .discount(BigDecimal.ZERO)
-                    .total(item.getUnitPrice() != null ? item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO)
+                    .unitCost(item.getUnitCost())
+                    .totalCost(item.getTotalCost() != null ? item.getTotalCost() : (item.getUnitCost() != null ? item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO))
                     .build())
                     .collect(Collectors.toList());
             response.setItems(itemResponses);
