@@ -45,7 +45,8 @@ export default function ReportforCashier() {
   transactions.forEach(t => {
     if (t.items) {
       t.items.forEach(item => {
-        if (!productStats[item.name]) productStats[item.name] = { revenue: 0, quantity: 0, price: item.price, code: item.code || item.barcode || 'N/A' };
+        const productCode = item.sku || item.barcode || item.code || 'N/A';
+        if (!productStats[item.name]) productStats[item.name] = { revenue: 0, quantity: 0, price: item.price, code: productCode };
         productStats[item.name].revenue += item.price * item.quantity;
         productStats[item.name].quantity += item.quantity;
       });
@@ -127,10 +128,10 @@ export default function ReportforCashier() {
               total: 0
             };
           }
-          productMap[item.name].quantity += item.quantity;
-          productMap[item.name].total += item.price * item.quantity;
-          totalQuantity += item.quantity;
-          grandTotal += item.price * item.quantity;
+          productMap[item.name].quantity += item.quantity || item.qty || 1;
+          productMap[item.name].total += item.price * (item.quantity || item.qty || 1);
+          totalQuantity += item.quantity || item.qty || 1;
+          grandTotal += item.price * (item.quantity || item.qty || 1);
         });
       }
     });

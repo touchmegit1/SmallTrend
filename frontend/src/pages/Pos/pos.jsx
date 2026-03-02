@@ -324,26 +324,20 @@ export default function POS() {
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const filteredTransactions = transactions.filter(t => t.status !== "Chờ thanh toán");
     
-    // Xử lý điểm khách hàng
-    if (orderData.customer) {
+    // Cập nhật điểm khách hàng trong localStorage (đã được cập nhật từ PaymentModal)
+    if (orderData.customer && orderData.customer.loyaltyPoints !== undefined) {
       const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-      const earnedPoints = Math.floor(orderData.total / 10000);
-      const pointsUsed = orderData.pointsDiscount / 100;
-      
       const updatedCustomers = customers.map(c => 
-        c.phone === orderData.customer.phone 
+        c.id === orderData.customer.id
           ? { 
               ...c, 
-              points: (c.points || 0) - pointsUsed + earnedPoints,
-              existingPoints: (c.existingPoints || 0) - pointsUsed + earnedPoints
+              loyaltyPoints: orderData.customer.loyaltyPoints,
+              points: orderData.customer.loyaltyPoints,
+              existingPoints: orderData.customer.loyaltyPoints
             }
           : c
       );
       localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-      
-      // Cập nhật lại customer object
-      orderData.customer.points = (orderData.customer.points || 0) - pointsUsed + earnedPoints;
-      orderData.customer.existingPoints = (orderData.customer.existingPoints || 0) - pointsUsed + earnedPoints;
     }
 
     const transaction = {

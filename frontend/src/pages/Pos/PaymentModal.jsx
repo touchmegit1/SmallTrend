@@ -188,7 +188,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
         };
       } catch (error) {
         console.error('Error updating customer loyalty points:', error);
-        alert('Không thể cập nhật điểm khách hàng');
+        // Không hiện alert, chỉ log lỗi và tiếp tục thanh toán
       }
     }
 
