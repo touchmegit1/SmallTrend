@@ -2,7 +2,9 @@ package com.smalltrend.service.Module1;
 
 import com.smalltrend.repository.CouponRepository;
 import com.smalltrend.repository.ProductVariantRepository;
+import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.entity.Coupon;
+import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.dto.Module1.ProductVariantRespone;
 import org.springframework.stereotype.Service;
@@ -17,28 +19,29 @@ public class ProductVariantService {
 
     private final ProductVariantRepository productVariantRepository;
     private final CouponRepository couponRepository;
+    private final ProductBatchRepository productBatchRepository;
 
     public List<ProductVariantRespone> getAllProductVariants() {
         return productVariantRepository.findAll().stream()
-            .map(this::mapToResponse)
-            .toList();
+                .map(this::mapToResponse)
+                .toList();
     }
 
     /** Chỉ lấy variant đang có coupon áp dụng (dùng cho Event Promotion) */
     public List<ProductVariantRespone> getVariantsWithCoupon() {
         return productVariantRepository.findAll().stream()
-            .filter(v -> v.getCoupon() != null)
-            .map(this::mapToResponse)
-            .toList();
+                .filter(v -> v.getCoupon() != null)
+                .map(this::mapToResponse)
+                .toList();
     }
 
     /** Áp dụng coupon cho một variant theo SKU */
     public ProductVariantRespone applyCoupon(String sku, Integer couponId) {
         ProductVariant variant = productVariantRepository.findBySku(sku)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + sku));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + sku));
 
         Coupon coupon = couponRepository.findById(couponId)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy coupon ID: " + couponId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy coupon ID: " + couponId));
 
         variant.setCoupon(coupon);
         return mapToResponse(productVariantRepository.save(variant));
@@ -47,7 +50,7 @@ public class ProductVariantService {
     /** Xóa coupon khỏi một variant theo SKU */
     public ProductVariantRespone removeCoupon(String sku) {
         ProductVariant variant = productVariantRepository.findBySku(sku)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + sku));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + sku));
 
         variant.setCoupon(null);
         return mapToResponse(productVariantRepository.save(variant));
@@ -62,12 +65,25 @@ public class ProductVariantService {
         r.setSellPrice(variant.getSellPrice());
         r.setActive(variant.isActive());
 
+        // Cost info (from latest batch)
+        List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());
+        if (batches != null && !batches.isEmpty()) {
+            ProductBatch latestBatch = batches.get(batches.size() - 1);
+            r.setCostPrice(latestBatch.getCostPrice());
+        }
+
         // Ảnh: ưu tiên ảnh variant, fallback ảnh product
         String img = variant.getImageUrl();
         if ((img == null || img.isBlank()) && variant.getProduct() != null) {
             img = variant.getProduct().getImageUrl();
         }
         r.setImageUrl(img);
+
+        // Tax info
+        if (variant.getProduct() != null && variant.getProduct().getTaxRate() != null) {
+            r.setTaxRate(variant.getProduct().getTaxRate().getRate());
+            r.setTaxName(variant.getProduct().getTaxRate().getName());
+        }
 
         // Coupon info
         Coupon c = variant.getCoupon();

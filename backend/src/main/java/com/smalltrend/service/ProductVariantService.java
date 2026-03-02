@@ -169,6 +169,12 @@ public class ProductVariantService {
         response.setSellPrice(variant.getSellPrice());
         response.setIsActive(variant.isActive());
 
+        // Tax Info
+        if (variant.getProduct() != null && variant.getProduct().getTaxRate() != null) {
+            response.setTaxRate(variant.getProduct().getTaxRate().getRate());
+            response.setTaxName(variant.getProduct().getTaxRate().getName());
+        }
+
         // Get stock quantity
         Integer stockQty = inventoryStockRepository.findByVariantId(variant.getId())
                 .stream()

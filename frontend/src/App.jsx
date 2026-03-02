@@ -31,6 +31,7 @@ import AddNewProductVariant from "./pages/Products/ProductManager/AddNewProductV
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
 import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
+import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import { useAuth } from "./context/AuthContext";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
 import ShiftHandover from "./pages/Pos/ShiftHandover";
@@ -166,7 +167,7 @@ function App() {
         />
         <Route
           path="products/price"
-          element={<div className="p-4">{ }</div>}
+          element={<PriceSetting />}
         />
         <Route
           path="products/combo"

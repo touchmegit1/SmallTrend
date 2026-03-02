@@ -21,4 +21,6 @@ public class ProductVariantRespone {
     private String imageUrl;
     private Map<String, String> attributes;
     private Boolean isActive;
+    private BigDecimal taxRate;
+    private String taxName;
 }
