@@ -8,8 +8,6 @@ import org.springframework.stereotype.Repository;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,5 +26,16 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
 
     // Tìm stock của variant tại một location cụ thể (dùng cho DisposalVoucherService)
     Optional<InventoryStock> findByVariantAndLocation(ProductVariant variant, Location location);
-}
 
+    @Query(value = """
+        SELECT p.name, pv.sku, SUM(i.quantity)
+        FROM inventory_stock i
+        JOIN product_variants pv ON i.variant_id = pv.id
+        JOIN products p ON pv.product_id = p.id
+        GROUP BY pv.id, p.name, pv.sku
+        HAVING SUM(i.quantity) <= :threshold
+        ORDER BY SUM(i.quantity) ASC
+        LIMIT 10
+        """, nativeQuery = true)
+    List<Object[]> findLowStockSummary(@Param("threshold") int threshold);
+}
