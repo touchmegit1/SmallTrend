@@ -10,7 +10,8 @@
 
 export const PO_STATUS = {
   DRAFT: "DRAFT",
-  CONFIRMED: "ORDERED",
+  CONFIRMED: "CONFIRMED",
+  RECEIVED: "RECEIVED",
   CANCELLED: "CANCELLED",
 };
 
@@ -23,6 +24,13 @@ export const PO_STATUS_CONFIG = {
     dot: "bg-amber-500",
   },
   [PO_STATUS.CONFIRMED]: {
+    label: "Đã xác nhận",
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    border: "border-blue-200",
+    dot: "bg-blue-500",
+  },
+  [PO_STATUS.RECEIVED]: {
     label: "Đã nhập hàng",
     bg: "bg-emerald-50",
     text: "text-emerald-700",

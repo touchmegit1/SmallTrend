@@ -390,11 +390,11 @@ export const deleteLocation = async (id) => {
 };
 
 // ═══════════════════════════════════════════════════════════
-//  Inventory Count (JSON Server – TODO: migrate to Spring Boot)
+//  Inventory Count (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
 
 export const getInventoryCounts = async () => {
-  const response = await fetch(`${JSON_API}/inventory_counts`, {
+  const response = await fetch(`${SPRING_API}/inventory-counts`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch inventory counts");
@@ -415,7 +415,7 @@ export const getInventoryCounts = async () => {
 };
 
 export const getInventoryCountById = async (id) => {
-  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
+  const response = await fetch(`${SPRING_API}/inventory-counts/${id}`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Không tìm thấy phiếu kiểm kho.");
@@ -435,20 +435,26 @@ export const getInventoryCountById = async (id) => {
     items: (ic.items || []).map((item) => ({
       ...item,
       product_id: item.productId || item.product_id,
-      system_quantity: item.systemQuantity || item.system_quantity,
-      actual_quantity: item.actualQuantity || item.actual_quantity,
-      difference_quantity: item.differenceQuantity || item.difference_quantity,
-      difference_value: item.differenceValue || item.difference_value,
+      system_quantity: item.systemQuantity ?? item.system_quantity,
+      actual_quantity: item.actualQuantity ?? item.actual_quantity,
+      difference_quantity: item.differenceQuantity ?? item.difference_quantity,
+      difference_value: item.differenceValue ?? item.difference_value,
     })),
   };
 };
 
 export const getInventoryCountNextCode = async () => {
   try {
+    const response = await fetch(`${SPRING_API}/inventory-counts/next-code`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error("Failed to get next code");
+    const data = await response.json();
+    return data.code;
+  } catch {
+    // Fallback: generate code client-side
     const counts = await getInventoryCounts();
     return generateICCode(counts);
-  } catch {
-    return "IC-001";
   }
 };
 
@@ -467,10 +473,10 @@ function generateICCode(existingCounts = []) {
 
 export const saveInventoryCountDraft = async (request) => {
   const body = mapCountRequestToBackend(request);
-  const response = await fetch(`${JSON_API}/inventory_counts`, {
+  const response = await fetch(`${SPRING_API}/inventory-counts/draft`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ ...body, status: "DRAFT" }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) throw new Error("Failed to save draft");
   return response.json();
@@ -478,7 +484,7 @@ export const saveInventoryCountDraft = async (request) => {
 
 export const updateInventoryCount = async (id, request) => {
   const body = mapCountRequestToBackend(request);
-  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
+  const response = await fetch(`${SPRING_API}/inventory-counts/${id}`, {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify(body),
@@ -489,10 +495,10 @@ export const updateInventoryCount = async (id, request) => {
 
 export const confirmInventoryCount = async (id, request) => {
   const body = mapCountRequestToBackend(request);
-  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
-    method: "PATCH",
+  const response = await fetch(`${SPRING_API}/inventory-counts/${id}/confirm`, {
+    method: "PUT",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ ...body, status: "CONFIRMED" }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) throw new Error("Failed to confirm inventory count");
   return response.json();
@@ -500,10 +506,10 @@ export const confirmInventoryCount = async (id, request) => {
 
 export const createAndConfirmInventoryCount = async (request) => {
   const body = mapCountRequestToBackend(request);
-  const response = await fetch(`${JSON_API}/inventory_counts`, {
+  const response = await fetch(`${SPRING_API}/inventory-counts/confirm`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ ...body, status: "CONFIRMED" }),
+    body: JSON.stringify(body),
   });
   if (!response.ok)
     throw new Error("Failed to create and confirm inventory count");
@@ -511,17 +517,16 @@ export const createAndConfirmInventoryCount = async (request) => {
 };
 
 export const cancelInventoryCount = async (id) => {
-  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
-    method: "PATCH",
+  const response = await fetch(`${SPRING_API}/inventory-counts/${id}/cancel`, {
+    method: "PUT",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ status: "CANCELLED" }),
   });
   if (!response.ok) throw new Error("Failed to cancel inventory count");
   return response.json();
 };
 
 export const deleteInventoryCount = async (id) => {
-  const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
+  const response = await fetch(`${SPRING_API}/inventory-counts/${id}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
@@ -534,12 +539,9 @@ function mapCountRequestToBackend(request) {
   const userId = currentUser.id || 1;
 
   return {
-    code: request.code,
     locationId: request.location_id || request.locationId,
     notes: request.notes,
     status: request.status,
-    createdBy: userId,
-    createdAt: new Date().toISOString(),
     items: (request.items || [])
       .filter(
         (item) =>

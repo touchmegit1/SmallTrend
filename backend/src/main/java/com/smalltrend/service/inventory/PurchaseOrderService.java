@@ -112,7 +112,7 @@ public class PurchaseOrderService {
         validateConfirm(request);
 
         PurchaseOrder order = buildOrderFromRequest(request);
-        order.setStatus(PurchaseOrderStatus.ORDERED);
+        order.setStatus(PurchaseOrderStatus.CONFIRMED);
         order.setOrderDate(LocalDate.now());
 
         if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
@@ -153,7 +153,7 @@ public class PurchaseOrderService {
             throw new RuntimeException("Phiếu nhập phải có ít nhất 1 sản phẩm.");
         }
 
-        order.setStatus(PurchaseOrderStatus.ORDERED);
+        order.setStatus(PurchaseOrderStatus.CONFIRMED);
         purchaseOrderRepository.save(order);
 
         // ── Stock Update from existing items ──

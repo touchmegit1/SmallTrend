@@ -24,7 +24,7 @@ public class PurchaseOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "order_number", unique = true)
+    @Column(name = "po_number", unique = true)
     private String orderNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)

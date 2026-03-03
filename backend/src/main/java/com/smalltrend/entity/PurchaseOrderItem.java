@@ -22,13 +22,13 @@ public class PurchaseOrderItem {
     private PurchaseOrder purchaseOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id")
+    @JoinColumn(name = "variant_id")
     private ProductVariant variant;
 
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(name = "unit_cost", precision = 15, scale = 2)
+    @Column(name = "unit_price", precision = 15, scale = 2)
     private BigDecimal unitCost;
 
     @Column(name = "total_cost", precision = 15, scale = 2)

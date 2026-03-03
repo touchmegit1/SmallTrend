@@ -65,7 +65,11 @@ function RootRedirect() {
     );
   }
 
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/crm/homepage" replace />
+  );
 }
 
 function App() {
@@ -106,23 +110,13 @@ function App() {
 
         {/* Module 1: POS (Bán hàng) */}
         <Route path="pos" element={<POS />} />
-        <Route
-          path="pos/history"
-          element={<TransactionHistory />}
-        />
-        <Route
-          path="pos/suspended"
-          element={<ReportforCashier />}
-        />
-        <Route
-          path="pos/shift-handover"
-          element={<ShiftHandover />}
-        />
+        <Route path="pos/history" element={<TransactionHistory />} />
+        <Route path="pos/suspended" element={<ReportforCashier />} />
+        <Route path="pos/shift-handover" element={<ShiftHandover />} />
         {/* Module 2: Inventory (Kho) */}
-        < Route path="inventory" element={<InventoryDashboard />} />
+        <Route path="inventory" element={<InventoryDashboard />} />
         <Route path="inventory/import" element={<ImportInventory />} />
         <Route path="inventory/import/create" element={<CreateImport />} />
-        <Route path="inventory/export" element={<DisposalList />} />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
         <Route
           path="inventory/suppliers"
@@ -144,18 +138,9 @@ function App() {
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
 
         {/* Module 3: Products (Sản phẩm) */}
-        <Route
-          path="products"
-          element={<ProductList />}
-        />
-        <Route
-          path="products/addproduct"
-          element={<AddNewProduct />}
-        />
-        <Route
-          path="products/detail/:id"
-          element={<ProductDetail />}
-        />
+        <Route path="products" element={<ProductList />} />
+        <Route path="products/addproduct" element={<AddNewProduct />} />
+        <Route path="products/detail/:id" element={<ProductDetail />} />
         <Route
           path="products/addproduct_variant"
           element={<AddNewProductVariant />}
@@ -164,10 +149,7 @@ function App() {
           path="products/categories"
           element={<div className="p-4">{<CategoryAndBrand />}</div>}
         />
-        <Route
-          path="products/price"
-          element={<div className="p-4">{ }</div>}
-        />
+        <Route path="products/price" element={<div className="p-4">{}</div>} />
         <Route
           path="products/combo"
           element={<div className="p-4">{<ComboManage />}</div>}
@@ -181,13 +163,22 @@ function App() {
           element={<div className="p-4">{<ComboDetail />}</div>}
         />
         {/* Module 4: CRM (Khách hàng) */}
-        <Route path="crm" element={<div className="p-4">CRM &amp; Promotion</div>} />
+        <Route
+          path="crm"
+          element={<div className="p-4">CRM &amp; Promotion</div>}
+        />
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
         <Route path="crm/report" element={<CRMreport />} />
-        <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
-        <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
+        <Route
+          path="crm/promotions"
+          element={<div className="p-4">Chương trình KM</div>}
+        />
+        <Route
+          path="crm/vouchers"
+          element={<div className="p-4">Voucher/Coupon</div>}
+        />
         <Route path="crm/complain" element={<CRMcomplain />} />
         <Route path="crm/complaints" element={<CRMcomplain />} />
 
