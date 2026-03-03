@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import eventService from '../../services/eventService';
 import { useCampaigns } from '../../hooks/useCampaigns';
-import { useCoupons } from '../../hooks/useCoupons';
+import { useVouchers } from '../../hooks/useVouchers';
 import { useProductVariants } from '../../hooks/useProductVariants';
 
 // ─── ICONS ────────────────────────────────────────────────────────────────────
@@ -29,15 +29,15 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// ─── COUPON TYPE LABEL ─────────────────────────────────────────────────────────
-const couponTypeLabel = (type) => ({
+// ─── VOUCHER TYPE LABEL ─────────────────────────────────────────────────────────
+const voucherTypeLabel = (type) => ({
   PERCENTAGE: 'Giảm %',
   FIXED_AMOUNT: 'Giảm tiền cố định',
   FREE_SHIPPING: 'Miễn phí vận chuyển',
   BUY_X_GET_Y: 'Mua X tặng Y',
 }[type] || type);
 
-const couponTypeBadge = (type) => ({
+const voucherTypeBadge = (type) => ({
   PERCENTAGE: 'bg-purple-100 text-purple-700',
   FIXED_AMOUNT: 'bg-blue-100 text-blue-700',
   FREE_SHIPPING: 'bg-teal-100 text-teal-700',
@@ -46,7 +46,7 @@ const couponTypeBadge = (type) => ({
 
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const EventManagement = () => {
-  const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' | 'coupons' | 'products'
+  const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' | 'vouchers' | 'products'
 
   // ── Campaigns ──
   const { campaigns, loading: loadingCampaigns, refetch: refetchCampaigns } = useCampaigns();
@@ -60,18 +60,18 @@ const EventManagement = () => {
   const [campaignForm, setCampaignForm] = useState(initialCampaignForm);
   const [savingCampaign, setSavingCampaign] = useState(false);
 
-  // ── Coupons ──
-  const { coupons, loading: loadingCoupons, refetch: refetchCoupons } = useCoupons();
-  const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
-  const [editingCoupon, setEditingCoupon] = useState(null);
-  const initialCouponForm = {
-    couponCode: '', couponName: '', description: '', couponType: 'PERCENTAGE',
+  // ── Vouchers ──
+  const { vouchers, loading: loadingVouchers, refetch: refetchVouchers } = useVouchers();
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [editingVoucher, setEditingVoucher] = useState(null);
+  const initialVoucherForm = {
+    voucherCode: '', voucherName: '', description: '', voucherType: 'PERCENTAGE',
     discountPercent: '', discountAmount: '', maxDiscountAmount: '',
     minPurchaseAmount: '', startDate: '', endDate: '',
     totalUsageLimit: '', usagePerCustomer: '', campaignId: '', status: 'DRAFT',
   };
-  const [couponForm, setCouponForm] = useState(initialCouponForm);
-  const [savingCoupon, setSavingCoupon] = useState(false);
+  const [voucherForm, setVoucherForm] = useState(initialVoucherForm);
+  const [savingVoucher, setSavingVoucher] = useState(false);
 
   // ── Products tab ──
   const { variants, loading: loadingVariants, refetch: refetchVariants } = useProductVariants();
@@ -86,7 +86,7 @@ const EventManagement = () => {
     return v.name?.toLowerCase().includes(kw) || v.sku?.toLowerCase().includes(kw);
   });
 
-  const activeCoupons = coupons.filter(c => c.status === 'ACTIVE');
+  const activeVouchers = vouchers.filter(c => c.status === 'ACTIVE');
 
   // ── Campaign handlers ─────────────────────────────────────────────────────────
   const openCampaignModal = (campaign = null) => {
@@ -140,80 +140,80 @@ const EventManagement = () => {
     }
   };
 
-  // ── Coupon handlers ───────────────────────────────────────────────────────────
-  const openCouponModal = (coupon = null) => {
-    if (coupon) {
-      setCouponForm({
-        ...initialCouponForm,
-        ...coupon,
-        discountPercent: coupon.discountPercent ?? '',
-        discountAmount: coupon.discountAmount ?? '',
-        maxDiscountAmount: coupon.maxDiscountAmount ?? '',
-        minPurchaseAmount: coupon.minPurchaseAmount ?? '',
-        totalUsageLimit: coupon.totalUsageLimit ?? '',
-        usagePerCustomer: coupon.usagePerCustomer ?? '',
-        campaignId: coupon.campaignId ?? '',
-        startDate: coupon.startDate || '',
-        endDate: coupon.endDate || '',
+  // ── Voucher handlers ───────────────────────────────────────────────────────────
+  const openVoucherModal = (voucher = null) => {
+    if (voucher) {
+      setVoucherForm({
+        ...initialVoucherForm,
+        ...voucher,
+        discountPercent: voucher.discountPercent ?? '',
+        discountAmount: voucher.discountAmount ?? '',
+        maxDiscountAmount: voucher.maxDiscountAmount ?? '',
+        minPurchaseAmount: voucher.minPurchaseAmount ?? '',
+        totalUsageLimit: voucher.totalUsageLimit ?? '',
+        usagePerCustomer: voucher.usagePerCustomer ?? '',
+        campaignId: voucher.campaignId ?? '',
+        startDate: voucher.startDate || '',
+        endDate: voucher.endDate || '',
       });
-      setEditingCoupon(coupon.id);
+      setEditingVoucher(voucher.id);
     } else {
-      setCouponForm(initialCouponForm);
-      setEditingCoupon(null);
+      setVoucherForm(initialVoucherForm);
+      setEditingVoucher(null);
     }
-    setIsCouponModalOpen(true);
+    setIsVoucherModalOpen(true);
   };
 
-  const handleCouponSubmit = async (e) => {
+  const handleVoucherSubmit = async (e) => {
     e.preventDefault();
-    setSavingCoupon(true);
+    setSavingVoucher(true);
     try {
       const payload = {
-        ...couponForm,
-        discountPercent: couponForm.discountPercent ? Number(couponForm.discountPercent) : null,
-        discountAmount: couponForm.discountAmount ? Number(couponForm.discountAmount) : null,
-        maxDiscountAmount: couponForm.maxDiscountAmount ? Number(couponForm.maxDiscountAmount) : null,
-        minPurchaseAmount: couponForm.minPurchaseAmount ? Number(couponForm.minPurchaseAmount) : null,
-        totalUsageLimit: couponForm.totalUsageLimit ? Number(couponForm.totalUsageLimit) : null,
-        usagePerCustomer: couponForm.usagePerCustomer ? Number(couponForm.usagePerCustomer) : null,
-        campaignId: couponForm.campaignId ? Number(couponForm.campaignId) : null,
+        ...voucherForm,
+        discountPercent: voucherForm.discountPercent ? Number(voucherForm.discountPercent) : null,
+        discountAmount: voucherForm.discountAmount ? Number(voucherForm.discountAmount) : null,
+        maxDiscountAmount: voucherForm.maxDiscountAmount ? Number(voucherForm.maxDiscountAmount) : null,
+        minPurchaseAmount: voucherForm.minPurchaseAmount ? Number(voucherForm.minPurchaseAmount) : null,
+        totalUsageLimit: voucherForm.totalUsageLimit ? Number(voucherForm.totalUsageLimit) : null,
+        usagePerCustomer: voucherForm.usagePerCustomer ? Number(voucherForm.usagePerCustomer) : null,
+        campaignId: voucherForm.campaignId ? Number(voucherForm.campaignId) : null,
       };
-      if (editingCoupon) {
-        await eventService.updateCoupon(editingCoupon, payload);
+      if (editingVoucher) {
+        await eventService.updateVoucher(editingVoucher, payload);
       } else {
-        await eventService.createCoupon(payload);
+        await eventService.createVoucher(payload);
       }
-      setIsCouponModalOpen(false);
-      await refetchCoupons();
+      setIsVoucherModalOpen(false);
+      await refetchVouchers();
     } catch (err) {
       alert('Lỗi: ' + (err?.response?.data?.message || err.message));
     } finally {
-      setSavingCoupon(false);
+      setSavingVoucher(false);
     }
   };
 
-  const handleDeleteCoupon = async (id) => {
-    if (!window.confirm('Xóa coupon này?')) return;
+  const handleDeleteVoucher = async (id) => {
+    if (!window.confirm('Xóa voucher này?')) return;
     try {
-      await eventService.deleteCoupon(id);
-      await refetchCoupons();
+      await eventService.deleteVoucher(id);
+      await refetchVouchers();
     } catch (err) {
       alert('Lỗi khi xóa: ' + (err?.response?.data?.message || err.message));
     }
   };
 
-  // ── Product coupon apply ───────────────────────────────────────────────────────
-  const handleApplyCoupon = async (sku, couponId) => {
+  // ── Product voucher apply ───────────────────────────────────────────────────────
+  const handleApplyVoucher = async (sku, voucherId) => {
     setSavingVariant(sku);
     try {
-      if (couponId) {
-        await eventService.applyCouponToVariant(sku, couponId);
+      if (voucherId) {
+        await eventService.applyVoucherToVariant(sku, voucherId);
       } else {
-        await eventService.removeCouponFromVariant(sku);
+        await eventService.removeVoucherFromVariant(sku);
       }
       await refetchVariants(); // Sync lại từ DB
     } catch (err) {
-      alert('Lỗi áp dụng coupon: ' + (err?.response?.data?.message || err.message));
+      alert('Lỗi áp dụng voucher: ' + (err?.response?.data?.message || err.message));
     } finally {
       setSavingVariant(null);
     }
@@ -222,7 +222,7 @@ const EventManagement = () => {
   // ─── TABS ──────────────────────────────────────────────────────────────────────
   const tabs = [
     { key: 'campaigns', label: 'Sự kiện / Chiến dịch' },
-    { key: 'coupons', label: 'Coupon' },
+    { key: 'vouchers', label: 'Voucher' },
     { key: 'products', label: 'Áp dụng theo Sản phẩm' },
   ];
 
@@ -232,7 +232,7 @@ const EventManagement = () => {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Quản lý Sự kiện &amp; Khuyến Mãi</h1>
-          <p className="text-slate-500 mt-1">Quản lý chính sách khuyến mãi, sự kiện và coupon.</p>
+          <p className="text-slate-500 mt-1">Quản lý chính sách khuyến mãi, sự kiện và voucher.</p>
         </div>
         <div className="flex gap-2">
           {activeTab === 'campaigns' && (
@@ -240,9 +240,9 @@ const EventManagement = () => {
               + Thêm Sự kiện
             </button>
           )}
-          {activeTab === 'coupons' && (
-            <button onClick={() => openCouponModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/30 transition-all text-sm font-medium">
-              + Thêm Coupon
+          {activeTab === 'vouchers' && (
+            <button onClick={() => openVoucherModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/30 transition-all text-sm font-medium">
+              + Thêm Voucher
             </button>
           )}
         </div>
@@ -339,21 +339,21 @@ const EventManagement = () => {
         </div>
       )}
 
-      {/* ═══ TAB 2: COUPONS ═══ */}
-      {activeTab === 'coupons' && (
+      {/* ═══ TAB 2: VOUCHERS ═══ */}
+      {activeTab === 'vouchers' && (
         <div className="bg-white rounded-xl shadow overflow-hidden">
-          {loadingCoupons ? (
+          {loadingVouchers ? (
             <div className="text-center py-12 text-gray-500">Đang tải...</div>
-          ) : coupons.length === 0 ? (
+          ) : vouchers.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <div className="text-4xl mb-2">🎟️</div>
-              <p>Chưa có coupon nào. Tạo coupon đầu tiên!</p>
+              <p>Chưa có voucher nào. Tạo voucher đầu tiên!</p>
             </div>
           ) : (
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Mã Coupon</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Mã Voucher</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600">Tên / Mô tả</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600">Loại</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600">Giá trị giảm</th>
@@ -364,29 +364,29 @@ const EventManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {coupons.map(c => (
+                {vouchers.map(c => (
                   <tr key={c.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded">{c.couponCode}</span>
+                      <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded">{c.voucherCode}</span>
                       {c.campaignName && (
                         <div className="text-xs text-gray-400 mt-0.5">📌 {c.campaignName}</div>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-800">{c.couponName}</div>
+                      <div className="font-medium text-gray-800">{c.voucherName}</div>
                       {c.description && <div className="text-xs text-gray-400 truncate max-w-[160px]">{c.description}</div>}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${couponTypeBadge(c.couponType)}`}>
-                        {couponTypeLabel(c.couponType)}
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${voucherTypeBadge(c.voucherType)}`}>
+                        {voucherTypeLabel(c.voucherType)}
                       </span>
                     </td>
                     <td className="px-4 py-3 font-bold text-red-500">
-                      {c.couponType === 'PERCENTAGE' && c.discountPercent != null
+                      {c.voucherType === 'PERCENTAGE' && c.discountPercent != null
                         ? `-${c.discountPercent}%`
-                        : c.couponType === 'FIXED_AMOUNT' && c.discountAmount != null
+                        : c.voucherType === 'FIXED_AMOUNT' && c.discountAmount != null
                           ? `-${Number(c.discountAmount).toLocaleString('vi-VN')}đ`
-                          : c.couponType === 'FREE_SHIPPING'
+                          : c.voucherType === 'FREE_SHIPPING'
                             ? 'Miễn phí ship'
                             : '-'}
                     </td>
@@ -402,14 +402,14 @@ const EventManagement = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
                         <button
-                          onClick={() => openCouponModal(c)}
+                          onClick={() => openVoucherModal(c)}
                           title="Sửa"
                           className="p-1.5 rounded text-blue-500 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                         >
                           <IconEdit />
                         </button>
                         <button
-                          onClick={() => handleDeleteCoupon(c.id)}
+                          onClick={() => handleDeleteVoucher(c.id)}
                           title="Xóa"
                           className="p-1.5 rounded text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
                         >
@@ -458,7 +458,7 @@ const EventManagement = () => {
                   <th className="px-4 py-3 text-left font-semibold text-gray-600">Tên sản phẩm</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600">Giá bán</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600" style={{ minWidth: 200 }}>
-                    Áp dụng Coupon
+                    Áp dụng Voucher
                   </th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-600">Hành động</th>
                 </tr>
@@ -480,7 +480,7 @@ const EventManagement = () => {
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-800">{v.name}</td>
                       <td className="px-4 py-3">
-                        {v.couponId && v.discountedPrice != null ? (
+                        {v.voucherId && v.discountedPrice != null ? (
                           <div>
                             <span className="line-through text-gray-400 text-xs mr-1">
                               {Number(v.sellPrice).toLocaleString('vi-VN')}đ
@@ -497,15 +497,15 @@ const EventManagement = () => {
                       </td>
                       <td className="px-4 py-3">
                         <select
-                          value={v.couponId || ''}
+                          value={v.voucherId || ''}
                           disabled={isSaving}
-                          onChange={e => handleApplyCoupon(v.sku, e.target.value ? Number(e.target.value) : null)}
+                          onChange={e => handleApplyVoucher(v.sku, e.target.value ? Number(e.target.value) : null)}
                           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full disabled:bg-gray-100"
                         >
                           <option value="">-- Không áp dụng --</option>
-                          {activeCoupons.map(c => (
+                          {activeVouchers.map(c => (
                             <option key={c.id} value={c.id}>
-                              [{c.couponCode}] {c.couponName}
+                              [{c.voucherCode}] {c.voucherName}
                             </option>
                           ))}
                         </select>
@@ -514,15 +514,15 @@ const EventManagement = () => {
                         <div className="flex items-center justify-center gap-1">
                           {isSaving ? (
                             <span className="text-xs text-blue-500 animate-pulse">Đang lưu...</span>
-                          ) : v.couponId ? (
+                          ) : v.voucherId ? (
                             <>
                               <span className="text-xs text-green-600 font-medium mr-1 bg-green-50 px-2 py-0.5 rounded">
-                                {v.couponType === 'PERCENTAGE' ? `-${v.discountPercent}%` : ''}
-                                {v.couponType === 'FIXED_AMOUNT' ? `-${Number(v.discountAmount).toLocaleString('vi-VN')}đ` : ''}
-                                {v.couponType === 'FREE_SHIPPING' ? 'Free ship' : ''}
+                                {v.voucherType === 'PERCENTAGE' ? `-${v.discountPercent}%` : ''}
+                                {v.voucherType === 'FIXED_AMOUNT' ? `-${Number(v.discountAmount).toLocaleString('vi-VN')}đ` : ''}
+                                {v.voucherType === 'FREE_SHIPPING' ? 'Free ship' : ''}
                               </span>
                               <button
-                                onClick={() => handleApplyCoupon(v.sku, null)}
+                                onClick={() => handleApplyVoucher(v.sku, null)}
                                 title="Bỏ áp dụng"
                                 className="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors"
                               >
@@ -637,31 +637,31 @@ const EventManagement = () => {
         </div>
       )}
 
-      {/* ═══ MODAL: COUPON ═══ */}
-      {isCouponModalOpen && (
+      {/* ═══ MODAL: VOUCHER ═══ */}
+      {isVoucherModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center px-6 py-4 border-b">
               <h2 className="text-lg font-bold text-gray-800">
-                {editingCoupon ? '✏️ Chỉnh sửa Coupon' : '➕ Thêm Coupon mới'}
+                {editingVoucher ? '✏️ Chỉnh sửa Voucher' : '➕ Thêm Voucher mới'}
               </h2>
-              <button onClick={() => setIsCouponModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+              <button onClick={() => setIsVoucherModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
             </div>
-            <form onSubmit={handleCouponSubmit} className="p-6 grid grid-cols-2 gap-4">
+            <form onSubmit={handleVoucherSubmit} className="p-6 grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Mã Coupon *</label>
-                <input type="text" required value={couponForm.couponCode} onChange={e => setCouponForm({ ...couponForm, couponCode: e.target.value })}
-                  disabled={!!editingCoupon}
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Mã Voucher *</label>
+                <input type="text" required value={voucherForm.voucherCode} onChange={e => setVoucherForm({ ...voucherForm, voucherCode: e.target.value })}
+                  disabled={!!editingVoucher}
                   placeholder="SUMMER2024" className="w-full border rounded-lg px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 font-mono" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Tên Coupon *</label>
-                <input type="text" required value={couponForm.couponName} onChange={e => setCouponForm({ ...couponForm, couponName: e.target.value })}
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Tên Voucher *</label>
+                <input type="text" required value={voucherForm.voucherName} onChange={e => setVoucherForm({ ...voucherForm, voucherName: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Loại Coupon</label>
-                <select value={couponForm.couponType} onChange={e => setCouponForm({ ...couponForm, couponType: e.target.value })}
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Loại Voucher</label>
+                <select value={voucherForm.voucherType} onChange={e => setVoucherForm({ ...voucherForm, voucherType: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
                   <option value="PERCENTAGE">Giảm theo %</option>
                   <option value="FIXED_AMOUNT">Giảm tiền cố định</option>
@@ -671,7 +671,7 @@ const EventManagement = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Trạng thái</label>
-                <select value={couponForm.status} onChange={e => setCouponForm({ ...couponForm, status: e.target.value })}
+                <select value={voucherForm.status} onChange={e => setVoucherForm({ ...voucherForm, status: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
                   <option value="DRAFT">DRAFT</option>
                   <option value="ACTIVE">ACTIVE</option>
@@ -679,31 +679,31 @@ const EventManagement = () => {
                 </select>
               </div>
 
-              {couponForm.couponType === 'PERCENTAGE' && (
+              {voucherForm.voucherType === 'PERCENTAGE' && (
                 <>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Giảm % *</label>
-                    <input type="number" min="0" max="100" step="0.01" required value={couponForm.discountPercent}
-                      onChange={e => setCouponForm({ ...couponForm, discountPercent: e.target.value })}
+                    <input type="number" min="0" max="100" step="0.01" required value={voucherForm.discountPercent}
+                      onChange={e => setVoucherForm({ ...voucherForm, discountPercent: e.target.value })}
                       className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Giảm tối đa (đ)</label>
-                    <input type="number" min="0" value={couponForm.maxDiscountAmount}
-                      onChange={e => setCouponForm({ ...couponForm, maxDiscountAmount: e.target.value })}
+                    <input type="number" min="0" value={voucherForm.maxDiscountAmount}
+                      onChange={e => setVoucherForm({ ...voucherForm, maxDiscountAmount: e.target.value })}
                       className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
                   </div>
                 </>
               )}
-              {couponForm.couponType === 'FIXED_AMOUNT' && (
+              {voucherForm.voucherType === 'FIXED_AMOUNT' && (
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Số tiền giảm (đ) *</label>
-                  <input type="number" min="0" required value={couponForm.discountAmount}
-                    onChange={e => setCouponForm({ ...couponForm, discountAmount: e.target.value })}
+                  <input type="number" min="0" required value={voucherForm.discountAmount}
+                    onChange={e => setVoucherForm({ ...voucherForm, discountAmount: e.target.value })}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 </div>
               )}
-              {couponForm.couponType === 'BUY_X_GET_Y' && (
+              {voucherForm.voucherType === 'BUY_X_GET_Y' && (
                 <div className="col-span-2 p-3 bg-orange-50 rounded-lg border border-orange-200 text-sm text-orange-700">
                   ℹ️ Cấu hình Buy X Get Y sẽ được xử lý khi áp dụng vào đơn hàng.
                 </div>
@@ -711,13 +711,13 @@ const EventManagement = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Đơn hàng tối thiểu (đ)</label>
-                <input type="number" min="0" value={couponForm.minPurchaseAmount}
-                  onChange={e => setCouponForm({ ...couponForm, minPurchaseAmount: e.target.value })}
+                <input type="number" min="0" value={voucherForm.minPurchaseAmount}
+                  onChange={e => setVoucherForm({ ...voucherForm, minPurchaseAmount: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Thuộc Sự kiện</label>
-                <select value={couponForm.campaignId} onChange={e => setCouponForm({ ...couponForm, campaignId: e.target.value })}
+                <select value={voucherForm.campaignId} onChange={e => setVoucherForm({ ...voucherForm, campaignId: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
                   <option value="">-- Độc lập --</option>
                   {campaigns.map(c => (
@@ -727,39 +727,39 @@ const EventManagement = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Ngày bắt đầu</label>
-                <input type="date" value={couponForm.startDate} onChange={e => setCouponForm({ ...couponForm, startDate: e.target.value })}
+                <input type="date" value={voucherForm.startDate} onChange={e => setVoucherForm({ ...voucherForm, startDate: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Ngày hết hạn *</label>
-                <input type="date" required value={couponForm.endDate} onChange={e => setCouponForm({ ...couponForm, endDate: e.target.value })}
+                <input type="date" required value={voucherForm.endDate} onChange={e => setVoucherForm({ ...voucherForm, endDate: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Tổng lượt dùng tối đa</label>
-                <input type="number" min="1" value={couponForm.totalUsageLimit}
-                  onChange={e => setCouponForm({ ...couponForm, totalUsageLimit: e.target.value })}
+                <input type="number" min="1" value={voucherForm.totalUsageLimit}
+                  onChange={e => setVoucherForm({ ...voucherForm, totalUsageLimit: e.target.value })}
                   placeholder="Để trống = không giới hạn"
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Số lần dùng / khách</label>
-                <input type="number" min="1" value={couponForm.usagePerCustomer}
-                  onChange={e => setCouponForm({ ...couponForm, usagePerCustomer: e.target.value })}
+                <input type="number" min="1" value={voucherForm.usagePerCustomer}
+                  onChange={e => setVoucherForm({ ...voucherForm, usagePerCustomer: e.target.value })}
                   placeholder="Để trống = không giới hạn"
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Mô tả</label>
-                <textarea rows={2} value={couponForm.description} onChange={e => setCouponForm({ ...couponForm, description: e.target.value })}
+                <textarea rows={2} value={voucherForm.description} onChange={e => setVoucherForm({ ...voucherForm, description: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none" />
               </div>
               <div className="col-span-2 flex justify-end gap-3 pt-2 border-t">
-                <button type="button" onClick={() => setIsCouponModalOpen(false)}
+                <button type="button" onClick={() => setIsVoucherModalOpen(false)}
                   className="px-4 py-2 bg-gray-200 rounded-lg text-gray-700 hover:bg-gray-300 text-sm font-medium">Hủy</button>
-                <button type="submit" disabled={savingCoupon}
+                <button type="submit" disabled={savingVoucher}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium disabled:opacity-75">
-                  {savingCoupon ? 'Đang lưu...' : 'Lưu Coupon'}
+                  {savingVoucher ? 'Đang lưu...' : 'Lưu Voucher'}
                 </button>
               </div>
             </form>

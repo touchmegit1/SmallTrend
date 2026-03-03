@@ -14,4 +14,5 @@ public class CreateProductRequest {
     private Integer categoryId;
     private Integer brandId;
     private Integer taxRateId;
+    private Boolean isActive;
 }

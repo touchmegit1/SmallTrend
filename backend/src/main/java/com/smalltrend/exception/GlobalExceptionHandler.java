@@ -36,8 +36,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        String msg = ex.getMostSpecificCause().getMessage();
+        if (msg != null && (msg.contains("foreign key constraint") || msg.contains("a foreign key constraint fails"))) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new MessageResponse(
+                            "Lỗi: Không thể xóa vì danh mục hoặc thương hiệu này đang có sản phẩm áp dụng!"));
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new MessageResponse("Dữ liệu bị trùng hoặc vi phạm ràng buộc"));
+                .body(new MessageResponse("Lỗi: Dữ liệu bị trùng hoặc vi phạm ràng buộc hệ thống."));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

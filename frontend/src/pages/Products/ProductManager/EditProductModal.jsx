@@ -119,8 +119,8 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
         brandId: formData.brandId ? parseInt(formData.brandId) : null,
         taxRateId: formData.taxRateId ? parseInt(formData.taxRateId) : null,
       };
-      await api.put(`/products/${product.id}`, payload);
-      onSave({ ...product, ...payload });
+      const response = await api.put(`/products/${product.id}`, payload);
+      onSave(response.data);
       onClose();
     } catch (error) {
       console.error("Error updating product:", error);
@@ -241,7 +241,7 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                 {imagePreview ? (
                   <div className="relative flex-1 rounded-2xl overflow-hidden group">
                     <img
-                      src={imagePreview}
+                      src={imagePreview.startsWith('blob:') || imagePreview.startsWith('http') ? imagePreview : `http://localhost:8081${imagePreview.startsWith('/') ? '' : '/'}${imagePreview}`}
                       alt="Preview"
                       className="w-full h-full object-contain rounded-2xl bg-gray-50"
                       style={{ minHeight: '280px' }}
