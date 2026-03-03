@@ -32,7 +32,7 @@ const PriceSetting = () => {
         setLoading(true);
         setErrorMsg("");
         try {
-            const response = await api.get("/pos/product");
+            const response = await api.get("/products/variants");
             setVariants(response.data);
         } catch (err) {
             console.error("Error fetching variants: ", err);
@@ -374,7 +374,7 @@ const PriceSetting = () => {
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => handleEditClick(variant)}
-                                                            className="h-8 w-8 p-0 border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200"
+                                                            className="h-8 w-8 p-0 border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg shadow-sm transition-all duration-200"
                                                             title="Thiết lập giá bán"
                                                         >
                                                             <Edit2 className="w-4 h-4" />

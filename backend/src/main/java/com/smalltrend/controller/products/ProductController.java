@@ -44,6 +44,14 @@ public class ProductController {
         return ResponseEntity.ok(productVariantService.getVariantsByProductId(id));
     }
 
+    // Lấy danh sách tất cả các biến thể
+    @GetMapping("/variants")
+    public ResponseEntity<List<ProductVariantRespone>> getAllVariants(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String barcode) {
+        return ResponseEntity.ok(productVariantService.getAllProductVariants(search, barcode));
+    }
+
     // Tạo mới một biến thể cho sản phẩm
     @PostMapping("/{id}/variants")
     public ResponseEntity<ProductVariantRespone> createVariant(
