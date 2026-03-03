@@ -247,15 +247,26 @@ const TicketCenter = () => {
         return reportType ? reportType.icon : FileText;
     };
 
+    const [showFilter, setShowFilter] = useState(true);
+
     return (
         <Container fluid className="bg-slate-50 min-h-screen py-4">
             {/* Page Header */}
-            <div className="mb-4">
-                <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2 mb-1">
-                    <FileText size={28} />
-                    Trung tâm Báo cáo
-                </h2>
-                <p className="text-slate-600">Quản lý và tạo báo cáo hệ thống</p>
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-slate-800 mb-1">
+                        Trung tâm Báo cáo
+                    </h2>
+                    <p className="text-slate-500 text-sm">Quản lý và tạo báo cáo hệ thống</p>
+                </div>
+                <Button
+                    variant="gradient"
+                    onClick={() => setShowFilter(prev => !prev)}
+                    className="flex items-center gap-2"
+                >
+                    <FileText size={16} />
+                    + Tạo báo cáo tùy chỉnh
+                </Button>
             </div>
 
             {/* Alerts */}
@@ -270,35 +281,121 @@ const TicketCenter = () => {
                 </Alert>
             )}
 
+            {/* Custom Filter Section */}
+            {showFilter && (
+                <div className="mb-6">
+                    <Card className="shadow-sm border border-slate-200">
+                        <CardContent className="p-5">
+                            <div className="flex justify-between items-center mb-4">
+                                <h5 className="text-base font-semibold text-slate-800">Bộ lọc tùy chỉnh</h5>
+                                <button
+                                    onClick={() => setShowFilter(false)}
+                                    className="text-slate-400 hover:text-slate-600 text-lg leading-none"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Loại báo cáo</label>
+                                    <Select value={reportForm.type} onValueChange={(value) => handleFormChange('type', value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Doanh thu (Revenue)" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {reportTypes.map(type => (
+                                                <SelectItem key={type.value} value={type.value}>
+                                                    {type.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Từ ngày</label>
+                                    <Input
+                                        type="date"
+                                        value={reportForm.fromDate}
+                                        onChange={(e) => handleFormChange('fromDate', e.target.value)}
+                                        placeholder="dd/mm/yyyy"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Đến ngày</label>
+                                    <Input
+                                        type="date"
+                                        value={reportForm.toDate}
+                                        onChange={(e) => handleFormChange('toDate', e.target.value)}
+                                        placeholder="dd/mm/yyyy"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Định dạng</label>
+                                    <Select value={reportForm.format} onValueChange={(value) => handleFormChange('format', value)}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {formatOptions.map(format => (
+                                                <SelectItem key={format} value={format}>
+                                                    {format}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Button
+                                        variant="gradient"
+                                        className="w-full"
+                                        onClick={handleGenerateReport}
+                                        disabled={generating}
+                                    >
+                                        {generating ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                Đang tạo...
+                                            </>
+                                        ) : (
+                                            'Tạo báo cáo'
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
             {/* Quick Reports Section */}
-            <div className="mb-4">
-                <h5 className="text-lg font-semibold text-slate-700 border-l-4 border-blue-500 pl-3 mb-3">
+            <div className="mb-6">
+                <h5 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
                     Báo cáo nhanh
                 </h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {quickReports.map((report, index) => {
                         const IconComponent = getQuickReportIcon(report.type);
                         return (
                             <Card
                                 key={index}
-                                className={`border-2 transition-all h-full ${
+                                className={`border border-slate-200 transition-all h-full ${
                                     report.available
-                                        ? 'cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:border-blue-500'
-                                        : 'opacity-60 bg-slate-100 cursor-not-allowed'
+                                        ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-blue-400'
+                                        : 'opacity-60 bg-slate-50 cursor-not-allowed'
                                 }`}
                                 onClick={() => report.available && handleQuickReport(report.type)}
                             >
-                                <CardContent className="p-6">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="w-12 h-12 rounded-xl gradient-purple flex items-center justify-center text-white">
-                                            <IconComponent size={24} />
+                                <CardContent className="p-5">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+                                            <IconComponent size={22} />
                                         </div>
-                                        <Badge variant={report.badge === 'Ready' ? 'success' : 'warning'} className="text-xs px-2 py-1">
+                                        <Badge variant={report.badge === 'Ready' ? 'success' : 'warning'} className="text-xs px-2 py-0.5">
                                             {report.badge === 'Ready' ? 'Sẵn sàng' : 'Chờ xử lý'}
                                         </Badge>
                                     </div>
-                                    <h6 className="font-semibold text-slate-800 mb-2 mt-3">{report.title}</h6>
-                                    <p className="text-sm text-slate-600 leading-snug mb-0">
+                                    <h6 className="font-semibold text-slate-800 mb-1">{report.title}</h6>
+                                    <p className="text-sm text-slate-500 leading-snug mb-0">
                                         {report.description}
                                     </p>
                                 </CardContent>
@@ -308,204 +405,129 @@ const TicketCenter = () => {
                 </div>
             </div>
 
-            {/* Custom Filter Section */}
-            <div className="mb-4">
-                <Card className="shadow-sm">
-                    <CardHeader className="bg-slate-100 p-4">
-                        <h5 className="mb-0 text-lg font-semibold">Bộ lọc tùy chỉnh</h5>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">Loại báo cáo</label>
-                                <Select value={reportForm.type} onValueChange={(value) => handleFormChange('type', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {reportTypes.map(type => (
-                                            <SelectItem key={type.value} value={type.value}>
-                                                {type.label}
-                                            </SelectItem>
+            {/* Report History Section */}
+            <div>
+                <div className="flex justify-between items-center mb-3">
+                    <h5 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                        Lịch sử báo cáo
+                    </h5>
+                    <span className="text-sm font-semibold text-blue-600">{totalReports} báo cáo</span>
+                </div>
+                <Card className="shadow-sm border border-slate-200">
+                    <CardContent className="p-0">
+                        {loading && reportHistory.length === 0 ? (
+                            <div className="text-center py-12">
+                                <div className="inline-block w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                <p className="mt-3 text-slate-600">Đang tải...</p>
+                            </div>
+                        ) : reportHistory.length === 0 ? (
+                            <div className="text-center py-12">
+                                <p className="text-slate-600">Chưa có báo cáo nào</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-b border-slate-200">
+                                            <TableHead className="text-xs font-bold text-slate-500 uppercase tracking-wide py-3">Tên báo cáo</TableHead>
+                                            <TableHead className="text-xs font-bold text-slate-500 uppercase tracking-wide py-3">Loại</TableHead>
+                                            <TableHead className="text-xs font-bold text-slate-500 uppercase tracking-wide py-3">Thời gian</TableHead>
+                                            <TableHead className="text-xs font-bold text-slate-500 uppercase tracking-wide py-3">Trạng thái</TableHead>
+                                            <TableHead className="text-xs font-bold text-slate-500 uppercase tracking-wide py-3">Thao tác</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {reportHistory.map((report) => (
+                                            <TableRow key={report.id} className="hover:bg-slate-50 border-b border-slate-100">
+                                                <TableCell className="py-4">
+                                                    <div>
+                                                        <div className="font-semibold text-slate-800">{report.reportName}</div>
+                                                        <div className="text-xs text-slate-400 mt-0.5">{report.dateRange || ''}</div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="py-4">
+                                                    <Badge variant="default">{report.type}</Badge>
+                                                </TableCell>
+                                                <TableCell className="py-4 text-slate-600 text-sm">
+                                                    {formatDateTime(report.createdAt)}
+                                                </TableCell>
+                                                <TableCell className="py-4">{getStatusBadge(report.status)}</TableCell>
+                                                <TableCell className="py-4">
+                                                    {report.status === 'COMPLETED' ? (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleDownload(report)}
+                                                            className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                                                        >
+                                                            <Download size={14} className="mr-1" />
+                                                            ↓ Tải
+                                                        </Button>
+                                                    ) : report.status === 'PROCESSING' || report.status === 'PENDING' ? (
+                                                        <Button variant="secondary" size="sm" disabled>
+                                                            <Loader size={14} className="mr-1" />
+                                                            Chờ
+                                                        </Button>
+                                                    ) : (
+                                                        <Button variant="outline" size="sm" disabled>
+                                                            Thất bại
+                                                        </Button>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
-                                    </SelectContent>
-                                </Select>
+                                    </TableBody>
+                                </Table>
                             </div>
-                            <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">Từ ngày</label>
-                                <Input
-                                    type="date"
-                                    value={reportForm.fromDate}
-                                    onChange={(e) => handleFormChange('fromDate', e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">Đến ngày</label>
-                                <Input
-                                    type="date"
-                                    value={reportForm.toDate}
-                                    onChange={(e) => handleFormChange('toDate', e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-bold text-slate-700 mb-1 block">Định dạng</label>
-                                <Select value={reportForm.format} onValueChange={(value) => handleFormChange('format', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {formatOptions.map(format => (
-                                            <SelectItem key={format} value={format}>
-                                                {format}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="flex justify-end mt-4">
-                            <Button
-                                variant="gradient"
-                                onClick={handleGenerateReport}
-                                disabled={generating}
-                            >
-                                {generating ? (
-                                    <>
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                        Đang tạo...
-                                    </>
-                                ) : (
-                                    <>
-                                        <FileText size={16} className="mr-2" />
-                                        Tạo báo cáo
-                                    </>
-                                )}
-                            </Button>
-                        </div>
+                        )}
                     </CardContent>
+                    {!loading && reportHistory.length > 0 && (
+                        <CardFooter className="border-t border-slate-200 p-4 bg-white">
+                            <div className="flex justify-between items-center w-full">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-slate-600">Số hàng mỗi trang:</span>
+                                    <select
+                                        className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                        value={pageSize}
+                                        onChange={(e) => {
+                                            setPageSize(parseInt(e.target.value));
+                                            setCurrentPage(0);
+                                        }}
+                                    >
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                        disabled={currentPage === 0}
+                                        className="border-slate-300 text-slate-600 px-3"
+                                    >
+                                        ‹ Trước
+                                    </Button>
+                                    <span className="px-3 py-1 bg-blue-600 text-white text-sm rounded font-medium">
+                                        {currentPage + 1}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                                        disabled={currentPage >= totalPages - 1}
+                                        className="border-slate-300 text-slate-600 px-3"
+                                    >
+                                        Sau ›
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardFooter>
+                    )}
                 </Card>
             </div>
-
-            {/* Report History Section */}
-            <Card className="shadow-sm">
-                <CardHeader className="bg-slate-100 p-4 flex flex-row justify-between items-center">
-                    <h5 className="mb-0 text-lg font-semibold">Lịch sử báo cáo</h5>
-                    <Badge variant="info">{totalReports} báo cáo</Badge>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {loading && reportHistory.length === 0 ? (
-                        <div className="text-center py-12">
-                            <div className="inline-block w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            <p className="mt-3 text-slate-600">Đang tải...</p>
-                        </div>
-                    ) : reportHistory.length === 0 ? (
-                        <div className="text-center py-12">
-                            <p className="text-slate-600">Chưa có báo cáo nào</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-slate-100">
-                                    <TableRow>
-                                        <TableHead>Tên báo cáo</TableHead>
-                                        <TableHead>Loại</TableHead>
-                                        <TableHead>Thời gian</TableHead>
-                                        <TableHead>Trạng thái</TableHead>
-                                        <TableHead>Thao tác</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {reportHistory.map((report) => (
-                                        <TableRow key={report.id} className="hover:bg-slate-50">
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <FileText size={16} className="text-primary" />
-                                                    <strong>{report.reportName}</strong>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="default">{report.type}</Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Clock size={14} className="text-slate-400" />
-                                                    {formatDateTime(report.createdAt)}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{getStatusBadge(report.status)}</TableCell>
-                                            <TableCell>
-                                                {report.status === 'COMPLETED' ? (
-                                                    <Button
-                                                        variant="success"
-                                                        size="sm"
-                                                        onClick={() => handleDownload(report)}
-                                                    >
-                                                        <Download size={14} className="mr-1" />
-                                                        Tải
-                                                    </Button>
-                                                ) : report.status === 'PROCESSING' || report.status === 'PENDING' ? (
-                                                    <Button variant="secondary" size="sm" disabled>
-                                                        <Loader size={14} className="mr-1" />
-                                                        Chờ
-                                                    </Button>
-                                                ) : (
-                                                    <Button variant="outline" size="sm" disabled>
-                                                        Thất bại
-                                                    </Button>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-                {!loading && reportHistory.length > 0 && (
-                    <CardFooter className="bg-slate-100 p-4">
-                        <div className="flex justify-between items-center w-full">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-slate-600">Số hàng mỗi trang:</span>
-                                <Select value={pageSize.toString()} onValueChange={(value) => {
-                                    setPageSize(parseInt(value));
-                                    setCurrentPage(0);
-                                }}>
-                                    <SelectTrigger className="w-20">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="5">5</SelectItem>
-                                        <SelectItem value="10">10</SelectItem>
-                                        <SelectItem value="20">20</SelectItem>
-                                        <SelectItem value="50">50</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                    disabled={currentPage === 0}
-                                >
-                                    &lt; Trước
-                                </Button>
-                                <span className="text-sm">
-                                    Trang {currentPage + 1} / {totalPages}
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                                    disabled={currentPage >= totalPages - 1}
-                                >
-                                    Sau &gt;
-                                </Button>
-                            </div>
-                        </div>
-                    </CardFooter>
-                )}
-            </Card>
         </Container>
     );
 };
