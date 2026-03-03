@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Save, Image as ImageIcon, Upload } from "lucide-react";
+import { X, Save, Image as ImageIcon, Upload, Plus, Trash } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
@@ -20,6 +20,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     sell_price: "",
     is_active: true,
   });
+  const [attributes, setAttributes] = useState([]);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -42,6 +43,10 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       setImageFile(null);
       setImagePreview(variant.image_url ? (variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`) : null);
       setErrorMsg("");
+
+      const attrsObj = variant.attributes || {};
+      const attrsArr = Object.keys(attrsObj).map(key => ({ name: key, value: attrsObj[key] }));
+      setAttributes(attrsArr);
     }
   }, [variant, isOpen, parentProduct]);
 
@@ -115,6 +120,14 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleAddAttribute = () => setAttributes([...attributes, { name: "", value: "" }]);
+  const handleRemoveAttribute = (index) => setAttributes(attributes.filter((_, i) => i !== index));
+  const handleChangeAttribute = (index, field, value) => {
+    const newAttrs = [...attributes];
+    newAttrs[index][field] = value;
+    setAttributes(newAttrs);
+  };
+
   // Hàm xác nhận Cập nhật thông tin Variant hiện tại
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -146,6 +159,13 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         imageUrl = variant.image_url;
       }
 
+      const attributesMap = {};
+      attributes.forEach((attr) => {
+        if (attr.name.trim() && attr.value.trim()) {
+          attributesMap[attr.name.trim()] = attr.value.trim();
+        }
+      });
+
       await api.put(`/products/variants/${variant.id}`, {
         sku: formData.sku,
         barcode: formData.barcode || null,
@@ -154,6 +174,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sellPrice: parseFloat(formData.sell_price),
         imageUrl: imageUrl,
         isActive: formData.is_active,
+        attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
       });
 
       onSave({
@@ -165,6 +186,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sell_price: parseFloat(formData.sell_price),
         image_url: imageUrl,
         is_active: formData.is_active,
+        attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
       });
     } catch (err) {
       console.error("Error updating variant:", err);
@@ -313,6 +335,55 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   <p className="text-xs text-red-500 mt-1">
                     Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt biến thể.
                   </p>
+                )}
+              </div>
+
+              {/* DYNAMIC ATTRIBUTES */}
+              <div className="pt-4 border-t border-gray-100 mt-4">
+                <div className="flex justify-between items-center mb-3">
+                  <Label className="text-sm font-semibold text-gray-700">Thuộc tính mở rộng</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleAddAttribute}
+                    className="h-8 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg px-2 flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> Thêm thuộc tính
+                  </Button>
+                </div>
+                {attributes.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">Có thể thêm kích cỡ (Size), hương vị (Flavor), mầu sắc (Color)...</p>
+                ) : (
+                  <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
+                    {attributes.map((attr, index) => (
+                      <div key={index} className="flex gap-3 items-start animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Tên thuộc tính (VD: Hương vị)"
+                            className="h-10 text-sm border-gray-200 rounded-xl"
+                            value={attr.name}
+                            onChange={(e) => handleChangeAttribute(index, "name", e.target.value)}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Giá trị (VD: Dâu tây)"
+                            className="h-10 text-sm border-gray-200 rounded-xl"
+                            value={attr.value}
+                            onChange={(e) => handleChangeAttribute(index, "value", e.target.value)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => handleRemoveAttribute(index)}
+                          className="h-10 w-10 p-0 text-red-500 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </CardContent>

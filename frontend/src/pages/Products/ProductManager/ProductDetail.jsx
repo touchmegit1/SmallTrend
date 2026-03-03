@@ -140,7 +140,7 @@ function ProductDetail() {
     printWindow.document.write(`
     <html>
       <head>
-        <title>In tem mã vạch ${product.name} - ${variant.sku}</title>
+        <title>In tem mã vạch ${product.name} - ${variant.name}</title>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
         <style>
           body { 
@@ -496,6 +496,7 @@ function ProductDetail() {
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên biến thể</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mã SKU</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Barcode</TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Thuộc tính</TableHead>
                   <TableHead className="text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Giá Vốn</TableHead>
                   <TableHead className="text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Giá Bán</TableHead>
                   <TableHead className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Tồn kho</TableHead>
@@ -531,6 +532,20 @@ function ProductDetail() {
 
                     <TableCell>
                       <span className="font-mono text-xs text-gray-500">{variant.barcode || "—"}</span>
+                    </TableCell>
+
+                    <TableCell>
+                      {variant.attributes && Object.keys(variant.attributes).length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(variant.attributes).map(([key, val]) => (
+                            <Badge key={key} variant="outline" className="text-[11px] bg-indigo-50 border-indigo-200 text-indigo-700 px-2 py-0.5 font-semibold whitespace-nowrap">
+                              {key}: {val}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Chưa có</span>
+                      )}
                     </TableCell>
 
                     <TableCell className="text-right">

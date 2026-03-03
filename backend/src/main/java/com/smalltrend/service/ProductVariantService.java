@@ -92,6 +92,7 @@ public class ProductVariantService {
                 .sellPrice(request.getSellPrice())
                 .imageUrl(request.getImageUrl())
                 .isActive(isVariantActive)
+                .attributes(request.getAttributes())
                 .build();
 
         ProductVariant saved = productVariantRepository.save(variant);
@@ -130,6 +131,9 @@ public class ProductVariantService {
                 throw new RuntimeException("Không thể bật trạng thái hoạt động vì sản phẩm gốc đang ngừng bán!");
             }
             variant.setActive(request.getIsActive());
+        }
+        if (request.getAttributes() != null) {
+            variant.setAttributes(request.getAttributes());
         }
 
         ProductVariant saved = productVariantRepository.save(variant);
@@ -205,6 +209,7 @@ public class ProductVariantService {
         response.setImageUrl(variant.getImageUrl());
         response.setSellPrice(variant.getSellPrice());
         response.setIsActive(variant.isActive());
+        response.setAttributes(variant.getAttributes());
         response.setCreatedAt(variant.getCreatedAt());
 
         // Tax Info

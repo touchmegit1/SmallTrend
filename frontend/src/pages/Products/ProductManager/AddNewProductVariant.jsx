@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Save, Image as ImageIcon, X, Upload } from "lucide-react";
+import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Trash } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
@@ -25,6 +25,7 @@ const AddNewProductVariant = () => {
     sell_price: "",
     is_active: product?.is_active === false ? false : true,
   });
+  const [attributes, setAttributes] = useState([]); // [{ name: "", value: "" }]
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -110,10 +111,23 @@ const AddNewProductVariant = () => {
     }
   };
 
-  // Cập nhật bộ đệm nội dung state mỗi khi gõ
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddAttribute = () => {
+    setAttributes([...attributes, { name: "", value: "" }]);
+  };
+
+  const handleRemoveAttribute = (index) => {
+    setAttributes(attributes.filter((_, i) => i !== index));
+  };
+
+  const handleChangeAttribute = (index, field, value) => {
+    const newAttrs = [...attributes];
+    newAttrs[index][field] = value;
+    setAttributes(newAttrs);
   };
 
   // Hàm Submit: Tiến hành Upload image (nếu có) trước rồi lấy URL đính vào payload Variant để Post tạo mới
@@ -144,6 +158,13 @@ const AddNewProductVariant = () => {
         imageUrl = await uploadImage();
       }
 
+      const attributesMap = {};
+      attributes.forEach((attr) => {
+        if (attr.name.trim() && attr.value.trim()) {
+          attributesMap[attr.name.trim()] = attr.value.trim();
+        }
+      });
+
       await api.post(`/products/${product.id}/variants`, {
         sku: formData.sku,
         barcode: formData.barcode || null,
@@ -152,6 +173,7 @@ const AddNewProductVariant = () => {
         sellPrice: parseFloat(formData.sell_price),
         imageUrl: imageUrl,
         isActive: formData.is_active,
+        attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
       });
 
       navigate(`/products/detail/${product.id}`, {
@@ -342,6 +364,55 @@ const AddNewProductVariant = () => {
                       </p>
                     )}
                   </div>
+
+                  {/* DYNAMIC ATTRIBUTES */}
+                  <div className="pt-4 border-t border-gray-100 mt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <Label className="text-sm font-semibold text-gray-700">Thuộc tính mở rộng</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleAddAttribute}
+                        className="h-8 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg px-2 flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Thêm thuộc tính
+                      </Button>
+                    </div>
+                    {attributes.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">Có thể thêm kích cỡ (Size), hương vị (Flavor), mầu sắc (Color)...</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {attributes.map((attr, index) => (
+                          <div key={index} className="flex gap-3 items-start animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex-1">
+                              <Input
+                                placeholder="Tên thuộc tính (VD: Hương vị)"
+                                className="h-10 text-sm border-gray-200 rounded-xl"
+                                value={attr.name}
+                                onChange={(e) => handleChangeAttribute(index, "name", e.target.value)}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <Input
+                                placeholder="Giá trị (VD: Dâu tây)"
+                                className="h-10 text-sm border-gray-200 rounded-xl"
+                                value={attr.value}
+                                onChange={(e) => handleChangeAttribute(index, "value", e.target.value)}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => handleRemoveAttribute(index)}
+                              className="h-10 w-10 p-0 text-red-500 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200"
+                            >
+                              <Trash className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -449,8 +520,8 @@ const AddNewProductVariant = () => {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

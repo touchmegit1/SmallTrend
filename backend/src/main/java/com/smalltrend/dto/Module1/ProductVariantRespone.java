@@ -11,6 +11,7 @@ public class ProductVariantRespone {
     private BigDecimal sellPrice;
     private String imageUrl; // Ảnh variant (hoặc product)
     private boolean isActive;
+    private java.util.Map<String, String> attributes;
 
     // Coupon info (nullable)
     private Integer couponId;

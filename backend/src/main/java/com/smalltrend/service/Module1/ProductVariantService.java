@@ -64,6 +64,7 @@ public class ProductVariantService {
         r.setName(variant.getProduct() != null ? variant.getProduct().getName() : "");
         r.setSellPrice(variant.getSellPrice());
         r.setActive(variant.isActive());
+        r.setAttributes(variant.getAttributes());
 
         // Cost info (from latest batch)
         List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());

@@ -12,6 +12,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "product_variants")
@@ -57,6 +58,12 @@ public class ProductVariant {
     @UpdateTimestamp
     @Column(name = "updated_at", columnDefinition = "DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)")
     private LocalDateTime updatedAt;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "variant_attributes", joinColumns = @JoinColumn(name = "variant_id"))
+    @MapKeyColumn(name = "attribute_name")
+    @Column(name = "attribute_value")
+    private Map<String, String> attributes;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coupon_id", nullable = true)

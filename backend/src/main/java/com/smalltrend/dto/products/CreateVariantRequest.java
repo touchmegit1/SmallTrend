@@ -12,4 +12,5 @@ public class CreateVariantRequest {
     private BigDecimal sellPrice;
     private String imageUrl;
     private Boolean isActive;
+    private java.util.Map<String, String> attributes;
 }
