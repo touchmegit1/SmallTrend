@@ -259,7 +259,19 @@ INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, s
 (4, 3, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Thu ngân', NOW(), NOW()),
 (4, 4, '2026-02-23', 'ASSIGNED', 'Ca cuối tuần - Thu ngân', NOW(), NOW()),
 (4, 6, '2026-02-23', 'ASSIGNED', 'Ca cuối tuần - Bán hàng', NOW(), NOW()),
-(4, 7, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Bán hàng', NOW(), NOW());
+(4, 7, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Bán hàng', NOW(), NOW()),
+
+-- Current month assignments để màn hình HR (attendance/payroll) có dữ liệu mặc định
+(1, 1, '2026-03-02', 'ASSIGNED', 'Giám sát đầu tuần', NOW(), NOW()),
+(2, 2, '2026-03-02', 'ASSIGNED', 'Quản lý ca chiều đầu tuần', NOW(), NOW()),
+(1, 3, '2026-03-02', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-02', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-02', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-02', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-02', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+(4, 1, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần quản lý', NOW(), NOW()),
+(4, 3, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần thu ngân', NOW(), NOW()),
+(4, 6, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần bán hàng', NOW(), NOW());
 
 -- 14. CAMPAIGNS
 INSERT IGNORE INTO campaigns (campaign_code, campaign_name, campaign_type, description, start_date, end_date, status, budget, target_revenue, is_public, created_by, created_at, updated_at) VALUES
@@ -437,7 +449,19 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 (6, '2026-02-26', '09:05:00', '18:02:00', 'PRESENT'),
 (7, '2026-02-24', '09:00:00', '18:00:00', 'PRESENT'),
 (7, '2026-02-25', '09:15:00', '18:01:00', 'LATE'),
-(7, '2026-02-26', '09:00:00', '18:00:00', 'PRESENT');
+(7, '2026-02-26', '09:00:00', '18:00:00', 'PRESENT'),
+
+-- Current month attendance để trang chấm công mặc định ngày hiện tại có dữ liệu
+(1, '2026-03-01', '09:00:00', '18:02:00', 'PRESENT'),
+(3, '2026-03-01', '09:02:00', '17:58:00', 'PRESENT'),
+(6, '2026-03-01', '09:10:00', '18:00:00', 'LATE'),
+(1, '2026-03-02', '08:01:00', '17:05:00', 'PRESENT'),
+(2, '2026-03-02', '13:03:00', '22:01:00', 'PRESENT'),
+(3, '2026-03-02', '08:11:00', '17:00:00', 'LATE'),
+(4, '2026-03-02', '13:00:00', '22:03:00', 'PRESENT'),
+(5, '2026-03-02', '08:05:00', '17:02:00', 'PRESENT'),
+(6, '2026-03-02', '18:02:00', '23:00:00', 'PRESENT'),
+(7, '2026-03-02', NULL, NULL, 'ABSENT');
 
 -- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
 -- Each employee has individual salary setup - Manager can modify base salary for each person
@@ -558,7 +582,16 @@ INSERT IGNORE INTO payroll_calculations (
 (4, '2026-02-01', '2026-02-28', 'MONTHLY', 19, 9120, 300, 10944000.00, 540000.00, 500000.00, 76800.00, 1400000.00, 12060800.00, 10660800.00, 'APPROVED', 2, 2, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Thu ngân ca chiều - Giờ công + OT', NOW(), NOW()),
 (5, '2026-02-01', '2026-02-28', 'MONTHLY', 19, 9120, 0, 13000000.00, 0.00, 400000.00, 130000.00, 1400000.00, 13530000.00, 12130000.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Quản lý kho tháng 2', NOW(), NOW()),
 (6, '2026-02-01', '2026-02-28', 'MONTHLY', 18, 8400, 360, 9800000.00, 630000.00, 450000.00, 147000.00, 1200000.00, 11027000.00, 9827000.00, 'APPROVED', 2, 2, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Nhân viên bán hàng - Giờ công + OT', NOW(), NOW()),
-(7, '2026-02-01', '2026-02-28', 'MONTHLY', 20, 9600, 0, 12500000.00, 0.00, 400000.00, 187500.00, 1300000.00, 13087500.00, 11787500.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Nhân viên bán hàng tháng 2', NOW(), NOW());
+(7, '2026-02-01', '2026-02-28', 'MONTHLY', 20, 9600, 0, 12500000.00, 0.00, 400000.00, 187500.00, 1300000.00, 13087500.00, 11787500.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Nhân viên bán hàng tháng 2', NOW(), NOW()),
+
+-- Current month payroll snapshots
+(1, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 960, 0, 3000000.00, 0.00, 150000.00, 50000.00, 300000.00, 3200000.00, 2900000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(2, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 540, 0, 900000.00, 0.00, 50000.00, 15000.00, 90000.00, 965000.00, 875000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(3, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 1045, 0, 1306250.00, 0.00, 50000.00, 13500.00, 150000.00, 1369750.00, 1219750.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(4, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 543, 0, 651600.00, 0.00, 25000.00, 7000.00, 70000.00, 683600.00, 613600.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(5, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 537, 0, 730000.00, 0.00, 25000.00, 8000.00, 75000.00, 763000.00, 688000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(6, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 829, 0, 966833.00, 0.00, 30000.00, 12000.00, 90000.00, 1008833.00, 918833.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(7, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 0, 0, 0.00, 0.00, 0.00, 0.00, 120000.00, 0.00, 0.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Nghỉ không lương ngày 02/03', NOW(), NOW());
 
 -- 29. SHIFT SWAP REQUESTS
 INSERT IGNORE INTO shift_swap_requests (
