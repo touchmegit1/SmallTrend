@@ -317,6 +317,22 @@ INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_regist
 ('SO-PH-009', 4, 3, 2, '2026-02-28 09:10:00', 95000.00, 0.00, 0.00, 95000.00, 'CARD', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
 ('SO-PH-010', 3, 3, 2, '2026-02-28 16:30:00', 72000.00, 0.00, 0.00, 72000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW());
 
+-- March 2026 orders (past days + today)
+INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES
+-- 2026-03-01
+('SO-20260301-001', 1, 3, 1, '2026-03-01 09:15:00', 62000.00, 6200.00, 0.00, 68200.00, 'CASH', 'COMPLETED', 'Đơn sáng đầu tháng 3', '2026-03-01 09:15:00', '2026-03-01 09:16:00'),
+('SO-20260301-002', 4, 4, 2, '2026-03-01 14:50:00', 105000.00, 10500.00, 0.00, 115500.00, 'CARD', 'COMPLETED', 'Khách mua số lượng lớn', '2026-03-01 14:50:00', '2026-03-01 14:52:00'),
+-- 2026-03-02
+('SO-20260302-001', 2, 3, 1, '2026-03-02 10:30:00', 45000.00, 4500.00, 0.00, 49500.00, 'MOMO', 'COMPLETED', 'Đơn thanh toán ví điện tử', '2026-03-02 10:30:00', '2026-03-02 10:31:00'),
+('SO-20260302-002', 3, 4, 2, '2026-03-02 18:20:00', 88000.00, 8800.00, 0.00, 96800.00, 'CASH', 'COMPLETED', 'Đơn chiều tối', '2026-03-02 18:20:00', '2026-03-02 18:22:00'),
+-- 2026-03-03
+('SO-20260303-001', 1, 3, 1, '2026-03-03 08:45:00', 53000.00, 5300.00, 0.00, 58300.00, 'CASH', 'COMPLETED', 'Đơn sáng sớm', '2026-03-03 08:45:00', '2026-03-03 08:46:00'),
+-- 2026-03-04 today (NOW)
+('SO-20260304-001', 2, 3, 1, NOW(), 37000.00, 3700.00, 0.00, 40700.00, 'CASH', 'COMPLETED', 'Đơn hôm nay - sáng sớm', NOW(), NOW()),
+('SO-20260304-002', 1, 4, 2, NOW(), 93000.00, 9300.00, 5000.00, 97300.00, 'CARD', 'COMPLETED', 'Đơn hôm nay - khách thành viên', NOW(), NOW()),
+('SO-20260304-003', 4, 3, 1, NOW(), 126000.00, 12600.00, 0.00, 138600.00, 'MOMO', 'COMPLETED', 'Đơn hôm nay - mua nhiều mặt hàng', NOW(), NOW()),
+('SO-20260304-004', 3, 4, 2, NOW(), 48000.00, 4800.00, 0.00, 52800.00, 'CASH', 'COMPLETED', 'Đơn hôm nay - buổi chiều', NOW(), NOW());
+
 -- 19. SALE ORDER ITEMS
 INSERT IGNORE INTO sale_order_items (sale_order_id, product_variant_id, product_name, sku, quantity, unit_price, line_discount_amount, line_tax_amount, line_total_amount, notes) VALUES
 ((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 4, 'Coca Cola 330ml', 'COCA-330ML', 2, 12000.00, 0.00, 2400.00, 26400.00, NULL),
@@ -448,11 +464,11 @@ INSERT IGNORE INTO salary_configs (
     notes, created_at, updated_at
 ) VALUES
 -- Admin: Monthly salary with fixed base
-(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL, 
+(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Quản lý toàn hệ thống - Lương cố định hàng tháng', NOW(), NOW()),
 
 -- Manager: Monthly salary with fixed base
-(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, TRUE, '2026-01-01 00:00:00', NULL, 
+(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Quản lý cửa hàng - Lương cố định hàng tháng', NOW(), NOW()),
 
 -- Cashier 1: Hourly rate with monthly backup
@@ -477,7 +493,7 @@ INSERT IGNORE INTO salary_configs (
 
 -- 25. PURCHASE ORDERS (Matching JPA PurchaseOrder schema)
 INSERT IGNORE INTO purchase_orders (
-   po_number, supplier_id, created_by, order_date, status, subtotal, 
+   po_number, supplier_id, created_by, order_date, status, subtotal,
    tax_amount, discount_amount, total_amount, notes, created_at, updated_at
 ) VALUES
 ('PO-LEG-2024-001', 1, 2, '2024-01-10', 'RECEIVED', 5000000.00, 0.00, 0.00, 5000000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
