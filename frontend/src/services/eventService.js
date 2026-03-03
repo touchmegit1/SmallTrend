@@ -48,6 +48,27 @@ const eventService = {
         return response.data;
     },
 
+    // ======= VOUCHERS (aliases for coupons) =======
+    getAllVouchers: async () => {
+        const response = await api.get('/crm/coupons');
+        return response.data;
+    },
+
+    createVoucher: async (data) => {
+        const response = await api.post('/crm/coupons', data);
+        return response.data;
+    },
+
+    updateVoucher: async (id, data) => {
+        const response = await api.put(`/crm/coupons/${id}`, data);
+        return response.data;
+    },
+
+    deleteVoucher: async (id) => {
+        const response = await api.delete(`/crm/coupons/${id}`);
+        return response.data;
+    },
+
     // ======= PRODUCT VARIANTS =======
     getAllVariants: async () => {
         const response = await api.get('/pos/product');
@@ -65,6 +86,17 @@ const eventService = {
     },
 
     removeCouponFromVariant: async (sku) => {
+        const response = await api.delete(`/pos/product/${encodeURIComponent(sku)}/coupon`);
+        return response.data;
+    },
+
+    // ======= PRODUCT VARIANTS - VOUCHER ALIASES =======
+    applyVoucherToVariant: async (sku, voucherId) => {
+        const response = await api.put(`/pos/product/${encodeURIComponent(sku)}/coupon/${voucherId}`);
+        return response.data;
+    },
+
+    removeVoucherFromVariant: async (sku) => {
         const response = await api.delete(`/pos/product/${encodeURIComponent(sku)}/coupon`);
         return response.data;
     },
