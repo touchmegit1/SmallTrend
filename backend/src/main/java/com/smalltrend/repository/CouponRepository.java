@@ -2,6 +2,7 @@ package com.smalltrend.repository;
 
 import com.smalltrend.entity.Coupon;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
@@ -12,4 +13,7 @@ public interface CouponRepository extends JpaRepository<Coupon, Integer> {
     List<Coupon> findByStatusOrderByCreatedAtDesc(String status);
     boolean existsByCouponCode(String couponCode);
     Optional<Coupon> findByCouponCode(String couponCode);
+
+    @Query("SELECT c.couponCode, c.couponName, c.endDate, c.discountPercent, c.discountAmount FROM Coupon c WHERE c.status = 'ACTIVE' ORDER BY c.endDate ASC")
+    List<Object[]> findActiveCoupons();
 }
