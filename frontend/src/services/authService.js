@@ -1,8 +1,31 @@
 import api from '../config/axiosConfig';
 
+const clearAuthData = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+};
+
 const login = async (username, password) => {
     try {
         const response = await api.post('/auth/login', { username, password });
+        if (response.data.token) {
+            localStorage.setItem('user', JSON.stringify(response.data));
+            localStorage.setItem('token', response.data.token);
+        }
+        return response.data;
+    } catch (error) {
+        // Extract error message from backend response
+        const errorMessage = error.response?.data?.message ||
+            error.response?.data?.error ||
+            error.message ||
+            'Đăng nhập thất bại';
+        throw new Error(errorMessage);
+    }
+};
+
+const register = async (userData) => {
+    try {
+        const response = await api.post('/auth/register', userData);
         if (response.data.token) {
             localStorage.setItem('user', JSON.stringify(response.data));
             localStorage.setItem('token', response.data.token);
@@ -13,14 +36,15 @@ const login = async (username, password) => {
     }
 };
 
-const logout = async () => {
+const logout = async (callApi = true) => {
     try {
-        await api.post('/auth/logout');
+        if (callApi) {
+            await api.post('/auth/logout');
+        }
     } catch (error) {
         console.error('Logout error:', error);
     } finally {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        clearAuthData();
     }
 };
 
@@ -49,7 +73,9 @@ const validateToken = async () => {
 
 const authService = {
     login,
+    register,
     logout,
+    clearAuthData,
     getCurrentUser,
     getToken,
     validateToken

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Edit, Trash2, X, Search, Filter, UserCheck, Clock } from 'lucide-react';
+import { Users, Edit, Trash2, X, Search, Filter, UserCheck, Clock, Plus, Check, Ban } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import { userService } from '../../services/userService';
 const UserManagement = () => {
@@ -36,10 +36,11 @@ const UserManagement = () => {
 
     const fetchUsers = async () => {
         try {
-            const response = await userService.getAll();
-            setUsers(response);
+            const response = await userService.getAll({ page: 0, size: 100 });
+            setUsers(normalizeUsers(response));
             setError('');
         } catch (err) {
+            setUsers([]);
             setError('Không thể tải danh sách người dùng: ' + (err.response?.data?.message || err.message));
         } finally {
             setLoading(false);
@@ -47,12 +48,12 @@ const UserManagement = () => {
     };
 
     const filterUsers = () => {
-        let filtered = [...users];
+        let filtered = normalizeUsers(users);
 
         if (activeTab === 'pending') {
-            filtered = filtered.filter(user => (user.status || '').toLowerCase() === 'pending');
+            filtered = filtered.filter(user => normalizeStatus(user.status) === 'pending');
         } else {
-            filtered = filtered.filter(user => (user.status || '').toLowerCase() !== 'pending');
+            filtered = filtered.filter(user => normalizeStatus(user.status) !== 'pending');
         }
 
         if (searchTerm) {
@@ -64,7 +65,7 @@ const UserManagement = () => {
         }
 
         if (activeTab === 'approved' && statusFilter !== 'all') {
-            filtered = filtered.filter(user => (user.status || '').toLowerCase() === statusFilter);
+            filtered = filtered.filter(user => normalizeStatus(user.status) === statusFilter);
         }
 
         setFilteredUsers(filtered);
@@ -114,7 +115,7 @@ const UserManagement = () => {
             email: user.email,
             phone: user.phone || '',
             address: user.address || '',
-            roleId: user.role.id,
+            roleId: user.role?.id || 2,
             status: (user.status || 'active').toLowerCase()
         });
         setValidationErrors({});
@@ -157,11 +158,14 @@ const UserManagement = () => {
                     phone: formData.phone || undefined,
                     address: formData.address || undefined,
                     roleId: formData.roleId,
-                    status: formData.status
+                    status: (formData.status || 'active').toUpperCase()
                 };
                 await userService.create(payload);
             } else {
-                await userService.update(selectedUser.id, formData);
+                await userService.update(selectedUser.id, {
+                    ...formData,
+                    status: (formData.status || 'active').toUpperCase()
+                });
             }
             setShowModal(false);
             fetchUsers();
@@ -219,8 +223,9 @@ const UserManagement = () => {
         }
     };
 
-    const pendingCount = users.filter(u => u.status === 'pending').length;
-    const approvedCount = users.filter(u => u.status !== 'pending').length;
+    const safeUsers = normalizeUsers(users);
+    const pendingCount = safeUsers.filter(u => normalizeStatus(u.status) === 'pending').length;
+    const approvedCount = safeUsers.filter(u => normalizeStatus(u.status) !== 'pending').length;
 
     if (loading) {
         return (
@@ -231,17 +236,18 @@ const UserManagement = () => {
     }
 
     return (
-        <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                    <Users size={28} />
-                    Quản lý người dùng
+        <div className="space-y-6">
+            <div className="flex justify-between items-center gap-4">
+                <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+                    <Users size={26} className="text-indigo-600" />
+                    Quản lý tài khoản hệ thống
                 </h1>
                 <button
                     onClick={handleCreateOpen}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                 >
-                    + Tạo người dùng
+                    <Plus size={16} />
+                    Tạo người dùng
                 </button>
             </div>
 
@@ -251,7 +257,7 @@ const UserManagement = () => {
                 </div>
             )}
 
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2">
                 <button
                     onClick={() => setActiveTab('approved')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${activeTab === 'approved'
@@ -274,7 +280,7 @@ const UserManagement = () => {
                 </button>
             </div>
 
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6">
+            <div className="bg-white p-4 rounded-xl border border-slate-200">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="md:col-span-2">
                         <div className="relative">
@@ -309,14 +315,14 @@ const UserManagement = () => {
             </div>
 
             {filteredUsers.length === 0 ? (
-                <div className="bg-white rounded-lg shadow p-8 text-center">
+                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
                     <Users size={48} className="mx-auto text-slate-300 mb-4" />
                     <p className="text-slate-600">
                         {activeTab === 'pending' ? 'Không có yêu cầu đăng ký nào' : 'Không tìm thấy người dùng nào'}
                     </p>
                 </div>
             ) : (
-                <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <table className="min-w-full divide-y divide-slate-200">
                         <thead className="bg-slate-50">
                             <tr>
@@ -351,7 +357,7 @@ const UserManagement = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <CustomSelect
-                                            value={user.role.id}
+                                            value={user.role?.id || 2}
                                             onChange={(newRoleId) => handleRoleChange(user.id, newRoleId)}
                                             variant="role"
                                             options={[
@@ -382,17 +388,17 @@ const UserManagement = () => {
                                                 <>
                                                     <button
                                                         onClick={() => handleApprove(user.id)}
-                                                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-medium"
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-medium"
                                                         title="Duyệt"
                                                     >
-                                                        ✓ Duyệt
+                                                        <Check size={14} /> Duyệt
                                                     </button>
                                                     <button
                                                         onClick={() => handleReject(user.id)}
-                                                        className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xs font-medium"
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xs font-medium"
                                                         title="Từ chối"
                                                     >
-                                                        ✗ Từ chối
+                                                        <Ban size={14} /> Từ chối
                                                     </button>
                                                 </>
                                             ) : (
@@ -614,5 +620,15 @@ const UserManagement = () => {
         </div>
     );
 };
+
+const normalizeUsers = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.content)) return payload.content;
+    if (Array.isArray(payload?.data?.content)) return payload.data.content;
+    if (Array.isArray(payload?.data)) return payload.data;
+    return [];
+};
+
+const normalizeStatus = (status) => String(status || '').toLowerCase();
 
 export default UserManagement;

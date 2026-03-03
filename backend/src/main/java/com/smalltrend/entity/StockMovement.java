@@ -1,10 +1,10 @@
 package com.smalltrend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "stock_movements")
@@ -16,20 +16,36 @@ public class StockMovement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", nullable = false)
     private ProductVariant variant;
 
-    @ManyToOne
-    @JoinColumn(name = "from_bin_id")
-    private ShelfBin fromBin;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "batch_id")
+    private ProductBatch batch;
 
-    @ManyToOne
-    @JoinColumn(name = "to_bin_id")
-    private ShelfBin toBin;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private Location location;
 
+    @Column(nullable = false)
+    private String type; // IN, OUT, ADJUST
+
+    @Column(nullable = false)
     private Integer quantity;
-    private String type;
+
+    @Column(name = "reference_type")
+    private String referenceType; // purchase_order, disposal, inventory_count
+
+    @Column(name = "reference_id")
+    private Long referenceId;
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 }

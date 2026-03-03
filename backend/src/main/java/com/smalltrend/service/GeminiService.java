@@ -23,12 +23,17 @@ public class GeminiService {
 
     private final RestTemplate restTemplate;
 
-    @Value("${GEMINI_API_KEY}")
+    @Value("${GEMINI_API_KEY:}")
     private String apiKey;
 
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=";
 
     public String generateContent(String prompt) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("GEMINI_API_KEY is not configured. AI response is disabled.");
+            return "AI chưa được cấu hình GEMINI_API_KEY. Vui lòng cập nhật biến môi trường để sử dụng tính năng AI.";
+        }
+
         String url = GEMINI_API_URL + apiKey;
 
         HttpHeaders headers = new HttpHeaders();

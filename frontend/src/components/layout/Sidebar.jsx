@@ -16,14 +16,10 @@ const Sidebar = () => {
         }));
     };
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         navigate('/login');
     };
-
-    // Debug: log user info
-    console.log('Sidebar - Current user:', user);
-    console.log('Sidebar - User role:', user?.role);
 
     const navItems = [
         {
@@ -34,6 +30,7 @@ const Sidebar = () => {
                 { label: 'Giao diện bán hàng', path: '/pos' },
                 { label: 'Lịch sử đơn hàng', path: '/pos/history' },
                 { label: 'Đơn hàng treo', path: '/pos/suspended' },
+                { label: 'Giao ca', path: '/pos/shift-handover' },
             ]
         },
         {
@@ -46,6 +43,9 @@ const Sidebar = () => {
                 { label: 'Xuất kho', path: '/inventory/export' },
                 { label: 'Kiểm kê', path: '/inventory/audit' },
                 { label: 'Cảnh báo hết hàng', path: '/inventory/alerts' },
+                { label: 'Quản lý vị trí', path: '/inventory/locations' },
+                { label: 'Xuất hủy', path: '/inventory/disposal' },
+                { label: 'Nhà cung cấp', path: '/inventory/suppliers' },
             ]
         },
         {
@@ -54,9 +54,10 @@ const Sidebar = () => {
             path: '/products',
             children: [
                 { label: 'Danh sách sản phẩm', path: '/products' },
+                { label: 'Thêm sản phẩm', path: '/products/addproduct' },
                 { label: 'Danh mục & Brand', path: '/products/categories' },
-                { label: 'Thiết lập giá', path: '/products/price-books' },
-                { label: 'In tem mã vạch', path: '/products/print-barcodes' },
+                { label: 'Thiết lập giá', path: '/products/price' },
+                { label: 'Combo sản phẩm', path: '/products/combo' },
             ]
         },
         {
@@ -64,12 +65,11 @@ const Sidebar = () => {
             label: 'Khách hàng & KM',
             path: '/crm',
             children: [
-                { label: 'Danh sách khách hàng', path: '/crm' },
-                { label: 'Chương trình KM', path: '/crm/promotions' },
-                { label: 'Voucher/Coupon', path: '/crm/vouchers' },
-                { label: 'Tích điểm & Hạng', path: '/crm/loyalty' },
-                { label: 'Khiếu nại', path: '/crm/complaints' },
-                { label: 'Trang chủ', path: '/crm/homepage' },
+                { label: 'Danh sách khách hàng', path: '/crm/customer' },
+                { label: 'Khuyến Mãi', path: '/crm/event' },
+                { label: 'Kho quà tặng', path: '/crm/loyalty' },
+                { label: 'Khiếu nại', path: '/crm/complain' },
+                { label: 'Báo Cáo Thống Kê', path: '/crm/report' },
             ]
         },
         {
@@ -85,29 +85,29 @@ const Sidebar = () => {
         },
         {
             icon: BarChart3,
-            label: 'AI',
+            label: 'Báo cáo & AI',
             path: '/reports',
             children: [
+                { label: 'Tạo báo cáo', path: '/reports/create' },
+                { label: 'Quản lý báo cáo', path: '/reports/manage' },
                 { label: 'AI dự báo', path: '/reports/ai-chat' },
+                { label: 'Báo cáo doanh thu', path: '/reports/sales' },
+                { label: 'Báo cáo kho', path: '/reports/inventory' },
+                { label: 'Nhật ký kiểm toán', path: '/reports/audit-logs' },
+                { label: 'Nhật ký hoạt động', path: '/reports/logs' },
             ]
         },
     ];
 
-    // Debug: log user info
-    console.log('Sidebar - Current user:', user);
-    console.log('Sidebar - User role:', user?.role);
-    console.log('Sidebar - User full object:', JSON.stringify(user));
-
-    // Admin menu - always show for ROLE_ADMIN
-    const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
-    console.log('Sidebar - Is Admin:', isAdmin);
+    // Admin menu - compatible with new DB role naming
+    const isAdmin = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
             <div
                 className="p-6 border-b border-slate-100 flex items-center gap-3 cursor-pointer hover:bg-slate-50"
                 onClick={() => {
-                    const isAdminRole = user && (user.role === 'ROLE_ADMIN' || user.role === 'ADMIN');
+                    const isAdminRole = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
                     navigate(isAdminRole ? '/dashboard' : '/pos');
                 }}
                 title="Về trang chính"
@@ -126,8 +126,8 @@ const Sidebar = () => {
                     <div className="mb-2">
                         <div
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === '/dashboard' || location.pathname.startsWith('/hr/users') || openMenus['admin']
-                                    ? 'bg-indigo-50 text-indigo-700'
-                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                ? 'bg-indigo-50 text-indigo-700'
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                 }`}
                             onClick={() => toggleMenu('admin')}
                         >

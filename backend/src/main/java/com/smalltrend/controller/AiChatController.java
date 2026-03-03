@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -23,5 +25,15 @@ public class AiChatController {
                 request.getSessionId(),
                 java.time.Instant.now().toString()
         ));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getStats() {
+        return ResponseEntity.ok(aiChatService.getStatistics());
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> health() {
+        return ResponseEntity.ok(aiChatService.getHealthStatus());
     }
 }

@@ -3,9 +3,9 @@ package com.smalltrend.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smalltrend.dto.report.ReportGenerateRequest;
 import com.smalltrend.entity.InventoryStock;
+import com.smalltrend.entity.Order;
+import com.smalltrend.entity.OrderItem;
 import com.smalltrend.entity.Report;
-import com.smalltrend.entity.SalesOrder;
-import com.smalltrend.entity.SalesOrderItem;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.OrderRepository;
 import com.smalltrend.repository.ReportRepository;
@@ -22,8 +22,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Separate service for async report processing.
- * Spring's @Async only works when called from a different bean (proxy-based AOP).
+ * Separate service for async report processing. Spring's @Async only works when
+ * called from a different bean (proxy-based AOP).
  */
 @Service
 @RequiredArgsConstructor
@@ -38,8 +38,8 @@ public class ReportProcessingService {
     private final ObjectMapper objectMapper;
 
     /**
-     * Async report processing - must be in a separate bean from the caller
-     * for Spring's @Async proxy to work.
+     * Async report processing - must be in a separate bean from the caller for
+     * Spring's @Async proxy to work.
      */
     @Async
     @Transactional
@@ -121,7 +121,7 @@ public class ReportProcessingService {
     }
 
     private byte[] processRevenueReport(LocalDateTime from, LocalDateTime to, String format, Map<String, Object> dataMap) {
-        List<SalesOrder> orders = orderRepository.findByOrderDateBetween(from, to);
+        List<Order> orders = orderRepository.findByOrderDateBetween(from, to);
 
         // Calculate daily stats
         Map<LocalDate, DailyStats> dailyStats = orders.stream()
@@ -146,7 +146,7 @@ public class ReportProcessingService {
                 .collect(Collectors.toList());
 
         BigDecimal totalRevenue = orders.stream()
-                .map(SalesOrder::getTotalAmount)
+                .map(Order::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         dataMap.put("totalRevenue", totalRevenue);
@@ -158,10 +158,10 @@ public class ReportProcessingService {
         List<String> headers = Arrays.asList("Date", "Orders", "Revenue");
         List<List<String>> rows = chartData.stream()
                 .map(m -> Arrays.asList(
-                        m.get("date").toString(),
-                        m.get("orders").toString(),
-                        m.get("revenue").toString()
-                ))
+                m.get("date").toString(),
+                m.get("orders").toString(),
+                m.get("revenue").toString()
+        ))
                 .collect(Collectors.toList());
 
         if ("PDF".equalsIgnoreCase(format)) {
@@ -174,14 +174,14 @@ public class ReportProcessingService {
     }
 
     private byte[] processTopProductsReport(LocalDateTime from, LocalDateTime to, String format, Map<String, Object> dataMap) {
-        List<SalesOrder> orders = orderRepository.findByOrderDateBetween(from, to);
+        List<Order> orders = orderRepository.findByOrderDateBetween(from, to);
 
         Map<String, ProductStats> productStats = new HashMap<>();
 
-        for (SalesOrder order : orders) {
+        for (Order order : orders) {
             if (order.getItems() != null) {
-                for (SalesOrderItem item : order.getItems()) {
-                    String productName = item.getVariant().getProduct().getName() + " - " + item.getVariant().getSku();
+                for (OrderItem item : order.getItems()) {
+                    String productName = item.getProductVariant().getProduct().getName() + " - " + item.getProductVariant().getSku();
                     ProductStats stats = productStats.getOrDefault(productName, new ProductStats(0, BigDecimal.ZERO));
 
                     stats.quantity += item.getQuantity();
@@ -211,10 +211,10 @@ public class ReportProcessingService {
         List<String> headers = Arrays.asList("Product", "Quantity Sold", "Revenue");
         List<List<String>> rows = topProducts.stream()
                 .map(m -> Arrays.asList(
-                        m.get("name").toString(),
-                        m.get("quantity").toString(),
-                        m.get("revenue").toString()
-                ))
+                m.get("name").toString(),
+                m.get("quantity").toString(),
+                m.get("revenue").toString()
+        ))
                 .collect(Collectors.toList());
 
         if ("PDF".equalsIgnoreCase(format)) {
@@ -233,12 +233,12 @@ public class ReportProcessingService {
         List<Map<String, Object>> lowStockItems = stocks.stream()
                 .filter(s -> s.getQuantity() < 10)
                 .map(s -> {
-                     Map<String, Object> map = new HashMap<>();
-                     map.put("product", s.getVariant().getProduct().getName());
-                     map.put("sku", s.getVariant().getSku());
-                     map.put("quantity", s.getQuantity());
-                     map.put("location", s.getBin() != null ? (s.getBin().getLocation().getName() + " - " + s.getBin().getBinCode()) : "N/A");
-                     return map;
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("product", s.getVariant().getProduct().getName());
+                    map.put("sku", s.getVariant().getSku());
+                    map.put("quantity", s.getQuantity());
+                    map.put("location", s.getLocation() != null ? s.getLocation().getName() : "N/A");
+                    return map;
                 })
                 .collect(Collectors.toList());
 
@@ -251,11 +251,11 @@ public class ReportProcessingService {
         List<String> headers = Arrays.asList("Product", "SKU", "Quantity", "Location");
         List<List<String>> rows = lowStockItems.stream()
                 .map(m -> Arrays.asList(
-                        m.get("product").toString(),
-                        m.get("sku").toString(),
-                        m.get("quantity").toString(),
-                        m.get("location").toString()
-                ))
+                m.get("product").toString(),
+                m.get("sku").toString(),
+                m.get("quantity").toString(),
+                m.get("location").toString()
+        ))
                 .collect(Collectors.toList());
 
         if ("PDF".equalsIgnoreCase(format)) {
@@ -269,11 +269,11 @@ public class ReportProcessingService {
 
     private byte[] processCustomerReport(LocalDateTime from, LocalDateTime to, String format, Map<String, Object> dataMap) {
         // Basic implementation for now
-        List<SalesOrder> orders = orderRepository.findByOrderDateBetween(from, to);
+        List<Order> orders = orderRepository.findByOrderDateBetween(from, to);
 
         Map<String, DailyStats> customerStats = new HashMap<>(); // Reusing DailyStats for revenue/count
 
-        for (SalesOrder order : orders) {
+        for (Order order : orders) {
             String customerName = order.getCustomer() != null ? order.getCustomer().getName() : "Walk-in Customer";
             DailyStats stats = customerStats.getOrDefault(customerName, new DailyStats(BigDecimal.ZERO, 0));
 
@@ -301,10 +301,10 @@ public class ReportProcessingService {
         List<String> headers = Arrays.asList("Customer", "Orders", "Total Spent");
         List<List<String>> rows = topCustomers.stream()
                 .map(m -> Arrays.asList(
-                        m.get("name").toString(),
-                        m.get("orders").toString(),
-                        m.get("spent").toString()
-                ))
+                m.get("name").toString(),
+                m.get("orders").toString(),
+                m.get("spent").toString()
+        ))
                 .collect(Collectors.toList());
 
         if ("PDF".equalsIgnoreCase(format)) {
@@ -318,6 +318,7 @@ public class ReportProcessingService {
 
     // Helper classes
     static class DailyStats {
+
         BigDecimal revenue;
         int orderCount;
 
@@ -328,6 +329,7 @@ public class ReportProcessingService {
     }
 
     static class ProductStats {
+
         int quantity;
         BigDecimal revenue;
 

@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
                         setUser(currentUser);
                         setIsAuthenticated(true);
                     } else {
-                        authService.logout();
+                        authService.clearAuthData();
                         setUser(null);
                         setIsAuthenticated(false);
                     }
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
                 }
             } catch (error) {
                 console.error('Auth initialization error:', error);
-                authService.logout();
+                authService.clearAuthData();
                 setUser(null);
                 setIsAuthenticated(false);
             } finally {
@@ -44,17 +44,6 @@ export const AuthProvider = ({ children }) => {
     const login = async (username, password) => {
         try {
             const data = await authService.login(username, password);
-            setUser(data);
-            setIsAuthenticated(true);
-            return data;
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    const register = async (userData) => {
-        try {
-            const data = await authService.register(userData);
             setUser(data);
             setIsAuthenticated(true);
             return data;
@@ -77,7 +66,6 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         isLoading,
         login,
-        register,
         logout,
     };
 
