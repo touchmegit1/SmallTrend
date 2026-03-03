@@ -171,13 +171,31 @@ function ProductDetail() {
             font-size: 11px; 
             color: #666; 
           }
+          .attributes {
+            font-size: 11px;
+            color: #333;
+            margin-bottom: 3px;
+          }
+          .attributes span {
+            display: inline-block;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 1px 5px;
+            margin: 1px 2px;
+            font-size: 10px;
+          }
         </style>
       </head>
       <body>
         <div class="barcode-label">
           <div class="product-name">
-            ${product.name}
+            ${variant.name || product.name}
           </div>
+          ${variant.attributes && Object.keys(variant.attributes).length > 0 ? `
+          <div class="attributes">
+            ${Object.entries(variant.attributes).map(([k, v]) => `<span>${k}: ${v}</span>`).join('')}
+          </div>` : ''}
           <svg id="barcode"></svg>
           <div class="price">
             ${(variant.sell_price || 0).toLocaleString("vi-VN")}đ
