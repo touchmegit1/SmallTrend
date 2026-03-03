@@ -434,10 +434,11 @@ const AddNewProductVariant = () => {
               <Save className="w-5 h-5 mr-2" />
               {saving || uploadingImage ? "Đang lưu..." : "Lưu biến thể"}
             </Button>
+
             <Button
               type="button"
-              variant="ghost"
-              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold"
+              variant="danger"
+              className="w-full h-12 border-2 border-red-200 text-red-600 hover:bg-red-400 hover:text-red-800 rounded-xl font-bold flex items-center justify-center"
               onClick={() =>
                 navigate(`/products/detail/${product.id}`, {
                   state: { product },

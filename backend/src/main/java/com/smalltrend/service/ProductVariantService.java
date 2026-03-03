@@ -72,6 +72,17 @@ public class ProductVariantService {
             throw new RuntimeException("Không thể tạo biến thể đang bán vì sản phẩm gốc đang ngừng bán!");
         }
 
+        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
+            if (productVariantRepository.existsBySku(request.getSku())) {
+                throw new RuntimeException("Mã SKU đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
+        if (request.getBarcode() != null && !request.getBarcode().trim().isEmpty()) {
+            if (productVariantRepository.existsByBarcode(request.getBarcode())) {
+                throw new RuntimeException("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
+
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .sku(request.getSku())
@@ -93,6 +104,17 @@ public class ProductVariantService {
 
         Unit unit = unitRepository.findById(request.getUnitId())
                 .orElseThrow(() -> new RuntimeException("Unit not found with id: " + request.getUnitId()));
+
+        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
+            if (productVariantRepository.existsBySkuAndIdNot(request.getSku(), variantId)) {
+                throw new RuntimeException("Mã SKU đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
+        if (request.getBarcode() != null && !request.getBarcode().trim().isEmpty()) {
+            if (productVariantRepository.existsByBarcodeAndIdNot(request.getBarcode(), variantId)) {
+                throw new RuntimeException("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
 
         variant.setSku(request.getSku());
         variant.setBarcode(request.getBarcode());
@@ -125,6 +147,21 @@ public class ProductVariantService {
 
         variant.setActive(willBeActive);
         productVariantRepository.save(variant);
+    }
+
+    public void deleteVariant(Integer variantId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Variant not found with id: " + variantId));
+
+        java.time.LocalDateTime createdAt = variant.getCreatedAt();
+        if (createdAt != null) {
+            long minutes = java.time.Duration.between(createdAt, java.time.LocalDateTime.now()).toMinutes();
+            if (minutes >= 2) {
+                throw new RuntimeException("Biến thể đã tạo quá 2 phút, bạn không thể xoá biến thể này nữa!");
+            }
+        }
+
+        productVariantRepository.deleteById(variantId);
     }
 
     public List<Unit> getAllUnits() {
@@ -168,6 +205,7 @@ public class ProductVariantService {
         response.setImageUrl(variant.getImageUrl());
         response.setSellPrice(variant.getSellPrice());
         response.setIsActive(variant.isActive());
+        response.setCreatedAt(variant.getCreatedAt());
 
         // Tax Info
         if (variant.getProduct() != null && variant.getProduct().getTaxRate() != null) {

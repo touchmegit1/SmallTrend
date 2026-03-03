@@ -75,6 +75,13 @@ public class ProductController {
         return ResponseEntity.ok("Variant status toggled");
     }
 
+    // Xóa một biến thể (chỉ trong 2 phút đầu sau khi tạo)
+    @DeleteMapping("/variants/{variantId}")
+    public ResponseEntity<String> deleteVariant(@PathVariable Integer variantId) {
+        productVariantService.deleteVariant(variantId);
+        return ResponseEntity.ok("Variant deleted");
+    }
+
     // Lấy danh sách tất cả các đơn vị tính có trong hệ thống
     @GetMapping("/units")
     public ResponseEntity<List<Unit>> getAllUnits() {

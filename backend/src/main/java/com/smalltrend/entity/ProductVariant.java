@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,7 +29,10 @@ public class ProductVariant {
     @JoinColumn(name = "product_id", nullable = false)
     @JsonIgnore
     private Product product;
+    @Column(unique = true)
     private String sku;
+
+    @Column(unique = true)
     private String barcode;
 
     @ManyToOne(fetch = FetchType.EAGER)

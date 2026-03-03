@@ -23,4 +23,5 @@ public class ProductVariantRespone {
     private Boolean isActive;
     private BigDecimal taxRate;
     private String taxName;
+    private java.time.LocalDateTime createdAt;
 }

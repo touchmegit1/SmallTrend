@@ -14,4 +14,12 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     List<ProductVariant> findBySkuContainingIgnoreCase(String sku);
 
     List<ProductVariant> findByProductId(Integer productId);
+
+    boolean existsBySku(String sku);
+
+    boolean existsByBarcode(String barcode);
+
+    boolean existsBySkuAndIdNot(String sku, Integer id);
+
+    boolean existsByBarcodeAndIdNot(String barcode, Integer id);
 }

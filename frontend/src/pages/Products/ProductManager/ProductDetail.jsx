@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft, Package, Edit, Box, Calendar, Power, Printer } from "lucide-react";
+import { ArrowLeft, Package, Edit, Box, Calendar, Power, Printer, Trash2 } from "lucide-react";
 
 // Tái sử dụng components từ Design system UI thư mục chung ProductComponents
 import Button from "../ProductComponents/button";
@@ -38,6 +38,9 @@ function ProductDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Modal dành cho Parent Product
   const [isEditVariantModalOpen, setIsEditVariantModalOpen] = useState(false); // Modal dành cho Children Variant
   const [toastMessage, setToastMessage] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteVariant, setDeleteVariant] = useState(null);
+  const [, forceUpdate] = useState(0); // Dùng để re-render khi hết 2 phút
 
   // --- HANDLER FUNCTIONS ---
 
@@ -93,6 +96,39 @@ function ProductDetail() {
     setIsEditVariantModalOpen(false);
     fetchVariants(); // Tải lại list
     setTimeout(() => setToastMessage(""), 3000);
+  };
+
+  /**
+   * Xoá variant (chỉ trong 2 phút đầu)
+   */
+  const handleDeleteVariant = (variant) => {
+    setDeleteVariant(variant);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteVariant = async () => {
+    try {
+      await api.delete(`/products/variants/${deleteVariant.id}`);
+      setToastMessage("Đã xoá biến thể thành công!");
+      fetchVariants();
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data || "Lỗi khi xoá biến thể!";
+      setToastMessage(typeof msg === "string" ? msg : "Lỗi khi xoá biến thể!");
+      setTimeout(() => setToastMessage(""), 4000);
+    } finally {
+      setShowDeleteConfirm(false);
+      setDeleteVariant(null);
+    }
+  };
+
+  // Kiểm tra variant có trong vòng 2 phút không
+  const isWithin2Minutes = (createdAt) => {
+    if (!createdAt) return false;
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffMs = now - created;
+    return diffMs < 2 * 60 * 1000;
   };
 
   /**
@@ -184,6 +220,12 @@ function ProductDetail() {
     }
   }, [location.state]);
 
+  // Timer: re-render mỗi 10s để cập nhật nút xoá (ẩn khi quá 2 phút)
+  useEffect(() => {
+    const timer = setInterval(() => forceUpdate((n) => n + 1), 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Load fetch lại Parent Product từ Backend nếu người dùng nhấn Link URL tĩnh copy ở đâu đó 
   // thay vì navigate state nội bộ react (Vd: Load F5)
   React.useEffect(() => {
@@ -265,6 +307,28 @@ function ProductDetail() {
               </Button>
               <Button className="flex-1 h-10 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md border-0" onClick={confirmToggleStatus}>
                 Xác nhận đổi
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup Confirm: Xoá variant */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
+            <div className="p-6 bg-gradient-to-r from-red-50 to-orange-50 rounded-t-2xl border-b border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Xác nhận xoá biến thể</h3>
+              <p className="text-gray-600 text-sm">
+                Bạn có chắc chắn muốn xoá biến thể <strong>{deleteVariant?.name || deleteVariant?.sku}</strong>? Hành động này không thể hoàn tác.
+              </p>
+            </div>
+            <div className="p-5 bg-gray-50 flex gap-3 border-t">
+              <Button variant="ghost" className="flex-1 h-10 border border-gray-200 rounded-xl font-semibold bg-white text-gray-700" onClick={() => setShowDeleteConfirm(false)}>
+                Hủy
+              </Button>
+              <Button className="flex-1 h-10 rounded-xl font-semibold bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md border-0" onClick={confirmDeleteVariant}>
+                Xoá biến thể
               </Button>
             </div>
           </div>
@@ -494,38 +558,47 @@ function ProductDetail() {
                       )}
                     </TableCell>
 
-                    <TableCell className="p-2">
-                      <div className="flex justify-center items-center h-full">
-                        <div className="flex opacity-50 group-hover:opacity-100 transition-opacity bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <TableCell className="p-3">
+                      <div className="flex justify-center items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title={variant.is_active ? "Dừng xuất nhập" : (product?.is_active === false ? "Vui lòng mở khoá SP Gốc trước" : "Kích hoạt trở lại")}
+                          onClick={() => handleToggleStatus(variant)}
+                          disabled={!variant.is_active && product?.is_active === false}
+                          className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-amber-50 focus:ring-0 ${variant.is_active ? 'text-amber-600' : 'text-gray-400'}`}
+                        >
+                          <Power className="w-[18px] h-[18px]" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="Sửa khung phân loại"
+                          onClick={() => handleEditVariant(variant)}
+                          className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-blue-50 text-blue-600 focus:ring-0"
+                        >
+                          <Edit className="w-[18px] h-[18px]" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="Lệnh in Máy Barcode"
+                          onClick={() => handlePrintBarcode(variant)}
+                          className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-slate-100 text-slate-700 focus:ring-0"
+                        >
+                          <Printer className="w-[18px] h-[18px]" />
+                        </Button>
+                        {isWithin2Minutes(variant.created_at) && (
                           <Button
                             size="sm"
                             variant="ghost"
-                            title={variant.is_active ? "Dừng xuất nhập" : (product?.is_active === false ? "Vui lòng mở khoá SP Gốc trước" : "Kích hoạt trở lại")}
-                            onClick={() => handleToggleStatus(variant)}
-                            disabled={!variant.is_active && product?.is_active === false}
-                            className={`h-8 w-8 p-0 rounded-l-lg rounded-r-none border-r border-gray-100 hover:bg-gray-50 focus:ring-0 ${variant.is_active ? 'text-amber-600' : 'text-gray-400'}`}
+                            title="Xoá biến thể (trong 2 phút)"
+                            onClick={() => handleDeleteVariant(variant)}
+                            className="h-10 w-10 p-0 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-all hover:bg-red-50 text-red-500 focus:ring-0"
                           >
-                            <Power className="w-3.5 h-3.5" />
+                            <Trash2 className="w-[18px] h-[18px]" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Sửa khung phân loại"
-                            onClick={() => handleEditVariant(variant)}
-                            className="h-8 w-8 p-0 rounded-none border-r border-gray-100 hover:bg-blue-50 text-blue-600 focus:ring-0"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Lệnh in Máy Barcode"
-                            onClick={() => handlePrintBarcode(variant)}
-                            className="h-8 w-8 p-0 rounded-r-lg rounded-l-none hover:bg-slate-100 text-slate-700 focus:ring-0"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
+                        )}
                       </div>
                     </TableCell>
 
