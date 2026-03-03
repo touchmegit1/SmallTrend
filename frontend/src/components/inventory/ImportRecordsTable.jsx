@@ -14,7 +14,10 @@ function ImportRecordsTable({ records, suppliers }) {
   return records.map((record) => (
     <tr key={record.id} className="hover:bg-gray-50 cursor-pointer">
       <td className="px-4 py-3 text-sm font-mono text-blue-600">
-        {record.po_number}
+        {record.po_number ||
+          record.poNumber ||
+          record.order_number ||
+          record.orderNumber}
       </td>
       <td className="px-4 py-3 text-sm text-gray-900">
         {new Date(record.created_at).toLocaleString("vi-VN", {

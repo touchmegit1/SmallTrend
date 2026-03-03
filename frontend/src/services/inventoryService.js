@@ -14,49 +14,38 @@ function getAuthHeaders() {
 //  Purchase Orders (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
 
-// List all purchase orders
 export const getPurchaseOrders = async () => {
-  try {
-    const response = await fetch(`${JSON_API}/purchase_orders`, {
-      headers: getAuthHeaders(),
-    });
+  const response = await fetch(`${SPRING_API}/purchase-orders`, {
+    headers: getAuthHeaders(),
+  });
 
-    if (response.status === 401) {
-      throw new Error("Vui lòng đăng nhập lại");
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Lỗi ${response.status}: Không thể tải danh sách phiếu nhập`,
-      );
-    }
-
-    const data = await response.json();
-
-    return data.map((order) => ({
-      ...order,
-      order_number: order.orderNumber || order.order_number,
-      supplier_id: order.supplierId || order.supplier_id,
-      supplier_name: order.supplierName || order.supplier_name,
-      location_id: order.locationId || order.location_id,
-      total_amount: order.totalAmount || order.total_amount,
-      created_at: order.createdAt || order.created_at,
-      confirmed_at: order.confirmedAt || order.confirmed_at,
-      tax_percent: order.taxPercent || order.tax_percent,
-      shipping_fee: order.shippingFee || order.shipping_fee,
-      paid_amount: order.paidAmount || order.paid_amount,
-      remaining_amount: order.remainingAmount || order.remaining_amount,
-      tax_amount: order.taxAmount || order.tax_amount,
-    }));
-  } catch (error) {
-    throw error;
+  if (response.status === 401) {
+    throw new Error("Vui lòng đăng nhập lại");
   }
+  if (!response.ok) {
+    throw new Error(`Lỗi ${response.status}: Không thể tải danh sách phiếu nhập`);
+  }
+
+  const data = await response.json();
+  return data.map((order) => ({
+    ...order,
+    order_number: order.orderNumber || order.order_number,
+    supplier_id: order.supplierId || order.supplier_id,
+    supplier_name: order.supplierName || order.supplier_name,
+    location_id: order.locationId || order.location_id,
+    total_amount: order.totalAmount || order.total_amount,
+    created_at: order.createdAt || order.created_at,
+    confirmed_at: order.confirmedAt || order.confirmed_at,
+    tax_percent: order.taxPercent || order.tax_percent,
+    shipping_fee: order.shippingFee || order.shipping_fee,
+    paid_amount: order.paidAmount || order.paid_amount,
+    remaining_amount: order.remainingAmount || order.remaining_amount,
+    tax_amount: order.taxAmount || order.tax_amount,
+  }));
 };
 
-// Get single purchase order detail
 export const getPurchaseOrderById = async (id) => {
-  const response = await fetch(`${JSON_API}/purchase_orders/${id}`, {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch purchase order");
@@ -78,61 +67,60 @@ export const getPurchaseOrderById = async (id) => {
   };
 };
 
-// Get next PO code
 export const getNextPOCode = async () => {
-  return "PO-" + Date.now();
+  const response = await fetch(`${SPRING_API}/purchase-orders/next-code`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    return "PO-" + Date.now();
+  }
+  const data = await response.json();
+  return data.code;
 };
 
-// Save draft
 export const createPurchaseOrder = async (orderData) => {
   const payload = mapOrderToBackend(orderData);
-  const response = await fetch(`${JSON_API}/purchase_orders`, {
+  const response = await fetch(`${SPRING_API}/purchase-orders/draft`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ ...payload, status: "DRAFT" }),
+    body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error("Failed to save draft");
   return response.json();
 };
 
-// Confirm order (new)
 export const confirmPurchaseOrder = async (orderData) => {
   const payload = mapOrderToBackend(orderData);
-  const response = await fetch(`${JSON_API}/purchase_orders`, {
+  const response = await fetch(`${SPRING_API}/purchase-orders/confirm`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ ...payload, status: "CONFIRMED" }),
+    body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error("Failed to confirm order");
   return response.json();
 };
 
-// Confirm existing draft
 export const confirmExistingOrder = async (id) => {
-  const response = await fetch(`${JSON_API}/purchase_orders/${id}`, {
-    method: "PATCH",
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/confirm`, {
+    method: "PUT",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ status: "CONFIRMED" }),
   });
   if (!response.ok) throw new Error("Failed to confirm order");
   return response.json();
 };
 
-// Cancel order
 export const cancelPurchaseOrder = async (id) => {
-  const response = await fetch(`${JSON_API}/purchase_orders/${id}`, {
-    method: "PATCH",
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/cancel`, {
+    method: "PUT",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ status: "CANCELLED" }),
   });
   if (!response.ok) throw new Error("Failed to cancel order");
   return response.json();
 };
 
-// Update purchase order (legacy compatibility)
 export const updatePurchaseOrder = async (id, orderData) => {
   const payload = mapOrderToBackend(orderData);
-  const response = await fetch(`${JSON_API}/purchase_orders/${id}`, {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}`, {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -141,23 +129,24 @@ export const updatePurchaseOrder = async (id, orderData) => {
   return response.json();
 };
 
-// ─── Helper: map frontend order shape to backend request ──
+// ─── Helper: map frontend → backend request ──────────────
 function mapOrderToBackend(orderData) {
   return {
-    orderNumber: orderData.order_number || orderData.orderNumber,
+    orderNumber:
+      orderData.order_number ||
+      orderData.orderNumber ||
+      orderData.po_number ||
+      orderData.poNumber,
     supplierId: orderData.supplier_id || orderData.supplierId,
-    supplierName: orderData.supplier_name || orderData.supplierName,
-    locationId: orderData.location_id || orderData.locationId,
     status: orderData.status,
-    discount: orderData.discount || 0,
-    taxPercent: orderData.tax_percent || orderData.taxPercent || 0,
-    shippingFee: orderData.shipping_fee || orderData.shippingFee || 0,
-    paidAmount: orderData.paid_amount || orderData.paidAmount || 0,
-    subtotal: orderData.subtotal || 0,
+    discountAmount: orderData.discount || orderData.discountAmount || 0,
     taxAmount: orderData.tax_amount || orderData.taxAmount || 0,
+    subtotal: orderData.subtotal || 0,
     totalAmount: orderData.total_amount || orderData.totalAmount || 0,
-    remainingAmount:
-      orderData.remaining_amount || orderData.remainingAmount || 0,
+    expectedDeliveryDate:
+      orderData.expected_delivery_date ||
+      orderData.expectedDeliveryDate ||
+      null,
     notes: orderData.notes || "",
     createdBy: orderData.created_by || orderData.createdBy || 1,
     items: (orderData.items || []).map((item) => ({
@@ -166,54 +155,28 @@ function mapOrderToBackend(orderData) {
       sku: item.sku || "",
       name: item.name || "",
       quantity: item.quantity || 0,
-      unitPrice: item.unit_price || item.unitPrice || 0,
-      discount: item.discount || 0,
-      total: item.total || 0,
-      expiryDate: item.expiry_date || item.expiryDate || null,
-      batches: (item.batches || []).map((b) => ({
-        batchCode: b.batch_code || b.batchCode || "",
-        quantity: b.quantity || 0,
-        expiryDate: b.expiry_date || b.expiryDate || null,
-      })),
+      unitCost: item.unit_price || item.unitPrice || item.unitCost || 0,
+      totalCost: item.total || item.totalCost || 0,
+      receivedQuantity: item.received_quantity || item.receivedQuantity || 0,
+      notes: item.notes || "",
     })),
   };
 }
 
 // ═══════════════════════════════════════════════════════════
-//  Purchase Order Items (kept for backward compatibility)
-// ═══════════════════════════════════════════════════════════
-
-export const getPurchaseOrderItems = async () => {
-  const response = await fetch(`${JSON_API}/purchase_order_items`);
-  if (!response.ok) throw new Error("Failed to fetch purchase order items");
-  return response.json();
-};
-
-export const createPurchaseOrderItem = async (itemData) => {
-  // This is now handled by the order creation endpoint
-  // Kept for backward compatibility
-  console.warn(
-    "createPurchaseOrderItem is deprecated. Items are now included in order creation.",
-  );
-  return itemData;
-};
-
-// ═══════════════════════════════════════════════════════════
 //  Reference Data (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
 
-// Suppliers
 export const getSuppliers = async () => {
-  const response = await fetch(`${JSON_API}/suppliers`, {
+  const response = await fetch(`${SPRING_API}/suppliers`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch suppliers");
   return response.json();
 };
 
-// Products
 export const getProducts = async () => {
-  const response = await fetch(`${JSON_API}/products`, {
+  const response = await fetch(`${SPRING_API}/products`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error("Failed to fetch products");
@@ -225,7 +188,6 @@ export const getProducts = async () => {
   }));
 };
 
-// Locations
 export const getLocations = async () => {
   const response = await fetch(`${SPRING_API}/locations`, {
     headers: getAuthHeaders(),
@@ -245,7 +207,6 @@ export const getLocations = async () => {
 //  Dashboard Data (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
 
-// Dashboard Products (full shape with stock, pricing, category, brand)
 export const getDashboardProducts = async () => {
   const response = await fetch(`${SPRING_API}/dashboard/products`, {
     headers: getAuthHeaders(),
@@ -267,7 +228,6 @@ export const getDashboardProducts = async () => {
   }));
 };
 
-// Dashboard Summary
 export const getDashboardSummary = async () => {
   const response = await fetch(`${SPRING_API}/dashboard/summary`, {
     headers: getAuthHeaders(),
@@ -276,7 +236,6 @@ export const getDashboardSummary = async () => {
   return response.json();
 };
 
-// Dashboard Batches (batch status list from BatchStatusResponse DTO)
 export const getDashboardBatches = async () => {
   const response = await fetch(`${SPRING_API}/dashboard/batches`, {
     headers: getAuthHeaders(),
@@ -294,7 +253,6 @@ export const getDashboardBatches = async () => {
   }));
 };
 
-// Recent Activities
 export const getRecentActivities = async () => {
   const response = await fetch(`${SPRING_API}/dashboard/recent-activities`, {
     headers: getAuthHeaders(),
@@ -310,7 +268,6 @@ export const getRecentActivities = async () => {
   }));
 };
 
-// Debug: Reseed stock data
 export const reseedStock = async () => {
   const response = await fetch(`${SPRING_API}/debug/reseed-stock`, {
     method: "POST",
@@ -320,7 +277,6 @@ export const reseedStock = async () => {
   return response.json();
 };
 
-// Categories
 export const getCategories = async () => {
   const response = await fetch(`${SPRING_API}/categories`, {
     headers: getAuthHeaders(),
@@ -329,7 +285,6 @@ export const getCategories = async () => {
   return response.json();
 };
 
-// Brands
 export const getBrands = async () => {
   const response = await fetch(`${SPRING_API}/brands`, {
     headers: getAuthHeaders(),
@@ -338,7 +293,10 @@ export const getBrands = async () => {
   return response.json();
 };
 
-// Stock Movements
+// ═══════════════════════════════════════════════════════════
+//  Stock & Batches (Spring Boot backend)
+// ═══════════════════════════════════════════════════════════
+
 export const getStockMovements = async () => {
   const response = await fetch(`${SPRING_API}/stock-movements`, {
     headers: getAuthHeaders(),
@@ -354,7 +312,6 @@ export const getStockMovements = async () => {
   }));
 };
 
-// Product Batches
 export const getProductBatches = async () => {
   const response = await fetch(`${SPRING_API}/product-batches`, {
     headers: getAuthHeaders(),
@@ -371,15 +328,10 @@ export const getProductBatches = async () => {
   }));
 };
 
-export const createProductBatch = async (batchData) => {
-  // Now handled by the confirm order endpoint
-  console.warn(
-    "createProductBatch is deprecated. Batches are now created during order confirmation.",
-  );
-  return batchData;
-};
+// ═══════════════════════════════════════════════════════════
+//  Location CRUD (Spring Boot backend)
+// ═══════════════════════════════════════════════════════════
 
-// Location CRUD (Spring Boot)
 export const createLocation = async (locationData) => {
   const response = await fetch(`${SPRING_API}/locations`, {
     method: "POST",
@@ -437,23 +389,8 @@ export const deleteLocation = async (id) => {
   return true;
 };
 
-// Inventory Stock
-export const getInventoryStock = async () => {
-  const response = await fetch(`${JSON_API}/inventory_stock`);
-  if (!response.ok) throw new Error("Failed to fetch inventory stock");
-  return response.json();
-};
-
-// Update product stock (deprecated - now handled by confirm)
-export const updateProductStock = async (productId, newQuantity) => {
-  console.warn(
-    "updateProductStock is deprecated. Stock is now updated during order confirmation.",
-  );
-  return { id: productId, stock_quantity: newQuantity };
-};
-
 // ═══════════════════════════════════════════════════════════
-//  Inventory Count (Spring Boot backend)
+//  Inventory Count (JSON Server – TODO: migrate to Spring Boot)
 // ═══════════════════════════════════════════════════════════
 
 export const getInventoryCounts = async () => {
@@ -481,7 +418,7 @@ export const getInventoryCountById = async (id) => {
   const response = await fetch(`${JSON_API}/inventory_counts/${id}`, {
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Khong tim thay phieu kiem kho.");
+  if (!response.ok) throw new Error("Không tìm thấy phiếu kiểm kho.");
   const ic = await response.json();
   return {
     ...ic,
@@ -518,7 +455,6 @@ export const getInventoryCountNextCode = async () => {
 function generateICCode(existingCounts = []) {
   const prefix = "IC-";
   let maxNum = 0;
-
   for (const count of existingCounts) {
     const code = count.code || "";
     if (code.startsWith(prefix)) {
@@ -526,7 +462,6 @@ function generateICCode(existingCounts = []) {
       if (!isNaN(num) && num > maxNum) maxNum = num;
     }
   }
-
   return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
 }
 
@@ -594,7 +529,6 @@ export const deleteInventoryCount = async (id) => {
   return true;
 };
 
-// Map frontend snake_case to backend camelCase
 function mapCountRequestToBackend(request) {
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userId = currentUser.id || 1;

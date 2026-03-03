@@ -17,7 +17,7 @@ export function useImportList() {
         setSuppliers(suppliersData);
         setImportRecords(ordersData);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error loading import list:", error);
       } finally {
         setLoading(false);
       }
@@ -26,9 +26,10 @@ export function useImportList() {
   }, []);
 
   const filteredRecords = importRecords.filter((record) => {
-    const poNumber = (record.po_number || record.poNumber || "").toLowerCase();
-    const supplierName = (record.supplier_name || record.supplierName || "").toLowerCase();
     const query = searchQuery.toLowerCase();
+    if (!query) return true;
+    const poNumber = (record.order_number || "").toLowerCase();
+    const supplierName = (record.supplier_name || "").toLowerCase();
     return poNumber.includes(query) || supplierName.includes(query);
   });
 

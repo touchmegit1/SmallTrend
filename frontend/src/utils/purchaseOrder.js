@@ -10,7 +10,7 @@
 
 export const PO_STATUS = {
   DRAFT: "DRAFT",
-  CONFIRMED: "CONFIRMED",
+  CONFIRMED: "ORDERED",
   CANCELLED: "CANCELLED",
 };
 
