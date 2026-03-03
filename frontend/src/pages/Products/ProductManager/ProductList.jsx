@@ -45,6 +45,7 @@ export function ProductListScreen() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [, forceUpdate] = useState(0);
 
   // --- API HOOKS ---
   const { products, loading, error, fetchProducts, deleteProduct } = useFetchProducts();
@@ -127,15 +128,12 @@ export function ProductListScreen() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  /**
-   * Tính toán thời gian tạo để cho phép hiển thị nút xóa
-   */
   const canDeleteProduct = (createdAt) => {
     if (!createdAt) return false;
     const createdTime = new Date(createdAt).getTime();
     const now = new Date().getTime();
-    // Chấp nhận chênh lệch 2 phút
-    return (now - createdTime) <= 2 * 60 * 1000;
+    // Chấp nhận chênh lệch 2 phút (dùng Math.abs để phòng rủi ro lệch âm do timezone / clock lệch)
+    return Math.abs(now - createdTime) <= 2 * 60 * 1000;
   };
 
   /**
@@ -165,6 +163,12 @@ export function ProductListScreen() {
   };
 
   // --- USE EFFECTS ---
+  // Timer để tự làm mới giao diện 10 giây/lần, làm nút xóa biến mất tự động
+  useEffect(() => {
+    const timer = setInterval(() => forceUpdate((n) => n + 1), 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Dùng để bắt Navigation State Message (Ví dụ khi tạo xong SP mới, trang Add chuyển hướng sang đây và báo thành công)
   useEffect(() => {
     if (location.state?.message) {

@@ -127,8 +127,7 @@ function ProductDetail() {
     if (!createdAt) return false;
     const created = new Date(createdAt);
     const now = new Date();
-    const diffMs = now - created;
-    return diffMs < 2 * 60 * 1000;
+    return Math.abs(now - created) <= 2 * 60 * 1000;
   };
 
   /**
