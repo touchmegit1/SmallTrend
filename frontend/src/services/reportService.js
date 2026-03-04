@@ -83,31 +83,43 @@ const reportService = {
     },
 
     /**
-     * Download report
+     * Get the Cloudinary download URL for a completed report.
+     * Returns the secure_url string stored in the DB.
      */
-    downloadReport: async (id, reportName, format = 'PDF') => {
+    getDownloadUrl: async (id) => {
         try {
-            const response = await api.get(`/reports/${id}/download`, {
-                responseType: 'blob'
-            });
+            const response = await api.get(`/reports/${id}/download-url`);
+            return response.data.url; // Cloudinary https:// URL
+        } catch (error) {
+            console.error('Error fetching download URL:', error);
+            throw error;
+        }
+    },
 
-            // Determine extension
-            let extension = 'pdf';
-            if (format && format.toUpperCase() === 'EXCEL') {
-                extension = 'xlsx';
-            } else if (format && format.toUpperCase() === 'CSV') {
-                extension = 'csv';
-            }
+    /**
+     * Open the report file directly from Cloudinary in a new browser tab.
+     * No blob streaming — the file is fetched entirely from the cloud.
+     */
+    openDownload: async (id) => {
+        try {
+            const response = await api.get(`/reports/${id}/download-url`);
+            const url = response.data.url;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        } catch (error) {
+            console.error('Error opening report download:', error);
+            throw error;
+        }
+    },
 
-            // Create blob link to download
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `${reportName}.${extension}`);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode.removeChild(link);
-            window.URL.revokeObjectURL(url);
+    /**
+     * @deprecated Use openDownload() instead.
+     * Kept for backward compatibility — now simply opens the Cloudinary URL.
+     */
+    downloadReport: async (id, _reportName, _format) => {
+        try {
+            const response = await api.get(`/reports/${id}/download-url`);
+            const url = response.data.url;
+            window.open(url, '_blank', 'noopener,noreferrer');
         } catch (error) {
             console.error('Error downloading report:', error);
             throw error;
