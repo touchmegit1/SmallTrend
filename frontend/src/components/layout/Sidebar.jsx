@@ -31,6 +31,7 @@ const Sidebar = () => {
                 { label: 'Lịch sử đơn hàng', path: '/pos/history' },
                 { label: 'Báo cáo doanh thu', path: '/pos/suspended' },
                 { label: 'Giao ca', path: '/pos/shift-handover' },
+                 { label: 'Khiếu nại', path: '/crm/complain' },
             ]
         },
         {
@@ -68,7 +69,6 @@ const Sidebar = () => {
                 { label: 'Danh sách khách hàng', path: '/crm/customer' },
                 { label: 'Khuyến Mãi', path: '/crm/event' },
                 { label: 'Kho quà tặng', path: '/crm/loyalty' },
-                { label: 'Khiếu nại', path: '/crm/complain' },
                 { label: 'Báo Cáo Thống Kê', path: '/crm/report' },
             ]
         },
