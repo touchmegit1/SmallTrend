@@ -61,7 +61,31 @@ public class ProductVariantService {
         ProductVariantRespone r = new ProductVariantRespone();
         r.setId(variant.getId());
         r.setSku(variant.getSku());
-        r.setName(variant.getProduct() != null ? variant.getProduct().getName() : "");
+
+        // Build variant name: Product name + unitValue + Unit name (consistent with
+        // ProductVariantService)
+        String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
+        String unitName = variant.getUnit() != null ? variant.getUnit().getName() : null;
+        java.math.BigDecimal unitValue = variant.getUnitValue();
+
+        StringBuilder nameBuilder = new StringBuilder(productName);
+        if (unitValue != null || (unitName != null && !unitName.isEmpty())) {
+            nameBuilder.append(" - ");
+            if (unitValue != null) {
+                if (unitValue.stripTrailingZeros().scale() <= 0) {
+                    nameBuilder.append(unitValue.toBigInteger().toString());
+                } else {
+                    nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
+                }
+                if (unitName != null && !unitName.isEmpty()) {
+                    nameBuilder.append(" ");
+                }
+            }
+            if (unitName != null && !unitName.isEmpty()) {
+                nameBuilder.append(unitName);
+            }
+        }
+        r.setName(nameBuilder.toString());
         r.setSellPrice(variant.getSellPrice());
         r.setActive(variant.isActive());
         r.setAttributes(variant.getAttributes());

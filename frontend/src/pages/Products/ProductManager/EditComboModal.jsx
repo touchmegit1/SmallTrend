@@ -120,7 +120,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
           {formData.comboPrice && (
             <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
               <p className="text-sm text-green-700">
-                💰 Giảm giá: <span className="font-bold">{discountAmount.toLocaleString()}đ ({discountPercent}%)</span>
+                Giảm giá: <span className="font-bold">{discountAmount.toLocaleString()}đ ({discountPercent}%)</span>
               </p>
             </div>
           )}
@@ -133,8 +133,8 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
               value={formData.isActive}
               onChange={handleChange}
             >
-              <option value={true}>✅ Đang bán</option>
-              <option value={false}>❌ Ngưng bán</option>
+              <option value={true}>Đang bán</option>
+              <option value={false}>Ngưng bán</option>
             </select>
           </div>
 
@@ -149,7 +149,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant="danger"
               className="flex-1 h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold"
               onClick={onClose}
             >

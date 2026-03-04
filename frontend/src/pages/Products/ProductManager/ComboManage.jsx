@@ -4,7 +4,7 @@ import { Input } from "../ProductComponents/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
-import { Plus, Search, Edit, Package2, Eye, CheckCircle, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Package2, Eye, CheckCircle, Trash2, Power } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditComboModal from "./EditComboModal";
 
@@ -13,7 +13,7 @@ import { useProductCombos } from "../../../hooks/product_combos";
 // Component quản lý danh sách các Combo Sản phẩm
 // Nơi hiển thị, lọc, tìm kiếm và thao tác các combo như xoá, sửa
 const ComboManage = () => {
-  const { combos, loading, error, deleteCombo, updateCombo } = useProductCombos();
+  const { combos, loading, error, deleteCombo, updateCombo, toggleComboStatus } = useProductCombos();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortField, setSortField] = useState(null);
@@ -81,6 +81,17 @@ const ComboManage = () => {
         setToastMessage("Lỗi khi xóa: " + err.message);
         setTimeout(() => setToastMessage(""), 3000);
       }
+    }
+  };
+
+  const handleToggleStatus = async (comboId) => {
+    try {
+      await toggleComboStatus(comboId);
+      setToastMessage("Chuyển trạng thái thành công!");
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      setToastMessage("Lỗi: " + err.message);
+      setTimeout(() => setToastMessage(""), 3000);
     }
   };
 
@@ -300,6 +311,15 @@ const ComboManage = () => {
                             title="Chỉnh sửa"
                           >
                             <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleToggleStatus(combo.id)}
+                            className="hover:bg-amber-100 hover:text-amber-600 rounded-lg"
+                            title="Chuyển trạng thái"
+                          >
+                            <Power className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"

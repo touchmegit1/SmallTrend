@@ -30,14 +30,11 @@ const CreateCombo = () => {
     // Gọi API lấy danh sách các variant (sản phẩm con) để hiển thị trên ô tìm kiếm
     const fetchVariants = async () => {
       try {
-        const response = await axios.get("/product-variants"); // Changed endpoint
-        if (response.data && response.data.content) {
-          setAvailableVariants(response.data.content); // Updated state variable
-        } else {
-          setAvailableVariants([]); // Ensure it's an array even if content is missing
-        }
-      } catch (err) { // Kept original error variable name
-        console.error("Error fetching variants:", err); // Kept original error variable name
+        const response = await axios.get("/products/variants");
+        setAvailableVariants(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        console.error("Error fetching variants:", err);
+        setAvailableVariants([]);
       }
     };
     fetchVariants();
@@ -79,7 +76,7 @@ const CreateCombo = () => {
     );
   };
 
-  const totalPrice = selectedVariants.reduce((sum, v) => sum + ((v.sellPrice || v.price || 0) * v.quantity), 0);
+  const totalPrice = selectedVariants.reduce((sum, v) => sum + ((v.sellPrice || 0) * v.quantity), 0);
   const discountAmount = totalPrice - (formData.comboPrice || 0);
   const discountPercent = totalPrice > 0 && formData.comboPrice ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
 
@@ -253,8 +250,17 @@ const CreateCombo = () => {
                           onClick={() => addVariant(variant)}
                           className="w-full text-left px-4 py-3 hover:bg-white rounded-xl flex justify-between items-center transition-all shadow-sm"
                         >
-                          <span className="text-sm font-medium">{variant.name || variant.productName} {variant.unitValue ? `- ${variant.unitValue} ${variant.unitName}` : ''}</span>
-                          <span className="text-sm text-blue-600 font-semibold">{(variant.sellPrice || variant.price || 0).toLocaleString()}đ</span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-medium">{variant.name}</span>
+                            {variant.attributes && Object.keys(variant.attributes).length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(variant.attributes).map(([k, v]) => (
+                                  <span key={k} className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-1.5 py-0 rounded font-medium">{k}: {v}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-sm text-blue-600 font-semibold whitespace-nowrap ml-2">{(variant.sellPrice || 0).toLocaleString()}đ</span>
                         </button>
                       ))}
                     </div>
@@ -265,8 +271,15 @@ const CreateCombo = () => {
                   {selectedVariants.map(variant => (
                     <div key={variant.id} className="flex items-center gap-3 p-4 bg-gradient-to-r from-white to-gray-50 rounded-xl border border-gray-200 shadow-sm">
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-800">{variant.name || variant.productName} {variant.unitValue ? `- ${variant.unitValue} ${variant.unitName}` : ''}</p>
-                        <p className="text-xs text-gray-500">{(variant.sellPrice || variant.price || 0).toLocaleString()}đ</p>
+                        <p className="text-sm font-semibold text-gray-800">{variant.name}</p>
+                        {variant.attributes && Object.keys(variant.attributes).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {Object.entries(variant.attributes).map(([k, v]) => (
+                              <span key={k} className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-1.5 py-0 rounded font-medium">{k}: {v}</span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-500 mt-0.5">{(variant.sellPrice || 0).toLocaleString()}đ</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -319,8 +332,8 @@ const CreateCombo = () => {
             </Button>
             <Button
               type="button"
-              variant="ghost"
-              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold"
+              variant="danger"
+              className="w-full h-12 border-2 border-red-200 text-red-600 hover:bg-red-400 hover:text-red-800 rounded-xl font-bold flex items-center justify-center"
               onClick={() => navigate("/products/combo")}
             >
               Hủy
