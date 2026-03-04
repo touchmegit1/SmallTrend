@@ -215,22 +215,22 @@ const ShiftManagement = () => {
     };
 
     const handleDeleteShift = async (shiftId) => {
-        if (!window.confirm('Delete this shift?')) return;
+        if (!window.confirm('Ngưng hiệu lực ca này? Dữ liệu lịch sử vẫn được giữ lại.')) return;
         try {
             await shiftService.deleteShift(shiftId);
             await loadShifts();
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể xóa ca làm');
+            setError(err.response?.data?.message || 'Không thể ngưng hiệu lực ca làm');
         }
     };
 
     const handleDeleteAssignment = async (assignmentId) => {
-        if (!window.confirm('Delete this assignment?')) return;
+        if (!window.confirm('Ngưng hiệu lực phân công này?')) return;
         try {
             await shiftService.deleteAssignment(assignmentId);
             await loadAssignments();
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể xóa phân công');
+            setError(err.response?.data?.message || 'Không thể ngưng hiệu lực phân công');
         }
     };
 
@@ -316,8 +316,8 @@ const ShiftManagement = () => {
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab
-                                ? 'bg-slate-900 text-white'
-                                : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
                             }`}
                     >
                         {tab === 'shifts' ? 'Mẫu ca' : tab === 'assignments' ? 'Phân công' : 'Lịch ca'}
@@ -361,8 +361,8 @@ const ShiftManagement = () => {
                                         </p>
                                     </div>
                                     <span className={`rounded-full px-2 py-1 text-xs font-semibold ${shift.status === 'ACTIVE'
-                                            ? 'bg-emerald-100 text-emerald-700'
-                                            : 'bg-rose-100 text-rose-700'
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : 'bg-rose-100 text-rose-700'
                                         }`}>
                                         {shift.status}
                                     </span>
@@ -463,7 +463,7 @@ const ShiftManagement = () => {
                                         onClick={() => handleDeleteAssignment(assignment.id)}
                                         className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
                                     >
-                                        <Trash2 size={12} /> Xóa
+                                        <Trash2 size={12} /> Ngưng
                                     </button>
                                 </div>
                             </div>

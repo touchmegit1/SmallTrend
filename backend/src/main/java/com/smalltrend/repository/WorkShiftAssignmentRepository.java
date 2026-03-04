@@ -10,9 +10,9 @@ import java.util.List;
 @Repository
 public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAssignment, Integer> {
 
-    boolean existsByWorkShiftIdAndUserIdAndShiftDate(Integer workShiftId, Integer userId, LocalDate shiftDate);
+    boolean existsByWorkShiftIdAndUserIdAndShiftDateAndDeletedFalse(Integer workShiftId, Integer userId, LocalDate shiftDate);
 
-    List<WorkShiftAssignment> findByShiftDateBetween(LocalDate startDate, LocalDate endDate);
+    List<WorkShiftAssignment> findByShiftDateBetweenAndDeletedFalse(LocalDate startDate, LocalDate endDate);
 
-    List<WorkShiftAssignment> findByUserIdAndShiftDateBetween(Integer userId, LocalDate startDate, LocalDate endDate);
+    List<WorkShiftAssignment> findByUserIdAndShiftDateBetweenAndDeletedFalse(Integer userId, LocalDate startDate, LocalDate endDate);
 }

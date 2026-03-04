@@ -29,7 +29,7 @@ public class WorkShiftAssignmentService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (assignmentRepository.existsByWorkShiftIdAndUserIdAndShiftDate(
+        if (assignmentRepository.existsByWorkShiftIdAndUserIdAndShiftDateAndDeletedFalse(
                 request.getWorkShiftId(),
                 request.getUserId(),
                 request.getShiftDate())) {
@@ -57,13 +57,13 @@ public class WorkShiftAssignmentService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (assignmentRepository.existsByWorkShiftIdAndUserIdAndShiftDate(
+        if (assignmentRepository.existsByWorkShiftIdAndUserIdAndShiftDateAndDeletedFalse(
                 request.getWorkShiftId(),
                 request.getUserId(),
-                request.getShiftDate()) &&
-                !(assignment.getWorkShift().getId().equals(request.getWorkShiftId())
-                        && assignment.getUser().getId().equals(request.getUserId())
-                        && assignment.getShiftDate().equals(request.getShiftDate()))) {
+                request.getShiftDate())
+                && !(assignment.getWorkShift().getId().equals(request.getWorkShiftId())
+                && assignment.getUser().getId().equals(request.getUserId())
+                && assignment.getShiftDate().equals(request.getShiftDate()))) {
             throw new RuntimeException("Assignment already exists for this shift and date");
         }
 
@@ -87,9 +87,9 @@ public class WorkShiftAssignmentService {
             Integer shiftId) {
         List<WorkShiftAssignment> assignments;
         if (userId != null) {
-            assignments = assignmentRepository.findByUserIdAndShiftDateBetween(userId, startDate, endDate);
+            assignments = assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, startDate, endDate);
         } else {
-            assignments = assignmentRepository.findByShiftDateBetween(startDate, endDate);
+            assignments = assignmentRepository.findByShiftDateBetweenAndDeletedFalse(startDate, endDate);
         }
 
         if (shiftId != null) {
@@ -104,10 +104,10 @@ public class WorkShiftAssignmentService {
     }
 
     public void deleteAssignment(Integer id) {
-        if (!assignmentRepository.existsById(id)) {
-            throw new RuntimeException("Assignment not found");
-        }
-        assignmentRepository.deleteById(id);
+        WorkShiftAssignment assignment = assignmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+        assignment.setDeleted(true);
+        assignmentRepository.save(assignment);
     }
 
     private ShiftAssignmentResponse toResponse(WorkShiftAssignment assignment) {

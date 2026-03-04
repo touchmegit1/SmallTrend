@@ -468,36 +468,58 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 -- Supports both HOURLY and MONTHLY salary types
 INSERT IGNORE INTO salary_configs (
     user_id, salary_type, base_salary, hourly_rate, overtime_rate_multiplier,
-    allowances, bonus_percentage, is_active, effective_from, effective_until,
+        allowances, bonus_percentage, min_required_shifts, count_late_as_present, working_hours_per_month,
+        is_active, effective_from, effective_until,
     notes, created_at, updated_at
 ) VALUES
 -- Admin: Monthly salary with fixed base
-(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL, 
+(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL, 
  'Quản lý toàn hệ thống - Lương cố định hàng tháng', NOW(), NOW()),
 
 -- Manager: Monthly salary with fixed base
-(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, TRUE, '2026-01-01 00:00:00', NULL, 
+(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL, 
  'Quản lý cửa hàng - Lương cố định hàng tháng', NOW(), NOW()),
 
 -- Cashier 1: Hourly rate with monthly backup
-(3, 'HOURLY', 13500000.00, 75000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL,
+(3, 'HOURLY', 13500000.00, 75000.00, 1.50, 500000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Thu ngân ca sáng - Lương theo giờ (Giờ thường: 75k/h, OT: 112.5k/h)', NOW(), NOW()),
 
 -- Cashier 2: Hourly rate (different from cashier 1 for flexible configuration)
-(4, 'HOURLY', 13200000.00, 72000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL,
+(4, 'HOURLY', 13200000.00, 72000.00, 1.50, 500000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Thu ngân ca chiều - Lương theo giờ (Giờ thường: 72k/h, OT: 108k/h)', NOW(), NOW()),
 
 -- Inventory: Monthly salary
-(5, 'MONTHLY', 13000000.00, NULL, 1.50, 400000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL,
+(5, 'MONTHLY', 13000000.00, NULL, 1.50, 400000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Quản lý kho hàng - Lương cố định hàng tháng', NOW(), NOW()),
 
 -- Sales 1: Hourly rate for flexible hours
-(6, 'HOURLY', 12600000.00, 70000.00, 1.50, 450000.00, 1.50, TRUE, '2026-01-01 00:00:00', NULL,
+(6, 'HOURLY', 12600000.00, 70000.00, 1.50, 450000.00, 1.50, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Nhân viên bán hàng - Lương theo giờ (Giờ thường: 70k/h, OT: 105k/h)', NOW(), NOW()),
 
--- Sales 2: Monthly salary
-(7, 'MONTHLY', 12500000.00, NULL, 1.50, 400000.00, 1.50, TRUE, '2026-01-01 00:00:00', NULL,
- 'Nhân viên bán hàng - Lương cố định hàng tháng', NOW(), NOW());
+-- Sales 2: Monthly salary with minimum required shifts
+(7, 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 1.50, 400000.00, 1.50, 20, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
+ 'Nhân viên bán hàng - Lương tháng, cần tối thiểu 20 ca công/tháng', NOW(), NOW());
+
+-- Mark one historical assignment as soft-deleted sample
+UPDATE work_shift_assignments
+SET is_deleted = TRUE, updated_at = NOW()
+WHERE work_shift_id = 4 AND user_id = 7 AND shift_date = '2026-02-22';
+
+-- Backfill attendance snapshots from assignments + shifts for payroll history safety
+UPDATE attendance a
+JOIN work_shift_assignments wsa
+    ON wsa.user_id = a.user_id
+ AND wsa.shift_date = a.date
+ AND wsa.is_deleted = FALSE
+JOIN work_shifts ws
+    ON ws.id = wsa.work_shift_id
+SET a.assignment_id_snapshot = wsa.id,
+        a.shift_id_snapshot = ws.id,
+        a.shift_name_snapshot = ws.shift_name,
+        a.shift_start_snapshot = ws.start_time,
+        a.shift_end_snapshot = ws.end_time,
+        a.shift_working_minutes_snapshot = ws.working_minutes
+WHERE a.assignment_id_snapshot IS NULL;
 
 -- 25. PURCHASE ORDERS (Matching JPA PurchaseOrder schema)
 INSERT IGNORE INTO purchase_orders (

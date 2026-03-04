@@ -192,9 +192,10 @@ const PayrollManagement = () => {
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                <div className="grid grid-cols-12 gap-2 border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <div className="grid grid-cols-14 gap-2 border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
                     <div className="col-span-2">Nhân viên</div>
                     <div className="col-span-2">Số điện thoại</div>
+                    <div className="col-span-2">Chế độ lương</div>
                     <div className="col-span-2">Ca làm</div>
                     <div className="col-span-2">Giờ công</div>
                     <div className="col-span-2">OT / Vắng</div>
@@ -203,9 +204,17 @@ const PayrollManagement = () => {
                 </div>
 
                 {filteredRows.map((row) => (
-                    <div key={row.userId} className="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-slate-100">
+                    <div key={row.userId} className="grid grid-cols-14 gap-2 px-4 py-3 text-sm border-b border-slate-100">
                         <div className="col-span-2 font-medium text-slate-900">{row.fullName}</div>
                         <div className="col-span-2 text-slate-700">{userPhoneMap.get(String(row.userId)) || '-'}</div>
+                        <div className="col-span-2 text-slate-700">
+                            <div>{formatSalaryType(row.salaryType)}</div>
+                            {row.salaryType === 'MONTHLY_MIN_SHIFTS' && (
+                                <div className={`text-xs ${row.eligibleForMonthlySalary ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    {row.workedShifts}/{row.minRequiredShifts || 0} ca - {row.eligibleForMonthlySalary ? 'Đủ điều kiện' : 'Chưa đủ'}
+                                </div>
+                            )}
+                        </div>
                         <div className="col-span-2 text-slate-700">{row.workedShifts}/{row.totalShifts}</div>
                         <div className="col-span-2 text-slate-700">{Number(row.workedHours || 0).toFixed(1)} giờ</div>
                         <div className="col-span-2 text-slate-700">OT {Number(row.overtimeHours || 0).toFixed(1)}h / Vắng {row.absentShifts}</div>
@@ -234,6 +243,13 @@ const StatCard = ({ title, value, icon: Icon }) => (
 
 const formatCurrency = (value) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value || 0);
+};
+
+const formatSalaryType = (salaryType) => {
+    if (salaryType === 'HOURLY') return 'Theo giờ';
+    if (salaryType === 'MONTHLY_MIN_SHIFTS') return 'Theo tháng (đủ ca)';
+    if (salaryType === 'MONTHLY') return 'Theo tháng';
+    return 'Theo giờ';
 };
 
 const validatePayrollFilters = (filters) => {

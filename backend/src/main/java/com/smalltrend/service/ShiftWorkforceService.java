@@ -43,8 +43,8 @@ public class ShiftWorkforceService {
         LocalDate targetDate = Optional.ofNullable(date).orElse(LocalDate.now());
 
         List<WorkShiftAssignment> assignments = userId != null
-                ? assignmentRepository.findByUserIdAndShiftDateBetween(userId, targetDate, targetDate)
-                : assignmentRepository.findByShiftDateBetween(targetDate, targetDate);
+                ? assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, targetDate, targetDate)
+                : assignmentRepository.findByShiftDateBetweenAndDeletedFalse(targetDate, targetDate);
 
         List<Attendance> attendances = userId != null
                 ? attendanceRepository.findByUserIdAndDateBetween(userId, targetDate, targetDate)
@@ -121,13 +121,23 @@ public class ShiftWorkforceService {
         attendance.setTimeOut(request.getTimeOut());
         attendance.setStatus(normalizeStatus(request.getStatus()));
 
-        Attendance saved = attendanceRepository.save(attendance);
-
         WorkShiftAssignment assignment = assignmentRepository
-                .findByUserIdAndShiftDateBetween(user.getId(), request.getDate(), request.getDate())
+                .findByUserIdAndShiftDateBetweenAndDeletedFalse(user.getId(), request.getDate(), request.getDate())
                 .stream()
                 .findFirst()
                 .orElse(null);
+
+        if (assignment != null && assignment.getWorkShift() != null) {
+            WorkShift shift = assignment.getWorkShift();
+            attendance.setAssignmentIdSnapshot(assignment.getId());
+            attendance.setShiftIdSnapshot(shift.getId());
+            attendance.setShiftNameSnapshot(shift.getShiftName());
+            attendance.setShiftStartSnapshot(shift.getStartTime());
+            attendance.setShiftEndSnapshot(shift.getEndTime());
+            attendance.setShiftWorkingMinutesSnapshot(shift.getWorkingMinutes());
+        }
+
+        Attendance saved = attendanceRepository.save(attendance);
 
         WorkShift shift = assignment != null ? assignment.getWorkShift() : null;
 
@@ -157,8 +167,8 @@ public class ShiftWorkforceService {
         LocalDate endDate = targetMonth.atEndOfMonth();
 
         List<WorkShiftAssignment> assignments = userId != null
-                ? assignmentRepository.findByUserIdAndShiftDateBetween(userId, startDate, endDate)
-                : assignmentRepository.findByShiftDateBetween(startDate, endDate);
+                ? assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, startDate, endDate)
+                : assignmentRepository.findByShiftDateBetweenAndDeletedFalse(startDate, endDate);
 
         List<Attendance> attendances = userId != null
                 ? attendanceRepository.findByUserIdAndDateBetween(userId, startDate, endDate)
@@ -230,19 +240,39 @@ public class ShiftWorkforceService {
     }
 
     private PayrollSummaryResponse.Row toPayrollRow(PayrollAccumulator acc, BigDecimal hourlyRateOverride) {
-        BigDecimal hourlyRate = resolveHourlyRate(acc.user.getId(), hourlyRateOverride);
+        SalaryProfile salaryProfile = resolveSalaryProfile(acc.user.getId(), hourlyRateOverride);
 
-        BigDecimal regularPay = acc.workedHours.subtract(acc.overtimeHours)
-                .multiply(hourlyRate);
-        BigDecimal overtimePay = acc.overtimeHours
-                .multiply(hourlyRate)
-                .multiply(BigDecimal.valueOf(1.5));
+        BigDecimal hourlyRate = salaryProfile.hourlyRate;
+        BigDecimal regularPay = BigDecimal.ZERO;
+        BigDecimal overtimePay = BigDecimal.ZERO;
+        BigDecimal grossPay;
+        BigDecimal deductions = BigDecimal.ZERO;
+        BigDecimal netPay;
+        boolean eligibleForMonthlySalary = true;
 
-        BigDecimal grossPay = regularPay.add(overtimePay);
-        BigDecimal deductions = BigDecimal.valueOf(acc.absentShifts)
-                .multiply(hourlyRate)
-                .multiply(BigDecimal.valueOf(2));
-        BigDecimal netPay = grossPay.subtract(deductions).max(BigDecimal.ZERO);
+        if (salaryProfile.salaryType == SalaryType.HOURLY) {
+            regularPay = acc.workedHours.subtract(acc.overtimeHours).max(BigDecimal.ZERO)
+                    .multiply(hourlyRate);
+            overtimePay = acc.overtimeHours
+                    .multiply(hourlyRate)
+                    .multiply(BigDecimal.valueOf(1.5));
+            grossPay = regularPay.add(overtimePay);
+            deductions = BigDecimal.valueOf(acc.absentShifts)
+                    .multiply(hourlyRate)
+                    .multiply(BigDecimal.valueOf(2));
+            netPay = grossPay.subtract(deductions).max(BigDecimal.ZERO);
+        } else if (salaryProfile.salaryType == SalaryType.MONTHLY_MIN_SHIFTS) {
+            int minRequiredShifts = Optional.ofNullable(salaryProfile.minRequiredShifts).orElse(0);
+            int eligibleShiftCount = salaryProfile.countLateAsPresent
+                    ? acc.workedShifts
+                    : Math.max(0, acc.workedShifts - acc.lateShifts);
+            eligibleForMonthlySalary = eligibleShiftCount >= minRequiredShifts;
+            grossPay = eligibleForMonthlySalary ? salaryProfile.baseSalary : BigDecimal.ZERO;
+            netPay = grossPay;
+        } else {
+            grossPay = salaryProfile.baseSalary;
+            netPay = grossPay;
+        }
 
         return PayrollSummaryResponse.Row.builder()
                 .userId(acc.user.getId())
@@ -254,46 +284,61 @@ public class ShiftWorkforceService {
                 .workedHours(acc.workedHours.setScale(2, RoundingMode.HALF_UP))
                 .overtimeHours(acc.overtimeHours.setScale(2, RoundingMode.HALF_UP))
                 .hourlyRate(hourlyRate.setScale(2, RoundingMode.HALF_UP))
+                .salaryType(salaryProfile.salaryType.name())
+                .minRequiredShifts(salaryProfile.minRequiredShifts)
+                .eligibleForMonthlySalary(eligibleForMonthlySalary)
+                .baseSalary(salaryProfile.baseSalary.setScale(2, RoundingMode.HALF_UP))
                 .grossPay(grossPay.setScale(2, RoundingMode.HALF_UP))
                 .deductions(deductions.setScale(2, RoundingMode.HALF_UP))
                 .netPay(netPay.setScale(2, RoundingMode.HALF_UP))
                 .build();
     }
 
-    private BigDecimal resolveHourlyRate(Integer userId, BigDecimal hourlyRateOverride) {
+    private SalaryProfile resolveSalaryProfile(Integer userId, BigDecimal hourlyRateOverride) {
         if (hourlyRateOverride != null && hourlyRateOverride.compareTo(BigDecimal.ZERO) > 0) {
-            return hourlyRateOverride;
+            return new SalaryProfile(
+                    SalaryType.HOURLY,
+                    BigDecimal.ZERO,
+                    hourlyRateOverride,
+                    null,
+                    true,
+                    BigDecimal.valueOf(208));
         }
 
         Optional<SalaryConfig> salaryConfig = salaryConfigRepository.findActiveConfigByUserId(userId, LocalDateTime.now());
         if (salaryConfig.isEmpty()) {
             salaryConfig = salaryConfigRepository.findFirstByUserIdOrderByEffectiveFromDesc(userId);
         }
+
         if (salaryConfig.isPresent()) {
             SalaryConfig config = salaryConfig.get();
-            if (config.getSalaryType() != null) {
-                if (config.getSalaryType() == SalaryType.HOURLY
-                        && config.getHourlyRate() != null
-                        && config.getHourlyRate().compareTo(BigDecimal.ZERO) > 0) {
-                    return config.getHourlyRate();
-                }
+            SalaryType salaryType = Optional.ofNullable(config.getSalaryType()).orElse(SalaryType.MONTHLY);
+            BigDecimal baseSalary = Optional.ofNullable(config.getBaseSalary()).orElse(BigDecimal.ZERO);
+            BigDecimal workingHoursPerMonth = Optional.ofNullable(config.getWorkingHoursPerMonth())
+                    .filter(hours -> hours.compareTo(BigDecimal.ZERO) > 0)
+                    .orElse(BigDecimal.valueOf(208));
+            BigDecimal hourlyRate = Optional.ofNullable(config.getHourlyRate()).orElse(BigDecimal.ZERO);
 
-                if (config.getSalaryType() == SalaryType.MONTHLY
-                        && config.getBaseSalary() != null
-                        && config.getBaseSalary().compareTo(BigDecimal.ZERO) > 0) {
-                    return config.getBaseSalary().divide(BigDecimal.valueOf(208), 2, RoundingMode.HALF_UP);
-                }
+            if (hourlyRate.compareTo(BigDecimal.ZERO) <= 0 && baseSalary.compareTo(BigDecimal.ZERO) > 0) {
+                hourlyRate = baseSalary.divide(workingHoursPerMonth, 2, RoundingMode.HALF_UP);
             }
 
-            if (config.getHourlyRate() != null && config.getHourlyRate().compareTo(BigDecimal.ZERO) > 0) {
-                return config.getHourlyRate();
-            }
-            if (config.getBaseSalary() != null && config.getBaseSalary().compareTo(BigDecimal.ZERO) > 0) {
-                return config.getBaseSalary().divide(BigDecimal.valueOf(208), 2, RoundingMode.HALF_UP);
-            }
+            return new SalaryProfile(
+                    salaryType,
+                    baseSalary,
+                    hourlyRate.compareTo(BigDecimal.ZERO) > 0 ? hourlyRate : BigDecimal.valueOf(30000),
+                    config.getMinRequiredShifts(),
+                    config.isCountLateAsPresent(),
+                    workingHoursPerMonth);
         }
 
-        return BigDecimal.valueOf(30000);
+        return new SalaryProfile(
+                SalaryType.HOURLY,
+                BigDecimal.ZERO,
+                BigDecimal.valueOf(30000),
+                null,
+                true,
+                BigDecimal.valueOf(208));
     }
 
     private BigDecimal resolveWorkedHours(WorkShift shift, Attendance attendance) {
@@ -305,6 +350,11 @@ public class ShiftWorkforceService {
                 minutes += 24 * 60;
             }
             return BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        }
+
+        if (attendance != null && attendance.getShiftWorkingMinutesSnapshot() != null) {
+            return BigDecimal.valueOf(attendance.getShiftWorkingMinutesSnapshot())
+                    .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
         }
 
         if (shift != null && shift.getWorkingMinutes() != null) {
@@ -338,6 +388,28 @@ public class ShiftWorkforceService {
 
         private PayrollAccumulator(User user) {
             this.user = user;
+        }
+    }
+
+    private static class SalaryProfile {
+
+        private final SalaryType salaryType;
+        private final BigDecimal baseSalary;
+        private final BigDecimal hourlyRate;
+        private final Integer minRequiredShifts;
+        private final boolean countLateAsPresent;
+
+        private SalaryProfile(SalaryType salaryType,
+                BigDecimal baseSalary,
+                BigDecimal hourlyRate,
+                Integer minRequiredShifts,
+                boolean countLateAsPresent,
+                BigDecimal ignoredWorkingHoursPerMonth) {
+            this.salaryType = salaryType;
+            this.baseSalary = baseSalary;
+            this.hourlyRate = hourlyRate;
+            this.minRequiredShifts = minRequiredShifts;
+            this.countLateAsPresent = countLateAsPresent;
         }
     }
 }

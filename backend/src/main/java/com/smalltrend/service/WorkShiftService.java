@@ -73,10 +73,10 @@ public class WorkShiftService {
     }
 
     public void deleteShift(Integer id) {
-        if (!workShiftRepository.existsById(id)) {
-            throw new RuntimeException("Shift not found");
-        }
-        workShiftRepository.deleteById(id);
+        WorkShift shift = workShiftRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Shift not found"));
+        shift.setStatus("INACTIVE");
+        workShiftRepository.save(shift);
     }
 
     private WorkShift buildShiftEntity(WorkShift shift, WorkShiftRequest request) {
