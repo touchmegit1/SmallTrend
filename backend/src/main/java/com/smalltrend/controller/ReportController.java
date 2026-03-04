@@ -109,13 +109,14 @@ public class ReportController {
         String userEmail = authentication.getName();
         ReportDTO report = reportService.getReportById(id, userEmail);
 
-        if (!"COMPLETED".equals(report.getStatus()) || report.getFilePath() == null) {
+        // prefer the dedicated downloadUrl column, fall back to filePath for old records
+        String url = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
+        if (!"COMPLETED".equals(report.getStatus()) || url == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        // HTTP 302 redirect to the Cloudinary URL — zero bandwidth on our server
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(report.getFilePath()))
+                .location(URI.create(url))
                 .build();
     }
 
@@ -130,10 +131,12 @@ public class ReportController {
         String userEmail = authentication.getName();
         ReportDTO report = reportService.getReportById(id, userEmail);
 
-        if (!"COMPLETED".equals(report.getStatus()) || report.getFilePath() == null) {
+        // prefer the dedicated downloadUrl column, fall back to filePath for old records
+        String url = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
+        if (!"COMPLETED".equals(report.getStatus()) || url == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        return ResponseEntity.ok(Map.of("url", report.getFilePath()));
+        return ResponseEntity.ok(Map.of("url", url));
     }
 }
