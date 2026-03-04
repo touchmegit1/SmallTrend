@@ -97,14 +97,25 @@ const reportService = {
     },
 
     /**
-     * Open the report file directly from Cloudinary in a new browser tab.
-     * No blob streaming — the file is fetched entirely from the cloud.
+     * Open the report file directly from Cloudinary.
+     * Step 1: fetch the URL from our backend (authenticated via JWT).
+     * Step 2: trigger a native browser download via hidden anchor — no Axios, no auth header sent to Cloudinary.
      */
     openDownload: async (id) => {
         try {
             const response = await api.get(`/reports/${id}/download-url`);
             const url = response.data.url;
-            window.open(url, '_blank', 'noopener,noreferrer');
+
+            // Use a hidden anchor to let the browser download the file natively.
+            // This avoids Axios interceptors and does NOT send the JWT to Cloudinary.
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', '');  // browser will infer filename from Content-Disposition
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         } catch (error) {
             console.error('Error opening report download:', error);
             throw error;
@@ -113,13 +124,20 @@ const reportService = {
 
     /**
      * @deprecated Use openDownload() instead.
-     * Kept for backward compatibility — now simply opens the Cloudinary URL.
      */
     downloadReport: async (id, _reportName, _format) => {
         try {
             const response = await api.get(`/reports/${id}/download-url`);
             const url = response.data.url;
-            window.open(url, '_blank', 'noopener,noreferrer');
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', '');
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         } catch (error) {
             console.error('Error downloading report:', error);
             throw error;
