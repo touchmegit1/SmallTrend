@@ -1,45 +1,54 @@
 package com.smalltrend.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Uploads report files to Cloudinary (cloud storage).
+ * Returns the public secure_url so it can be stored in the DB and used for direct downloads.
+ */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class FileStorageService {
 
-    private final Path fileStorageLocation;
+    private final Cloudinary cloudinary;
 
-    public FileStorageService() {
-        this.fileStorageLocation = Paths.get("uploads/reports").toAbsolutePath().normalize();
-
-        try {
-            Files.createDirectories(this.fileStorageLocation);
-        } catch (Exception ex) {
-            throw new RuntimeException("Could not create the directory where the uploaded files will be stored.", ex);
-        }
-    }
-
+    /**
+     * Upload raw file bytes to Cloudinary.
+     *
+     * @param content          the file bytes to upload
+     * @param originalFileName the original file name (used to derive a unique public_id)
+     * @return the Cloudinary secure_url (e.g. https://res.cloudinary.com/…)
+     */
     public String storeFile(byte[] content, String originalFileName) {
-        // Normalize file name
-        String fileName = UUID.randomUUID().toString() + "_" + originalFileName;
+        // Build a unique public_id inside the "reports" folder
+        String publicId = "reports/" + UUID.randomUUID() + "_" + originalFileName;
 
         try {
-            // Check if the file's name contains invalid characters
-            if(fileName.contains("..")) {
-                throw new RuntimeException("Sorry! Filename contains invalid path sequence " + fileName);
-            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(content,
+                    ObjectUtils.asMap(
+                            "public_id", publicId,
+                            "resource_type", "raw",   // required for non-image files (PDF, XLSX, CSV)
+                            "use_filename", false,
+                            "overwrite", true
+                    ));
 
-            // Copy file to the target location (Replacing existing file with the same name)
-            Path targetLocation = this.fileStorageLocation.resolve(fileName);
-            Files.write(targetLocation, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            String secureUrl = (String) uploadResult.get("secure_url");
+            log.info("Report uploaded to Cloudinary: {}", secureUrl);
+            return secureUrl;
 
-            return "/uploads/reports/" + fileName;
-        } catch (IOException ex) {
-            throw new RuntimeException("Could not store file " + fileName + ". Please try again!", ex);
+        } catch (IOException e) {
+            log.error("Failed to upload report to Cloudinary: {}", originalFileName, e);
+            throw new RuntimeException("Could not upload report to cloud storage: " + originalFileName, e);
         }
     }
 }
