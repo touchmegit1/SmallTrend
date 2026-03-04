@@ -1,6 +1,7 @@
 package com.smalltrend.controller;
 
 import com.smalltrend.dto.report.*;
+import com.smalltrend.service.CloudinaryService;
 import com.smalltrend.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class ReportController {
 
     private final ReportService reportService;
+    private final CloudinaryService cloudinaryService;
 
     /**
      * Get quick report summaries
@@ -110,13 +112,15 @@ public class ReportController {
         ReportDTO report = reportService.getReportById(id, userEmail);
 
         // prefer the dedicated downloadUrl column, fall back to filePath for old records
-        String url = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
-        if (!"COMPLETED".equals(report.getStatus()) || url == null) {
+        String rawUrl = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
+        if (!"COMPLETED".equals(report.getStatus()) || rawUrl == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
+        // Generate a signed URL — bypasses Cloudinary access restrictions
+        String signedUrl = cloudinaryService.generateSignedDownloadUrl(rawUrl);
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(url))
+                .location(URI.create(signedUrl))
                 .build();
     }
 
@@ -132,11 +136,13 @@ public class ReportController {
         ReportDTO report = reportService.getReportById(id, userEmail);
 
         // prefer the dedicated downloadUrl column, fall back to filePath for old records
-        String url = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
-        if (!"COMPLETED".equals(report.getStatus()) || url == null) {
+        String rawUrl = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
+        if (!"COMPLETED".equals(report.getStatus()) || rawUrl == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        return ResponseEntity.ok(Map.of("url", url));
+        // Generate a signed URL — bypasses Cloudinary access restrictions
+        String signedUrl = cloudinaryService.generateSignedDownloadUrl(rawUrl);
+        return ResponseEntity.ok(Map.of("url", signedUrl));
     }
 }
