@@ -33,7 +33,7 @@ public class ReportProcessingService {
     private final ReportRepository reportRepository;
     private final OrderRepository orderRepository;
     private final InventoryStockRepository inventoryStockRepository;
-    private final FileStorageService fileStorageService;
+    private final CloudinaryService cloudinaryService;   // renamed from FileStorageService
     private final ReportGeneratorService reportGeneratorService;
     private final ObjectMapper objectMapper;
 
@@ -93,7 +93,8 @@ public class ReportProcessingService {
                     extension = "csv";
                 }
                 String fileName = "Report_" + request.getType() + "_" + System.currentTimeMillis() + "." + extension;
-                fileUrl = fileStorageService.storeFile(fileContent, fileName);
+                // Upload to Cloudinary → secure_url is stored in DB as the download link
+                fileUrl = cloudinaryService.uploadFile(fileContent, "reports", fileName);
             }
 
             // 3. Serialize Data for Frontend Preview
@@ -103,7 +104,8 @@ public class ReportProcessingService {
             report.setStatus("COMPLETED");
             report.setData(jsonData);
             report.setCompletedAt(LocalDateTime.now());
-            report.setFilePath(fileUrl);
+            report.setFilePath(fileUrl);       // kept for backward compat
+            report.setDownloadUrl(fileUrl);    // explicit Cloudinary URL column in DB
 
             reportRepository.save(report);
 
