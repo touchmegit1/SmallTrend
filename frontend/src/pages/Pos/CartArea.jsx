@@ -9,7 +9,12 @@ export default function CartArea({ cart }) {
           padding: "8px",
           borderBottom: "1px solid #ddd"
         }}>
-          <span>{item.name}</span>
+          <span>
+            {item.name}
+            <span style={{ color: '#666', fontSize: '13px', marginLeft: '5px' }}>
+              ({item.unitName || (item.category?.toLowerCase() === 'nước' ? 'Lon' : item.category?.toLowerCase() === 'thực phẩm' ? 'Gói' : 'Cái')})
+            </span>
+          </span>
           <span>x {item.qty}</span>
         </div>
       ))}

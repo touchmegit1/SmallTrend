@@ -12,6 +12,7 @@ import api from "../../config/axiosConfig";
 export default function POS() {
   const searchInputRef = useRef(null);
   const [products, setProducts] = useState([]);
+  const [combos, setCombos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState(() => {
     const saved = localStorage.getItem('posOrders');
@@ -28,6 +29,16 @@ export default function POS() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [shortcuts, setShortcuts] = useState(() => {
+    const saved = localStorage.getItem('posShortcuts');
+    return saved ? JSON.parse(saved) : {
+      payment1: 'F9',
+      payment2: 'F10',
+      newOrder: 'F8',
+      deleteOrder: 'Delete'
+    };
+  });
 
   const activeOrder = orders.find(order => order.id === activeOrderId) || { id: activeOrderId, cart: [], customer: null, usePoints: false };
 
@@ -45,44 +56,96 @@ export default function POS() {
 
   // Reset selected index when search term changes
   useEffect(() => {
-    setSelectedProductIndex(-1);
-  }, [searchTerm]);
+    if (searchTerm) {
+      const filtered = products.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.barcode && product.barcode.includes(searchTerm)) ||
+        (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()))
+      ).sort((a, b) => {
+        const term = searchTerm.toLowerCase();
+        const aStarts = a.name.toLowerCase().startsWith(term) || (a.barcode && a.barcode.toLowerCase().startsWith(term)) || (a.sku && a.sku.toLowerCase().startsWith(term));
+        const bStarts = b.name.toLowerCase().startsWith(term) || (b.barcode && b.barcode.toLowerCase().startsWith(term)) || (b.sku && b.sku.toLowerCase().startsWith(term));
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return 0;
+      });
+      if (filtered.length > 0) {
+        const exactMatchIndex = filtered.findIndex(p =>
+          (p.barcode && p.barcode.toLowerCase() === searchTerm.toLowerCase()) ||
+          (p.sku && p.sku.toLowerCase() === searchTerm.toLowerCase())
+        );
+        setSelectedProductIndex(exactMatchIndex >= 0 ? exactMatchIndex : 0);
+      } else {
+        setSelectedProductIndex(-1);
+      }
+    } else {
+      setSelectedProductIndex(-1);
+    }
+  }, [searchTerm, products]);
 
   // Re-focus when switching orders or closing modals
   useEffect(() => {
-    if (searchInputRef.current && !showPaymentModal && !showQRScanner && !showInvoice) {
+    if (searchInputRef.current && !showPaymentModal && !showQRScanner && !showInvoice && !showShortcuts) {
       searchInputRef.current.focus();
     }
-  }, [activeOrderId, showPaymentModal, showQRScanner, showInvoice]);
+  }, [activeOrderId, showPaymentModal, showQRScanner, showInvoice, showShortcuts]);
 
   // Keyboard navigation handler
   const handleKeyDown = (e) => {
-    if (filteredProducts.length === 0) return;
+    // Không xử lý phím tắt nếu đang focus vào ô input trong modal cài đặt
+    if (showShortcuts) return;
+
+    if (e.key === shortcuts.deleteOrder) {
+      e.preventDefault();
+      if (orders.length > 1) {
+        // Find next or previous order id to set active
+        const sortedOrders = [...orders].sort((a, b) => a.id - b.id);
+        const currentIndex = sortedOrders.findIndex(o => o.id === activeOrderId);
+        const nextIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex + 1;
+        const nextId = sortedOrders[nextIndex].id;
+
+        const newOrders = orders.filter(o => o.id !== activeOrderId).sort((a, b) => a.id - b.id);
+        setOrders(newOrders);
+        setActiveOrderId(nextId);
+
+        // Cập nhật lại transactions trong localStorage
+        const orderId = `ORDER_${activeOrderId}`;
+        const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        const filteredTransactions = transactions.filter(t => t.orderId !== orderId);
+        localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
+      }
+      return;
+    }
+
+    if (filteredProducts.length === 0 && e.key !== 'Enter') return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedProductIndex(prev => 
+      setSelectedProductIndex(prev =>
         prev < filteredProducts.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedProductIndex(prev => prev > 0 ? prev - 1 : -1);
-    } else if (e.key === 'Enter' && selectedProductIndex >= 0) {
+      setSelectedProductIndex(prev => prev > 0 ? prev - 1 : 0);
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      addToCart(filteredProducts[selectedProductIndex]);
-      setSearchTerm('');
-      setSelectedProductIndex(-1);
+      if (filteredProducts.length > 0) {
+        const indexToAdd = selectedProductIndex >= 0 && selectedProductIndex < filteredProducts.length
+          ? selectedProductIndex : 0;
+        addToCart(filteredProducts[indexToAdd]);
+        setSearchTerm('');
+        setSelectedProductIndex(-1);
+      }
     } else if (e.key === '+' && activeOrder.cart.length > 0) {
       e.preventDefault();
-      const lastItem = activeOrder.cart[activeOrder.cart.length - 1];
-      updateCart(activeOrder.cart.map((item, idx) => 
+      updateCart(activeOrder.cart.map((item, idx) =>
         idx === activeOrder.cart.length - 1 ? { ...item, qty: item.qty + 1 } : item
       ));
     } else if (e.key === '-' && activeOrder.cart.length > 0) {
       e.preventDefault();
       const lastItem = activeOrder.cart[activeOrder.cart.length - 1];
       if (lastItem.qty > 1) {
-        updateCart(activeOrder.cart.map((item, idx) => 
+        updateCart(activeOrder.cart.map((item, idx) =>
           idx === activeOrder.cart.length - 1 ? { ...item, qty: item.qty - 1 } : item
         ));
       }
@@ -90,7 +153,7 @@ export default function POS() {
       e.preventDefault();
       const sortedOrders = [...orders].sort((a, b) => a.id - b.id);
       const currentIndex = sortedOrders.findIndex(o => o.id === activeOrderId);
-      const nextIndex = e.shiftKey 
+      const nextIndex = e.shiftKey
         ? (currentIndex - 1 + sortedOrders.length) % sortedOrders.length
         : (currentIndex + 1) % sortedOrders.length;
       setActiveOrderId(sortedOrders[nextIndex].id);
@@ -100,17 +163,20 @@ export default function POS() {
   // F9/F10 shortcut for payment
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if ((e.key === 'F9' || e.key === 'F10') && activeOrder.cart.length > 0 && !showPaymentModal) {
+      // Bỏ qua phím tắt nếu đang mở modal (ngoại trừ F9/F10 trong payment modal thì đã xử lý bên trong modal)
+      if (showPaymentModal || showQRScanner || showInvoice || showShortcuts) return;
+
+      if ((e.key === shortcuts.payment1 || e.key === shortcuts.payment2) && activeOrder.cart.length > 0) {
         e.preventDefault();
         setShowPaymentModal(true);
-      } else if (e.key === 'F8') {
+      } else if (e.key === shortcuts.newOrder) {
         e.preventDefault();
         addNewOrder();
       }
     };
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [activeOrder.cart, showPaymentModal]);
+  }, [activeOrder.cart, showPaymentModal, showQRScanner, showInvoice, showShortcuts, orders, activeOrderId, shortcuts]);
 
   const loadProducts = async () => {
     try {
@@ -145,11 +211,25 @@ export default function POS() {
           { id: 6, name: "Nước suối Lavie", price: 8000, barcode: "123461", sku: "NUOC-LAVIE", stock: 100 }
         ];
         setProducts(mockProducts);
+        setCombos([]);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Load backend combos separately just in case product load fails slightly or we want them independent
+  useEffect(() => {
+    const fetchCombos = async () => {
+      try {
+        const response = await api.get('/product-combos');
+        setCombos(response.data || []);
+      } catch (err) {
+        console.error('Error fetching combos:', err);
+      }
+    };
+    fetchCombos();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('posOrders', JSON.stringify(orders));
@@ -160,7 +240,14 @@ export default function POS() {
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (product.barcode && product.barcode.includes(searchTerm)) ||
     (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  ).sort((a, b) => {
+    const term = searchTerm.toLowerCase();
+    const aStarts = a.name.toLowerCase().startsWith(term) || (a.barcode && a.barcode.toLowerCase().startsWith(term)) || (a.sku && a.sku.toLowerCase().startsWith(term));
+    const bStarts = b.name.toLowerCase().startsWith(term) || (b.barcode && b.barcode.toLowerCase().startsWith(term)) || (b.sku && b.sku.toLowerCase().startsWith(term));
+    if (aStarts && !bStarts) return -1;
+    if (!aStarts && bStarts) return 1;
+    return 0;
+  });
 
   const addToCart = (product) => {
     const existingItem = activeOrder.cart.find(item => item.id === product.id);
@@ -186,14 +273,14 @@ export default function POS() {
       );
     }
     setOrders(updatedOrders);
-    
+
     // Focus lại vào search input sau khi thêm sản phẩm
     setTimeout(() => {
       if (searchInputRef.current) {
         searchInputRef.current.focus();
       }
     }, 0);
-    
+
     // Lưu ngay sau khi cập nhật
     setTimeout(() => {
       const currentOrder = updatedOrders.find(o => o.id === activeOrderId);
@@ -203,12 +290,12 @@ export default function POS() {
         const pendingTransaction = {
           id: `#HD${Date.now().toString().slice(-6)}`,
           orderId: orderId,
-          time: new Date().toLocaleString('vi-VN', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
+          time: new Date().toLocaleString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
           }),
           quantity: `${currentOrder.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
           payment: "Tiền mặt",
@@ -221,10 +308,10 @@ export default function POS() {
           pointsDiscount: 0,
           notes: ""
         };
-        
+
         const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
         const existingIndex = transactions.findIndex(t => t.orderId === orderId);
-        
+
         if (existingIndex >= 0) {
           transactions[existingIndex] = pendingTransaction;
         } else {
@@ -235,12 +322,44 @@ export default function POS() {
     }, 100);
   };
 
+  const addComboToCart = (combo) => {
+    let currentCart = [...activeOrder.cart];
+
+    // Tạo hashmap để kiểm tra và trừ qty
+    combo.items.forEach(comboItem => {
+      const existingIdx = currentCart.findIndex(c => c.id === comboItem.productVariantId);
+      if (existingIdx >= 0) {
+        currentCart[existingIdx].qty -= comboItem.quantity;
+        if (currentCart[existingIdx].qty <= 0) {
+          currentCart.splice(existingIdx, 1);
+        }
+      }
+    });
+
+    const existingComboIdx = currentCart.findIndex(c => c.isCombo && c.id === `combo_${combo.id}`);
+    if (existingComboIdx >= 0) {
+      currentCart[existingComboIdx].qty += 1;
+    } else {
+      currentCart.push({
+        id: `combo_${combo.id}`,
+        name: `Combo: ${combo.comboName}`,
+        price: combo.comboPrice,
+        qty: 1,
+        isCombo: true,
+        comboId: combo.id,
+        items: combo.items
+      });
+    }
+
+    updateCart(currentCart);
+  };
+
   const updateCart = (newCart) => {
     const updatedOrders = orders.map(order =>
       order.id === activeOrderId ? { ...order, cart: newCart } : order
     );
     setOrders(updatedOrders);
-    
+
     // Lưu ngay sau khi cập nhật
     setTimeout(() => {
       const currentOrder = updatedOrders.find(o => o.id === activeOrderId);
@@ -250,12 +369,12 @@ export default function POS() {
         const pendingTransaction = {
           id: `#HD${Date.now().toString().slice(-6)}`,
           orderId: orderId,
-          time: new Date().toLocaleString('vi-VN', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
+          time: new Date().toLocaleString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
           }),
           quantity: `${currentOrder.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
           payment: "Tiền mặt",
@@ -268,10 +387,10 @@ export default function POS() {
           pointsDiscount: 0,
           notes: ""
         };
-        
+
         const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
         const existingIndex = transactions.findIndex(t => t.orderId === orderId);
-        
+
         if (existingIndex >= 0) {
           transactions[existingIndex] = pendingTransaction;
         } else {
@@ -323,18 +442,18 @@ export default function POS() {
     // Xóa đơn chờ thanh toán
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const filteredTransactions = transactions.filter(t => t.status !== "Chờ thanh toán");
-    
+
     // Cập nhật điểm khách hàng trong localStorage (đã được cập nhật từ PaymentModal)
     if (orderData.customer && orderData.customer.loyaltyPoints !== undefined) {
       const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-      const updatedCustomers = customers.map(c => 
+      const updatedCustomers = customers.map(c =>
         c.id === orderData.customer.id
-          ? { 
-              ...c, 
-              loyaltyPoints: orderData.customer.loyaltyPoints,
-              points: orderData.customer.loyaltyPoints,
-              existingPoints: orderData.customer.loyaltyPoints
-            }
+          ? {
+            ...c,
+            loyaltyPoints: orderData.customer.loyaltyPoints,
+            points: orderData.customer.loyaltyPoints,
+            existingPoints: orderData.customer.loyaltyPoints
+          }
           : c
       );
       localStorage.setItem('customers', JSON.stringify(updatedCustomers));
@@ -342,12 +461,12 @@ export default function POS() {
 
     const transaction = {
       id: `#HD${Date.now().toString().slice(-6)}`,
-      time: new Date().toLocaleString('vi-VN', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
+      time: new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
       }),
       quantity: `${orderData.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
       payment: orderData.paymentMethod || "Tiền mặt",
@@ -396,10 +515,10 @@ export default function POS() {
 
     setSelectedTransaction(transaction);
     setShowInvoice(true);
-    
+
     setOrders(orders.map(order =>
-      order.id === activeOrderId 
-        ? { ...order, cart: [], customer: null, usePoints: false } 
+      order.id === activeOrderId
+        ? { ...order, cart: [], customer: null, usePoints: false }
         : order
     ));
   };
@@ -422,7 +541,7 @@ export default function POS() {
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       background: "#f8f9fa",
       overflow: "hidden",
-      paddingTop: "20px",     
+      paddingTop: "20px",
     }}>
       <div style={{ padding: "10px 20px" }}>
         <TopBar
@@ -440,8 +559,105 @@ export default function POS() {
           onPrintInvoice={handlePrintLastInvoice}
           onKeyDown={handleKeyDown}
           selectedProductIndex={selectedProductIndex}
+          setShowShortcuts={setShowShortcuts}
         />
       </div>
+
+      {showShortcuts && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: "white",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "400px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+          }}>
+            <h2 style={{ marginTop: 0, marginBottom: "20px", fontSize: "18px", borderBottom: "1px solid #ddd", paddingBottom: "10px" }}>
+              Cài đặt Phím tắt hệ thống
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Thanh toán (Phím 1)</span>
+                <input
+                  value={shortcuts.payment1}
+                  onChange={(e) => setShortcuts({ ...shortcuts, payment1: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Thanh toán (Phím 2)</span>
+                <input
+                  value={shortcuts.payment2}
+                  onChange={(e) => setShortcuts({ ...shortcuts, payment2: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Thêm hóa đơn mới</span>
+                <input
+                  value={shortcuts.newOrder}
+                  onChange={(e) => setShortcuts({ ...shortcuts, newOrder: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Xóa hóa đơn đang chọn</span>
+                <input
+                  value={shortcuts.deleteOrder}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const finalVal = val.toLowerCase() === 'delete' ? 'Delete' : val.toUpperCase();
+                    setShortcuts({ ...shortcuts, deleteOrder: finalVal });
+                  }}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px", color: "#666", fontSize: "13px" }}>
+                <span>Chuyển hóa đơn tiếp theo</span>
+                <strong>Tab</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#666", fontSize: "13px" }}>
+                <span>Chuyển hóa đơn trước đó</span>
+                <strong>Shift + Tab</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#666", fontSize: "13px" }}>
+                <span>Tăng giảm số lượng SP</span>
+                <strong>+, -</strong>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem('posShortcuts', JSON.stringify(shortcuts));
+                setShowShortcuts(false);
+              }}
+              style={{
+                width: "100%",
+                padding: "10px",
+                background: "#007bff",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                marginTop: "20px",
+                cursor: "pointer",
+                fontWeight: "bold"
+              }}
+            >
+              Lưu & Đóng
+            </button>
+          </div>
+        </div>
+      )}
 
       {showPaymentModal && (
         <div style={{ marginTop: "20px" }}>
@@ -450,6 +666,7 @@ export default function POS() {
             customer={activeOrder.customer}
             onClose={() => setShowPaymentModal(false)}
             onComplete={completeOrder}
+            shortcuts={shortcuts}
           />
         </div>
       )}
@@ -548,6 +765,10 @@ export default function POS() {
             <Cart
               cart={activeOrder.cart}
               setCart={updateCart}
+              combos={combos}
+              products={products}
+              addToCart={addToCart}
+              addComboToCart={addComboToCart}
             />
             <PaymentPanel
               cart={activeOrder.cart}

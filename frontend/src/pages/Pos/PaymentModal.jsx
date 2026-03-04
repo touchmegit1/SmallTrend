@@ -2,17 +2,17 @@ import { useState, useRef, useEffect } from "react";
 import CustomerSearch from "./CustomerSearch";
 import api from "../../config/axiosConfig";
 
-export default function PaymentModal({ cart, customer, onClose, onComplete }) {
+export default function PaymentModal({ cart, customer, onClose, onComplete, shortcuts }) {
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
   const [usePoints, setUsePoints] = useState(false);
   const [voucher, setVoucher] = useState("");
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [focusedField, setFocusedField] = useState("customerSearch");
   const [suggestedIndex, setSuggestedIndex] = useState(-1);
-  
+
   const customerSearchRef = useRef(null);
   const voucherInputRef = useRef(null);
   const voucherButtonRef = useRef(null);
@@ -47,6 +47,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
           notesRef.current?.focus();
         } else if (focusedField === "notes") {
           setFocusedField("paymentMethod");
+          if (!paymentMethod) setPaymentMethod("cash");
         } else if (focusedField === "paymentMethod") {
           if (paymentMethod === "cash") {
             setFocusedField("cashAmount");
@@ -130,6 +131,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
         if (focusedField === "voucher") {
           e.preventDefault();
           voucherButtonRef.current?.click();
+        } else if (focusedField === "paymentMethod") {
+          e.preventDefault();
+          if (paymentMethod === "cash") {
+            setFocusedField("cashAmount");
+            cashInputRef.current?.focus();
+          } else {
+            setFocusedField("paymentButton");
+            paymentButtonRef.current?.focus();
+          }
         } else if (focusedField === "suggestedAmounts" && suggestedIndex >= 0) {
           e.preventDefault();
           const amounts = getSuggestedAmounts();
@@ -137,15 +147,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
           setFocusedField("paymentButton");
           paymentButtonRef.current?.focus();
           setSuggestedIndex(-1);
-        } else if (focusedField === "paymentButton" || e.key === 'F9' || e.key === 'F10') {
+        } else if (focusedField === "paymentButton" || (shortcuts && (e.key === shortcuts.payment1 || e.key === shortcuts.payment2))) {
           e.preventDefault();
-          handlePayment();
+          paymentButtonRef.current?.click();
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedField, paymentMethod, cashAmount, finalTotal, suggestedIndex]);
+  }, [focusedField, paymentMethod, cashAmount, finalTotal, suggestedIndex, shortcuts]);
 
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
@@ -164,19 +174,19 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
     }
 
     let customerToUpdate = selectedCustomer;
-    
+
     // Cập nhật điểm trung thành trong bảng customers
     if (selectedCustomer && selectedCustomer.id) {
       try {
         const earnedPoints = Math.floor(finalTotal / 10000); // 1 điểm/10,000đ
         const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
         const currentPoints = selectedCustomer.loyaltyPoints || 0;
-        
+
         // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
         const newPoints = currentPoints - pointsUsed + earnedPoints;
 
         // Lưu vào cột loyalty_points trong bảng customers
-        await api.put(`/crm/customers/${selectedCustomer.id}`, {
+        await api.put(`/ crm / customers / ${selectedCustomer.id} `, {
           name: selectedCustomer.name,
           phone: selectedCustomer.phone,
           loyaltyPoints: newPoints
@@ -262,7 +272,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
           {/* Left: Tạm tính */}
           <div>
             <h3 style={{ margin: "0 0 15px 0", fontSize: "16px" }}>Tạm tính tiền</h3>
-            
+
             {/* Danh sách sản phẩm */}
             <div style={{
               maxHeight: "200px",
@@ -465,7 +475,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     outline: focusedField === "paymentMethod" && paymentMethod === "cash" ? "3px solid #80bdff" : "none"
                   }}
                 >
-                   Tiền mặt
+                  Tiền mặt
                 </button>
                 <button
                   onClick={() => setPaymentMethod("transfer")}
@@ -482,7 +492,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     outline: focusedField === "paymentMethod" && paymentMethod === "transfer" ? "3px solid #80bdff" : "none"
                   }}
                 >
-                   Chuyển khoản
+                  Chuyển khoản
                 </button>
               </div>
             </div>
@@ -514,7 +524,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     marginBottom: "10px"
                   }}
                 />
-                
+
                 {/* Gợi ý tiền */}
                 {cashAmount && getSuggestedAmounts().length > 0 && (
                   <div style={{ marginBottom: "10px" }}>
@@ -589,13 +599,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 boxShadow: "0 4px 12px rgba(0,123,255,0.3)"
               }}
             >
-              {!paymentMethod
-                ? "CHỌN HÌNH THỨC THANH TOÁN"
-                : paymentMethod === "cash" && !cashAmount
-                  ? "NHẬP TIỀN KHÁCH ĐƯA"
-                  : paymentMethod === "cash" && parseFloat(cashAmount) < finalTotal
-                    ? "TIỀN KHÔNG ĐỦ"
-                    : "THANH TOÁN"}
+              {paymentMethod === 'cash' ? `Hoàn tất(${shortcuts?.payment1 || 'F9'})` : `Xác nhận chuyển khoản(${shortcuts?.payment2 || 'F10'})`}
             </button>
           </div>
         </div>
