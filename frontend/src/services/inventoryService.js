@@ -23,7 +23,9 @@ export const getPurchaseOrders = async () => {
     throw new Error("Vui lòng đăng nhập lại");
   }
   if (!response.ok) {
-    throw new Error(`Lỗi ${response.status}: Không thể tải danh sách phiếu nhập`);
+    throw new Error(
+      `Lỗi ${response.status}: Không thể tải danh sách phiếu nhập`,
+    );
   }
 
   const data = await response.json();
@@ -184,7 +186,9 @@ export const getProducts = async () => {
   return data.map((p) => ({
     ...p,
     purchase_price: p.purchasePrice || p.purchase_price || 0,
+    stock_quantity: p.stockQuantity ?? p.stock_quantity ?? 0,
     image_url: p.imageUrl || p.image_url,
+    unit: p.unit || "",
   }));
 };
 

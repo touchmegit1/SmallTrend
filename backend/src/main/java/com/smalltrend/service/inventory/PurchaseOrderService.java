@@ -202,7 +202,7 @@ public class PurchaseOrderService {
                 .collect(Collectors.toList());
     }
 
-    // ─── Get All Products (with variant info for PO creation) ─
+    // ─── Get All Products (with variant info, stock quantity, unit) ─
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
                 .map(p -> {
@@ -211,13 +211,31 @@ public class PurchaseOrderService {
                             .name(p.getName())
                             .imageUrl(p.getImageUrl());
 
-                    // Get first variant's SKU and price
+                    int totalStock = 0;
+
                     if (p.getVariants() != null && !p.getVariants().isEmpty()) {
-                        ProductVariant v = p.getVariants().get(0);
-                        builder.sku(v.getSku());
-                        builder.purchasePrice(v.getSellPrice());
+                        // Lấy SKU, giá, đơn vị từ variant đầu tiên
+                        ProductVariant firstVariant = p.getVariants().get(0);
+                        builder.sku(firstVariant.getSku());
+                        builder.purchasePrice(firstVariant.getSellPrice());
+
+                        if (firstVariant.getUnit() != null) {
+                            builder.unit(firstVariant.getUnit().getName());
+                        }
+
+                        // Tính tổng tồn kho từ tất cả variants
+                        for (ProductVariant v : p.getVariants()) {
+                            if (v.getInventoryStocks() != null) {
+                                for (InventoryStock stock : v.getInventoryStocks()) {
+                                    if (stock.getQuantity() != null) {
+                                        totalStock += stock.getQuantity();
+                                    }
+                                }
+                            }
+                        }
                     }
 
+                    builder.stockQuantity(totalStock);
                     return builder.build();
                 })
                 .collect(Collectors.toList());

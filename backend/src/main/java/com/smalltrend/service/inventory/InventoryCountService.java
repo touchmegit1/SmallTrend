@@ -193,6 +193,24 @@ public class InventoryCountService {
         count = countRepository.save(count);
         return toListResponse(count);
     }
+    // ═══════════════════════════════════════════════════════════
+    //  7. Xóa phiếu (Delete)
+    // ═══════════════════════════════════════════════════════════
+
+    /** Xóa phiếu kiểm kê (chỉ cho phép xóa DRAFT hoặc CANCELLED) */
+    @Transactional
+    public void deleteCount(Integer id) {
+        InventoryCount count = countRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu kiểm kho."));
+
+        if ("CONFIRMED".equals(count.getStatus())) {
+            throw new RuntimeException("Không thể xóa phiếu đã xác nhận.");
+        }
+
+        // Xóa items trước (do foreign key constraint)
+        itemRepository.deleteByInventoryCountId(id);
+        countRepository.delete(count);
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  Private Helpers

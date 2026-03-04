@@ -75,5 +75,11 @@ public class InventoryCountController {
         InventoryCountResponse response = countService.cancelCount(id);
         return ResponseEntity.ok(response);
     }
+    // ─── 9. Xóa phiếu ───────────────────────────────────────
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCount(@PathVariable Integer id) {
+        countService.deleteCount(id);
+        return ResponseEntity.noContent().build();
+    }
 }
 
