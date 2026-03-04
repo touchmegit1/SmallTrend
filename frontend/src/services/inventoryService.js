@@ -204,6 +204,31 @@ export const getLocations = async () => {
     location_code: loc.locationCode || loc.location_code,
     location_type: loc.locationType || loc.location_type,
     created_at: loc.createdAt || loc.created_at,
+    total_products: loc.totalProducts || loc.total_products || 0,
+    stock_items: (loc.stockItems || loc.stock_items || []).map((item) => ({
+      ...item,
+      variant_id: item.variantId || item.variant_id,
+      product_name: item.productName || item.product_name,
+      variant_unit: item.variantUnit || item.variant_unit,
+      batch_code: item.batchCode || item.batch_code,
+      batch_id: item.batchId || item.batch_id,
+    })),
+  }));
+};
+
+export const getLocationStocks = async (locationId) => {
+  const response = await fetch(`${SPRING_API}/locations/${locationId}/stocks`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to fetch location stocks");
+  const data = await response.json();
+  return data.map((item) => ({
+    ...item,
+    variant_id: item.variantId || item.variant_id,
+    product_name: item.productName || item.product_name,
+    variant_unit: item.variantUnit || item.variant_unit,
+    batch_code: item.batchCode || item.batch_code,
+    batch_id: item.batchId || item.batch_id,
   }));
 };
 
