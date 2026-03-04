@@ -175,7 +175,7 @@ const ReportCenterPage = () => {
 
     const handleDownload = async (report) => {
         try {
-            await reportService.openDownload(report.id);
+            await reportService.openDownload(report.id, report.reportName, report.format);
         } catch (err) {
             setError('Không thể tải báo cáo');
             console.error('Error downloading report:', err);
