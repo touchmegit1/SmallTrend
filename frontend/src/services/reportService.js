@@ -97,27 +97,30 @@ const reportService = {
     },
 
     /**
-     * Open the report file directly from Cloudinary.
-     * Step 1: fetch the URL from our backend (authenticated via JWT).
-     * Step 2: trigger a native browser download via hidden anchor — no Axios, no auth header sent to Cloudinary.
+     * Download the report file through the backend (backend fetches from Cloudinary using API credentials).
+     * This avoids Cloudinary delivery URL restrictions entirely.
      */
-    openDownload: async (id) => {
+    openDownload: async (id, reportName, format) => {
         try {
-            const response = await api.get(`/reports/${id}/download-url`);
-            const url = response.data.url;
+            const response = await api.get(`/reports/${id}/download`, {
+                responseType: 'blob'
+            });
 
-            // Use a hidden anchor to let the browser download the file natively.
-            // This avoids Axios interceptors and does NOT send the JWT to Cloudinary.
+            const extMap = { PDF: '.pdf', EXCEL: '.xlsx', CSV: '.csv' };
+            const ext = extMap[(format || '').toUpperCase()] || '';
+            const safeName = (reportName || `report_${id}`).replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_');
+            const filename = safeName + ext;
+
+            const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', '');  // browser will infer filename from Content-Disposition
-            link.setAttribute('target', '_blank');
-            link.setAttribute('rel', 'noopener noreferrer');
+            link.href = blobUrl;
+            link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
         } catch (error) {
-            console.error('Error opening report download:', error);
+            console.error('Error downloading report:', error);
             throw error;
         }
     },
