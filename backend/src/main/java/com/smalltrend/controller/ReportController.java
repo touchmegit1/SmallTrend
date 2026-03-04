@@ -9,7 +9,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -96,56 +98,42 @@ public class ReportController {
     }
 
     /**
-     * Download report file
-     * This is a placeholder - implement actual file download logic
+     * Download report — redirects browser to the Cloudinary secure URL.
+     * The file is served directly from Cloudinary, not streamed through this server.
      */
     @GetMapping("/{id}/download")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<byte[]> downloadReport(
+    public ResponseEntity<Void> downloadReport(
             @PathVariable Integer id,
             Authentication authentication) {
-        // TODO: Implement actual file download
-        // For now, return a placeholder response
         String userEmail = authentication.getName();
         ReportDTO report = reportService.getReportById(id, userEmail);
 
-        if (!"COMPLETED".equals(report.getStatus())) {
+        if (!"COMPLETED".equals(report.getStatus()) || report.getFilePath() == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        // Read the file from the file system
-        try {
-            String filePath = report.getFilePath();
-            if (filePath != null && filePath.startsWith("/")) {
-                filePath = filePath.substring(1); // Remove leading slash to make it relative
-            }
+        // HTTP 302 redirect to the Cloudinary URL — zero bandwidth on our server
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(report.getFilePath()))
+                .build();
+    }
 
-            java.nio.file.Path path = java.nio.file.Paths.get(filePath);
-            byte[] data = java.nio.file.Files.readAllBytes(path);
+    /**
+     * Returns the Cloudinary download URL as JSON so the frontend can open it directly.
+     */
+    @GetMapping("/{id}/download-url")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> getDownloadUrl(
+            @PathVariable Integer id,
+            Authentication authentication) {
+        String userEmail = authentication.getName();
+        ReportDTO report = reportService.getReportById(id, userEmail);
 
-            String contentType = "application/octet-stream";
-            if (report.getFormat().equalsIgnoreCase("PDF")) {
-                contentType = "application/pdf";
-            } else if (report.getFormat().equalsIgnoreCase("EXCEL")) {
-                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            } else if (report.getFormat().equalsIgnoreCase("CSV")) {
-                contentType = "text/csv";
-            }
-
-            String extension = "pdf";
-            if (report.getFormat().equalsIgnoreCase("EXCEL")) {
-                extension = "xlsx";
-            } else if (report.getFormat().equalsIgnoreCase("CSV")) {
-                extension = "csv";
-            }
-
-            return ResponseEntity.ok()
-                    .header("Content-Type", contentType)
-                    .header("Content-Disposition", "attachment; filename=\"" + report.getReportName() + "." + extension + "\"")
-                    .body(data);
-        } catch (java.io.IOException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        if (!"COMPLETED".equals(report.getStatus()) || report.getFilePath() == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+
+        return ResponseEntity.ok(Map.of("url", report.getFilePath()));
     }
 }
