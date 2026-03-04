@@ -8,6 +8,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Map;
 import java.util.UUID;
 
@@ -70,60 +76,68 @@ public class CloudinaryService {
     }
 
     /**
-     * Generate a signed Cloudinary download URL valid for 1 hour.
-     * This bypasses Cloudinary access restrictions (authenticated delivery, strict transformations, etc.).
-     * Uses Cloudinary's standard HMAC-SHA256 URL signing algorithm.
-     *
-     * @param storedUrl the secure_url saved in the DB (e.g. https://res.cloudinary.com/...)
-     * @return a signed URL the browser can use to download the file directly
+     * Download file bytes via Cloudinary's private download API endpoint.
+     * Endpoint: https://api.cloudinary.com/v1_1/{cloud}/raw/download
+     * Signature: SHA-1 of sorted params string (excl. api_key, resource_type, signature) + api_secret
      */
-    public String generateSignedDownloadUrl(String storedUrl) {
+    public byte[] downloadFileBytes(String storedUrl) {
         try {
-            // Extract public_id from the stored Cloudinary URL.
-            // URL pattern: https://res.cloudinary.com/{cloudName}/raw/upload/v{version}/{publicId}
             String cloudName = cloudinary.config.cloudName;
+            String apiKey = cloudinary.config.apiKey;
             String apiSecret = cloudinary.config.apiSecret;
 
+            // Extract public_id from stored URL
             String marker = cloudName + "/raw/upload/";
             int idx = storedUrl.indexOf(marker);
-            if (idx == -1) {
-                log.warn("Cannot extract publicId from URL, falling back to original: {}", storedUrl);
-                return storedUrl;
+            if (idx == -1) throw new RuntimeException("Unrecognised Cloudinary URL: " + storedUrl);
+            String publicId = storedUrl.substring(idx + marker.length()).replaceFirst("^v\\d+/", "");
+
+            // Extract filename from public_id for Content-Disposition / target_filename
+            String targetFilename = publicId.contains("/") ? publicId.substring(publicId.lastIndexOf('/') + 1) : publicId;
+
+            long timestamp = System.currentTimeMillis() / 1000;
+
+            // Signature string: all params sorted alphabetically (excl. api_key, resource_type, signature)
+            // Params: attachment, public_id, target_filename, timestamp, type
+            String toSign = "attachment=true"
+                    + "&public_id=" + publicId
+                    + "&target_filename=" + targetFilename
+                    + "&timestamp=" + timestamp
+                    + "&type=upload"
+                    + apiSecret;
+
+            MessageDigest digest = MessageDigest.getInstance("SHA-1");
+            byte[] hash = digest.digest(toSign.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sig = new StringBuilder();
+            for (byte b : hash) sig.append(String.format("%02x", b));
+
+            String downloadUrl = "https://api.cloudinary.com/v1_1/" + cloudName + "/raw/download"
+                    + "?api_key=" + apiKey
+                    + "&attachment=true"
+                    + "&public_id=" + URLEncoder.encode(publicId, StandardCharsets.UTF_8)
+                    + "&target_filename=" + URLEncoder.encode(targetFilename, StandardCharsets.UTF_8)
+                    + "&timestamp=" + timestamp
+                    + "&type=upload"
+                    + "&signature=" + sig;
+
+            log.info("Downloading via Cloudinary API for publicId: {}", publicId);
+
+            HttpURLConnection conn = (HttpURLConnection) new URL(downloadUrl).openConnection();
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(60000);
+
+            int status = conn.getResponseCode();
+            if (status != 200) {
+                throw new RuntimeException("Cloudinary API download returned HTTP " + status + " for: " + publicId);
             }
 
-            String afterMarker = storedUrl.substring(idx + marker.length());
-            // Strip version prefix  (v1234567890/) if present — Cloudinary adds this on upload
-            String publicId = afterMarker.replaceFirst("^v\\d+/", "");
-
-            long expiresAt = System.currentTimeMillis() / 1000 + 3600; // 1 hour from now
-
-            // Cloudinary signature algorithm (SHA-256):
-            // to_sign = "expires_at=<ts>&public_id=<id>" + apiSecret
-            // signature = hex(SHA256(to_sign)).substring(0, 8) encoded in URL-safe Base64
-            // Actually Cloudinary uses: SHA256(params_sorted_by_name + api_secret), first 8 chars of hex
-            String toSign = "expires_at=" + expiresAt + "&public_id=" + publicId + apiSecret;
-
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(toSign.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                hexString.append(String.format("%02x", b));
+            try (InputStream is = conn.getInputStream()) {
+                return is.readAllBytes();
             }
-            String signature = hexString.substring(0, 8); // Cloudinary uses first 8 chars
-
-            // Reconstruct the signed URL: insert s--{sig}-- after the upload/ segment
-            // Format: https://res.cloudinary.com/{cloud}/raw/upload/s--{sig}--/v{version}/{publicId}
-            String baseUrl = storedUrl.substring(0, idx + marker.length());
-            String versionAndPublicId = afterMarker; // still has v<version>/ prefix if present
-            String signedUrl = baseUrl + "s--" + signature + "--/" + versionAndPublicId
-                    + "?expires_at=" + expiresAt;
-
-            log.info("Generated signed download URL for publicId: {}", publicId);
-            return signedUrl;
 
         } catch (Exception e) {
-            log.error("Failed to generate signed URL for: {}", storedUrl, e);
-            return storedUrl; // fall back to original URL
+            log.error("Failed to download file bytes from Cloudinary: {}", storedUrl, e);
+            throw new RuntimeException("Could not download report file", e);
         }
     }
 
