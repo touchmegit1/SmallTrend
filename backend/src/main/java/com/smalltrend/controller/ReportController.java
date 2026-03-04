@@ -4,16 +4,18 @@ import com.smalltrend.dto.report.*;
 import com.smalltrend.service.CloudinaryService;
 import com.smalltrend.service.ReportService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.List;
-import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
@@ -100,49 +102,40 @@ public class ReportController {
     }
 
     /**
-     * Download report — redirects browser to the Cloudinary secure URL.
-     * The file is served directly from Cloudinary, not streamed through this server.
+     * Stream the report file through the backend.
+     * Downloads from Cloudinary using API credentials and serves bytes directly to the browser.
      */
     @GetMapping("/{id}/download")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> downloadReport(
+    public ResponseEntity<byte[]> downloadReport(
             @PathVariable Integer id,
             Authentication authentication) {
         String userEmail = authentication.getName();
         ReportDTO report = reportService.getReportById(id, userEmail);
 
-        // prefer the dedicated downloadUrl column, fall back to filePath for old records
         String rawUrl = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
         if (!"COMPLETED".equals(report.getStatus()) || rawUrl == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        // Generate a signed URL — bypasses Cloudinary access restrictions
-        String signedUrl = cloudinaryService.generateSignedDownloadUrl(rawUrl);
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(signedUrl))
-                .build();
-    }
+        try {
+            byte[] fileBytes = cloudinaryService.downloadFileBytes(rawUrl);
 
-    /**
-     * Returns the Cloudinary download URL as JSON so the frontend can open it directly.
-     */
-    @GetMapping("/{id}/download-url")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, String>> getDownloadUrl(
-            @PathVariable Integer id,
-            Authentication authentication) {
-        String userEmail = authentication.getName();
-        ReportDTO report = reportService.getReportById(id, userEmail);
+            String filename = rawUrl.substring(rawUrl.lastIndexOf('/') + 1);
+            MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
+            if (filename.endsWith(".pdf")) contentType = MediaType.APPLICATION_PDF;
+            else if (filename.endsWith(".xlsx")) contentType = MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            else if (filename.endsWith(".csv")) contentType = MediaType.parseMediaType("text/csv");
 
-        // prefer the dedicated downloadUrl column, fall back to filePath for old records
-        String rawUrl = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
-        if (!"COMPLETED".equals(report.getStatus()) || rawUrl == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(contentType)
+                    .body(fileBytes);
+
+        } catch (Exception e) {
+            log.error("Failed to stream report {} for user {}", id, userEmail, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        // Generate a signed URL — bypasses Cloudinary access restrictions
-        String signedUrl = cloudinaryService.generateSignedDownloadUrl(rawUrl);
-        return ResponseEntity.ok(Map.of("url", signedUrl));
     }
 }
