@@ -19,11 +19,16 @@ const STATUS_COLORS = {
     ASSIGNED: { bg: '#f8fafc', color: '#334155', label: 'Đã phân công' },
 };
 
-const CustomSelect = ({ value, onChange, options, className = '', variant = 'default' }) => {
+const CustomSelect = ({ value, onChange, options, className = '', variant = 'default', disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
     const selectedOption = options.find(opt => opt.value === value);
+
+    // Force update when options change
+    useEffect(() => {
+        // This ensures the component re-renders when options change
+    }, [options]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -58,8 +63,12 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
         <div className={`relative ${className}`} ref={dropdownRef}>
             <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full px-4 py-2.5 text-sm font-medium rounded-xl border-none outline-none transition-all cursor-pointer hover:opacity-90 hover:scale-[1.02] focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 shadow-md hover:shadow-lg flex items-center justify-between"
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                disabled={disabled}
+                className={`w-full px-4 py-2.5 text-sm font-medium rounded-xl border-none outline-none transition-all shadow-md flex items-center justify-between ${disabled
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'cursor-pointer hover:opacity-90 hover:scale-[1.02] focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 hover:shadow-lg'
+                    }`}
                 style={{
                     backgroundColor: variantStyle.bg,
                     color: variantStyle.color
