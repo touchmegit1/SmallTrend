@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MapPin, Truck, ChevronDown, X, Search } from "lucide-react";
 import { PO_STATUS_CONFIG, formatVND } from "../../../utils/purchaseOrder";
+import ContractSelector from "./ContractSelector";
 
 export default function SummaryPanel({
   order,
@@ -9,10 +10,13 @@ export default function SummaryPanel({
   suppliers,
   filteredSuppliers,
   locations,
+  contracts,
   supplierQuery,
   setSupplierQuery,
   selectSupplier,
   clearSupplier,
+  selectContract,
+  clearContract,
   updateOrder,
   isEditable = true,
 }) {
@@ -140,6 +144,19 @@ export default function SummaryPanel({
             )}
           </div>
         </div>
+
+        {/* Contract Selector (sau khi chọn NCC) */}
+        {order.supplier_id && contracts && contracts.length > 0 && (
+          <div className="px-5 py-4 border-b border-slate-100">
+            <ContractSelector
+              contracts={contracts}
+              selectedContractId={order.contract_id}
+              onSelect={selectContract}
+              onClear={clearContract}
+              disabled={!isEditable}
+            />
+          </div>
+        )}
 
         {/* Location Selector */}
         <div className="px-5 py-4 border-b border-slate-100">

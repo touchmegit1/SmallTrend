@@ -22,6 +22,11 @@ public class PurchaseOrderResponse {
     private Integer supplierId;
     private String supplierName;
 
+    // Contract info
+    private Long contractId;
+    private String contractNumber;
+    private String contractTitle;
+
     // User info
     private Integer createdById;
     private String createdByName;

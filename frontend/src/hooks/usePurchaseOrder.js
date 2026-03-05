@@ -10,6 +10,9 @@ import {
   confirmExistingOrder,
   cancelPurchaseOrder as cancelPurchaseOrderApi,
   deletePurchaseOrder,
+  getContractsBySupplier,
+  startCheckingOrder,
+  receiveGoodsOrder,
 } from "../services/inventoryService";
 import {
   PO_STATUS,
@@ -26,6 +29,7 @@ export function usePurchaseOrder(initialId = null) {
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -34,6 +38,9 @@ export function usePurchaseOrder(initialId = null) {
   const [items, setItems] = useState([]);
   const [batchEditItem, setBatchEditItem] = useState(null);
   const [supplierQuery, setSupplierQuery] = useState("");
+
+  // State cho kiểm kê (NV kho)
+  const [receiptItems, setReceiptItems] = useState([]);
 
   useEffect(() => {
     const init = async () => {
@@ -75,12 +82,32 @@ export function usePurchaseOrder(initialId = null) {
                 unit_price: item.unitCost || item.unit_cost,
                 total: item.totalCost || item.total_cost,
                 quantity: item.quantity,
+                received_quantity: item.receivedQuantity ?? item.received_quantity ?? 0,
                 name: item.name || results[0].find(p => p.id === (item.productId || item.product_id))?.name || "Sản phẩm",
              }));
              setItems(mappedItems);
+
+             // Khởi tạo receiptItems cho kiểm kê
+             setReceiptItems(mappedItems.map(item => ({
+               itemId: item.id,
+               variantId: item.variantId || item.variant_id,
+               receivedQuantity: item.received_quantity || item.quantity,
+               notes: "",
+             })));
           }
           if (existingOrder.supplier_name) {
              setSupplierQuery(existingOrder.supplier_name);
+          }
+
+          // Load contracts nếu đã có supplier
+          const supplierId = existingOrder.supplier_id || existingOrder.supplierId;
+          if (supplierId) {
+            try {
+              const supplierContracts = await getContractsBySupplier(supplierId);
+              setContracts(supplierContracts);
+            } catch (err) {
+              console.warn("Could not load contracts:", err);
+            }
           }
         } else {
           nextCode = results[3];
@@ -123,13 +150,25 @@ export function usePurchaseOrder(initialId = null) {
   }, []);
 
   const selectSupplier = useCallback(
-    (supplier) => {
+    async (supplier) => {
       setOrder((prev) => ({
         ...prev,
         supplier_id: supplier.id,
         supplier_name: supplier.name,
+        contract_id: null,
+        contract_number: "",
+        contract_title: "",
       }));
       setSupplierQuery(supplier.name);
+
+      // Load contracts cho supplier
+      try {
+        const supplierContracts = await getContractsBySupplier(supplier.id);
+        setContracts(supplierContracts);
+      } catch (err) {
+        console.warn("Could not load contracts:", err);
+        setContracts([]);
+      }
     },
     []
   );
@@ -139,8 +178,30 @@ export function usePurchaseOrder(initialId = null) {
       ...prev,
       supplier_id: null,
       supplier_name: "",
+      contract_id: null,
+      contract_number: "",
+      contract_title: "",
     }));
     setSupplierQuery("");
+    setContracts([]);
+  }, []);
+
+  const selectContract = useCallback((contract) => {
+    setOrder((prev) => ({
+      ...prev,
+      contract_id: contract.id,
+      contract_number: contract.contractNumber,
+      contract_title: contract.title,
+    }));
+  }, []);
+
+  const clearContract = useCallback(() => {
+    setOrder((prev) => ({
+      ...prev,
+      contract_id: null,
+      contract_number: "",
+      contract_title: "",
+    }));
   }, []);
 
   const addProduct = useCallback(
@@ -203,6 +264,15 @@ export function usePurchaseOrder(initialId = null) {
     if (!batchEditItem) return null;
     return items.find((i) => i._key === batchEditItem) || null;
   }, [batchEditItem, items]);
+
+  // ─── Cập nhật số lượng kiểm kê ────────────────────────────
+  const updateReceiptItem = useCallback((itemId, field, value) => {
+    setReceiptItems((prev) =>
+      prev.map((ri) =>
+        ri.itemId === itemId ? { ...ri, [field]: value } : ri
+      )
+    );
+  }, []);
 
   const saveDraft = useCallback(
     async (navigate) => {
@@ -284,50 +354,100 @@ export function usePurchaseOrder(initialId = null) {
     [initialId, order, items, financials]
   );
 
+  // Quản lý duyệt (PENDING → CONFIRMED) — không cập nhật stock
   const confirmOrder = useCallback(
     async (navigate) => {
-      const validation = validateConfirm(order, items);
-      if (!validation.valid) {
-        alert(validation.errors.join("\n"));
-        return false;
-      }
+      if (!initialId) return false;
 
-      if (!window.confirm("Xác nhận nhập hàng? Tồn kho sẽ được cập nhật và không thể hoàn tác.")) {
+      if (!window.confirm("Xác nhận duyệt phiếu nhập? Phiếu sẽ chuyển cho NV kho kiểm kê.")) {
         return false;
       }
 
       setSaving(true);
       try {
-        if (initialId) {
-          await fetch(`http://localhost:8080/api/inventory/purchase-orders/${initialId}/approve`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-          });
-        } else {
-          const orderData = {
-            ...order,
-            status: PO_STATUS.CONFIRMED,
-            subtotal: financials.subtotal,
-            tax_amount: financials.taxAmount,
-            total_amount: financials.total,
-            remaining_amount: financials.remaining,
-            items: items,
-          };
-          await confirmPurchaseOrder(orderData);
-        }
+        await fetch(`http://localhost:8081/api/inventory/purchase-orders/${initialId}/approve`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+        });
 
-        alert("Đã xác nhận nhập hàng và cập nhật tồn kho thành công!");
+        alert("Đã duyệt phiếu nhập! Chuyển sang bước kiểm kê.");
         if (navigate) navigate("/inventory/purchase-orders");
         return true;
       } catch (err) {
         console.error("Confirm error:", err);
-        alert("Lỗi khi xác nhận nhập hàng: " + err.message);
+        alert("Lỗi khi duyệt phiếu: " + err.message);
         return false;
       } finally {
         setSaving(false);
       }
     },
-    [initialId, order, items, financials]
+    [initialId]
+  );
+
+  // NV kho bắt đầu kiểm kê (CONFIRMED → CHECKING)
+  const startChecking = useCallback(
+    async (navigate) => {
+      if (!initialId) return false;
+
+      if (!window.confirm("Bắt đầu kiểm kê hàng hóa?")) {
+        return false;
+      }
+
+      setSaving(true);
+      try {
+        await startCheckingOrder(initialId);
+        alert("Đã bắt đầu kiểm kê. Vui lòng nhập số lượng thực nhận cho từng sản phẩm.");
+        if (navigate) navigate(`/inventory/purchase-orders/${initialId}`);
+        else window.location.reload();
+        return true;
+      } catch (err) {
+        console.error("Start checking error:", err);
+        alert("Lỗi khi bắt đầu kiểm kê: " + err.message);
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [initialId]
+  );
+
+  // NV kho xác nhận nhập kho (CHECKING → RECEIVED) — cập nhật stock
+  const receiveGoods = useCallback(
+    async (navigate) => {
+      if (!initialId) return false;
+
+      // Validate
+      for (const ri of receiptItems) {
+        if (ri.receivedQuantity === null || ri.receivedQuantity === undefined || ri.receivedQuantity < 0) {
+          alert("Số lượng thực nhận không hợp lệ.");
+          return false;
+        }
+      }
+
+      if (!window.confirm("Xác nhận nhập kho? Tồn kho sẽ được cập nhật và không thể hoàn tác.")) {
+        return false;
+      }
+
+      setSaving(true);
+      try {
+        const receiptData = {
+          notes: order.notes,
+          items: receiptItems,
+        };
+        await receiveGoodsOrder(initialId, receiptData);
+
+        alert("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
+        if (navigate) navigate("/inventory/purchase-orders");
+        return true;
+      } catch (err) {
+        console.error("Receive goods error:", err);
+        alert("Lỗi khi xác nhận nhập kho: " + err.message);
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [initialId, receiptItems, order.notes]
   );
 
   const rejectOrder = useCallback(
@@ -344,7 +464,7 @@ export function usePurchaseOrder(initialId = null) {
 
       setSaving(true);
       try {
-        const response = await fetch(`http://localhost:8080/api/inventory/purchase-orders/${initialId}/reject`, {
+        const response = await fetch(`http://localhost:8081/api/inventory/purchase-orders/${initialId}/reject`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rejectionReason }),
@@ -397,6 +517,7 @@ export function usePurchaseOrder(initialId = null) {
     products,
     suppliers,
     locations,
+    contracts,
     filteredSuppliers,
     loading,
     saving,
@@ -408,6 +529,8 @@ export function usePurchaseOrder(initialId = null) {
     setSupplierQuery,
     selectSupplier,
     clearSupplier,
+    selectContract,
+    clearContract,
     updateOrder,
     addProduct,
     removeItem,
@@ -417,9 +540,13 @@ export function usePurchaseOrder(initialId = null) {
     openBatchEditor,
     closeBatchEditor,
     updateItemBatches,
+    receiptItems,
+    updateReceiptItem,
     saveDraft,
     submitForApproval,
     confirmOrder,
+    startChecking,
+    receiveGoods,
     rejectOrder,
     deleteOrder,
   };

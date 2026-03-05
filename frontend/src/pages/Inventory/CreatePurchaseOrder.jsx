@@ -10,6 +10,7 @@ import BatchEditorModal from "../../components/inventory/purchase/BatchEditorMod
 import SummaryPanel from "../../components/inventory/purchase/SummaryPanel";
 import ActionButtons from "../../components/inventory/purchase/ActionButtons";
 import RejectionModal from "../../components/inventory/purchase/RejectionModal";
+import GoodsReceiptTable from "../../components/inventory/purchase/GoodsReceiptTable";
 
 function CreatePurchaseOrder() {
   const { id } = useParams();
@@ -20,6 +21,7 @@ function CreatePurchaseOrder() {
     products,
     suppliers,
     locations,
+    contracts,
     filteredSuppliers,
     loading,
     saving,
@@ -31,6 +33,8 @@ function CreatePurchaseOrder() {
     setSupplierQuery,
     selectSupplier,
     clearSupplier,
+    selectContract,
+    clearContract,
     updateOrder,
     addProduct,
     removeItem,
@@ -39,9 +43,13 @@ function CreatePurchaseOrder() {
     openBatchEditor,
     closeBatchEditor,
     updateItemBatches,
+    receiptItems,
+    updateReceiptItem,
     saveDraft,
     submitForApproval,
     confirmOrder,
+    startChecking,
+    receiveGoods,
     rejectOrder,
     deleteOrder,
   } = usePurchaseOrder(id || null);
@@ -78,9 +86,9 @@ function CreatePurchaseOrder() {
   }
 
   const isEditable =
-    order.status === PO_STATUS.DRAFT ||
-    order.status === PO_STATUS.REJECTED ||
-    order.status === PO_STATUS.PENDING;
+    order.status === PO_STATUS.DRAFT || order.status === PO_STATUS.REJECTED;
+
+  const isChecking = order.status === PO_STATUS.CHECKING;
 
   const handleRejectClick = () => {
     setShowRejectionModal(true);
@@ -105,13 +113,22 @@ function CreatePurchaseOrder() {
           <ProductSearchBar products={products} onAddProduct={addProduct} />
         )}
 
-        <PurchaseItemTable
-          items={items}
-          isEditable={isEditable}
-          onUpdate={updateItem}
-          onRemove={removeItem}
-          onOpenBatch={openBatchEditor}
-        />
+        {/* Bảng kiểm kê cho NV kho (trạng thái CHECKING) */}
+        {isChecking ? (
+          <GoodsReceiptTable
+            items={items}
+            receiptItems={receiptItems}
+            onUpdateReceiptItem={updateReceiptItem}
+          />
+        ) : (
+          <PurchaseItemTable
+            items={items}
+            isEditable={isEditable}
+            onUpdate={updateItem}
+            onRemove={removeItem}
+            onOpenBatch={openBatchEditor}
+          />
+        )}
       </div>
 
       <div className="flex flex-col w-[380px] bg-white border-l border-slate-200 shrink-0 h-full">
@@ -122,10 +139,13 @@ function CreatePurchaseOrder() {
           suppliers={suppliers}
           filteredSuppliers={filteredSuppliers}
           locations={locations}
+          contracts={contracts}
           supplierQuery={supplierQuery}
           setSupplierQuery={setSupplierQuery}
           selectSupplier={selectSupplier}
           clearSupplier={clearSupplier}
+          selectContract={selectContract}
+          clearContract={clearContract}
           updateOrder={updateOrder}
           isEditable={isEditable}
         />
@@ -139,6 +159,8 @@ function CreatePurchaseOrder() {
           onConfirm={() => confirmOrder(navigate)}
           onReject={handleRejectClick}
           onDelete={() => deleteOrder(navigate)}
+          onStartChecking={() => startChecking(navigate)}
+          onReceiveGoods={() => receiveGoods(navigate)}
         />
       </div>
 

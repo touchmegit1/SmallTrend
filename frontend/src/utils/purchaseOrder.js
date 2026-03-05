@@ -3,16 +3,16 @@
 // ═══════════════════════════════════════════════════════════
 
 // ─── Status Flow ─────────────────────────────────────────
-// DRAFT → CONFIRMED (stock updated)
-//       → CANCELLED (no stock change)
-// CONFIRMED → (terminal – cannot go back)
-// CANCELLED → (terminal – cannot go back)
+// DRAFT → PENDING → CONFIRMED → CHECKING → RECEIVED (stock updated)
+//                  ↘ REJECTED → DRAFT (sửa & gửi lại)
+// DRAFT → CANCELLED (hủy)
 
 export const PO_STATUS = {
   DRAFT: "DRAFT",
   PENDING: "PENDING",
   REJECTED: "REJECTED",
   CONFIRMED: "CONFIRMED",
+  CHECKING: "CHECKING",
   RECEIVED: "RECEIVED",
   CANCELLED: "CANCELLED",
 };
@@ -40,14 +40,21 @@ export const PO_STATUS_CONFIG = {
     dot: "bg-red-500",
   },
   [PO_STATUS.CONFIRMED]: {
-    label: "Đã xác nhận",
+    label: "Đã duyệt",
     bg: "bg-blue-50",
     text: "text-blue-700",
     border: "border-blue-200",
     dot: "bg-blue-500",
   },
+  [PO_STATUS.CHECKING]: {
+    label: "Đang kiểm kê",
+    bg: "bg-purple-50",
+    text: "text-purple-700",
+    border: "border-purple-200",
+    dot: "bg-purple-500",
+  },
   [PO_STATUS.RECEIVED]: {
-    label: "Đã nhập hàng",
+    label: "Đã nhập kho",
     bg: "bg-emerald-50",
     text: "text-emerald-700",
     border: "border-emerald-200",
@@ -66,7 +73,9 @@ export const ALLOWED_TRANSITIONS = {
   [PO_STATUS.DRAFT]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
   [PO_STATUS.PENDING]: [PO_STATUS.CONFIRMED, PO_STATUS.REJECTED, PO_STATUS.CANCELLED],
   [PO_STATUS.REJECTED]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
-  [PO_STATUS.CONFIRMED]: [], // terminal
+  [PO_STATUS.CONFIRMED]: [PO_STATUS.CHECKING],             // QĐ duyệt → NV kho kiểm kê
+  [PO_STATUS.CHECKING]: [PO_STATUS.RECEIVED],               // Kiểm kê xong → nhập kho
+  [PO_STATUS.RECEIVED]: [],  // terminal
   [PO_STATUS.CANCELLED]: [], // terminal
 };
 
@@ -181,6 +190,9 @@ export function createDefaultOrder(code) {
     po_number: code,
     supplier_id: null,
     supplier_name: "",
+    contract_id: null,
+    contract_number: "",
+    contract_title: "",
     location_id: null,
     status: PO_STATUS.DRAFT,
     discount: 0,

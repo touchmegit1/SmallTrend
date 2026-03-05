@@ -32,6 +32,10 @@ public class PurchaseOrder {
     private Supplier supplier;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contract_id")
+    private SupplierContract contract;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
 

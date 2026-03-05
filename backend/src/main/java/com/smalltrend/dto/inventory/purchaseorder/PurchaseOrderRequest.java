@@ -16,6 +16,7 @@ import java.util.List;
 public class PurchaseOrderRequest {
     private String orderNumber;
     private Integer supplierId;
+    private Long contractId;
     private Integer createdBy;
     private LocalDate expectedDeliveryDate;
     private String status;

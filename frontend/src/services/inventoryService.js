@@ -34,6 +34,9 @@ export const getPurchaseOrders = async () => {
     order_number: order.orderNumber || order.order_number,
     supplier_id: order.supplierId || order.supplier_id,
     supplier_name: order.supplierName || order.supplier_name,
+    contract_id: order.contractId || order.contract_id,
+    contract_number: order.contractNumber || order.contract_number,
+    contract_title: order.contractTitle || order.contract_title,
     location_id: order.locationId || order.location_id,
     total_amount: order.totalAmount || order.total_amount,
     created_at: order.createdAt || order.created_at,
@@ -57,6 +60,9 @@ export const getPurchaseOrderById = async (id) => {
     order_number: order.orderNumber || order.order_number,
     supplier_id: order.supplierId || order.supplier_id,
     supplier_name: order.supplierName || order.supplier_name,
+    contract_id: order.contractId || order.contract_id,
+    contract_number: order.contractNumber || order.contract_number,
+    contract_title: order.contractTitle || order.contract_title,
     location_id: order.locationId || order.location_id,
     total_amount: order.totalAmount || order.total_amount,
     created_at: order.createdAt || order.created_at,
@@ -149,6 +155,7 @@ function mapOrderToBackend(orderData) {
       orderData.po_number ||
       orderData.poNumber,
     supplierId: orderData.supplier_id || orderData.supplierId,
+    contractId: orderData.contract_id || orderData.contractId || null,
     status: orderData.status,
     discountAmount: orderData.discount || orderData.discountAmount || 0,
     taxAmount: orderData.tax_amount || orderData.taxAmount || 0,
@@ -173,6 +180,35 @@ function mapOrderToBackend(orderData) {
     })),
   };
 }
+
+// ─── New: Contract & Goods Receipt APIs ──────────────────
+
+export const getContractsBySupplier = async (supplierId) => {
+  const response = await fetch(`${SPRING_API}/suppliers/${supplierId}/contracts`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to fetch contracts");
+  return response.json();
+};
+
+export const startCheckingOrder = async (id) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/start-checking`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to start checking");
+  return response.json();
+};
+
+export const receiveGoodsOrder = async (id, receiptData) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/receive`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(receiptData),
+  });
+  if (!response.ok) throw new Error("Failed to receive goods");
+  return response.json();
+};
 
 // ═══════════════════════════════════════════════════════════
 //  Reference Data (Spring Boot backend)

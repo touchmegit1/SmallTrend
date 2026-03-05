@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,6 +24,7 @@ public class PurchaseOrderService {
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final PurchaseOrderItemRepository purchaseOrderItemRepository;
     private final SupplierRepository supplierRepository;
+    private final SupplierContractRepository supplierContractRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductRepository productRepository;
     private final ProductBatchRepository productBatchRepository;
@@ -131,14 +129,14 @@ public class PurchaseOrderService {
 
         if (!itemRequests.isEmpty()) {
             saveOrderItems(savedOrder, itemRequests);
-            updateStock(savedOrder, itemRequests);
         }
 
-        log.info("✅ Purchase Order {} CONFIRMED. Stock updated.", savedOrder.getOrderNumber());
+        log.info("✅ Purchase Order {} CONFIRMED. Chờ NV kho kiểm kê.", savedOrder.getOrderNumber());
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
     }
 
     // ─── Approve Pending Order (Manager approves) ──────────
+    // Quản lý duyệt: PENDING → CONFIRMED (KHÔNG cập nhật stock)
     @Transactional
     public PurchaseOrderResponse approveOrder(Integer orderId) {
         PurchaseOrder order = purchaseOrderRepository.findById(orderId)
@@ -152,12 +150,72 @@ public class PurchaseOrderService {
         order.setRejectionReason(null);
         purchaseOrderRepository.save(order);
 
+        log.info("✅ Purchase Order {} APPROVED by Manager. Chờ NV kho kiểm kê.", order.getOrderNumber());
+        return toDetailResponse(order);
+    }
+
+    // ─── Start Checking (NV kho bắt đầu kiểm kê) ───────────
+    // CONFIRMED → CHECKING
+    @Transactional
+    public PurchaseOrderResponse startChecking(Integer orderId) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.CONFIRMED) {
+            throw new RuntimeException("Chỉ có thể bắt đầu kiểm kê phiếu đã được duyệt.");
+        }
+
+        order.setStatus(PurchaseOrderStatus.CHECKING);
+        purchaseOrderRepository.save(order);
+
+        log.info("📋 Purchase Order {} CHECKING started.", order.getOrderNumber());
+        return toDetailResponse(order);
+    }
+
+    // ─── Receive Goods (NV kho xác nhận nhập kho) ───────────
+    // CHECKING → RECEIVED (cập nhật stock tại đây)
+    @Transactional
+    public PurchaseOrderResponse receiveGoods(Integer orderId, GoodsReceiptRequest receiptRequest) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.CHECKING) {
+            throw new RuntimeException("Chỉ có thể nhập kho phiếu đang kiểm kê.");
+        }
+
+        // Cập nhật receivedQuantity cho từng item
+        if (receiptRequest.getItems() != null) {
+            for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
+                PurchaseOrderItem orderItem = order.getItems().stream()
+                        .filter(i -> i.getId().equals(receiptItem.getItemId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (orderItem != null) {
+                    orderItem.setReceivedQuantity(receiptItem.getReceivedQuantity() != null
+                            ? receiptItem.getReceivedQuantity() : 0);
+                    if (receiptItem.getNotes() != null) {
+                        orderItem.setNotes(receiptItem.getNotes());
+                    }
+                    purchaseOrderItemRepository.save(orderItem);
+                }
+            }
+        }
+
+        order.setStatus(PurchaseOrderStatus.RECEIVED);
+        order.setActualDeliveryDate(LocalDate.now());
+        if (receiptRequest.getNotes() != null) {
+            order.setNotes(receiptRequest.getNotes());
+        }
+        purchaseOrderRepository.save(order);
+
+        // Cập nhật stock dựa trên receivedQuantity
         List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
                 .map(item -> PurchaseOrderItemRequest.builder()
                 .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
                 .productId(item.getVariant() != null && item.getVariant().getProduct() != null
                         ? item.getVariant().getProduct().getId().intValue() : null)
-                .quantity(item.getQuantity())
+                .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : item.getQuantity())
                 .unitCost(item.getUnitCost())
                 .totalCost(item.getTotalCost())
                 .build())
@@ -165,7 +223,7 @@ public class PurchaseOrderService {
 
         updateStock(order, itemRequests);
 
-        log.info("✅ Purchase Order {} APPROVED by Manager. Stock updated.", order.getOrderNumber());
+        log.info("📦 Purchase Order {} RECEIVED. Stock updated.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -190,21 +248,7 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.CONFIRMED);
         purchaseOrderRepository.save(order);
 
-        // ── Stock Update from existing items ──
-        List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
-                .map(item -> PurchaseOrderItemRequest.builder()
-                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
-                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                        ? item.getVariant().getProduct().getId().intValue() : null)
-                .quantity(item.getQuantity())
-                .unitCost(item.getUnitCost())
-                .totalCost(item.getTotalCost())
-                .build())
-                .collect(Collectors.toList());
-
-        updateStock(order, itemRequests);
-
-        log.info("✅ Existing Draft {} CONFIRMED. Stock updated.", order.getOrderNumber());
+        log.info("✅ Existing Draft {} CONFIRMED. Chờ NV kho kiểm kê.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -226,6 +270,13 @@ public class PurchaseOrderService {
             order.setSupplier(supplier);
         } else {
             order.setSupplier(null);
+        }
+
+        // Cập nhật contract nếu có
+        if (request.getContractId() != null) {
+            SupplierContract contract = supplierContractRepository.findById(request.getContractId())
+                    .orElseThrow(() -> new RuntimeException("Hợp đồng không tồn tại."));
+            order.setContract(contract);
         }
 
         order.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
@@ -319,6 +370,21 @@ public class PurchaseOrderService {
                 .collect(Collectors.toList());
     }
 
+    // ─── Get Active Contracts By Supplier ─────────────────────
+    public List<ContractResponse> getContractsBySupplier(Integer supplierId) {
+        return supplierContractRepository.findBySupplierId(supplierId).stream()
+                .map(c -> ContractResponse.builder()
+                .id(c.getId())
+                .contractNumber(c.getContractNumber())
+                .title(c.getTitle())
+                .status(c.getStatus() != null ? c.getStatus().name() : "DRAFT")
+                .startDate(c.getStartDate())
+                .endDate(c.getEndDate())
+                .totalValue(c.getTotalValue())
+                .build())
+                .collect(Collectors.toList());
+    }
+
     // ─── Get All Products (with variant info, stock quantity, unit) ─
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
@@ -377,6 +443,13 @@ public class PurchaseOrderService {
             Supplier supplier = supplierRepository.findById(request.getSupplierId())
                     .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
             order.setSupplier(supplier);
+        }
+
+        // Liên kết contract nếu có
+        if (request.getContractId() != null) {
+            SupplierContract contract = supplierContractRepository.findById(request.getContractId())
+                    .orElseThrow(() -> new RuntimeException("Hợp đồng không tồn tại."));
+            order.setContract(contract);
         }
 
         return order;
@@ -444,7 +517,7 @@ public class PurchaseOrderService {
         }
     }
 
-    // ─── Update Stock (on CONFIRM) ───────────────────────────
+    // ─── Update Stock (on RECEIVE) ───────────────────────────
     private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests) {
         // Get a default location
         Location defaultLocation = locationRepository.findAll().stream()
@@ -549,7 +622,7 @@ public class PurchaseOrderService {
 
     // ─── Mappers ─────────────────────────────────────────────
     private PurchaseOrderResponse toListResponse(PurchaseOrder order) {
-        return PurchaseOrderResponse.builder()
+        PurchaseOrderResponse.PurchaseOrderResponseBuilder builder = PurchaseOrderResponse.builder()
                 .id(order.getId() != null ? order.getId().intValue() : null)
                 .orderNumber(order.getOrderNumber())
                 .supplierId(order.getSupplier() != null ? order.getSupplier().getId() : null)
@@ -562,8 +635,16 @@ public class PurchaseOrderService {
                 .taxAmount(order.getTaxAmount())
                 .totalAmount(order.getTotalAmount())
                 .notes(order.getNotes())
-                .rejectionReason(order.getRejectionReason())
-                .build();
+                .rejectionReason(order.getRejectionReason());
+
+        // Contract info
+        if (order.getContract() != null) {
+            builder.contractId(order.getContract().getId())
+                    .contractNumber(order.getContract().getContractNumber())
+                    .contractTitle(order.getContract().getTitle());
+        }
+
+        return builder.build();
     }
 
     private PurchaseOrderResponse toDetailResponse(PurchaseOrder order) {
@@ -583,6 +664,8 @@ public class PurchaseOrderService {
                     .quantity(item.getQuantity())
                     .unitCost(item.getUnitCost())
                     .totalCost(item.getTotalCost() != null ? item.getTotalCost() : (item.getUnitCost() != null ? item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO))
+                    .receivedQuantity(item.getReceivedQuantity())
+                    .notes(item.getNotes())
                     .build())
                     .collect(Collectors.toList());
             response.setItems(itemResponses);

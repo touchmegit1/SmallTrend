@@ -132,10 +132,6 @@ function App() {
           path="inventory/suppliers"
           element={<div className="p-4">Quản lý nhà cung cấp (Supplier)</div>}
         />
-        <Route
-          path="inventory/audit"
-          element={<Navigate to="/inventory-counts" replace />}
-        />
         <Route path="inventory-counts" element={<InventoryCountList />} />
         <Route
           path="inventory-counts/create"

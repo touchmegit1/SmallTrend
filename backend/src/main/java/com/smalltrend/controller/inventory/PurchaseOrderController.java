@@ -66,6 +66,20 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(purchaseOrderService.approveOrder(id));
     }
 
+    // ─── New: NV kho kiểm kê ─────────────────────────────────
+
+    @PutMapping("/purchase-orders/{id}/start-checking")
+    public ResponseEntity<PurchaseOrderResponse> startChecking(@PathVariable Integer id) {
+        return ResponseEntity.ok(purchaseOrderService.startChecking(id));
+    }
+
+    @PutMapping("/purchase-orders/{id}/receive")
+    public ResponseEntity<PurchaseOrderResponse> receiveGoods(@PathVariable Integer id, @RequestBody GoodsReceiptRequest request) {
+        return ResponseEntity.ok(purchaseOrderService.receiveGoods(id, request));
+    }
+
+    // ─── Cancel & Delete ─────────────────────────────────────
+
     @PutMapping("/purchase-orders/{id}/cancel")
     public ResponseEntity<PurchaseOrderResponse> cancelOrder(@PathVariable Integer id) {
         return ResponseEntity.ok(purchaseOrderService.cancelOrder(id));
@@ -82,6 +96,11 @@ public class PurchaseOrderController {
     @GetMapping("/suppliers")
     public ResponseEntity<List<SupplierResponse>> getAllSuppliers() {
         return ResponseEntity.ok(purchaseOrderService.getAllSuppliers());
+    }
+
+    @GetMapping("/suppliers/{supplierId}/contracts")
+    public ResponseEntity<List<ContractResponse>> getContractsBySupplier(@PathVariable Integer supplierId) {
+        return ResponseEntity.ok(purchaseOrderService.getContractsBySupplier(supplierId));
     }
 
     @GetMapping("/products")
