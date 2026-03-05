@@ -62,29 +62,31 @@ public class ProductVariantService {
         r.setId(variant.getId());
         r.setSku(variant.getSku());
 
-        // Build variant name: Product name + unitValue + Unit name (consistent with
-        // ProductVariantService)
         String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
-        String unitName = variant.getUnit() != null ? variant.getUnit().getName() : null;
-        java.math.BigDecimal unitValue = variant.getUnitValue();
-
         StringBuilder nameBuilder = new StringBuilder(productName);
-        if (unitValue != null || (unitName != null && !unitName.isEmpty())) {
+
+        java.math.BigDecimal unitValue = variant.getUnitValue();
+        String unitNameStr = variant.getUnit() != null ? variant.getUnit().getName() : "";
+
+        if (unitValue != null || (unitNameStr != null && !unitNameStr.trim().isEmpty())) {
             nameBuilder.append(" - ");
             if (unitValue != null) {
-                if (unitValue.stripTrailingZeros().scale() <= 0) {
-                    nameBuilder.append(unitValue.toBigInteger().toString());
-                } else {
-                    nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
-                }
-                if (unitName != null && !unitName.isEmpty()) {
-                    nameBuilder.append(" ");
-                }
+                nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
             }
-            if (unitName != null && !unitName.isEmpty()) {
-                nameBuilder.append(unitName);
+            if (unitNameStr != null && !unitNameStr.trim().isEmpty()) {
+                nameBuilder.append(unitNameStr.trim());
             }
         }
+
+        java.util.Map<String, String> attributes = variant.getAttributes();
+        if (attributes != null && !attributes.isEmpty()) {
+            for (String value : attributes.values()) {
+                if (value != null && !value.trim().isEmpty()) {
+                    nameBuilder.append(" - ").append(value.trim());
+                }
+            }
+        }
+
         r.setName(nameBuilder.toString());
         r.setSellPrice(variant.getSellPrice());
         r.setActive(variant.isActive());

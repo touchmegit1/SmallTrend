@@ -211,13 +211,9 @@ const AddNewProductVariant = () => {
   const selectedUnit = units.find((u) => u.id === parseInt(formData.unit_id));
   const previewName = (() => {
     let name = product.name;
-    if (formData.unit_value || selectedUnit) {
-      name += " - ";
-      if (formData.unit_value) {
-        name += formData.unit_value;
-        if (selectedUnit) name += " ";
-      }
-      if (selectedUnit) name += selectedUnit.name;
+    const activeAttributes = attributes.filter(attr => attr.name.trim() && attr.value.trim());
+    if (activeAttributes.length > 0) {
+      name += " - " + activeAttributes.map(attr => attr.value.trim()).join(" - ");
     }
     return name;
   })();

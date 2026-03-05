@@ -8,7 +8,6 @@ import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.Unit;
-import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
@@ -177,30 +176,33 @@ public class ProductVariantService {
         response.setId(variant.getId());
         response.setSku(variant.getSku());
         response.setBarcode(variant.getBarcode());
-        // Build variant name: Product name + unitValue + Unit name
-        // Example: "Dove Soap - 90 Gram"
-        String productName = variant.getProduct().getName();
-        String unitName = variant.getUnit() != null ? variant.getUnit().getName() : null;
-        java.math.BigDecimal unitValue = variant.getUnitValue();
+        String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
+        StringBuilder nameBuilder = new StringBuilder(productName);
 
-        StringBuilder nameBuilder = new StringBuilder(productName != null ? productName : "");
-        if (unitValue != null || (unitName != null && !unitName.isEmpty())) {
+        java.math.BigDecimal unitValue = variant.getUnitValue();
+        String unitNameStr = variant.getUnit() != null ? variant.getUnit().getName() : "";
+
+        if (unitValue != null || (unitNameStr != null && !unitNameStr.trim().isEmpty())) {
             nameBuilder.append(" - ");
             if (unitValue != null) {
-                if (unitValue.stripTrailingZeros().scale() <= 0) {
-                    nameBuilder.append(unitValue.toBigInteger().toString());
-                } else {
-                    nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
-                }
-                if (unitName != null && !unitName.isEmpty()) {
-                    nameBuilder.append(" ");
-                }
+                nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
             }
-            if (unitName != null && !unitName.isEmpty()) {
-                nameBuilder.append(unitName);
+            if (unitNameStr != null && !unitNameStr.trim().isEmpty()) {
+                nameBuilder.append(unitNameStr.trim());
             }
         }
+
+        java.util.Map<String, String> attributes = variant.getAttributes();
+        if (attributes != null && !attributes.isEmpty()) {
+            for (String value : attributes.values()) {
+                if (value != null && !value.trim().isEmpty()) {
+                    nameBuilder.append(" - ").append(value.trim());
+                }
+            }
+        }
+
         response.setName(nameBuilder.toString());
+        String unitName = variant.getUnit() != null ? variant.getUnit().getName() : null;
         response.setUnitName(unitName);
         if (variant.getUnit() != null) {
             response.setUnitId(variant.getUnit().getId());

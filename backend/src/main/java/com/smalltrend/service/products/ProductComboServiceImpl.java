@@ -243,11 +243,20 @@ public class ProductComboServiceImpl implements ProductComboService {
                         nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
                     }
                     if (unitName != null && !unitName.isEmpty()) {
-                        nameBuilder.append(" ");
+                        // Let's not add space to match ProductVariantService `20g` instead of `20 g`
                     }
                 }
                 if (unitName != null && !unitName.isEmpty()) {
-                    nameBuilder.append(unitName);
+                    nameBuilder.append(unitName.trim());
+                }
+            }
+
+            java.util.Map<String, String> attributes = item.getProductVariant().getAttributes();
+            if (attributes != null && !attributes.isEmpty()) {
+                for (String value : attributes.values()) {
+                    if (value != null && !value.trim().isEmpty()) {
+                        nameBuilder.append(" - ").append(value.trim());
+                    }
                 }
             }
             resp.setProductVariantName(nameBuilder.toString());
