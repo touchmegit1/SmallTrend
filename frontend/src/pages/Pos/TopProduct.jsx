@@ -3,6 +3,7 @@ export default function TopProduct({
   name,
   price,
   code,
+  quantity,
 }) {
   return (
     <div
@@ -40,6 +41,11 @@ export default function TopProduct({
 
       <div style={{ textAlign: "right" }}>
         <strong style={{ color: "#2563EB" }}>{price ? price.toLocaleString() : '0'} đ</strong>
+        {quantity !== undefined && (
+          <div style={{ color: "#9CA3AF", fontSize: "12px", marginTop: "2px" }}>
+            Đã bán: <span style={{ color: "#1F2937", fontWeight: "600" }}>{quantity}</span>
+          </div>
+        )}
       </div>
     </div>
   );

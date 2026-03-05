@@ -274,12 +274,19 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
 
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
-    const firstDigit = cashAmount[0];
-    return [
-      parseInt(firstDigit + "0000"),
-      parseInt(firstDigit + "00000"),
-      parseInt(firstDigit + "000000")
-    ];
+    const num = parseInt(cashAmount.replace(/[^0-9]/g, ''));
+    if (isNaN(num)) return [];
+
+    // Nếu người dùng nhập số có 1-3 chữ số, tự động gợi ý thêm các số lớn hơn (x1.000, x10.000, vv...)
+    if (cashAmount.length <= 3) {
+      return [
+        num * 1000,
+        num * 10000,
+        num * 100000
+      ];
+    }
+
+    return [];
   };
 
   const completePaymentProcess = async (method, receivedAmt, changeAmt) => {

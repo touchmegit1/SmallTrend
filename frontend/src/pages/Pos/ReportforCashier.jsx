@@ -29,38 +29,65 @@ export default function ReportforCashier() {
     setTransactions(savedTransactions);
   }, []);
 
-  const totalOrders = transactions.length;
-  const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]').length;
-  const completedOrders = totalOrders;
-  const totalRevenue = transactions.reduce((sum, t) => sum + parseInt(t.total.replace(/[^0-9]/g, '')), 0);
-  const averagePerOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-  const totalProducts = transactions.reduce((sum, t) => sum + parseInt(t.quantity), 0);
-  const totalDiscount = transactions.reduce((sum, t) => sum + (t.pointsDiscount || 0), 0);
+  const allTransactions = transactions;
+  const completedTransactions = transactions.filter(t => t.status !== "Chờ thanh toán");
+  const pendingTransactions = transactions.filter(t => t.status === "Chờ thanh toán");
 
-  const cashTransactions = transactions.filter(t => t.payment === "Tiền mặt");
-  const cashAmount = cashTransactions.reduce((sum, t) => sum + parseInt(t.total.replace(/[^0-9]/g, '')), 0);
+  const totalOrders = completedTransactions.length;
+  const pendingOrdersCount = pendingTransactions.length;
+  const totalRevenue = completedTransactions.reduce((sum, t) => sum + parseInt((t.total || "0").replace(/[^0-9]/g, '')), 0);
+  const averagePerOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const totalProducts = completedTransactions.reduce((sum, t) => sum + parseInt(t.quantity || 0), 0);
+  const totalDiscount = completedTransactions.reduce((sum, t) => sum + (t.pointsDiscount || 0), 0);
+
+  const cashTransactions = completedTransactions.filter(t => t.payment === "Tiền mặt");
+  const cashAmount = cashTransactions.reduce((sum, t) => sum + parseInt((t.total || "0").replace(/[^0-9]/g, '')), 0);
   const cashPercent = totalRevenue > 0 ? (cashAmount / totalRevenue) * 100 : 0;
 
+  const transferTransactions = completedTransactions.filter(t => t.payment === "Chuyển khoản");
+  const transferAmount = transferTransactions.reduce((sum, t) => sum + parseInt((t.total || "0").replace(/[^0-9]/g, '')), 0);
+  const transferPercent = totalRevenue > 0 ? (transferAmount / totalRevenue) * 100 : 0;
+
+  const orderCompletionRate = allTransactions.length > 0
+    ? Math.round((completedTransactions.length / allTransactions.length) * 100)
+    : 0;
+
   const productStats = {};
-  transactions.forEach(t => {
+  completedTransactions.forEach(t => {
     if (t.items) {
       t.items.forEach(item => {
         const productCode = item.sku || item.barcode || item.code || 'N/A';
+        const qty = item.quantity || item.qty || 1;
         if (!productStats[item.name]) productStats[item.name] = { revenue: 0, quantity: 0, price: item.price, code: productCode };
-        productStats[item.name].revenue += item.price * item.quantity;
-        productStats[item.name].quantity += item.quantity;
+        productStats[item.name].revenue += item.price * qty;
+        productStats[item.name].quantity += qty;
       });
     }
   });
-  const topProducts = Object.entries(productStats).sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 3);
+  const topProducts = Object.entries(productStats).sort((a, b) => b[1].quantity - a[1].quantity).slice(0, 3);
 
   const hourStats = {};
-  transactions.forEach(t => {
-    const hour = t.time.split(' ')[0].split(':')[0];
-    hourStats[hour] = (hourStats[hour] || 0) + 1;
+  completedTransactions.forEach(t => {
+    if (t.time) {
+      const parts = t.time.split(/[\s,]+/);
+      let hour = 0;
+      if (parts.length > 1) {
+        const timeParts = parts[1].split(':');
+        if (timeParts.length > 0) {
+          hour = parseInt(timeParts[0]);
+        }
+      } else {
+        hour = parseInt(t.time.split(' ')[0].split(':')[0]);
+      }
+
+      // Nhóm vào khung 2 giờ (ví dụ: 0-2, 2-4, 4-6...)
+      const windowStart = Math.floor(hour / 2) * 2;
+      hourStats[windowStart] = (hourStats[windowStart] || 0) + 1;
+    }
   });
+
   const peakHour = Object.entries(hourStats).sort((a, b) => b[1] - a[1])[0];
-  const peakHourText = peakHour ? `${peakHour[0]}:00 - ${parseInt(peakHour[0]) + 1}:00` : "--";
+  const peakHourText = peakHour ? `${peakHour[0]}:00 - ${parseInt(peakHour[0]) + 2}:00` : "--";
 
   const showRevenueDetails = () => {
     const totalRevenueSum = transactions.reduce((sum, t) => sum + parseInt(t.total.replace(/[^0-9]/g, '')), 0);
@@ -80,27 +107,27 @@ export default function ReportforCashier() {
   const showOrderDetails = () => {
     // Lấy tất cả transactions từ localStorage (giống TransactionHistory)
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    
+
     // Phân loại theo trạng thái
     const completedTransactions = allTransactions.filter(t => t.status !== 'Chờ thanh toán');
     const pendingTransactions = allTransactions.filter(t => t.status === 'Chờ thanh toán');
-    
+
     const completedData = completedTransactions.map((t, i) => ({
       stt: i + 1,
       time: t.time,
       quantity: t.quantity,
-      total: parseInt(t.total.replace(/[^0-9]/g, '')),
+      total: parseInt((t.total || "0").replace(/[^0-9]/g, '')),
       status: 'Đã hoàn thành'
     }));
-    
+
     const pendingData = pendingTransactions.map((t, i) => ({
       stt: completedTransactions.length + i + 1,
       time: t.time,
       quantity: t.quantity,
-      total: parseInt(t.total.replace(/[^0-9]/g, '')),
+      total: parseInt((t.total || "0").replace(/[^0-9]/g, '')),
       status: 'Đơn treo'
     }));
-    
+
     setModalContent({
       title: "Chi tiết Đơn hàng",
       data: [...completedData, ...pendingData],
@@ -116,8 +143,8 @@ export default function ReportforCashier() {
     const productMap = {};
     let totalQuantity = 0;
     let grandTotal = 0;
-    
-    transactions.forEach(t => {
+
+    completedTransactions.forEach(t => {
       if (t.items) {
         t.items.forEach(item => {
           if (!productMap[item.name]) {
@@ -135,7 +162,7 @@ export default function ReportforCashier() {
         });
       }
     });
-    
+
     setModalContent({
       title: "Chi tiết Sản phẩm bán",
       data: Object.values(productMap),
@@ -143,7 +170,7 @@ export default function ReportforCashier() {
     });
     setShowModal(true);
   };
-  
+
   return (
     <div
       style={{
@@ -175,7 +202,7 @@ export default function ReportforCashier() {
 
         <StatCard
           title="Số đơn hàng"
-          value={totalOrders }
+          value={totalOrders}
           iconBg="#ECFEFF"
           iconColor={COLORS.success}
           onClick={showOrderDetails}
@@ -231,9 +258,9 @@ export default function ReportforCashier() {
 
           <PaymentMethod
             name="Chuyển khoản"
-            amount="0"
-            percent={0}
-            transactions={0}
+            amount={transferAmount.toLocaleString()}
+            percent={Math.round(transferPercent)}
+            transactions={transferTransactions.length}
             color={COLORS.purple}
             bg="#F3E8FF"
           />
@@ -248,9 +275,10 @@ export default function ReportforCashier() {
             boxShadow: SHADOW,
           }}
         >
-          <h3 style={{ marginBottom: "12px", color: COLORS.text }}>
-            Top sản phẩm
-          </h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <h3 style={{ margin: 0, color: COLORS.text }}>Top sản phẩm</h3>
+            <span style={{ fontSize: "12px", color: COLORS.textMuted }}>Số lượng</span>
+          </div>
 
           {topProducts.length > 0 ? topProducts.map(([name, stats], index) => (
             <TopProduct
@@ -259,6 +287,7 @@ export default function ReportforCashier() {
               name={name}
               price={stats.price}
               code={stats.code}
+              quantity={stats.quantity}
             />
           )) : <div style={{ color: COLORS.textMuted, textAlign: "center", padding: "20px" }}>Chưa có dữ liệu</div>}
         </div>
@@ -317,7 +346,7 @@ export default function ReportforCashier() {
           }}
         >
           <div style={{ color: COLORS.textMuted }}>Tỷ lệ hoàn thành</div>
-          <h4 style={{ color: COLORS.purple }}>100%</h4>
+          <h4 style={{ color: COLORS.purple }}>{orderCompletionRate}%</h4>
         </div>
       </div>
 
@@ -418,10 +447,10 @@ export default function ReportforCashier() {
                             {item.total.toLocaleString()} đ
                           </td>
                           <td style={{ padding: "12px", textAlign: "center" }}>
-                            <span style={{ 
-                              padding: "4px 8px", 
-                              borderRadius: "4px", 
-                              background: item.status === 'Đã hoàn thành' ? "#ECFDF5" : "#FEF3C7", 
+                            <span style={{
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              background: item.status === 'Đã hoàn thành' ? "#ECFDF5" : "#FEF3C7",
                               color: item.status === 'Đã hoàn thành' ? COLORS.success : COLORS.orange,
                               fontSize: "12px"
                             }}>
