@@ -40,6 +40,7 @@ import TicketCenter from "./pages/Admin/TicketCenter";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
 import CRMreport from "./pages/CRM/report";
+import Suppliers from "./pages/Products/ProductManager/Suppliers";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -126,8 +127,7 @@ function App() {
         <Route path="inventory/export" element={<DisposalList />} />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
         <Route
-          path="inventory/suppliers"
-          element={<div className="p-4">Quản lý nhà cung cấp (Supplier)</div>}
+          path="inventory/suppliers" element={<Suppliers />}
         />
         <Route
           path="inventory/audit"

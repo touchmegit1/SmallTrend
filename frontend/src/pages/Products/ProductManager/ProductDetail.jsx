@@ -515,9 +515,7 @@ function ProductDetail() {
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mã SKU</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Barcode</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Thuộc tính</TableHead>
-                  <TableHead className="text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Giá Vốn</TableHead>
                   <TableHead className="text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Giá Bán</TableHead>
-                  <TableHead className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Tồn kho</TableHead>
                   <TableHead className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Trạng thái</TableHead>
                   <TableHead className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Thao tác</TableHead>
                 </TableRow>
@@ -567,19 +565,7 @@ function ProductDetail() {
                     </TableCell>
 
                     <TableCell className="text-right">
-                      {variant.cost_price != null ? (
-                        <span className="text-sm font-medium text-gray-600">{variant.cost_price.toLocaleString('vi-VN')}₫</span>
-                      ) : <span className="text-gray-400 font-medium text-xs">TRỐNG</span>}
-                    </TableCell>
-
-                    <TableCell className="text-right">
                       <span className="text-base font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded whitespace-nowrap">{variant.sell_price?.toLocaleString('vi-VN') || "0"} ₫</span>
-                    </TableCell>
-
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className={variant.stock_quantity > 0 ? "border-blue-200 bg-blue-50 text-blue-700 font-bold" : "border-red-200 bg-red-50 text-red-600 font-bold"}>
-                        {variant.stock_quantity ?? 0}
-                      </Badge>
                     </TableCell>
 
                     <TableCell className="text-center">
