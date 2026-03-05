@@ -27,6 +27,7 @@ public class PurchaseOrderRequest {
     private BigDecimal totalAmount;
 
     private String notes;
+    private String rejectionReason;
 
     // Items
     private List<PurchaseOrderItemRequest> items;

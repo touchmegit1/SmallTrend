@@ -7,10 +7,17 @@ export default function ActionButtons({
   saving,
   isEditMode,
   onSaveDraft,
+  onSubmitForApproval,
   onConfirm,
+  onReject,
   onDelete,
 }) {
-  const isDraft = status === PO_STATUS.DRAFT;
+  const isDraft = status === PO_STATUS.DRAFT || status === PO_STATUS.REJECTED;
+  const isPending = status === PO_STATUS.PENDING;
+  const isProcessed =
+    status === PO_STATUS.CONFIRMED ||
+    status === PO_STATUS.RECEIVED ||
+    status === PO_STATUS.CANCELLED;
 
   return (
     <div className="border-t border-slate-200 px-5 py-4 bg-slate-50/50">
@@ -27,23 +34,23 @@ export default function ActionButtons({
             ) : (
               <Save size={16} />
             )}
-            Lưu phiếu tạm
+            Lưu nháp
           </button>
         )}
 
-        {/* Confirm */}
+        {/* Submit For Approval */}
         {isDraft && (
           <button
-            onClick={onConfirm}
+            onClick={onSubmitForApproval}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-200"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-indigo-200"
           >
             {saving ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
               <CheckCircle size={18} />
             )}
-            Xác nhận & Nhập kho
+            Gửi yêu cầu duyệt
           </button>
         )}
 
@@ -59,7 +66,32 @@ export default function ActionButtons({
           </button>
         )}
 
-        {!isDraft && (
+        {/* Manager Actions: Approve & Reject */}
+        {isPending && (
+          <>
+            <button
+              onClick={onConfirm}
+              disabled={saving}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-200"
+            >
+              {saving ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <CheckCircle size={18} />
+              )}
+              Chấp nhận (Cập nhật tồn kho)
+            </button>
+            <button
+              onClick={onReject}
+              disabled={saving}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              Từ chối
+            </button>
+          </>
+        )}
+
+        {isProcessed && (
           <div className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-slate-400 rounded-xl shadow-sm">
             <CheckCircle size={18} />
             Phiếu đã xử lý xong

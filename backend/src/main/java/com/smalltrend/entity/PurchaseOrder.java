@@ -68,6 +68,9 @@ public class PurchaseOrder {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PurchaseOrderItem> items = new ArrayList<>();

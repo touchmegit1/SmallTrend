@@ -10,6 +10,8 @@
 
 export const PO_STATUS = {
   DRAFT: "DRAFT",
+  PENDING: "PENDING",
+  REJECTED: "REJECTED",
   CONFIRMED: "CONFIRMED",
   RECEIVED: "RECEIVED",
   CANCELLED: "CANCELLED",
@@ -18,10 +20,24 @@ export const PO_STATUS = {
 export const PO_STATUS_CONFIG = {
   [PO_STATUS.DRAFT]: {
     label: "Phiếu tạm",
+    bg: "bg-gray-50",
+    text: "text-gray-700",
+    border: "border-gray-200",
+    dot: "bg-gray-500",
+  },
+  [PO_STATUS.PENDING]: {
+    label: "Chờ duyệt",
     bg: "bg-amber-50",
     text: "text-amber-700",
     border: "border-amber-200",
     dot: "bg-amber-500",
+  },
+  [PO_STATUS.REJECTED]: {
+    label: "Từ chối",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    border: "border-red-200",
+    dot: "bg-red-500",
   },
   [PO_STATUS.CONFIRMED]: {
     label: "Đã xác nhận",
@@ -39,15 +55,17 @@ export const PO_STATUS_CONFIG = {
   },
   [PO_STATUS.CANCELLED]: {
     label: "Đã hủy",
-    bg: "bg-red-50",
-    text: "text-red-700",
-    border: "border-red-200",
-    dot: "bg-red-500",
+    bg: "bg-slate-50",
+    text: "text-slate-700",
+    border: "border-slate-200",
+    dot: "bg-slate-500",
   },
 };
 
 export const ALLOWED_TRANSITIONS = {
-  [PO_STATUS.DRAFT]: [PO_STATUS.CONFIRMED, PO_STATUS.CANCELLED],
+  [PO_STATUS.DRAFT]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
+  [PO_STATUS.PENDING]: [PO_STATUS.CONFIRMED, PO_STATUS.REJECTED, PO_STATUS.CANCELLED],
+  [PO_STATUS.REJECTED]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
   [PO_STATUS.CONFIRMED]: [], // terminal
   [PO_STATUS.CANCELLED]: [], // terminal
 };

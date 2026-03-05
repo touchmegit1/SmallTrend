@@ -23,7 +23,6 @@ import {
 } from "../utils/purchaseOrder";
 
 export function usePurchaseOrder(initialId = null) {
-  // ─── Reference Data ────────────────────────────────────
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -31,15 +30,11 @@ export function usePurchaseOrder(initialId = null) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // ─── Order State ───────────────────────────────────────
   const [order, setOrder] = useState(createDefaultOrder(""));
   const [items, setItems] = useState([]);
-  const [batchEditItem, setBatchEditItem] = useState(null); // item _key for batch modal
-
-  // ─── Supplier Search ───────────────────────────────────
+  const [batchEditItem, setBatchEditItem] = useState(null);
   const [supplierQuery, setSupplierQuery] = useState("");
 
-  // ─── Init ──────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
       try {
@@ -102,7 +97,6 @@ export function usePurchaseOrder(initialId = null) {
     init();
   }, [initialId]);
 
-  // ─── Financials (memoized) ─────────────────────────────
   const financials = useMemo(() => {
     return calcOrderFinancials(
       items,
@@ -113,7 +107,6 @@ export function usePurchaseOrder(initialId = null) {
     );
   }, [items, order.discount, order.tax_percent, order.shipping_fee, order.paid_amount]);
 
-  // ─── Filtered suppliers for autocomplete ───────────────
   const filteredSuppliers = useMemo(() => {
     if (!supplierQuery.trim()) return suppliers;
     const q = supplierQuery.toLowerCase();
@@ -125,7 +118,6 @@ export function usePurchaseOrder(initialId = null) {
     );
   }, [suppliers, supplierQuery]);
 
-  // ─── Order Field Updates ───────────────────────────────
   const updateOrder = useCallback((field, value) => {
     setOrder((prev) => ({ ...prev, [field]: value }));
   }, []);
@@ -151,7 +143,6 @@ export function usePurchaseOrder(initialId = null) {
     setSupplierQuery("");
   }, []);
 
-  // ─── Item Management ──────────────────────────────────
   const addProduct = useCallback(
     (product) => {
       setItems((prev) => {
@@ -182,7 +173,6 @@ export function usePurchaseOrder(initialId = null) {
       prev.map((item) => {
         if (item._key !== _key) return item;
         const updated = { ...item, [field]: value };
-        // Recalculate total when quantity, price, or discount changes
         if (["quantity", "unit_price", "discount"].includes(field)) {
           updated.total = calcItemTotal(
             updated.quantity,
@@ -195,7 +185,6 @@ export function usePurchaseOrder(initialId = null) {
     );
   }, []);
 
-  // ─── Batch Management ─────────────────────────────────
   const openBatchEditor = useCallback((_key) => {
     setBatchEditItem(_key);
   }, []);
@@ -215,7 +204,6 @@ export function usePurchaseOrder(initialId = null) {
     return items.find((i) => i._key === batchEditItem) || null;
   }, [batchEditItem, items]);
 
-  // ─── Save Draft ────────────────────────────────────────
   const saveDraft = useCallback(
     async (navigate) => {
       const validation = validateDraft(order, items);
@@ -256,7 +244,46 @@ export function usePurchaseOrder(initialId = null) {
     [order, items, financials]
   );
 
-  // ─── Confirm & Update Stock ────────────────────────────
+  const submitForApproval = useCallback(
+    async (navigate) => {
+      const validation = validateDraft(order, items);
+      if (!validation.valid) {
+        alert(validation.errors.join("\n"));
+        return false;
+      }
+
+      setSaving(true);
+      try {
+        const orderData = {
+          ...order,
+          status: PO_STATUS.PENDING,
+          subtotal: financials.subtotal,
+          tax_amount: financials.taxAmount,
+          total_amount: financials.total,
+          remaining_amount: financials.remaining,
+          items: items,
+        };
+
+        if (initialId) {
+          await updatePurchaseOrder(initialId, orderData);
+        } else {
+          await createPurchaseOrder(orderData);
+        }
+
+        alert("Đã gửi yêu cầu duyệt thành công!");
+        if (navigate) navigate("/inventory/purchase-orders");
+        return true;
+      } catch (err) {
+        console.error("Submit for approval error:", err);
+        alert("Lỗi khi gửi yêu cầu duyệt: " + err.message);
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [initialId, order, items, financials]
+  );
+
   const confirmOrder = useCallback(
     async (navigate) => {
       const validation = validateConfirm(order, items);
@@ -271,20 +298,21 @@ export function usePurchaseOrder(initialId = null) {
 
       setSaving(true);
       try {
-        const orderData = {
-          ...order,
-          status: PO_STATUS.CONFIRMED,
-          subtotal: financials.subtotal,
-          tax_amount: financials.taxAmount,
-          total_amount: financials.total,
-          remaining_amount: financials.remaining,
-          items: items,
-        };
-
         if (initialId) {
-          await updatePurchaseOrder(initialId, orderData);
-          await confirmExistingOrder(initialId);
+          await fetch(`http://localhost:8080/api/inventory/purchase-orders/${initialId}/approve`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+          });
         } else {
+          const orderData = {
+            ...order,
+            status: PO_STATUS.CONFIRMED,
+            subtotal: financials.subtotal,
+            tax_amount: financials.taxAmount,
+            total_amount: financials.total,
+            remaining_amount: financials.remaining,
+            items: items,
+          };
           await confirmPurchaseOrder(orderData);
         }
 
@@ -299,44 +327,45 @@ export function usePurchaseOrder(initialId = null) {
         setSaving(false);
       }
     },
-    [order, items, financials]
+    [initialId, order, items, financials]
   );
 
-  // ─── Cancel Order ──────────────────────────────────────
-  const cancelOrder = useCallback(
-    async (navigate) => {
-      if (!canTransitionTo(order.status, PO_STATUS.CANCELLED)) {
-        alert("Không thể hủy phiếu nhập ở trạng thái hiện tại.");
+  const rejectOrder = useCallback(
+    async (navigate, rejectionReason) => {
+      if (order.status !== PO_STATUS.PENDING) {
+        alert("Chỉ có thể từ chối phiếu đang chờ duyệt.");
         return false;
       }
 
-      if (!window.confirm("Bạn có chắc muốn hủy phiếu nhập này?")) {
+      if (!rejectionReason || rejectionReason.trim() === "") {
+        alert("Bạn phải nhập lý do từ chối.");
         return false;
       }
 
-      if (initialId) {
-        setSaving(true);
-        try {
-          await cancelPurchaseOrderApi(initialId);
-          alert("Đã hủy phiếu nhập.");
-          if (navigate) navigate("/inventory/purchase-orders");
-          return true;
-        } catch (err) {
-          alert("Lỗi khi hủy phiếu: " + err.message);
-          return false;
-        } finally {
-          setSaving(false);
-        }
-      } else {
-        alert("Đã hủy phiếu nhập.");
+      setSaving(true);
+      try {
+        const response = await fetch(`http://localhost:8080/api/inventory/purchase-orders/${initialId}/reject`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rejectionReason }),
+        });
+        
+        if (!response.ok) throw new Error('Lỗi từ chối phiếu');
+        
+        alert("Đã từ chối phiếu nhập.");
         if (navigate) navigate("/inventory/purchase-orders");
         return true;
+      } catch (err) {
+        console.error("Reject order error", err);
+        alert("Lỗi khi từ chối phiếu: " + err.message);
+        return false;
+      } finally {
+        setSaving(false);
       }
     },
-    [order.status]
+    [initialId, order.status]
   );
 
-  // ─── Delete Draft Order ────────────────────────────────
   const deleteOrder = useCallback(
     async (navigate) => {
       if (!initialId) return false;
@@ -365,7 +394,6 @@ export function usePurchaseOrder(initialId = null) {
   );
 
   return {
-    // Reference data
     products,
     suppliers,
     locations,
@@ -373,35 +401,26 @@ export function usePurchaseOrder(initialId = null) {
     loading,
     saving,
     error,
-
-    // Order state
     order,
     items,
     financials,
-
-    // Supplier autocomplete
     supplierQuery,
     setSupplierQuery,
     selectSupplier,
     clearSupplier,
-
-    // Order management
     updateOrder,
     addProduct,
     removeItem,
     updateItem,
-
-    // Batch management
     batchEditItem,
     batchEditData,
     openBatchEditor,
     closeBatchEditor,
     updateItemBatches,
-
-    // Actions
     saveDraft,
+    submitForApproval,
     confirmOrder,
-    cancelOrder,
+    rejectOrder,
     deleteOrder,
   };
 }

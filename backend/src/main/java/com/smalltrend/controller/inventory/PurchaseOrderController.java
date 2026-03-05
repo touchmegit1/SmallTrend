@@ -51,6 +51,21 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(purchaseOrderService.confirmExistingOrder(id));
     }
 
+    @PutMapping("/purchase-orders/{id}")
+    public ResponseEntity<PurchaseOrderResponse> updateOrder(@PathVariable Integer id, @RequestBody PurchaseOrderRequest request) {
+        return ResponseEntity.ok(purchaseOrderService.updateOrder(id, request));
+    }
+
+    @PutMapping("/purchase-orders/{id}/reject")
+    public ResponseEntity<PurchaseOrderResponse> rejectOrder(@PathVariable Integer id, @RequestBody Map<String, String> payload) {
+        return ResponseEntity.ok(purchaseOrderService.rejectOrder(id, payload.get("rejectionReason")));
+    }
+
+    @PutMapping("/purchase-orders/{id}/approve")
+    public ResponseEntity<PurchaseOrderResponse> approveOrder(@PathVariable Integer id) {
+        return ResponseEntity.ok(purchaseOrderService.approveOrder(id));
+    }
+
     @PutMapping("/purchase-orders/{id}/cancel")
     public ResponseEntity<PurchaseOrderResponse> cancelOrder(@PathVariable Integer id) {
         return ResponseEntity.ok(purchaseOrderService.cancelOrder(id));

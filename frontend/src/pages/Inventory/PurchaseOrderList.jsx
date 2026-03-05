@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePurchaseOrderList } from "../../hooks/usePurchaseOrderList";
 import PurchaseOrderRecordsTable from "../../components/inventory/PurchaseOrderRecordsTable";
+import { PO_STATUS_CONFIG } from "../../utils/purchaseOrder";
 
 function PurchaseOrderList() {
   const navigate = useNavigate();
   const { suppliers, filteredOrders, loading, searchQuery, setSearchQuery } =
     usePurchaseOrderList();
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   if (loading) {
     return (
@@ -17,11 +19,15 @@ function PurchaseOrderList() {
     );
   }
 
+  const displayedOrders = statusFilter === "ALL" 
+    ? filteredOrders 
+    : filteredOrders.filter(o => o.status === statusFilter);
+
   return (
     <div className="flex h-screen bg-gray-50">
       <div className="flex-1 flex flex-col">
         <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4 flex-1">
               <h1 className="text-xl font-semibold text-gray-800">Nhập hàng</h1>
               <div className="flex-1 max-w-md relative">
@@ -41,6 +47,59 @@ function PurchaseOrderList() {
             >
               <Plus className="w-4 h-4" />
               Nhập hàng
+            </button>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setStatusFilter("ALL")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                statusFilter === "ALL"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Tất cả
+            </button>
+            <button
+              onClick={() => setStatusFilter("PENDING")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                statusFilter === "PENDING"
+                  ? "bg-amber-600 text-white"
+                  : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+              }`}
+            >
+              Chờ duyệt ({filteredOrders.filter(o => o.status === "PENDING").length})
+            </button>
+            <button
+              onClick={() => setStatusFilter("DRAFT")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                statusFilter === "DRAFT"
+                  ? "bg-gray-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Phiếu tạm ({filteredOrders.filter(o => o.status === "DRAFT").length})
+            </button>
+            <button
+              onClick={() => setStatusFilter("CONFIRMED")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                statusFilter === "CONFIRMED"
+                  ? "bg-blue-600 text-white"
+                  : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+              }`}
+            >
+              Đã xác nhận ({filteredOrders.filter(o => o.status === "CONFIRMED").length})
+            </button>
+            <button
+              onClick={() => setStatusFilter("REJECTED")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                statusFilter === "REJECTED"
+                  ? "bg-red-600 text-white"
+                  : "bg-red-50 text-red-700 hover:bg-red-100"
+              }`}
+            >
+              Từ chối ({filteredOrders.filter(o => o.status === "REJECTED").length})
             </button>
           </div>
         </div>
@@ -71,7 +130,7 @@ function PurchaseOrderList() {
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               <PurchaseOrderRecordsTable
-                records={filteredOrders}
+                records={displayedOrders}
                 suppliers={suppliers}
               />
             </tbody>
@@ -80,8 +139,7 @@ function PurchaseOrderList() {
 
         <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Hiển thị{" "}
-            <span className="font-medium">{filteredOrders.length}</span> dòng
+            Hiển thị <span className="font-medium">{displayedOrders.length}</span> dòng
           </div>
         </div>
       </div>

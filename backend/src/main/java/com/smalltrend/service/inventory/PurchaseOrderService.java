@@ -85,7 +85,11 @@ public class PurchaseOrderService {
         validateDraft(request);
 
         PurchaseOrder order = buildOrderFromRequest(request);
-        order.setStatus(PurchaseOrderStatus.DRAFT);
+        if (request.getStatus() != null && "PENDING".equalsIgnoreCase(request.getStatus())) {
+            order.setStatus(PurchaseOrderStatus.PENDING);
+        } else {
+            order.setStatus(PurchaseOrderStatus.DRAFT);
+        }
         order.setOrderDate(LocalDate.now());
 
         if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
@@ -127,12 +131,42 @@ public class PurchaseOrderService {
 
         if (!itemRequests.isEmpty()) {
             saveOrderItems(savedOrder, itemRequests);
-            // ── Stock Update ──
             updateStock(savedOrder, itemRequests);
         }
 
         log.info("✅ Purchase Order {} CONFIRMED. Stock updated.", savedOrder.getOrderNumber());
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
+    }
+
+    // ─── Approve Pending Order (Manager approves) ──────────
+    @Transactional
+    public PurchaseOrderResponse approveOrder(Integer orderId) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể duyệt phiếu đang chờ duyệt.");
+        }
+
+        order.setStatus(PurchaseOrderStatus.CONFIRMED);
+        order.setRejectionReason(null);
+        purchaseOrderRepository.save(order);
+
+        List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
+                .map(item -> PurchaseOrderItemRequest.builder()
+                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                        ? item.getVariant().getProduct().getId().intValue() : null)
+                .quantity(item.getQuantity())
+                .unitCost(item.getUnitCost())
+                .totalCost(item.getTotalCost())
+                .build())
+                .collect(Collectors.toList());
+
+        updateStock(order, itemRequests);
+
+        log.info("✅ Purchase Order {} APPROVED by Manager. Stock updated.", order.getOrderNumber());
+        return toDetailResponse(order);
     }
 
     // ─── Confirm Existing Draft ──────────────────────────────
@@ -141,8 +175,8 @@ public class PurchaseOrderService {
         PurchaseOrder order = purchaseOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
 
-        if (order.getStatus() != PurchaseOrderStatus.DRAFT) {
-            throw new RuntimeException("Chỉ có thể xác nhận phiếu ở trạng thái Phiếu tạm.");
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể xác nhận phiếu ở trạng thái Phiếu tạm hoặc Chờ duyệt.");
         }
 
         if (order.getSupplier() == null) {
@@ -174,6 +208,71 @@ public class PurchaseOrderService {
         return toDetailResponse(order);
     }
 
+    // ─── Update Order ──────────────────────────────────────────
+    @Transactional
+    public PurchaseOrderResponse updateOrder(Integer id, PurchaseOrderRequest request) {
+        PurchaseOrder order = purchaseOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + id));
+
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.REJECTED) {
+            throw new RuntimeException("Chỉ có thể cập nhật phiếu ở trạng thái Phiếu tạm hoặc Từ chối.");
+        }
+
+        validateDraft(request);
+
+        if (request.getSupplierId() != null) {
+            Supplier supplier = supplierRepository.findById(request.getSupplierId())
+                    .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
+            order.setSupplier(supplier);
+        } else {
+            order.setSupplier(null);
+        }
+
+        order.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+        order.setDiscountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO);
+        order.setTaxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO);
+        order.setNotes(request.getNotes());
+        order.setRejectionReason(null); // Clear rejection reason upon update
+
+        // Update status based on request (DRAFT or PENDING)
+        if (request.getStatus() != null && "PENDING".equalsIgnoreCase(request.getStatus())) {
+            order.setStatus(PurchaseOrderStatus.PENDING);
+        } else {
+            order.setStatus(PurchaseOrderStatus.DRAFT);
+        }
+
+        purchaseOrderItemRepository.deleteAll(order.getItems());
+        order.getItems().clear();
+
+        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems() : new ArrayList<>();
+        recalculate(order, itemRequests);
+
+        PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
+        if (!itemRequests.isEmpty()) {
+            saveOrderItems(savedOrder, itemRequests);
+        }
+
+        return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
+    }
+
+    // ─── Reject Order ────────────────────────────────────────
+    @Transactional
+    public PurchaseOrderResponse rejectOrder(Integer id, String reason) {
+        PurchaseOrder order = purchaseOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + id));
+
+        if (order.getStatus() != PurchaseOrderStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể từ chối phiếu đang chờ duyệt.");
+        }
+
+        order.setStatus(PurchaseOrderStatus.REJECTED);
+        order.setRejectionReason(reason);
+        purchaseOrderRepository.save(order);
+
+        log.info("🚫 Purchase Order {} REJECTED. Reason: {}", order.getOrderNumber(), reason);
+        return toDetailResponse(order);
+    }
+
     // ─── Cancel Order ────────────────────────────────────────
     @Transactional
     public PurchaseOrderResponse cancelOrder(Integer orderId) {
@@ -197,8 +296,8 @@ public class PurchaseOrderService {
         PurchaseOrder order = purchaseOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
 
-        if (order.getStatus() != PurchaseOrderStatus.DRAFT) {
-            throw new RuntimeException("Chỉ có thể xóa phiếu ở trạng thái Phiếu tạm.");
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.REJECTED) {
+            throw new RuntimeException("Chỉ có thể xóa phiếu ở trạng thái Phiếu tạm hoặc Từ chối.");
         }
 
         if (order.getItems() != null && !order.getItems().isEmpty()) {
@@ -463,6 +562,7 @@ public class PurchaseOrderService {
                 .taxAmount(order.getTaxAmount())
                 .totalAmount(order.getTotalAmount())
                 .notes(order.getNotes())
+                .rejectionReason(order.getRejectionReason())
                 .build();
     }
 
