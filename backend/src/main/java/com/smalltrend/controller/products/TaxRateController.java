@@ -24,4 +24,31 @@ public class TaxRateController {
     public ResponseEntity<List<TaxRate>> getAll() {
         return ResponseEntity.ok(taxRateRepository.findAll());
     }
+
+    // Thêm mới thuế
+    @PostMapping
+    public ResponseEntity<TaxRate> create(@RequestBody TaxRate taxRate) {
+        return ResponseEntity.ok(taxRateRepository.save(taxRate));
+    }
+
+    // Cập nhật thuế
+    @PutMapping("/{id}")
+    public ResponseEntity<TaxRate> update(@PathVariable Integer id, @RequestBody TaxRate taxRateData) {
+        return taxRateRepository.findById(id).map(existing -> {
+            existing.setName(taxRateData.getName());
+            existing.setRate(taxRateData.getRate());
+            existing.setActive(taxRateData.isActive());
+            return ResponseEntity.ok(taxRateRepository.save(existing));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // Xóa thuế
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        if (taxRateRepository.existsById(id)) {
+            taxRateRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
 }
