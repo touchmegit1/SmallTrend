@@ -3,6 +3,7 @@ import { CalendarDays, Plus, Search, X, Pencil, Trash2, Users, UserPlus, Chevron
 import api from '../../config/axiosConfig';
 import { shiftService } from '../../services/shiftService';
 import CustomSelect from '../../components/common/CustomSelect';
+import { useNavigate } from 'react-router-dom';
 
 const defaultShiftForm = {
     shiftCode: '',
@@ -37,6 +38,7 @@ const defaultAssignmentForm = {
 };
 
 const ShiftManagement = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('shifts');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -287,6 +289,12 @@ const ShiftManagement = () => {
                     <p className="text-sm text-slate-500 mt-1">Quản trị mẫu ca, phân ca nhân sự và lịch theo tuần/tháng.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => navigate('/hr/shift-tickets')}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
+                    >
+                        Ticket đổi ca
+                    </button>
                     <button
                         onClick={() => openShiftModal()}
                         className="inline-flex items-center gap-2 rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { shiftService } from '../../services/shiftService';
 import { userService } from '../../services/userService';
-import { Wallet, Users, Clock3, BadgeDollarSign, Calculator, Settings, X } from 'lucide-react';
+import { Wallet, Users, Clock3, BadgeDollarSign, Settings, X } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 
 const PayrollManagement = () => {
@@ -30,8 +30,6 @@ const PayrollManagement = () => {
         return {
             month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
             userId: '',
-            hourlyRate: 30000,
-            salaryMode: 'PER_USER',
         };
     });
 
@@ -41,7 +39,7 @@ const PayrollManagement = () => {
 
     useEffect(() => {
         loadPayroll();
-    }, [filters.month, filters.userId, filters.hourlyRate, filters.salaryMode]);
+    }, [filters.month, filters.userId]);
 
     const loadUsers = async () => {
         try {
@@ -69,10 +67,6 @@ const PayrollManagement = () => {
             const params = {
                 month: filters.month,
             };
-
-            if (filters.salaryMode === 'OVERRIDE') {
-                params.hourlyRate = filters.hourlyRate;
-            }
 
             if (filters.userId) {
                 params.userId = filters.userId;
@@ -133,19 +127,14 @@ const PayrollManagement = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <StatCard title="Nhân viên" value={summary.staffCount} icon={Users} />
                 <StatCard title="Tổng giờ công" value={Number(summary.totalHours || 0).toFixed(1)} icon={Clock3} />
-                <StatCard
-                    title="Đơn giá/giờ"
-                    value={filters.salaryMode === 'OVERRIDE' ? formatCurrency(Number(filters.hourlyRate || 0)) : 'Theo từng nhân viên'}
-                    icon={Calculator}
-                />
                 <StatCard title="Tổng lương" value={formatCurrency(summary.totalPayroll || 0)} icon={BadgeDollarSign} />
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-3 md:grid-cols-3">
                     <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-600">Tháng tính lương</label>
                         <input
@@ -166,29 +155,6 @@ const PayrollManagement = () => {
                                 ...users.map((user) => ({ value: String(user.id), label: user.fullName || user.email }))
                             ]}
                         />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600">Chế độ tính lương</label>
-                        <CustomSelect
-                            value={filters.salaryMode}
-                            onChange={(value) => setFilters((prev) => ({ ...prev, salaryMode: value }))}
-                            options={[
-                                { value: 'PER_USER', label: 'Theo cấu hình từng nhân viên' },
-                                { value: 'OVERRIDE', label: 'Ghi đè theo đơn giá chung' },
-                            ]}
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600">Đơn giá theo giờ (VND)</label>
-                        <input
-                            type="number"
-                            value={filters.hourlyRate}
-                            onChange={(event) => setFilters((prev) => ({ ...prev, hourlyRate: event.target.value }))}
-                            min="0"
-                            disabled={filters.salaryMode !== 'OVERRIDE'}
-                            className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.hourlyRate ? 'border-rose-400' : 'border-slate-200'}`}
-                        />
-                        {filterErrors.hourlyRate && filters.salaryMode === 'OVERRIDE' && <p className="text-xs text-rose-600">{filterErrors.hourlyRate}</p>}
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-600">Tìm kiếm (tên / SĐT)</label>
@@ -470,13 +436,6 @@ const validatePayrollFilters = (filters) => {
 
     if (!filters.month) {
         errors.month = 'Vui lòng chọn tháng tính lương.';
-    }
-
-    if (filters.salaryMode === 'OVERRIDE') {
-        const hourlyRate = Number(filters.hourlyRate);
-        if (filters.hourlyRate === '' || Number.isNaN(hourlyRate) || hourlyRate < 0) {
-            errors.hourlyRate = 'Đơn giá theo giờ phải là số lớn hơn hoặc bằng 0.';
-        }
     }
 
     return errors;

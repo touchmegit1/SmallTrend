@@ -1,103 +1,72 @@
 import api from '../config/axiosConfig';
 
 export const shiftTicketService = {
-    // Get all shift-related tickets
-    getShiftTickets: async (params = {}) => {
-        const res = await api.get('/api/tickets', {
-            params: {
-                ticketType: 'SHIFT_CHANGE',
-                ...params
-            }
-        });
-        return res.data;
+    getShiftTickets: async () => {
+        const res = await api.get('/crm/tickets');
+        const payload = Array.isArray(res.data) ? res.data : [];
+        return payload.filter((item) => item.ticketType === 'SHIFT_CHANGE');
     },
 
-    // Get tickets assigned to current user (for manager approval)
-    getAssignedTickets: async (params = {}) => {
-        const res = await api.get('/api/tickets/assigned', { params });
-        return res.data;
-    },
-
-    // Create shift swap ticket (when 2 employees want to swap shifts)
     createShiftSwapTicket: async (swapData) => {
-        const res = await api.post('/api/tickets', {
+        const res = await api.post('/crm/tickets', {
             ticketType: 'SHIFT_CHANGE',
-            title: `Shift Swap: ${swapData.fromDate} ↔ ${swapData.toDate}`,
+            title: `Yêu cầu đổi ca: ${swapData.fromDate} ↔ ${swapData.toDate}`,
             description: swapData.reason,
-            priority: 'NORMAL',
+            priority: swapData.priority || 'HIGH',
             relatedEntityType: 'SHIFT_SWAP',
-            relatedEntityId: swapData.swapRequestId,
-            assignedToUserId: swapData.targetUserId // Assign to other employee
+            relatedEntityId: swapData.relatedEntityId || null,
+            assignedToUserId: swapData.assignedToUserId,
         });
         return res.data;
     },
 
-    // Create shift cancel ticket (employee asks to cancel a shift)
     createShiftCancelTicket: async (cancelData) => {
-        const res = await api.post('/api/tickets', {
+        const res = await api.post('/crm/tickets', {
             ticketType: 'SHIFT_CHANGE',
-            title: `Cancel Shift Request: ${cancelData.shiftDate}`,
+            title: `Yêu cầu nghỉ ca: ${cancelData.shiftDate}`,
             description: cancelData.reason,
-            priority: cancelData.priority || 'NORMAL',
+            priority: cancelData.priority || 'HIGH',
             relatedEntityType: 'SHIFT_ASSIGNMENT',
             relatedEntityId: cancelData.assignmentId,
-            assignedToUserId: cancelData.managerId // Assign to manager for approval
+            assignedToUserId: cancelData.assignedToUserId,
         });
         return res.data;
     },
 
-    // Create shift update ticket (employee asks to modify shift details)
     createShiftUpdateTicket: async (updateData) => {
-        const res = await api.post('/api/tickets', {
+        const res = await api.post('/crm/tickets', {
             ticketType: 'SHIFT_CHANGE',
-            title: `Shift Update Request: ${updateData.shiftDate}`,
+            title: `Yêu cầu cập nhật ca: ${updateData.shiftDate}`,
             description: updateData.reason,
             priority: updateData.priority || 'NORMAL',
             relatedEntityType: 'SHIFT_ASSIGNMENT',
             relatedEntityId: updateData.assignmentId,
-            assignedToUserId: updateData.managerId // Assign to manager for approval
+            assignedToUserId: updateData.assignedToUserId,
         });
         return res.data;
     },
 
-    // Approve ticket (for manager or co-worker)
     approveTicket: async (ticketId, resolution = '') => {
-        const res = await api.put(`/api/tickets/${ticketId}/approve`, {
+        const res = await api.put(`/crm/tickets/${ticketId}`, {
             status: 'RESOLVED',
-            resolution: resolution || 'Approved'
+            resolution: resolution || 'Đã duyệt yêu cầu đổi ca',
         });
         return res.data;
     },
 
-    // Reject ticket
     rejectTicket: async (ticketId, resolution) => {
-        const res = await api.put(`/api/tickets/${ticketId}/reject`, {
+        const res = await api.put(`/crm/tickets/${ticketId}`, {
             status: 'CLOSED',
-            resolution: resolution || 'Rejected'
+            resolution: resolution || 'Từ chối yêu cầu đổi ca',
         });
         return res.data;
     },
 
-    // Update ticket status
     updateTicketStatus: async (ticketId, status, resolution = '') => {
-        const res = await api.put(`/api/tickets/${ticketId}`, {
+        const res = await api.put(`/crm/tickets/${ticketId}`, {
             status,
-            resolution
+            resolution,
         });
         return res.data;
     },
-
-    // Get pending shift swap requests
-    getPendingSwapRequests: async (params = {}) => {
-        const res = await api.get('/shifts/swap-requests/pending', { params });
-        return res.data;
-    },
-
-    // Auto-approve swap if both employees accepted
-    autoApproveSwap: async (ticketId, swapRequestId) => {
-        const res = await api.post(`/shifts/swap-requests/${swapRequestId}/auto-approve`);
-        // Also update ticket status
-        await shiftTicketService.approveTicket(ticketId, 'Auto-approved by both employees');
-        return res.data;
-    }
 };

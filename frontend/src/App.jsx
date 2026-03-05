@@ -11,6 +11,7 @@ import ShiftManagement from "./pages/HR/ShiftManagement";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import PayrollManagement from "./pages/HR/PayrollManagement";
 import MyPayrollSummary from "./pages/HR/MyPayrollSummary";
+import ShiftTicketCenter from "./pages/HR/ShiftTicketCenter";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import ImportInventory from "./pages/Inventory/ImportInventory";
 import CreateImport from "./pages/Inventory/CreateImport";
@@ -223,6 +224,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
               <AttendanceManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/shift-tickets"
+          element={
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <ShiftTicketCenter />
             </ProtectedRoute>
           }
         />

@@ -27,6 +27,7 @@ const Sidebar = () => {
     const hrChildren = [
         { label: 'Danh sách nhân viên', path: '/hr' },
         { label: 'Phân ca làm việc', path: '/hr/shifts' },
+        { label: 'Đổi ca & Ticket ca', path: '/hr/shift-tickets' },
         { label: 'Chấm công', path: '/hr/attendance' },
         ...(isAdmin || isManager
             ? [{ label: 'Tính lương nhân sự', path: '/hr/payroll' }]
