@@ -19,6 +19,7 @@ TRUNCATE TABLE cash_transactions;
 TRUNCATE TABLE shift_handovers;
 TRUNCATE TABLE shift_swap_requests;
 TRUNCATE TABLE stock_movements;
+TRUNCATE TABLE stock_movements;
 TRUNCATE TABLE payroll_calculations;
 TRUNCATE TABLE salary_configs;
 TRUNCATE TABLE attendance;
@@ -39,10 +40,17 @@ TRUNCATE TABLE inventory_count_items;
 TRUNCATE TABLE inventory_counts;
 TRUNCATE TABLE disposal_voucher_items;
 TRUNCATE TABLE disposal_vouchers;
+TRUNCATE TABLE inventory_count_items;
+TRUNCATE TABLE inventory_counts;
+TRUNCATE TABLE disposal_voucher_items;
+TRUNCATE TABLE disposal_vouchers;
 TRUNCATE TABLE inventory_stock;
 TRUNCATE TABLE product_batches;
 TRUNCATE TABLE locations;
 TRUNCATE TABLE product_variants;
+TRUNCATE TABLE gift_redemption_history;
+TRUNCATE TABLE loyalty_gifts;
+TRUNCATE TABLE purchase_history;
 TRUNCATE TABLE gift_redemption_history;
 TRUNCATE TABLE loyalty_gifts;
 TRUNCATE TABLE purchase_history;
@@ -231,6 +239,7 @@ UPDATE inventory_stock SET quantity = 350 WHERE variant_id = 4 AND location_id =
 UPDATE inventory_stock SET quantity = 220 WHERE variant_id = 5 AND location_id = 5 AND batch_id = 5;
 
 -- 12. WORK SHIFTS (Matching JPA Schema)
+-- 12. WORK SHIFTS (Matching JPA Schema)
 INSERT IGNORE INTO work_shifts (
    shift_code, shift_name, start_time, end_time, break_start_time, break_end_time,
    shift_type, overtime_multiplier, night_shift_bonus, weekend_bonus, holiday_bonus,
@@ -377,6 +386,22 @@ INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_regist
 ('SO-PH-009', 4, 3, 2, '2026-02-28 09:10:00', 95000.00, 0.00, 0.00, 95000.00, 'CARD', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
 ('SO-PH-010', 3, 3, 2, '2026-02-28 16:30:00', 72000.00, 0.00, 0.00, 72000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW());
 
+-- March 2026 orders (past days + today)
+INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES
+-- 2026-03-01
+('SO-20260301-001', 1, 3, 1, '2026-03-01 09:15:00', 62000.00, 6200.00, 0.00, 68200.00, 'CASH', 'COMPLETED', 'Đơn sáng đầu tháng 3', '2026-03-01 09:15:00', '2026-03-01 09:16:00'),
+('SO-20260301-002', 4, 4, 2, '2026-03-01 14:50:00', 105000.00, 10500.00, 0.00, 115500.00, 'CARD', 'COMPLETED', 'Khách mua số lượng lớn', '2026-03-01 14:50:00', '2026-03-01 14:52:00'),
+-- 2026-03-02
+('SO-20260302-001', 2, 3, 1, '2026-03-02 10:30:00', 45000.00, 4500.00, 0.00, 49500.00, 'MOMO', 'COMPLETED', 'Đơn thanh toán ví điện tử', '2026-03-02 10:30:00', '2026-03-02 10:31:00'),
+('SO-20260302-002', 3, 4, 2, '2026-03-02 18:20:00', 88000.00, 8800.00, 0.00, 96800.00, 'CASH', 'COMPLETED', 'Đơn chiều tối', '2026-03-02 18:20:00', '2026-03-02 18:22:00'),
+-- 2026-03-03
+('SO-20260303-001', 1, 3, 1, '2026-03-03 08:45:00', 53000.00, 5300.00, 0.00, 58300.00, 'CASH', 'COMPLETED', 'Đơn sáng sớm', '2026-03-03 08:45:00', '2026-03-03 08:46:00'),
+-- 2026-03-04 today (NOW)
+('SO-20260304-001', 2, 3, 1, NOW(), 37000.00, 3700.00, 0.00, 40700.00, 'CASH', 'COMPLETED', 'Đơn hôm nay - sáng sớm', NOW(), NOW()),
+('SO-20260304-002', 1, 4, 2, NOW(), 93000.00, 9300.00, 5000.00, 97300.00, 'CARD', 'COMPLETED', 'Đơn hôm nay - khách thành viên', NOW(), NOW()),
+('SO-20260304-003', 4, 3, 1, NOW(), 126000.00, 12600.00, 0.00, 138600.00, 'MOMO', 'COMPLETED', 'Đơn hôm nay - mua nhiều mặt hàng', NOW(), NOW()),
+('SO-20260304-004', 3, 4, 2, NOW(), 48000.00, 4800.00, 0.00, 52800.00, 'CASH', 'COMPLETED', 'Đơn hôm nay - buổi chiều', NOW(), NOW());
+
 -- 19. SALE ORDER ITEMS
 INSERT IGNORE INTO sale_order_items (sale_order_id, product_variant_id, product_name, sku, quantity, unit_price, line_discount_amount, line_tax_amount, line_total_amount, notes) VALUES
 ((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 4, 'Coca Cola 330ml', 'COCA-330ML', 2, 12000.00, 0.00, 2400.00, 26400.00, NULL),
@@ -469,12 +494,21 @@ INSERT IGNORE INTO user_credentials (user_id, username, password_hash) VALUES
 (5, 'inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
 (6, 'sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
 (7, 'sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
+(3, 'cashier1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(4, 'cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(5, 'inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(6, 'sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(7, 'sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
 
+-- 23. ATTENDANCE (Auto-tracked based on employee login/logout)
 -- 23. ATTENDANCE (Auto-tracked based on employee login/logout)
 INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 -- Daily attendance for employees working various shifts
+-- Daily attendance for employees working various shifts
 (1, '2026-02-24', '08:01:00', '17:03:00', 'PRESENT'),
 (1, '2026-02-25', '08:12:00', '17:00:00', 'LATE'),
+(1, '2026-02-26', '08:00:00', '17:02:00', 'PRESENT'),
+(1, '2026-02-27', '08:05:00', NULL, 'PRESENT'),
 (1, '2026-02-26', '08:00:00', '17:02:00', 'PRESENT'),
 (1, '2026-02-27', '08:05:00', NULL, 'PRESENT'),
 (2, '2026-02-24', '13:00:00', '22:05:00', 'PRESENT'),
@@ -546,6 +580,9 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 -- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
 -- Each employee has individual salary setup - Manager can modify base salary for each person
 -- Supports both HOURLY and MONTHLY salary types
+-- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
+-- Each employee has individual salary setup - Manager can modify base salary for each person
+-- Supports both HOURLY and MONTHLY salary types
 INSERT IGNORE INTO salary_configs (
     user_id, salary_type, base_salary, hourly_rate, overtime_rate_multiplier,
         allowances, bonus_percentage, min_required_shifts, count_late_as_present, working_hours_per_month,
@@ -602,6 +639,7 @@ SET a.assignment_id_snapshot = wsa.id,
 WHERE a.assignment_id_snapshot IS NULL;
 
 -- 25. PURCHASE ORDERS (Matching JPA PurchaseOrder schema)
+-- 25. PURCHASE ORDERS (Matching JPA PurchaseOrder schema)
 INSERT IGNORE INTO purchase_orders (
    po_number, supplier_id, created_by, order_date, status, subtotal, 
    tax_amount, discount_amount, total_amount, notes, created_at, updated_at
@@ -611,7 +649,16 @@ INSERT IGNORE INTO purchase_orders (
 ('PO-LEG-2024-003', 3, 2, '2024-02-01', 'DRAFT', 2400000.00, 0.00, 0.00, 2400000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-LEG-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-LEG-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-LEG-2024-001', 1, 2, '2024-01-10', 'RECEIVED', 5000000.00, 0.00, 0.00, 5000000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-LEG-2024-002', 2, 2, '2024-01-15', 'RECEIVED', 3500000.00, 0.00, 0.00, 3500000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-LEG-2024-003', 3, 2, '2024-02-01', 'DRAFT', 2400000.00, 0.00, 0.00, 2400000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-LEG-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-LEG-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 
+('PO-2026-001', 1, 2, '2026-02-10', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
+('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
+('PO-2026-003', 3, 1, '2026-02-15', 'DRAFT', 12000000.00, 1200000.00, 200000.00, 13000000.00, 'Đơn nhập snack Nestle', NOW(), NOW()),
+('PO-2026-004', 4, 2, '2026-02-18', 'DRAFT', 24000000.00, 2400000.00, 1000000.00, 25400000.00, 'Đơn nhập nước ngọt Coca-Cola', NOW(), NOW());
 ('PO-2026-001', 1, 2, '2026-02-10', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
 ('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
 ('PO-2026-003', 3, 1, '2026-02-15', 'DRAFT', 12000000.00, 1200000.00, 200000.00, 13000000.00, 'Đơn nhập snack Nestle', NOW(), NOW()),
@@ -624,7 +671,19 @@ INSERT IGNORE INTO purchase_order_items (purchase_order_id, variant_id, quantity
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-003'), 3, 800, 3500.00, 0, 'Migrated from legacy purchase_order_items'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-004'), 4, 200, 9500.00, 200, 'Migrated from legacy purchase_order_items'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-005'), 5, 180, 12000.00, 0, 'Migrated from legacy purchase_order_items'),
+-- 26. PURCHASE ORDER ITEMS (Matching JPA PurchaseOrderItem schema)
+INSERT IGNORE INTO purchase_order_items (purchase_order_id, variant_id, quantity, unit_price, received_quantity, notes) VALUES
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-001'), 1, 250, 20000.00, 250, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-002'), 2, 160, 22000.00, 160, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-003'), 3, 800, 3500.00, 0, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-004'), 4, 200, 9500.00, 200, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-005'), 5, 180, 12000.00, 0, 'Migrated from legacy purchase_order_items'),
 
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 1, 2000, 20000.00, 2000, 'Đã nhận đủ 2000 hộp'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 3, 200, 35000.00, 200, 'Đã nhận đủ 200 gói'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-002'), 2, 1500, 12000.00, 0, 'Chưa nhận hàng'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-003'), 5, 2000, 6000.00, 0, 'Đang chờ giao'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-004'), 4, 3000, 8000.00, 0, 'Đơn nháp chưa gửi');
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 1, 2000, 20000.00, 2000, 'Đã nhận đủ 2000 hộp'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 3, 200, 35000.00, 200, 'Đã nhận đủ 200 gói'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-002'), 2, 1500, 12000.00, 0, 'Chưa nhận hàng'),
@@ -813,8 +872,14 @@ INSERT IGNORE INTO reports (type, report_date, data, created_by, status, created
 ('Revenue', CURDATE(), '{"summary":"seed"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Revenue Report', 'PDF', NULL),
 ('Inventory', CURDATE(), '{"summary":"seed inventory"}', 5, 'COMPLETED', NOW(), NOW(), 'Seed Inventory Report', 'PDF', NULL),
 ('Attendance', CURDATE(), '{"summary":"seed attendance"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Attendance Report', 'PDF', NULL);
+('Revenue', CURDATE(), '{"summary":"seed"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Revenue Report', 'PDF', NULL),
+('Inventory', CURDATE(), '{"summary":"seed inventory"}', 5, 'COMPLETED', NOW(), NOW(), 'Seed Inventory Report', 'PDF', NULL),
+('Attendance', CURDATE(), '{"summary":"seed attendance"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Attendance Report', 'PDF', NULL);
 
 INSERT IGNORE INTO audit_logs (user_id, action, entity_name, entity_id, changes, created_at, result, source, details) VALUES
+(1, 'LOGIN', 'User', 1, '{"event":"seed login"}', NOW(), 'OK', 'SYSTEM', 'Initial seed log'),
+(2, 'CREATE', 'Campaign', 1, '{"campaign_code":"CAMP-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created campaign seed'),
+(5, 'CREATE', 'InventoryCount', 1, '{"count_code":"IC-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created inventory count');
 (1, 'LOGIN', 'User', 1, '{"event":"seed login"}', NOW(), 'OK', 'SYSTEM', 'Initial seed log'),
 (2, 'CREATE', 'Campaign', 1, '{"campaign_code":"CAMP-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created campaign seed'),
 (5, 'CREATE', 'InventoryCount', 1, '{"count_code":"IC-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created inventory count');

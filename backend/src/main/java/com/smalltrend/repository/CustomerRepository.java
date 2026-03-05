@@ -20,5 +20,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Integer> {
 
     @Query("SELECT COUNT(c) FROM Customer c")
     Long countTotalCustomers();
-}
 
+    @Query(value = "SELECT name, spent_amount, loyalty_points FROM customers ORDER BY spent_amount DESC LIMIT :lim", nativeQuery = true)
+    List<Object[]> findTopCustomers(@Param("lim") int lim);
+}
