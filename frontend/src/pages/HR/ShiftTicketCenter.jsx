@@ -47,13 +47,18 @@ const TicketCard = ({ ticket, canApprove, canAcceptSwap, onApprove, onReject, on
                         <span className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(ticket.status)}`}>
                             {ticket.status}
                         </span>
+                        {!ticket.assignedToUserId && (
+                            <span className="text-xs font-medium px-2 py-1 rounded bg-indigo-100 text-indigo-800">
+                                Chung (Manager/Admin)
+                            </span>
+                        )}
                     </div>
                     <p className="text-sm text-slate-600 mb-2">{ticket.description}</p>
                     <div className="text-xs text-slate-500 space-y-1">
                         <div>Mã ticket: <span className="font-mono font-semibold">{ticket.ticketCode}</span></div>
                         <div>Tạo lúc: {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString('vi-VN') : '-'}</div>
                         <div>Người tạo: <span className="font-semibold">{ticket.createdByName || '-'}</span></div>
-                        <div>Người duyệt: <span className="font-semibold">{ticket.assignedToName || '-'}</span></div>
+                        <div>Người xử lý: <span className="font-semibold">{ticket.assignedToName || 'Manager/Admin xử lý chung'}</span></div>
                     </div>
                 </div>
             </div>
@@ -152,6 +157,61 @@ const ShiftTicketCenter = () => {
         [myAssignments]
     );
 
+    const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+    const attendanceDoneDateSet = useMemo(() => {
+        const doneStatuses = new Set(['PRESENT', 'LATE']);
+        const result = new Set();
+        (myAttendance || []).forEach((item) => {
+            const status = String(item?.status || '').toUpperCase();
+            if (doneStatuses.has(status) && item?.date) {
+                result.add(String(item.date));
+            }
+        });
+        return result;
+    }, [myAttendance]);
+
+    const swappableAssignmentOptions = useMemo(() => {
+        const allowedStatuses = new Set(['ASSIGNED', 'CONFIRMED']);
+        return myAssignments
+            .filter((assignment) => {
+                const date = String(assignment?.shiftDate || '');
+                if (!date || date < todayIso) {
+                    return false;
+                }
+
+                if (attendanceDoneDateSet.has(date)) {
+                    return false;
+                }
+
+                const status = String(assignment?.status || '').toUpperCase();
+                if (status && !allowedStatuses.has(status)) {
+                    return false;
+                }
+
+                return true;
+            })
+            .map((assignment) => ({
+                value: String(assignment.id),
+                label: `${assignment.shiftDate} - ${assignment.shift?.shiftName || assignment.shift?.shiftCode || 'Ca làm'}`,
+            }));
+    }, [myAssignments, attendanceDoneDateSet, todayIso]);
+
+    const assignmentOptionsByMode = useMemo(() => {
+        return createForm.ticketMode === 'SWAP' ? swappableAssignmentOptions : assignmentOptions;
+    }, [createForm.ticketMode, swappableAssignmentOptions, assignmentOptions]);
+
+    useEffect(() => {
+        if (!createForm.assignmentId) {
+            return;
+        }
+
+        const exists = assignmentOptionsByMode.some((item) => String(item.value) === String(createForm.assignmentId));
+        if (!exists) {
+            setCreateForm((prev) => ({ ...prev, assignmentId: '' }));
+        }
+    }, [createForm.ticketMode, createForm.assignmentId, assignmentOptionsByMode]);
+
     const acceptSwapRequesterAssignmentId = useMemo(
         () => extractSwapId(acceptSwapTicket?.description, 'SWAP_REQUESTER_ASSIGNMENT_ID'),
         [acceptSwapTicket]
@@ -171,20 +231,6 @@ const ShiftTicketCenter = () => {
             })),
         [myAssignments, acceptSwapRequesterAssignmentId]
     );
-
-    const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
-
-    const attendanceDoneDateSet = useMemo(() => {
-        const doneStatuses = new Set(['PRESENT', 'LATE']);
-        const result = new Set();
-        (myAttendance || []).forEach((item) => {
-            const status = String(item?.status || '').toUpperCase();
-            if (doneStatuses.has(status) && item?.date) {
-                result.add(String(item.date));
-            }
-        });
-        return result;
-    }, [myAttendance]);
 
     const acceptSwapEligibleAssignmentOptions = useMemo(() => {
         return acceptSwapAssignmentOptions.filter((option) => {
@@ -219,9 +265,17 @@ const ShiftTicketCenter = () => {
         const pending = tickets.filter((item) => item.status === 'OPEN' || item.status === 'IN_PROGRESS').length;
         const approved = tickets.filter((item) => item.status === 'RESOLVED').length;
         const rejected = tickets.filter((item) => item.status === 'CLOSED' || item.status === 'CANCELLED').length;
-        const waitingMyApproval = tickets.filter((item) => item.status === 'OPEN' && Number(item.assignedToUserId) === Number(currentUserId)).length;
+        const waitingMyApproval = tickets.filter((item) => {
+            if (item.status !== 'OPEN') {
+                return false;
+            }
+            if (isAdmin || isManager) {
+                return true;
+            }
+            return Number(item.assignedToUserId) === Number(currentUserId);
+        }).length;
         return { pending, approved, rejected, waitingMyApproval };
-    }, [tickets, currentUserId]);
+    }, [tickets, currentUserId, isAdmin, isManager]);
 
     const monthlyShiftSummary = useMemo(() => {
         const totalAssigned = myAssignments.length;
@@ -329,7 +383,7 @@ const ShiftTicketCenter = () => {
 
     const handleSubmitTicket = async (event) => {
         event.preventDefault();
-        const errors = validateCreateForm(createForm);
+        const errors = validateCreateForm(createForm, assignmentOptionsByMode);
         setFormErrors(errors);
         if (Object.keys(errors).length > 0) return;
 
@@ -337,10 +391,10 @@ const ShiftTicketCenter = () => {
         const shiftDate = selectedAssignment?.shiftDate || range.month;
         const assignedToUserId = createForm.ticketMode === 'SWAP'
             ? Number(createForm.targetUserId)
-            : Number(createForm.targetUserId || managerUsers[0]?.id || users[0]?.id);
+            : null;
 
-        if (!assignedToUserId) {
-            setError('Không tìm thấy người duyệt/nhận ticket để gửi yêu cầu.');
+        if (createForm.ticketMode === 'SWAP' && !assignedToUserId) {
+            setError('Vui lòng chọn nhân viên bạn muốn đổi ca hoặc nhờ nhận ca.');
             return;
         }
 
@@ -606,7 +660,7 @@ const ShiftTicketCenter = () => {
                         <TicketCard
                             key={ticket.id}
                             ticket={ticket}
-                            canApprove={(isAdmin || isManager) && Number(ticket.assignedToUserId) === Number(currentUserId)}
+                            canApprove={(isAdmin || isManager)}
                             canAcceptSwap={!(isAdmin || isManager)
                                 && ticket.relatedEntityType === 'SHIFT_SWAP'
                                 && Number(ticket.assignedToUserId) === Number(currentUserId)}
@@ -654,20 +708,25 @@ const ShiftTicketCenter = () => {
                                     <CustomSelect
                                         value={createForm.assignmentId}
                                         onChange={(value) => setCreateForm((prev) => ({ ...prev, assignmentId: value }))}
-                                        options={[{ value: '', label: 'Chọn ca làm' }, ...assignmentOptions]}
+                                        options={[{ value: '', label: 'Chọn ca làm' }, ...assignmentOptionsByMode]}
                                     />
                                 </div>
                                 {formErrors.assignmentId && <p className="text-xs text-rose-600 mt-1">{formErrors.assignmentId}</p>}
+                                {createForm.ticketMode === 'SWAP' && (
+                                    <p className="mt-1 text-xs text-slate-500">Chỉ hiển thị các ca hợp lệ để đổi: chưa qua ngày làm và chưa chấm công.</p>
+                                )}
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium text-slate-700">Người xử lý</label>
+                                <label className="text-sm font-medium text-slate-700">
+                                    {createForm.ticketMode === 'SWAP' ? 'Nhân viên muốn đổi/nhờ nhận ca' : 'Người xử lý (tuỳ chọn)'}
+                                </label>
                                 <div className="mt-1">
                                     <CustomSelect
                                         value={createForm.targetUserId}
                                         onChange={(value) => setCreateForm((prev) => ({ ...prev, targetUserId: value }))}
                                         options={[
-                                            { value: '', label: 'Chọn người xử lý' },
+                                            { value: '', label: createForm.ticketMode === 'SWAP' ? 'Chọn nhân viên còn lại' : 'Để trống: manager/admin sẽ xử lý chung' },
                                             ...(createForm.ticketMode === 'SWAP'
                                                 ? users.filter((entry) => Number(entry.id) !== Number(currentUserId)).map((entry) => ({ value: String(entry.id), label: entry.fullName || entry.email }))
                                                 : managerUsers.map((entry) => ({ value: String(entry.id), label: entry.fullName || entry.email }))),
@@ -818,14 +877,23 @@ const MetricCard = ({ title, value, icon: Icon }) => (
     </div>
 );
 
-const validateCreateForm = (form) => {
+const validateCreateForm = (form, allowedAssignmentOptions = []) => {
     const errors = {};
     if (!form.assignmentId) {
         errors.assignmentId = 'Vui lòng chọn ca làm liên quan.';
     }
-    if (!form.targetUserId) {
-        errors.targetUserId = 'Vui lòng chọn người xử lý/đổi ca.';
+
+    if (form.assignmentId) {
+        const exists = allowedAssignmentOptions.some((option) => String(option.value) === String(form.assignmentId));
+        if (!exists) {
+            errors.assignmentId = 'Ca đã chọn không còn hợp lệ để xử lý yêu cầu này.';
+        }
     }
+
+    if (form.ticketMode === 'SWAP' && !form.targetUserId) {
+        errors.targetUserId = 'Vui lòng chọn nhân viên bạn muốn đổi hoặc nhờ nhận ca.';
+    }
+
     if (!form.reason || form.reason.trim().length < 5) {
         errors.reason = 'Lý do tối thiểu 5 ký tự để người duyệt xử lý nhanh.';
     }

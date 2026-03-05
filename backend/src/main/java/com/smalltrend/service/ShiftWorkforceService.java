@@ -350,6 +350,15 @@ public class ShiftWorkforceService {
             if (minutes < 0) {
                 minutes += 24 * 60;
             }
+
+            if (shift != null && shift.getBreakStartTime() != null && shift.getBreakEndTime() != null) {
+                minutes -= calculateOverlapMinutes(start, end, shift.getBreakStartTime(), shift.getBreakEndTime());
+            }
+
+            if (minutes < 0) {
+                minutes = 0;
+            }
+
             return BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
         }
 
@@ -364,6 +373,34 @@ public class ShiftWorkforceService {
         }
 
         return BigDecimal.ZERO;
+    }
+
+    private long calculateOverlapMinutes(LocalTime windowStart, LocalTime windowEnd, LocalTime breakStart, LocalTime breakEnd) {
+        int dayMinutes = 24 * 60;
+
+        long start = windowStart.toSecondOfDay() / 60;
+        long end = windowEnd.toSecondOfDay() / 60;
+        long breakFrom = breakStart.toSecondOfDay() / 60;
+        long breakTo = breakEnd.toSecondOfDay() / 60;
+
+        if (end <= start) {
+            end += dayMinutes;
+        }
+        if (breakTo <= breakFrom) {
+            breakTo += dayMinutes;
+        }
+
+        long overlap = overlap(start, end, breakFrom, breakTo);
+        overlap += overlap(start, end, breakFrom + dayMinutes, breakTo + dayMinutes);
+        overlap += overlap(start + dayMinutes, end + dayMinutes, breakFrom, breakTo);
+
+        return Math.max(overlap, 0);
+    }
+
+    private long overlap(long aStart, long aEnd, long bStart, long bEnd) {
+        long start = Math.max(aStart, bStart);
+        long end = Math.min(aEnd, bEnd);
+        return Math.max(0, end - start);
     }
 
     private String key(Integer userId, LocalDate date) {

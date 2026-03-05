@@ -6,10 +6,8 @@ import Login from "./pages/Auth/Login";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
 import UserManagement from "./pages/HR/UserManagement";
-import EmployeeList from "./pages/HR/EmployeeList";
+import WorkforceManagement from "./pages/HR/WorkforceManagement";
 import ShiftManagement from "./pages/HR/ShiftManagement";
-import AttendanceManagement from "./pages/HR/AttendanceManagement";
-import PayrollManagement from "./pages/HR/PayrollManagement";
 import MyPayrollSummary from "./pages/HR/MyPayrollSummary";
 import ShiftTicketCenter from "./pages/HR/ShiftTicketCenter";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
@@ -195,12 +193,20 @@ function App() {
         <Route path="crm/complaints" element={<CRMcomplain />} />
 
         {/* Module 5: HR (Nhân sự) */}
-        <Route path="hr" element={<Navigate to="/hr/employees" replace />} />
+        <Route path="hr" element={<Navigate to="/hr/schedule" replace />} />
+        <Route
+          path="hr/workforce"
+          element={
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
+              <WorkforceManagement defaultTab="employees" />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="hr/employees"
           element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <EmployeeList />
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
+              <Navigate to="/hr/workforce" replace />
             </ProtectedRoute>
           }
         />
@@ -215,16 +221,24 @@ function App() {
         <Route
           path="hr/shifts"
           element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
               <ShiftManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/schedule"
+          element={
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <ShiftManagement viewMode="calendar-only" />
             </ProtectedRoute>
           }
         />
         <Route
           path="hr/attendance"
           element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <AttendanceManagement />
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
+              <WorkforceManagement defaultTab="attendance" />
             </ProtectedRoute>
           }
         />
@@ -240,7 +254,7 @@ function App() {
           path="hr/payroll"
           element={
             <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
-              <PayrollManagement />
+              <WorkforceManagement defaultTab="payroll" />
             </ProtectedRoute>
           }
         />

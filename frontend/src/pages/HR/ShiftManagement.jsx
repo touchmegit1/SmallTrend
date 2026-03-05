@@ -39,9 +39,61 @@ const defaultAssignmentForm = {
     notes: '',
 };
 
-const ShiftManagement = () => {
+const shiftTypePresets = {
+    REGULAR: {
+        overtimeMultiplier: '1.0',
+        nightShiftBonus: '0',
+        weekendBonus: '0',
+        holidayBonus: '0',
+        allowEarlyClockIn: true,
+        allowLateClockOut: true,
+        earlyClockInMinutes: '15',
+        lateClockOutMinutes: '30',
+        requiresApproval: false,
+        gracePeriodMinutes: '10',
+    },
+    NIGHT: {
+        overtimeMultiplier: '1.5',
+        nightShiftBonus: '15',
+        weekendBonus: '0',
+        holidayBonus: '0',
+        allowEarlyClockIn: true,
+        allowLateClockOut: true,
+        earlyClockInMinutes: '10',
+        lateClockOutMinutes: '20',
+        requiresApproval: false,
+        gracePeriodMinutes: '5',
+    },
+    WEEKEND: {
+        overtimeMultiplier: '2.0',
+        nightShiftBonus: '0',
+        weekendBonus: '20',
+        holidayBonus: '0',
+        allowEarlyClockIn: true,
+        allowLateClockOut: true,
+        earlyClockInMinutes: '15',
+        lateClockOutMinutes: '30',
+        requiresApproval: true,
+        gracePeriodMinutes: '10',
+    },
+    HOLIDAY: {
+        overtimeMultiplier: '2.5',
+        nightShiftBonus: '0',
+        weekendBonus: '0',
+        holidayBonus: '30',
+        allowEarlyClockIn: true,
+        allowLateClockOut: true,
+        earlyClockInMinutes: '15',
+        lateClockOutMinutes: '30',
+        requiresApproval: true,
+        gracePeriodMinutes: '10',
+    },
+};
+
+const ShiftManagement = ({ viewMode = 'full' }) => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('shifts');
+    const isCalendarOnly = viewMode === 'calendar-only';
+    const [activeTab, setActiveTab] = useState(isCalendarOnly ? 'calendar' : 'shifts');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -66,6 +118,40 @@ const ShiftManagement = () => {
     const [calendarView, setCalendarView] = useState('week');
     const [anchorDate, setAnchorDate] = useState(new Date());
     const [assignmentFilters, setAssignmentFilters] = useState({ userId: '', shiftId: '' });
+
+    const assignmentShiftOptions = useMemo(() => {
+        const options = shifts.map((shift) => ({
+            value: String(shift.id),
+            label: `${shift.shiftName} (${formatTime(shift.startTime)} - ${formatTime(shift.endTime)})`,
+        }));
+
+        const editingShiftId = editingAssignment?.shift?.id;
+        if (editingShiftId && !options.some((option) => option.value === String(editingShiftId))) {
+            options.push({
+                value: String(editingShiftId),
+                label: `${editingAssignment?.shift?.shiftName || editingAssignment?.shift?.shiftCode || 'Ca làm'} (${formatTime(editingAssignment?.shift?.startTime)} - ${formatTime(editingAssignment?.shift?.endTime)})`,
+            });
+        }
+
+        return options;
+    }, [shifts, editingAssignment]);
+
+    const assignmentUserOptions = useMemo(() => {
+        const options = users.map((item) => ({
+            value: String(item.id),
+            label: item.fullName || item.email,
+        }));
+
+        const editingUserId = editingAssignment?.user?.id;
+        if (editingUserId && !options.some((option) => option.value === String(editingUserId))) {
+            options.push({
+                value: String(editingUserId),
+                label: editingAssignment?.user?.fullName || editingAssignment?.user?.email || `User #${editingUserId}`,
+            });
+        }
+
+        return options;
+    }, [users, editingAssignment]);
 
     useEffect(() => {
         const init = async () => {
@@ -166,8 +252,8 @@ const ShiftManagement = () => {
         setAssignmentFormErrors({});
         if (assignment) {
             setAssignmentForm({
-                workShiftId: assignment.shift?.id || '',
-                userId: assignment.user?.id || '',
+                workShiftId: assignment.shift?.id ? String(assignment.shift.id) : '',
+                userId: assignment.user?.id ? String(assignment.user.id) : '',
                 shiftDate: assignment.shiftDate || '',
                 status: assignment.status || 'ASSIGNED',
                 notes: assignment.notes || '',
@@ -200,9 +286,18 @@ const ShiftManagement = () => {
         }
     };
 
+    const handleShiftTypeChange = (value) => {
+        const preset = shiftTypePresets[value] || shiftTypePresets.REGULAR;
+        setShiftForm((prev) => ({
+            ...prev,
+            shiftType: value,
+            ...preset,
+        }));
+    };
+
     const handleAssignmentSubmit = async (event) => {
         event.preventDefault();
-        const errors = validateAssignmentForm(assignmentForm);
+        const errors = validateAssignmentForm(assignmentForm, assignmentShiftOptions, assignmentUserOptions);
         setAssignmentFormErrors(errors);
         if (Object.keys(errors).length > 0) {
             setError(Object.values(errors)[0]);
@@ -290,32 +385,38 @@ const ShiftManagement = () => {
                 <div>
                     <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
                         <CalendarRange size={24} className="text-indigo-600" />
-                        Quản lý ca làm
+                        {isCalendarOnly ? 'Lịch làm việc' : 'Quản lý ca làm'}
                     </h1>
-                    <p className="text-sm text-slate-500 mt-1">Quản trị mẫu ca, phân ca nhân sự và lịch theo tuần/tháng.</p>
+                    <p className="text-sm text-slate-500 mt-1">
+                        {isCalendarOnly
+                            ? 'Theo dõi lịch ca tuần/tháng của nhân sự.'
+                            : 'Quản trị mẫu ca, phân ca nhân sự và lịch theo tuần/tháng.'}
+                    </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => navigate('/hr/shift-tickets')}
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
-                    >
-                        Ticket đổi ca
-                    </button>
-                    <button
-                        onClick={() => openShiftModal()}
-                        className="inline-flex items-center gap-2 rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
-                    >
-                        <Plus size={16} />
-                        Tạo ca mới
-                    </button>
-                    <button
-                        onClick={() => openAssignmentModal()}
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
-                    >
-                        <UserPlus size={16} />
-                        Phân ca
-                    </button>
-                </div>
+                {!isCalendarOnly && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => navigate('/hr/shift-tickets')}
+                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
+                        >
+                            Ticket đổi ca
+                        </button>
+                        <button
+                            onClick={() => openShiftModal()}
+                            className="inline-flex items-center gap-2 rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+                        >
+                            <Plus size={16} />
+                            Tạo ca mới
+                        </button>
+                        <button
+                            onClick={() => openAssignmentModal()}
+                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
+                        >
+                            <UserPlus size={16} />
+                            Phân ca
+                        </button>
+                    </div>
+                )}
             </div>
 
             {error && (
@@ -324,20 +425,22 @@ const ShiftManagement = () => {
                 </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-2">
-                {['shifts', 'assignments', 'calendar'].map((tab) => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                            }`}
-                    >
-                        {tab === 'shifts' ? 'Mẫu ca' : tab === 'assignments' ? 'Phân công' : 'Lịch ca'}
-                    </button>
-                ))}
-            </div>
+            {!isCalendarOnly && (
+                <div className="flex flex-wrap items-center gap-2">
+                    {['shifts', 'assignments', 'calendar'].map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab
+                                ? 'bg-slate-900 text-white'
+                                : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                                }`}
+                        >
+                            {tab === 'shifts' ? 'Danh sách ca' : tab === 'assignments' ? 'Phân công' : 'Lịch ca'}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {activeTab === 'shifts' && (
                 <section className="space-y-4">
@@ -544,7 +647,7 @@ const ShiftManagement = () => {
                                     key={date.toISOString()}
                                     date={date}
                                     assignments={assignmentsByDate[toDateInput(date)] || []}
-                                    onQuickAttendance={handleQuickAttendance}
+                                    onQuickAttendance={isCalendarOnly ? null : handleQuickAttendance}
                                 />
                             ))}
                         </div>
@@ -556,7 +659,7 @@ const ShiftManagement = () => {
                                     date={date}
                                     inMonth={date.getMonth() === anchorDate.getMonth()}
                                     assignments={assignmentsByDate[toDateInput(date)] || []}
-                                    onQuickAttendance={handleQuickAttendance}
+                                    onQuickAttendance={isCalendarOnly ? null : handleQuickAttendance}
                                 />
                             ))}
                         </div>
@@ -564,7 +667,7 @@ const ShiftManagement = () => {
                 </section>
             )}
 
-            {isShiftModalOpen && (
+            {!isCalendarOnly && isShiftModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
                     <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
@@ -646,7 +749,7 @@ const ShiftManagement = () => {
                                     <label className="text-xs font-medium text-slate-600">Loại ca</label>
                                     <CustomSelect
                                         value={shiftForm.shiftType}
-                                        onChange={(value) => setShiftForm({ ...shiftForm, shiftType: value })}
+                                        onChange={handleShiftTypeChange}
                                         options={[
                                             { value: 'REGULAR', label: 'Thường' },
                                             { value: 'WEEKEND', label: 'Cuối tuần' },
@@ -851,7 +954,7 @@ const ShiftManagement = () => {
                 </div>
             )}
 
-            {isAssignmentModalOpen && (
+            {!isCalendarOnly && isAssignmentModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
                     <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
@@ -874,10 +977,7 @@ const ShiftManagement = () => {
                                     className={`w-full ${assignmentFormErrors.workShiftId ? 'ring-1 ring-rose-400 rounded-xl' : ''}`}
                                     options={[
                                         { value: '', label: 'Chọn ca' },
-                                        ...shifts.map((shift) => ({
-                                            value: String(shift.id),
-                                            label: `${shift.shiftName} (${formatTime(shift.startTime)} - ${formatTime(shift.endTime)})`
-                                        }))
+                                        ...assignmentShiftOptions
                                     ]}
                                 />
                                 {assignmentFormErrors.workShiftId && <p className="text-xs text-rose-600">{assignmentFormErrors.workShiftId}</p>}
@@ -890,7 +990,7 @@ const ShiftManagement = () => {
                                     className={`w-full ${assignmentFormErrors.userId ? 'ring-1 ring-rose-400 rounded-xl' : ''}`}
                                     options={[
                                         { value: '', label: 'Chọn nhân viên' },
-                                        ...users.map((user) => ({ value: String(user.id), label: user.fullName || user.email }))
+                                        ...assignmentUserOptions
                                     ]}
                                 />
                                 {assignmentFormErrors.userId && <p className="text-xs text-rose-600">{assignmentFormErrors.userId}</p>}
@@ -967,14 +1067,16 @@ const CalendarColumn = ({ date, assignments, onQuickAttendance }) => {
                         <div className="text-slate-500">
                             {item.shift?.shiftName} ({formatTime(item.shift?.startTime)} - {formatTime(item.shift?.endTime)})
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => onQuickAttendance?.(item)}
-                            className="mt-2 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
-                        >
-                            <CheckCircle2 size={12} />
-                            Chấm công
-                        </button>
+                        {onQuickAttendance && (
+                            <button
+                                type="button"
+                                onClick={() => onQuickAttendance(item)}
+                                className="mt-2 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
+                            >
+                                <CheckCircle2 size={12} />
+                                Chấm công
+                            </button>
+                        )}
                     </div>
                 ))}
                 {assignments.length === 0 && (
@@ -997,13 +1099,15 @@ const CalendarTile = ({ date, inMonth, assignments, onQuickAttendance }) => {
                 {assignments.slice(0, 3).map((item) => (
                     <div key={item.id} className="rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-700">
                         <div>{item.shift?.shiftName} - {item.user?.fullName || 'Unknown'}</div>
-                        <button
-                            type="button"
-                            onClick={() => onQuickAttendance?.(item)}
-                            className="mt-1 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100"
-                        >
-                            <CheckCircle2 size={10} /> Chấm công
-                        </button>
+                        {onQuickAttendance && (
+                            <button
+                                type="button"
+                                onClick={() => onQuickAttendance(item)}
+                                className="mt-1 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100"
+                            >
+                                <CheckCircle2 size={10} /> Chấm công
+                            </button>
+                        )}
                     </div>
                 ))}
                 {assignments.length > 3 && (
@@ -1120,19 +1224,25 @@ const buildAssignmentPayload = (form) => ({
     notes: form.notes || null,
 });
 
-const validateAssignmentForm = (form) => {
+const validateAssignmentForm = (form, shiftOptions = [], userOptions = []) => {
     const errors = {};
 
     if (!form.workShiftId) {
         errors.workShiftId = 'Vui lòng chọn ca làm.';
+    } else if (!shiftOptions.some((option) => option.value === String(form.workShiftId))) {
+        errors.workShiftId = 'Ca làm đã chọn không hợp lệ hoặc đã hết hiệu lực.';
     }
 
     if (!form.userId) {
         errors.userId = 'Vui lòng chọn nhân viên.';
+    } else if (!userOptions.some((option) => option.value === String(form.userId))) {
+        errors.userId = 'Nhân viên đã chọn không hợp lệ.';
     }
 
     if (!form.shiftDate) {
         errors.shiftDate = 'Vui lòng chọn ngày làm việc.';
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(String(form.shiftDate))) {
+        errors.shiftDate = 'Ngày làm việc không đúng định dạng.';
     }
 
     return errors;

@@ -24,16 +24,19 @@ const Sidebar = () => {
     const isAdmin = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
     const isManager = user && (user.role === 'MANAGER' || user.role === 'ROLE_MANAGER');
 
-    const hrChildren = [
-        { label: 'Danh sách nhân viên', path: '/hr' },
-        { label: 'Phân ca làm việc', path: '/hr/shifts' },
-        { label: 'Đổi ca & Ticket ca', path: '/hr/shift-tickets' },
-        { label: 'Chấm công', path: '/hr/attendance' },
-        ...(isAdmin || isManager
-            ? [{ label: 'Tính lương nhân sự', path: '/hr/payroll' }]
-            : []),
-        { label: 'Thông tin lương', path: '/hr/my-payroll' },
-    ];
+    const hrChildren = isAdmin || isManager
+        ? [
+            { label: 'Nhân sự tổng hợp', path: '/hr/workforce' },
+            { label: 'Lịch làm việc', path: '/hr/schedule' },
+            { label: 'Phân ca làm việc', path: '/hr/shifts' },
+            { label: 'Đổi ca & Ticket ca', path: '/hr/shift-tickets' },
+            { label: 'Thông tin lương', path: '/hr/my-payroll' },
+        ]
+        : [
+            { label: 'Lịch làm việc', path: '/hr/schedule' },
+            { label: 'Đổi ca & Ticket ca', path: '/hr/shift-tickets' },
+            { label: 'Thông tin lương', path: '/hr/my-payroll' },
+        ];
 
     const navItems = [
         {
