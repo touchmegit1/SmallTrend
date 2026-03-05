@@ -31,6 +31,7 @@ import AddNewProductVariant from "./pages/Products/ProductManager/AddNewProductV
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
 import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
+import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import { useAuth } from "./context/AuthContext";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
 import ShiftHandover from "./pages/Pos/ShiftHandover";
@@ -39,6 +40,7 @@ import TicketCenter from "./pages/Admin/TicketCenter";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
 import CRMreport from "./pages/CRM/report";
+import Suppliers from "./pages/Products/ProductManager/Suppliers";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -125,8 +127,7 @@ function App() {
         <Route path="inventory/export" element={<DisposalList />} />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
         <Route
-          path="inventory/suppliers"
-          element={<div className="p-4">Quản lý nhà cung cấp (Supplier)</div>}
+          path="inventory/suppliers" element={<Suppliers />}
         />
         <Route
           path="inventory/audit"
@@ -166,7 +167,7 @@ function App() {
         />
         <Route
           path="products/price"
-          element={<div className="p-4">{ }</div>}
+          element={<PriceSetting />}
         />
         <Route
           path="products/combo"

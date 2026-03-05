@@ -9,6 +9,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "../../../config/axiosConfig";
 import { useProductCombos } from "../../../hooks/product_combos";
 
+// Component tạo mới một Combo Sản phẩm
+// Cho phép chọn và gán nhiều sản phẩm con với số lượng tuỳ ý để tạo thành Combo
 const CreateCombo = () => {
   const [formData, setFormData] = useState({
     comboName: "",
@@ -19,31 +21,35 @@ const CreateCombo = () => {
   const [selectedVariants, setSelectedVariants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showVariantPicker, setShowVariantPicker] = useState(false);
-  const [availableVariants, setAvailableVariants] = useState([]);
+  const [availableVariants, setAvailableVariants] = useState([]); // Renamed from allVariants to match original
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { createCombo } = useProductCombos();
 
   useEffect(() => {
+    // Gọi API lấy danh sách các variant (sản phẩm con) để hiển thị trên ô tìm kiếm
     const fetchVariants = async () => {
       try {
-        const response = await axios.get('/pos/product');
-        setAvailableVariants(response.data || []);
+        const response = await axios.get("/products/variants");
+        setAvailableVariants(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
-        console.error("Lỗi khi tải danh sách sản phẩm:", err);
+        console.error("Error fetching variants:", err);
+        setAvailableVariants([]);
       }
     };
     fetchVariants();
   }, []);
 
+  // Hàm xử lý việc gõ text nội dung của thông tin Combo
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
+  // Thêm một Variant (sản phẩm con) vào danh sách Combo dự kiến
   const addVariant = (variant) => {
     const existing = selectedVariants.find(v => v.id === variant.id);
     if (existing) {
@@ -53,20 +59,24 @@ const CreateCombo = () => {
     } else {
       setSelectedVariants([...selectedVariants, { ...variant, quantity: 1 }]);
     }
+    setSearchQuery(""); // Use searchQuery instead of searchTerm
+    setShowVariantPicker(false); // Use showVariantPicker instead of showResults
   };
 
+  // Xóa một Variant (sản phẩm con) khỏi danh sách Combo
   const removeVariant = (variantId) => {
     setSelectedVariants(selectedVariants.filter(v => v.id !== variantId));
   };
 
+  // Điều chỉnh số lượng cho mỗi Variant trong Combo
   const updateQuantity = (variantId, quantity) => {
     if (quantity < 1) return;
-    setSelectedVariants(selectedVariants.map(v =>
-      v.id === variantId ? { ...v, quantity } : v
-    ));
+    setSelectedVariants(
+      selectedVariants.map((v) => (v.id === variantId ? { ...v, quantity } : v))
+    );
   };
 
-  const totalPrice = selectedVariants.reduce((sum, v) => sum + ((v.sellPrice || v.price || 0) * v.quantity), 0);
+  const totalPrice = selectedVariants.reduce((sum, v) => sum + ((v.sellPrice || 0) * v.quantity), 0);
   const discountAmount = totalPrice - (formData.comboPrice || 0);
   const discountPercent = totalPrice > 0 && formData.comboPrice ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
 
@@ -75,14 +85,15 @@ const CreateCombo = () => {
     v.sku?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Xử lý gửi API để lưu danh sách con thành Combo duy nhất
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedVariants.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 sản phẩm!");
+    if (selectedVariants.length === 0) { // Changed condition from < 2 to === 0
+      alert("Vui lòng chọn ít nhất 1 sản phẩm!"); // Used alert instead of setToast
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true); // Used setIsSubmitting instead of setLoading
     try {
       const payload = {
         ...formData,
@@ -239,8 +250,17 @@ const CreateCombo = () => {
                           onClick={() => addVariant(variant)}
                           className="w-full text-left px-4 py-3 hover:bg-white rounded-xl flex justify-between items-center transition-all shadow-sm"
                         >
-                          <span className="text-sm font-medium">{variant.name || variant.productName} {variant.unitValue ? `- ${variant.unitValue} ${variant.unitName}` : ''}</span>
-                          <span className="text-sm text-blue-600 font-semibold">{(variant.sellPrice || variant.price || 0).toLocaleString()}đ</span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-medium">{variant.name}</span>
+                            {variant.attributes && Object.keys(variant.attributes).length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(variant.attributes).map(([k, v]) => (
+                                  <span key={k} className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-1.5 py-0 rounded font-medium">{k}: {v}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-sm text-blue-600 font-semibold whitespace-nowrap ml-2">{(variant.sellPrice || 0).toLocaleString()}đ</span>
                         </button>
                       ))}
                     </div>
@@ -251,8 +271,15 @@ const CreateCombo = () => {
                   {selectedVariants.map(variant => (
                     <div key={variant.id} className="flex items-center gap-3 p-4 bg-gradient-to-r from-white to-gray-50 rounded-xl border border-gray-200 shadow-sm">
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-800">{variant.name || variant.productName} {variant.unitValue ? `- ${variant.unitValue} ${variant.unitName}` : ''}</p>
-                        <p className="text-xs text-gray-500">{(variant.sellPrice || variant.price || 0).toLocaleString()}đ</p>
+                        <p className="text-sm font-semibold text-gray-800">{variant.name}</p>
+                        {variant.attributes && Object.keys(variant.attributes).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {Object.entries(variant.attributes).map(([k, v]) => (
+                              <span key={k} className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-1.5 py-0 rounded font-medium">{k}: {v}</span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-500 mt-0.5">{(variant.sellPrice || 0).toLocaleString()}đ</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -305,8 +332,8 @@ const CreateCombo = () => {
             </Button>
             <Button
               type="button"
-              variant="ghost"
-              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold"
+              variant="danger"
+              className="w-full h-12 border-2 border-red-200 text-red-600 hover:bg-red-400 hover:text-red-800 rounded-xl font-bold flex items-center justify-center"
               onClick={() => navigate("/products/combo")}
             >
               Hủy

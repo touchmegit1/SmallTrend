@@ -11,16 +11,23 @@ import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchProducts } from "../../../hooks/products";
 
 const Category_Brand = () => {
-  const [activeTab, setActiveTab] = useState('categories');
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
-  const [sortOrder, setSortOrder] = useState('desc');
+  // Trạng thái quản lý điều hướng và modal
+  const [activeTab, setActiveTab] = useState('categories'); // Quyết định xem đang ở tab "Danh mục" hay "Thương hiệu"
+  const [showModal, setShowModal] = useState(false); // Biến kiểm soát việc đóng/mở form thêm/sửa
+  const [modalMode, setModalMode] = useState('add'); // Chế độ của form: 'add' (Tạo mới) hoặc 'edit' (Cập nhật)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Biến kiểm soát việc bật popup cảnh báo khi muốn xoá dữ liệu
+  const [selectedItem, setSelectedItem] = useState(null); // Lưu thông tin hạng mục người dùng đang chọn để sửa hoặc xoá
+
+  // Trạng thái quản lý thanh tìm kiếm và bộ lọc bảng
+  const [searchQuery, setSearchQuery] = useState(""); // Lưu trữ từ khoá đang tìm kiếm trong bảng
+  const [countryFilter, setCountryFilter] = useState(""); // Lọc theo quốc gia (Chỉ dành cho tab thương hiệu)
+  const [sortOrder, setSortOrder] = useState('desc'); // Thứ tự sắp xếp thời gian tạo: 'desc' (Mới nhất) hoặc 'asc' (Cũ nhất)
+
+  // Trạng thái hiển thị cảnh báo (Toast Alert) & mở rộng xem chi tiết (Accordion)
   const [toastMessage, setToastMessage] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
+
+  // Lưu trữ các trường dữ liệu đang được nhập trên form
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -28,11 +35,12 @@ const Category_Brand = () => {
     country: ''
   });
 
-
+  // Gọi Hook Fetch Data từ server
   const { categories, loading: catLoading, error: catError, createCategory, updateCategory, deleteCategory } = useFetchCategories();
   const { brands, loading: brandLoading, error: brandError, createBrand, updateBrand, deleteBrand } = useFetchBrands();
   const { products } = useFetchProducts();
 
+  // Đếm nhanh số lượng sản phẩm được quy chiếu trong cùng 1 danh mục/thương hiệu 
   const productCountMap = useMemo(() => {
     const map = {};
 
@@ -48,7 +56,7 @@ const Category_Brand = () => {
     return map;
   }, [products, activeTab]);
 
-
+  // Hàm mở Modal cho mục đích Tạo mới Item
   const handleAdd = () => {
     setModalMode('add');
     setFormData({
@@ -62,6 +70,7 @@ const Category_Brand = () => {
     setShowModal(true);
   };
 
+  // Hàm mở Modal cho mục đích Chỉnh sửa Item có sẵn trên bảng
   const handleEdit = (item) => {
     setModalMode('edit');
     setSelectedItem(item);
@@ -75,11 +84,13 @@ const Category_Brand = () => {
     setShowModal(true);
   };
 
+  // Gọi xác nhận quyền xoá an toàn
   const handleDelete = (item) => {
     setSelectedItem(item);
     setShowDeleteConfirm(true);
   };
 
+  // Logic kết nối API xoá item khỏi Database & hiển thị toast phản hồi
   const confirmDelete = async () => {
     try {
       await (activeTab === 'categories' ? deleteCategory : deleteBrand)(selectedItem.id);
@@ -94,14 +105,16 @@ const Category_Brand = () => {
     }
   };
 
+  // Logic kết nối API lưu bản phân bổ mới hoặc cập nhật Item
   const handleSave = async () => {
-    // Validation
+    // Validate kiểm tra tên bắt buộc
     if (!formData.name?.trim()) {
       setToastMessage('Vui lòng nhập tên!');
       setTimeout(() => setToastMessage(""), 3000);
       return;
     }
 
+    // Validate mã danh mục bắt buộc cho tab Categories
     if (activeTab === 'categories' && !formData.code?.trim()) {
       setToastMessage('Vui lòng nhập mã danh mục!');
       setTimeout(() => setToastMessage(""), 3000);
@@ -109,6 +122,7 @@ const Category_Brand = () => {
     }
 
     try {
+      // Tuỳ biến hành động gọi theo trường hợp tab điều hướng 
       if (activeTab === 'categories') {
         if (modalMode === 'add') {
           await createCategory(formData);
@@ -131,14 +145,17 @@ const Category_Brand = () => {
     }
   };
 
+  // Nguồn dữ liệu tuỳ chỉnh tuỳ theo Tab (Tránh lỗi Undefined Array)
   const data = activeTab === 'categories' ? (categories || []) : (brands || []);
 
+  // Set-up dữ liệu tuỳ chọn list Quốc Gia tự động từ danh sách Các Thương Hiệu để cấp hiển thị Filter
   const uniqueCountries = useMemo(() => {
     if (activeTab !== 'brands') return [];
     const countries = brands?.map(b => b.country).filter(Boolean) || [];
     return [...new Set(countries)].sort();
   }, [brands, activeTab]);
 
+  // Bộ tổng hợp Filter: Chỉ hiện các từ khoá trùng, quốc gia khớp và sắp xếp theo ngày sinh
   const filteredData = useMemo(() => {
     let filtered = data.filter(item =>
       item.name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -155,17 +172,18 @@ const Category_Brand = () => {
     });
   }, [data, searchQuery, countryFilter, sortOrder, activeTab]);
 
+  // Render trạng thái chờ khi đang gọi request về backend
   if (catLoading || brandLoading) return <p>Đang tải...</p>;
   if (catError || brandError) return <p className="text-red-500">{catError || brandError}</p>;
 
   return (
     <div className="space-y-6">
-      {/* Toast Alert */}
+      {/* KHỐI HIỂN THỊ: Thông báo Toast UI phản hồi thành công và lỗi */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right">
           <div className={`flex items-center gap-3 text-white rounded-xl px-6 py-4 shadow-2xl transition-all duration-300 ${toastMessage.startsWith("Lỗi") || toastMessage.startsWith("Vui lòng")
-              ? "bg-gradient-to-r from-red-500 to-rose-500 ring-4 ring-red-500/20"
-              : "bg-gradient-to-r from-green-500 to-emerald-500 ring-4 ring-green-500/20"
+            ? "bg-gradient-to-r from-red-500 to-rose-500 ring-4 ring-red-500/20"
+            : "bg-gradient-to-r from-green-500 to-emerald-500 ring-4 ring-green-500/20"
             }`}>
             {toastMessage.startsWith("Lỗi") || toastMessage.startsWith("Vui lòng") ? (
               <XCircle className="w-6 h-6" />
@@ -177,7 +195,7 @@ const Category_Brand = () => {
         </div>
       )}
 
-      {/* Header */}
+      {/* KHỐI HIỂN THỊ: Header trang */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Quản lý Danh mục & Thương hiệu</h1>
@@ -193,7 +211,7 @@ const Category_Brand = () => {
         </Button>
       </div>
 
-      {/* Tabs */}
+      {/* KHỐI HIỂN THỊ: Vùng Tabs điều hướng và bộ Search/Filters */}
       <Card className="border-0 shadow-md rounded-xl bg-white overflow-hidden">
         <div className="border-b border-gray-100">
           <div className="flex p-1 bg-gray-50">
@@ -220,7 +238,7 @@ const Category_Brand = () => {
           </div>
         </div>
 
-        {/* Search & Filters */}
+        {/* Cụm input tìm kiếm và sắp xếp */}
         <CardContent className="p-6">
           <div className="flex gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[250px]">
@@ -233,6 +251,7 @@ const Category_Brand = () => {
               />
             </div>
 
+            {/* Chỉ hiện dropdown chọn mã quốc gia nếu đang chọn Quẩn lý Thương Hiệu */}
             {activeTab === 'brands' && (
               <div className="relative min-w-[200px]">
                 <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -261,7 +280,7 @@ const Category_Brand = () => {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {/* KHỐI HIỂN THỊ: Cấu trúc Table Data Render mảng filteredData */}
       <Card className="border-0 shadow-md rounded-xl bg-white overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
           <CardTitle className="text-xl font-bold text-gray-800">
@@ -316,6 +335,7 @@ const Category_Brand = () => {
                               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedRow === item.id ? 'rotate-180' : ''}`} />
                             )}
                           </button>
+                          {/* Sổ thông tin mô tả chi tiết thông qua nút Expand */}
                           {expandedRow === item.id && item.description && (
                             <div className="mt-2 text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg animate-in slide-in-from-top-2 duration-200">
                               {item.description}
@@ -373,7 +393,7 @@ const Category_Brand = () => {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Modal */}
+      {/* KHỐI HIỂN THỊ: Form Popup dùng để chèn thông tin Tạo Bản Ghi Mới hoặc Sửa thông tin */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
@@ -386,6 +406,7 @@ const Category_Brand = () => {
               </button>
             </div>
             <div className="p-6 space-y-5">
+              {/* Box nhập mã code cho Category */}
               {activeTab === 'categories' && (
                 <div>
                   <Label className="text-sm font-semibold text-gray-700">Mã danh mục <span className="text-red-500">*</span></Label>
@@ -399,6 +420,7 @@ const Category_Brand = () => {
                 </div>
               )}
 
+              {/* Box Tên bắt buộc */}
               <div>
                 <Label className="text-sm font-semibold text-gray-700">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} <span className="text-red-500">*</span></Label>
                 <Input
@@ -409,6 +431,7 @@ const Category_Brand = () => {
                 />
               </div>
 
+              {/* Box xuất xứ Quốc gia đối với Thương Hiệu */}
               {activeTab === 'brands' && (
                 <div>
                   <Label className="text-sm font-semibold text-gray-700">Quốc gia</Label>
@@ -423,6 +446,7 @@ const Category_Brand = () => {
                 </div>
               )}
 
+              {/* Box mô tả bổ trợ */}
               <div>
                 <Label className="text-sm font-semibold text-gray-700">Mô tả</Label>
                 <textarea
@@ -449,7 +473,7 @@ const Category_Brand = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* KHỐI HIỂN THỊ: Popup Confirm Xóa dữ liệu */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
@@ -463,13 +487,17 @@ const Category_Brand = () => {
               <p className="text-center text-gray-600 mb-3">
                 Bạn có chắc muốn xóa <span className="font-bold text-gray-900">{selectedItem?.name}</span>?
               </p>
+
+              {/* Validation cảnh báo trước khi cho phép huỷ (Báo trước có số lượng sản phẩm chứa tham chiếu khoá ngoại) */}
               <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
                 <p className="text-sm text-red-700 font-medium">
-                  ⚠️ {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
+                  {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
                   <span className="font-bold">{productCountMap[selectedItem?.id] || 0} sản phẩm</span>
                 </p>
               </div>
             </div>
+
+            {/* Phím Action Call của Delete Confirm Form */}
             <div className="p-6 bg-gray-50 rounded-b-2xl flex gap-3">
               <Button variant="outline" className="flex-1 h-11 rounded-xl font-semibold" onClick={() => setShowDeleteConfirm(false)}>
                 Hủy

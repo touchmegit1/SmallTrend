@@ -25,7 +25,9 @@ export const useFetchVariants = (productId) => {
         cost_price: v.costPrice,
         stock_quantity: v.stockQuantity,
         image_url: v.imageUrl,
-        is_active: v.isActive
+        is_active: v.isActive,
+        created_at: v.createdAt,
+        attributes: v.attributes
       }));
       setVariants(mappedVariants);
       setError(null);

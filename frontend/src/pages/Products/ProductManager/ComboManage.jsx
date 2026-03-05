@@ -4,14 +4,16 @@ import { Input } from "../ProductComponents/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
-import { Plus, Search, Edit, Package2, Eye, CheckCircle, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Package2, Eye, CheckCircle, Trash2, Power } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditComboModal from "./EditComboModal";
 
 import { useProductCombos } from "../../../hooks/product_combos";
 
-function ComboManage() {
-  const { combos, loading, error, deleteCombo, updateCombo } = useProductCombos();
+// Component quản lý danh sách các Combo Sản phẩm
+// Nơi hiển thị, lọc, tìm kiếm và thao tác các combo như xoá, sửa
+const ComboManage = () => {
+  const { combos, loading, error, deleteCombo, updateCombo, toggleComboStatus } = useProductCombos();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortField, setSortField] = useState(null);
@@ -22,6 +24,8 @@ function ComboManage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCombo, setSelectedCombo] = useState(null);
 
+  // Hàm xử lý việc sắp xếp các cột trong bảng (Tên, Giá, etc.)
+  // Đảo chiều sắp xếp (asc/desc) khi bấm vào tiêu đề cột
   const handleSort = (field) => {
     if (sortField === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -65,6 +69,8 @@ function ComboManage() {
       return 0;
     });
 
+  // Hàm xử lý xoá một Combo Sản phẩm từ danh sách
+  // Cập nhật lại UI thông qua mutate để đồng bộ dữ liệu sau khi API gọi thành công
   const handleDeleteCombo = async (comboId) => {
     if (confirm("Bạn có chắc muốn xóa combo này?")) {
       try {
@@ -78,11 +84,25 @@ function ComboManage() {
     }
   };
 
+  const handleToggleStatus = async (comboId) => {
+    try {
+      await toggleComboStatus(comboId);
+      setToastMessage("Chuyển trạng thái thành công!");
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      setToastMessage("Lỗi: " + err.message);
+      setTimeout(() => setToastMessage(""), 3000);
+    }
+  };
+
+  // Bật Modal sửa thông tin khi người dùng nhấn Sửa trên một dòng
   const handleEditCombo = (combo) => {
     setSelectedCombo(combo);
     setIsEditModalOpen(true);
   };
 
+  // Hàm xử lý sau khi lưu thay đổi Combo qua Edit Modal thành công
+  // Gọi API cập nhật và fetch lại danh sách Combo để hiển thị bản ghi mới
   const handleSaveCombo = async (updatedCombo) => {
     try {
       await updateCombo(updatedCombo.id, updatedCombo);
@@ -291,6 +311,15 @@ function ComboManage() {
                             title="Chỉnh sửa"
                           >
                             <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleToggleStatus(combo.id)}
+                            className="hover:bg-amber-100 hover:text-amber-600 rounded-lg"
+                            title="Chuyển trạng thái"
+                          >
+                            <Power className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"

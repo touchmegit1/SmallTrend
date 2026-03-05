@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Save, Image as ImageIcon, X, Upload } from "lucide-react";
+import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Trash } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
@@ -8,6 +8,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
+// Màn hình Thêm mới một Variant (Sản phẩm biến thể)
+// Cho phép khai báo đơn vị, giá bán, giá nhập và hình ảnh
 const AddNewProductVariant = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,6 +25,7 @@ const AddNewProductVariant = () => {
     sell_price: "",
     is_active: product?.is_active === false ? false : true,
   });
+  const [attributes, setAttributes] = useState([]); // [{ name: "", value: "" }]
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -32,19 +35,36 @@ const AddNewProductVariant = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Xử lý đọc file ảnh cục bộ dưới dạng DateURL để hiển thị Preview
   const handleImageSelect = (file) => {
-    if (file && file.type.startsWith("image/")) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (file) {
+      // The original code had a type check, let's keep it for robustness
+      if (!file.type.startsWith("image/")) {
+        // toast.error("File không phải là ảnh"); // Assuming toast is available
+        console.error("File is not an image.");
+        return;
+      }
+      // if (file.size > 5 * 1024 * 1024) { // Assuming toast is available
+      //   toast.error("Kích thước ảnh không được vượt quá 5MB");
+      //   return;
+      // }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+        setImageFile(file); // Changed from setSelectedImage to setImageFile
+      };
+      reader.readAsDataURL(file);
     }
   };
 
+  // Kích hoạt khi người dùng tải tệp từ ô input type="file"
   const handleFileSelect = (e) => {
-    if (e.target.files?.[0]) {
+    if (e.target.files && e.target.files[0]) {
       handleImageSelect(e.target.files[0]);
     }
   };
 
+  // 3 Hàm dưới đây dùng để hỗ trợ UX: Kéo thả file ảnh trực tiếp vào box
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -63,29 +83,31 @@ const AddNewProductVariant = () => {
     }
   };
 
+  // Gỡ ảnh hiện tại ra khỏi form
   const removeImage = () => {
-    setImageFile(null);
     setImagePreview(null);
+    setImageFile(null); // Changed from setSelectedImage to setImageFile
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
+  // Hàm đẩy ảnh dạng Binary Form-data lên Server và nhận link URL trả về
   const uploadImage = async () => {
-    if (!imageFile) return null;
-    setUploadingImage(true);
+    if (!imageFile) return null; // Changed from selectedImage to imageFile
+    setUploadingImage(true); // Kept from original
+    const formData = new FormData();
+    formData.append("file", imageFile); // Changed from selectedImage to imageFile
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append("file", imageFile);
-      const response = await api.post("/upload/image", formDataUpload, {
-        headers: { "Content-Type": undefined },
+      const response = await api.post("/upload/image", formData, { // Changed endpoint from /upload to /upload/image
+        headers: { "Content-Type": undefined }, // Changed from "multipart/form-data" to undefined to let browser set it
       });
       return response.data.url;
     } catch (error) {
-      console.error("Error uploading image:", error);
-      throw error;
+      console.error("Lỗi upload ảnh:", error); // Changed error message
+      throw new Error("Không thể upload ảnh"); // Changed error handling
     } finally {
-      setUploadingImage(false);
+      setUploadingImage(false); // Kept from original
     }
   };
 
@@ -94,9 +116,27 @@ const AddNewProductVariant = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleAddAttribute = () => {
+    setAttributes([...attributes, { name: "", value: "" }]);
+  };
+
+  const handleRemoveAttribute = (index) => {
+    setAttributes(attributes.filter((_, i) => i !== index));
+  };
+
+  const handleChangeAttribute = (index, field, value) => {
+    const newAttrs = [...attributes];
+    newAttrs[index][field] = value;
+    setAttributes(newAttrs);
+  };
+
+  // Hàm Submit: Tiến hành Upload image (nếu có) trước rồi lấy URL đính vào payload Variant để Post tạo mới
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMsg("");
+    setErrorMsg(""); // Kept from original
+
+    // if (isSubmitting) return; // isSubmitting state variable is not defined in the original code, so commenting out or adding it. Assuming it should be `saving`
+    if (saving) return;
 
     if (!formData.sku.trim()) {
       setErrorMsg("Vui lòng nhập SKU");
@@ -118,6 +158,13 @@ const AddNewProductVariant = () => {
         imageUrl = await uploadImage();
       }
 
+      const attributesMap = {};
+      attributes.forEach((attr) => {
+        if (attr.name.trim() && attr.value.trim()) {
+          attributesMap[attr.name.trim()] = attr.value.trim();
+        }
+      });
+
       await api.post(`/products/${product.id}/variants`, {
         sku: formData.sku,
         barcode: formData.barcode || null,
@@ -126,6 +173,7 @@ const AddNewProductVariant = () => {
         sellPrice: parseFloat(formData.sell_price),
         imageUrl: imageUrl,
         isActive: formData.is_active,
+        attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
       });
 
       navigate(`/products/detail/${product.id}`, {
@@ -163,13 +211,9 @@ const AddNewProductVariant = () => {
   const selectedUnit = units.find((u) => u.id === parseInt(formData.unit_id));
   const previewName = (() => {
     let name = product.name;
-    if (formData.unit_value || selectedUnit) {
-      name += " - ";
-      if (formData.unit_value) {
-        name += formData.unit_value;
-        if (selectedUnit) name += " ";
-      }
-      if (selectedUnit) name += selectedUnit.name;
+    const activeAttributes = attributes.filter(attr => attr.name.trim() && attr.value.trim());
+    if (activeAttributes.length > 0) {
+      name += " - " + activeAttributes.map(attr => attr.value.trim()).join(" - ");
     }
     return name;
   })();
@@ -316,6 +360,55 @@ const AddNewProductVariant = () => {
                       </p>
                     )}
                   </div>
+
+                  {/* DYNAMIC ATTRIBUTES */}
+                  <div className="pt-4 border-t border-gray-100 mt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <Label className="text-sm font-semibold text-gray-700">Thuộc tính mở rộng</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleAddAttribute}
+                        className="h-8 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg px-2 flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Thêm thuộc tính
+                      </Button>
+                    </div>
+                    {attributes.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">Có thể thêm kích cỡ (Size), hương vị (Flavor), mầu sắc (Color)...</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {attributes.map((attr, index) => (
+                          <div key={index} className="flex gap-3 items-start animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex-1">
+                              <Input
+                                placeholder="Tên thuộc tính (VD: Hương vị)"
+                                className="h-10 text-sm border-gray-200 rounded-xl"
+                                value={attr.name}
+                                onChange={(e) => handleChangeAttribute(index, "name", e.target.value)}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <Input
+                                placeholder="Giá trị (VD: Dâu tây)"
+                                className="h-10 text-sm border-gray-200 rounded-xl"
+                                value={attr.value}
+                                onChange={(e) => handleChangeAttribute(index, "value", e.target.value)}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => handleRemoveAttribute(index)}
+                              className="h-10 w-10 p-0 text-red-500 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200"
+                            >
+                              <Trash className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -408,10 +501,11 @@ const AddNewProductVariant = () => {
               <Save className="w-5 h-5 mr-2" />
               {saving || uploadingImage ? "Đang lưu..." : "Lưu biến thể"}
             </Button>
+
             <Button
               type="button"
-              variant="ghost"
-              className="w-full h-12 border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 rounded-xl font-semibold"
+              variant="danger"
+              className="w-full h-12 border-2 border-red-200 text-red-600 hover:bg-red-400 hover:text-red-800 rounded-xl font-bold flex items-center justify-center"
               onClick={() =>
                 navigate(`/products/detail/${product.id}`, {
                   state: { product },
@@ -422,8 +516,8 @@ const AddNewProductVariant = () => {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

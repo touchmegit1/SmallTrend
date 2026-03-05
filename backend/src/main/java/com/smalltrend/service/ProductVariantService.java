@@ -8,7 +8,6 @@ import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.Unit;
-import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
@@ -72,6 +71,17 @@ public class ProductVariantService {
             throw new RuntimeException("Không thể tạo biến thể đang bán vì sản phẩm gốc đang ngừng bán!");
         }
 
+        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
+            if (productVariantRepository.existsBySku(request.getSku())) {
+                throw new RuntimeException("Mã SKU đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
+        if (request.getBarcode() != null && !request.getBarcode().trim().isEmpty()) {
+            if (productVariantRepository.existsByBarcode(request.getBarcode())) {
+                throw new RuntimeException("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
+
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .sku(request.getSku())
@@ -81,6 +91,7 @@ public class ProductVariantService {
                 .sellPrice(request.getSellPrice())
                 .imageUrl(request.getImageUrl())
                 .isActive(isVariantActive)
+                .attributes(request.getAttributes())
                 .build();
 
         ProductVariant saved = productVariantRepository.save(variant);
@@ -93,6 +104,17 @@ public class ProductVariantService {
 
         Unit unit = unitRepository.findById(request.getUnitId())
                 .orElseThrow(() -> new RuntimeException("Unit not found with id: " + request.getUnitId()));
+
+        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
+            if (productVariantRepository.existsBySkuAndIdNot(request.getSku(), variantId)) {
+                throw new RuntimeException("Mã SKU đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
+        if (request.getBarcode() != null && !request.getBarcode().trim().isEmpty()) {
+            if (productVariantRepository.existsByBarcodeAndIdNot(request.getBarcode(), variantId)) {
+                throw new RuntimeException("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
 
         variant.setSku(request.getSku());
         variant.setBarcode(request.getBarcode());
@@ -108,6 +130,9 @@ public class ProductVariantService {
                 throw new RuntimeException("Không thể bật trạng thái hoạt động vì sản phẩm gốc đang ngừng bán!");
             }
             variant.setActive(request.getIsActive());
+        }
+        if (request.getAttributes() != null) {
+            variant.setAttributes(request.getAttributes());
         }
 
         ProductVariant saved = productVariantRepository.save(variant);
@@ -127,6 +152,21 @@ public class ProductVariantService {
         productVariantRepository.save(variant);
     }
 
+    public void deleteVariant(Integer variantId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Variant not found with id: " + variantId));
+
+        java.time.LocalDateTime createdAt = variant.getCreatedAt();
+        if (createdAt != null) {
+            long minutes = java.time.Duration.between(createdAt, java.time.LocalDateTime.now()).toMinutes();
+            if (minutes >= 2) {
+                throw new RuntimeException("Biến thể đã tạo quá 2 phút, bạn không thể xoá biến thể này nữa!");
+            }
+        }
+
+        productVariantRepository.deleteById(variantId);
+    }
+
     public List<Unit> getAllUnits() {
         return unitRepository.findAll();
     }
@@ -136,30 +176,33 @@ public class ProductVariantService {
         response.setId(variant.getId());
         response.setSku(variant.getSku());
         response.setBarcode(variant.getBarcode());
-        // Build variant name: Product name + unitValue + Unit name
-        // Example: "Dove Soap - 90 Gram"
-        String productName = variant.getProduct().getName();
-        String unitName = variant.getUnit() != null ? variant.getUnit().getName() : null;
-        java.math.BigDecimal unitValue = variant.getUnitValue();
+        String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
+        StringBuilder nameBuilder = new StringBuilder(productName);
 
-        StringBuilder nameBuilder = new StringBuilder(productName != null ? productName : "");
-        if (unitValue != null || (unitName != null && !unitName.isEmpty())) {
+        java.math.BigDecimal unitValue = variant.getUnitValue();
+        String unitNameStr = variant.getUnit() != null ? variant.getUnit().getName() : "";
+
+        if (unitValue != null || (unitNameStr != null && !unitNameStr.trim().isEmpty())) {
             nameBuilder.append(" - ");
             if (unitValue != null) {
-                if (unitValue.stripTrailingZeros().scale() <= 0) {
-                    nameBuilder.append(unitValue.toBigInteger().toString());
-                } else {
-                    nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
-                }
-                if (unitName != null && !unitName.isEmpty()) {
-                    nameBuilder.append(" ");
-                }
+                nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
             }
-            if (unitName != null && !unitName.isEmpty()) {
-                nameBuilder.append(unitName);
+            if (unitNameStr != null && !unitNameStr.trim().isEmpty()) {
+                nameBuilder.append(unitNameStr.trim());
             }
         }
+
+        java.util.Map<String, String> attributes = variant.getAttributes();
+        if (attributes != null && !attributes.isEmpty()) {
+            for (String value : attributes.values()) {
+                if (value != null && !value.trim().isEmpty()) {
+                    nameBuilder.append(" - ").append(value.trim());
+                }
+            }
+        }
+
         response.setName(nameBuilder.toString());
+        String unitName = variant.getUnit() != null ? variant.getUnit().getName() : null;
         response.setUnitName(unitName);
         if (variant.getUnit() != null) {
             response.setUnitId(variant.getUnit().getId());
@@ -168,6 +211,14 @@ public class ProductVariantService {
         response.setImageUrl(variant.getImageUrl());
         response.setSellPrice(variant.getSellPrice());
         response.setIsActive(variant.isActive());
+        response.setAttributes(variant.getAttributes());
+        response.setCreatedAt(variant.getCreatedAt());
+
+        // Tax Info
+        if (variant.getProduct() != null && variant.getProduct().getTaxRate() != null) {
+            response.setTaxRate(variant.getProduct().getTaxRate().getRate());
+            response.setTaxName(variant.getProduct().getTaxRate().getName());
+        }
 
         // Get stock quantity
         Integer stockQty = inventoryStockRepository.findByVariantId(variant.getId())
