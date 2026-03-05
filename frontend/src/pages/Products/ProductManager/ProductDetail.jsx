@@ -12,7 +12,9 @@ import { Badge } from "../ProductComponents/badge";
 // Gọi import các sub-modal Form Add/Edit
 import EditProductModal from "./EditProductModal";
 import EditVariantModal from "./EditVariantModal";
-import { useFetchVariants } from "../../../hooks/product_variants";
+import UnitConversionSection from "./UnitConversionSection";
+import UnitsManagerModal from "./UnitsManagerModal";
+import { useFetchVariants, useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
 /**
@@ -40,7 +42,11 @@ function ProductDetail() {
   const [toastMessage, setToastMessage] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteVariant, setDeleteVariant] = useState(null);
+  const [expandedVariantId, setExpandedVariantId] = useState(null); // Quản lý đóng/mở phần quy đổi đơn vị
+  const [showUnitsManager, setShowUnitsManager] = useState(false); // Trạng thái hiển thị Quản lý Đơn vị
   const [, forceUpdate] = useState(0); // Dùng để re-render khi hết 2 phút
+
+  const { units, fetchUnits } = useFetchUnits(); // Tải danh sách đơn vị để truyền cho form quy đổi
 
   // --- HANDLER FUNCTIONS ---
 
@@ -487,11 +493,19 @@ function ProductDetail() {
               <p className="text-xs text-gray-500 font-medium">Bảng kê mẫu mã thực thụ xuất nhập kho</p>
             </div>
           </div>
-          <Button
-            onClick={() => navigate("/products/addproduct_variant", { state: { product } })}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md border border-transparent font-semibold shadow-indigo-500/20 px-5">
-            + Thêm biến thể
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowUnitsManager(true)}
+              variant="outline"
+              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl px-4 font-semibold shadow-sm flex items-center gap-2">
+              <Box className="w-4 h-4" /> Bảng đơn vị tính
+            </Button>
+            <Button
+              onClick={() => navigate("/products/addproduct_variant", { state: { product } })}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md border border-transparent font-semibold shadow-indigo-500/20 px-5">
+              + Thêm biến thể
+            </Button>
+          </div>
         </div>
 
         {/* Body Table */}
@@ -522,105 +536,136 @@ function ProductDetail() {
               </TableHeader>
               <TableBody>
                 {variants.map((variant, index) => (
-                  <TableRow key={variant.id} className="hover:bg-blue-50/40 transition-colors border-b border-gray-100 group">
-                    <TableCell className="font-semibold text-gray-400 text-center text-xs">{index + 1}</TableCell>
-                    <TableCell className="text-center">
-                      <div className="w-9 h-9 mx-auto bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                        {variant.image_url ? (
-                          <img
-                            src={variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`}
-                            alt={variant.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Package className="w-4 h-4 text-gray-300" />
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <span className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{variant.name || "Mặc định (Default)"}</span>
-                    </TableCell>
-
-                    <TableCell>
-                      <span className="font-mono text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded">{variant.sku || "—"}</span>
-                    </TableCell>
-
-                    <TableCell>
-                      <span className="font-mono text-xs text-gray-500">{variant.barcode || "—"}</span>
-                    </TableCell>
-
-                    <TableCell>
-                      {variant.attributes && Object.keys(variant.attributes).length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {Object.entries(variant.attributes).map(([key, val]) => (
-                            <Badge key={key} variant="outline" className="text-[11px] bg-indigo-50 border-indigo-200 text-indigo-700 px-2 py-0.5 font-semibold whitespace-nowrap">
-                              {key}: {val}
-                            </Badge>
-                          ))}
+                  <React.Fragment key={variant.id}>
+                    <TableRow className="hover:bg-blue-50/40 transition-colors border-b border-gray-100 group">
+                      <TableCell className="font-semibold text-gray-400 text-center text-xs">{index + 1}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="w-9 h-9 mx-auto bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                          {variant.image_url ? (
+                            <img
+                              src={variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`}
+                              alt={variant.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Package className="w-4 h-4 text-gray-300" />
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">Chưa có</span>
-                      )}
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell className="text-right">
-                      <span className="text-base font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded whitespace-nowrap">{variant.sell_price?.toLocaleString('vi-VN') || "0"} ₫</span>
-                    </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{variant.name || "Mặc định (Default)"}</span>
+                      </TableCell>
 
-                    <TableCell className="text-center">
-                      {variant.is_active ? (
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 mx-auto ring-2 ring-green-100 shadow-sm" title="Hoạt động bình thường" />
-                      ) : (
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500 mx-auto ring-2 ring-red-100 shadow-sm" title="Vô hiệu hoá" />
-                      )}
-                    </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded">{variant.sku || "—"}</span>
+                      </TableCell>
 
-                    <TableCell className="p-3">
-                      <div className="flex justify-center items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title={variant.is_active ? "Dừng xuất nhập" : (product?.is_active === false ? "Vui lòng mở khoá SP Gốc trước" : "Kích hoạt trở lại")}
-                          onClick={() => handleToggleStatus(variant)}
-                          disabled={!variant.is_active && product?.is_active === false}
-                          className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-amber-50 focus:ring-0 ${variant.is_active ? 'text-amber-600' : 'text-gray-400'}`}
-                        >
-                          <Power className="w-[18px] h-[18px]" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title="Sửa khung phân loại"
-                          onClick={() => handleEditVariant(variant)}
-                          className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-blue-50 text-blue-600 focus:ring-0"
-                        >
-                          <Edit className="w-[18px] h-[18px]" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title="Lệnh in Máy Barcode"
-                          onClick={() => handlePrintBarcode(variant)}
-                          className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-slate-100 text-slate-700 focus:ring-0"
-                        >
-                          <Printer className="w-[18px] h-[18px]" />
-                        </Button>
-                        {isWithin2Minutes(variant.created_at) && (
+                      <TableCell>
+                        <span className="font-mono text-xs text-gray-500">{variant.barcode || "—"}</span>
+                      </TableCell>
+
+                      <TableCell>
+                        {variant.attributes && Object.keys(variant.attributes).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(variant.attributes).map(([key, val]) => (
+                              <Badge key={key} variant="outline" className="text-[11px] bg-indigo-50 border-indigo-200 text-indigo-700 px-2 py-0.5 font-semibold whitespace-nowrap">
+                                {key}: {val}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Chưa có</span>
+                        )}
+                        {variant.unit_conversions && variant.unit_conversions.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <Badge variant="outline" className="text-[10px] bg-green-50 border-green-200 text-green-700 px-1.5 py-0.5 font-medium whitespace-nowrap">
+                              Có {variant.unit_conversions.length} phép quy đổi
+                            </Badge>
+                          </div>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <span className="text-base font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded whitespace-nowrap">{variant.sell_price?.toLocaleString('vi-VN') || "0"} ₫</span>
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        {variant.is_active ? (
+                          <div className="w-2.5 h-2.5 rounded-full bg-green-500 mx-auto ring-2 ring-green-100 shadow-sm" title="Hoạt động bình thường" />
+                        ) : (
+                          <div className="w-2.5 h-2.5 rounded-full bg-red-500 mx-auto ring-2 ring-red-100 shadow-sm" title="Vô hiệu hoá" />
+                        )}
+                      </TableCell>
+
+                      <TableCell className="p-3">
+                        <div className="flex justify-center items-center gap-2">
                           <Button
                             size="sm"
                             variant="ghost"
-                            title="Xoá biến thể (trong 2 phút)"
-                            onClick={() => handleDeleteVariant(variant)}
-                            className="h-10 w-10 p-0 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-all hover:bg-red-50 text-red-500 focus:ring-0"
+                            title={variant.is_active ? "Dừng xuất nhập" : (product?.is_active === false ? "Vui lòng mở khoá SP Gốc trước" : "Kích hoạt trở lại")}
+                            onClick={() => handleToggleStatus(variant)}
+                            disabled={!variant.is_active && product?.is_active === false}
+                            className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-amber-50 focus:ring-0 ${variant.is_active ? 'text-amber-600' : 'text-gray-400'}`}
                           >
-                            <Trash2 className="w-[18px] h-[18px]" />
+                            <Power className="w-[18px] h-[18px]" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-
-                  </TableRow>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Sửa khung phân loại"
+                            onClick={() => handleEditVariant(variant)}
+                            className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-blue-50 text-blue-600 focus:ring-0"
+                          >
+                            <Edit className="w-[18px] h-[18px]" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Lệnh in Máy Barcode"
+                            onClick={() => handlePrintBarcode(variant)}
+                            className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-slate-100 text-slate-700 focus:ring-0"
+                          >
+                            <Printer className="w-[18px] h-[18px]" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title={expandedVariantId === variant.id ? "Thu gọn quy đổi" : "Cấu hình quy đổi đơn vị"}
+                            onClick={() => setExpandedVariantId(expandedVariantId === variant.id ? null : variant.id)}
+                            className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all focus:ring-0 ${expandedVariantId === variant.id ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                          >
+                            <Box className="w-[18px] h-[18px]" />
+                          </Button>
+                          {isWithin2Minutes(variant.created_at) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Xoá biến thể (trong 2 phút)"
+                              onClick={() => handleDeleteVariant(variant)}
+                              className="h-10 w-10 p-0 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-all hover:bg-red-50 text-red-500 focus:ring-0"
+                            >
+                              <Trash2 className="w-[18px] h-[18px]" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {/* Dòng hiển thị quy đổi đơn vị khi expand */}
+                    {expandedVariantId === variant.id && (
+                      <TableRow className="bg-gray-50/30">
+                        <TableCell colSpan={9} className="p-0">
+                          <div className="px-6 py-4 animate-in slide-in-from-top-2 duration-200 border-b border-gray-100">
+                            <UnitConversionSection
+                              variant={variant}
+                              units={units}
+                              onSuccess={() => fetchVariants()}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>
@@ -645,6 +690,17 @@ function ProductDetail() {
         onClose={() => setIsEditVariantModalOpen(false)}
         onSave={handleSaveVariant}
       />
+
+      {/* Modal Quản lý Đơn vị tính */}
+      {showUnitsManager && (
+        <UnitsManagerModal
+          onClose={() => setShowUnitsManager(false)}
+          onDataChange={() => {
+            if (fetchUnits) fetchUnits();
+          }}
+        />
+      )}
+
     </div>
   );
 }

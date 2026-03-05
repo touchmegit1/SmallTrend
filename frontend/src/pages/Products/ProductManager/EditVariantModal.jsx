@@ -4,6 +4,7 @@ import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import UnitConversionSection from "./UnitConversionSection";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
@@ -458,6 +459,22 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
               )}
             </CardContent>
           </Card>
+
+          {/* Unit Conversions - Inline Management */}
+          {variant && (
+            <Card className="border border-gray-300 rounded-lg bg-white mt-4">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold">Quy đổi đơn vị</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <UnitConversionSection
+                  variant={variant}
+                  units={units}
+                  onSuccess={() => { /* nothing to do, state is handled internally */ }}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">

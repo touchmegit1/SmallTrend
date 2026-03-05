@@ -5,12 +5,14 @@ import com.smalltrend.repository.ProductRepository;
 import com.smalltrend.repository.UnitRepository;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductBatchRepository;
+import com.smalltrend.repository.UnitConversionRepository;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.Unit;
 import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
+import com.smalltrend.dto.products.UnitConversionResponse;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +28,8 @@ public class ProductVariantService {
     private final UnitRepository unitRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final ProductBatchRepository productBatchRepository;
+    private final UnitConversionRepository unitConversionRepository;
+    private final UnitConversionService unitConversionService;
 
     public List<ProductVariantRespone> getAllProductVariants(String search, String barcode) {
         List<ProductVariant> variants;
@@ -167,9 +171,7 @@ public class ProductVariantService {
         productVariantRepository.deleteById(variantId);
     }
 
-    public List<Unit> getAllUnits() {
-        return unitRepository.findAll();
-    }
+    // Method removed: getAllUnits is now handled by UnitService
 
     private ProductVariantRespone mapToResponse(ProductVariant variant) {
         ProductVariantRespone response = new ProductVariantRespone();
@@ -242,6 +244,13 @@ public class ProductVariantService {
         if (variant.getProduct().getBrand() != null) {
             response.setBrandName(variant.getProduct().getBrand().getName());
         }
+
+        // Unit Conversions
+        List<UnitConversionResponse> conversions = unitConversionRepository.findByVariantId(variant.getId())
+                .stream()
+                .map(unitConversionService::mapToResponse)
+                .collect(Collectors.toList());
+        response.setUnitConversions(conversions);
 
         return response;
     }
