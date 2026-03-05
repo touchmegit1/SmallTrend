@@ -26,13 +26,23 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
           }
         );
         const data = await response.json();
+        console.log("SePay API response:", JSON.stringify(data));
+
         if (data.transactions && data.transactions.length > 0) {
-          setStatus("success");
-          clearInterval(pollingRef.current);
-          // Auto-complete after showing success briefly
-          setTimeout(() => {
-            onSuccess();
-          }, 1500);
+          // Double-check: verify at least one transaction content contains our exact payment code
+          const matched = data.transactions.some(tx => {
+            const content = (tx.transaction_content || tx.content || tx.description || "").toUpperCase();
+            return content.includes(paymentCode.toUpperCase());
+          });
+
+          if (matched) {
+            setStatus("success");
+            clearInterval(pollingRef.current);
+            // Auto-complete after showing success for 30s
+            setTimeout(() => {
+              onSuccess();
+            }, 30000);
+          }
         }
 
       } catch (err) {
@@ -40,10 +50,14 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
       }
     };
 
-    // Start polling every 3 seconds
-    pollingRef.current = setInterval(checkPayment, 3000);
+    // Delay 5 seconds before first poll to let the user scan first
+    const initialDelay = setTimeout(() => {
+      checkPayment(); // first check
+      pollingRef.current = setInterval(checkPayment, 3000);
+    }, 5000);
 
     return () => {
+      clearTimeout(initialDelay);
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, [amount, paymentCode, onSuccess]);
@@ -55,11 +69,15 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         onCancel();
+      } else if (status === 'success' && e.key === 'Enter') {
+        // Cho phép ấn Enter để đóng sớm nếu không muốn chờ 30s
+        e.preventDefault();
+        onSuccess();
       }
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [onCancel]);
+  }, [onCancel, onSuccess, status]);
 
   return (
     <div style={{
@@ -89,7 +107,27 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
             <h2 style={{ marginTop: 0, marginBottom: "10px", fontSize: "22px", color: "#28a745" }}>
               Thanh toán thành công!
             </h2>
-            <p style={{ color: "#666", fontSize: "14px" }}>Đang xử lý hóa đơn...</p>
+            <h3 style={{ marginTop: 0, marginBottom: "15px", fontSize: "18px", color: "#007bff" }}>
+              Cảm ơn quý khách!
+            </h3>
+            <p style={{ color: "#666", fontSize: "14px", marginBottom: "20px" }}>Đang xử lý hóa đơn...</p>
+            <button
+              onClick={onSuccess}
+              style={{
+                padding: "10px 20px",
+                background: "#28a745",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                cursor: "pointer",
+                transition: "background 0.2s"
+              }}
+              onMouseOver={(e) => e.target.style.background = "#218838"}
+              onMouseOut={(e) => e.target.style.background = "#28a745"}
+            >
+              Hoàn tất ngay (Enter)
+            </button>
           </>
         ) : (
           <>
