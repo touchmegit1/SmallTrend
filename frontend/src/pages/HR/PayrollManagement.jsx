@@ -209,6 +209,9 @@ const PayrollManagement = () => {
                         <div className="col-span-2 text-slate-700">{userPhoneMap.get(String(row.userId)) || '-'}</div>
                         <div className="col-span-2 text-slate-700">
                             <div>{formatSalaryType(row.salaryType)}</div>
+                            {(row.salaryType === 'MONTHLY' || row.salaryType === 'MONTHLY_MIN_SHIFTS') && (
+                                <div className="text-xs text-slate-500">Lương cơ bản: {formatCurrency(row.baseSalary || 0)}</div>
+                            )}
                             {row.salaryType === 'MONTHLY_MIN_SHIFTS' && (
                                 <div className={`text-xs ${row.eligibleForMonthlySalary ? 'text-emerald-600' : 'text-rose-600'}`}>
                                     {row.workedShifts}/{row.minRequiredShifts || 0} ca - {row.eligibleForMonthlySalary ? 'Đủ điều kiện' : 'Chưa đủ'}

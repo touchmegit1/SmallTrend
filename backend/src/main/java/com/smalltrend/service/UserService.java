@@ -7,6 +7,7 @@ import com.smalltrend.dto.user.UserUpdateRequest;
 import com.smalltrend.entity.Role;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.UserCredential;
+import com.smalltrend.entity.enums.SalaryType;
 import com.smalltrend.exception.UserException;
 import com.smalltrend.repository.RoleRepository;
 import com.smalltrend.repository.UserCredentialsRepository;
@@ -25,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
@@ -54,8 +56,8 @@ public class UserService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username)));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username)));
         String roleName = user.getRole() != null ? user.getRole().getName() : "ROLE_USER";
 
         // Ensure role has ROLE_ prefix for Spring Security
@@ -123,6 +125,14 @@ public class UserService implements UserDetailsService {
                 .role(role)
                 .build();
 
+        applySalaryFields(user,
+                request.getSalaryType(),
+                request.getBaseSalary(),
+                request.getHourlyRate(),
+                request.getMinRequiredShifts(),
+                request.getCountLateAsPresent(),
+                request.getWorkingHoursPerMonth());
+
         User savedUser = userRepository.save(user);
 
         // Generate JWT token
@@ -142,8 +152,8 @@ public class UserService implements UserDetailsService {
     public AuthResponse login(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found")));
         String token = jwtUtil.generateToken(username);
 
         return AuthResponse.builder()
@@ -160,8 +170,8 @@ public class UserService implements UserDetailsService {
     public User getCurrentUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found")));
     }
 
     public List<User> getAllUsers() {
@@ -211,6 +221,14 @@ public class UserService implements UserDetailsService {
                 .active(true)
                 .role(role)
                 .build();
+
+        applySalaryFields(user,
+                request.getSalaryType(),
+                request.getBaseSalary(),
+                request.getHourlyRate(),
+                request.getMinRequiredShifts(),
+                request.getCountLateAsPresent(),
+                request.getWorkingHoursPerMonth());
 
         User savedUser = userRepository.save(user);
 
@@ -306,6 +324,14 @@ public class UserService implements UserDetailsService {
             user.setStatus(request.getStatus().toUpperCase());
         }
 
+        applySalaryFields(user,
+                request.getSalaryType(),
+                request.getBaseSalary(),
+                request.getHourlyRate(),
+                request.getMinRequiredShifts(),
+                request.getCountLateAsPresent(),
+                request.getWorkingHoursPerMonth());
+
         return userRepository.save(user);
     }
 
@@ -318,5 +344,51 @@ public class UserService implements UserDetailsService {
         User user = getUserById(id);
         user.setStatus(status != null ? status.toUpperCase() : user.getStatus());
         return userRepository.save(user);
+    }
+
+    private void applySalaryFields(User user,
+            String salaryType,
+            BigDecimal baseSalary,
+            BigDecimal hourlyRate,
+            Integer minRequiredShifts,
+            Boolean countLateAsPresent,
+            BigDecimal workingHoursPerMonth) {
+        SalaryType parsedSalaryType = parseSalaryType(salaryType);
+        if (parsedSalaryType != null) {
+            user.setSalaryType(parsedSalaryType);
+        } else if (user.getSalaryType() == null) {
+            user.setSalaryType(SalaryType.MONTHLY);
+        }
+
+        if (baseSalary != null) {
+            user.setBaseSalary(baseSalary);
+        }
+        if (hourlyRate != null) {
+            user.setHourlyRate(hourlyRate);
+        }
+        if (minRequiredShifts != null) {
+            user.setMinRequiredShifts(minRequiredShifts);
+        }
+        if (countLateAsPresent != null) {
+            user.setCountLateAsPresent(countLateAsPresent);
+        } else if (user.getCountLateAsPresent() == null) {
+            user.setCountLateAsPresent(true);
+        }
+        if (workingHoursPerMonth != null && workingHoursPerMonth.compareTo(BigDecimal.ZERO) > 0) {
+            user.setWorkingHoursPerMonth(workingHoursPerMonth);
+        } else if (user.getWorkingHoursPerMonth() == null) {
+            user.setWorkingHoursPerMonth(BigDecimal.valueOf(208));
+        }
+    }
+
+    private SalaryType parseSalaryType(String salaryType) {
+        if (salaryType == null || salaryType.isBlank()) {
+            return null;
+        }
+        try {
+            return SalaryType.valueOf(salaryType.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 }

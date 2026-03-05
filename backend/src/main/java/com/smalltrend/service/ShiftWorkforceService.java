@@ -4,13 +4,11 @@ import com.smalltrend.dto.shift.AttendanceResponse;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
 import com.smalltrend.dto.shift.PayrollSummaryResponse;
 import com.smalltrend.entity.Attendance;
-import com.smalltrend.entity.SalaryConfig;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.WorkShift;
 import com.smalltrend.entity.WorkShiftAssignment;
 import com.smalltrend.entity.enums.SalaryType;
 import com.smalltrend.repository.AttendanceRepository;
-import com.smalltrend.repository.SalaryConfigRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +35,6 @@ public class ShiftWorkforceService {
     private final AttendanceRepository attendanceRepository;
     private final WorkShiftAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
-    private final SalaryConfigRepository salaryConfigRepository;
 
     public List<AttendanceResponse> listAttendance(LocalDate date, Integer userId, String status) {
         LocalDate targetDate = Optional.ofNullable(date).orElse(LocalDate.now());
@@ -305,31 +302,29 @@ public class ShiftWorkforceService {
                     BigDecimal.valueOf(208));
         }
 
-        Optional<SalaryConfig> salaryConfig = salaryConfigRepository.findActiveConfigByUserId(userId, LocalDateTime.now());
-        if (salaryConfig.isEmpty()) {
-            salaryConfig = salaryConfigRepository.findFirstByUserIdOrderByEffectiveFromDesc(userId);
-        }
-
-        if (salaryConfig.isPresent()) {
-            SalaryConfig config = salaryConfig.get();
-            SalaryType salaryType = Optional.ofNullable(config.getSalaryType()).orElse(SalaryType.MONTHLY);
-            BigDecimal baseSalary = Optional.ofNullable(config.getBaseSalary()).orElse(BigDecimal.ZERO);
-            BigDecimal workingHoursPerMonth = Optional.ofNullable(config.getWorkingHoursPerMonth())
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            SalaryType salaryType = Optional.ofNullable(user.getSalaryType()).orElse(SalaryType.MONTHLY);
+            BigDecimal baseSalary = Optional.ofNullable(user.getBaseSalary()).orElse(BigDecimal.ZERO);
+            BigDecimal workingHoursPerMonth = Optional.ofNullable(user.getWorkingHoursPerMonth())
                     .filter(hours -> hours.compareTo(BigDecimal.ZERO) > 0)
                     .orElse(BigDecimal.valueOf(208));
-            BigDecimal hourlyRate = Optional.ofNullable(config.getHourlyRate()).orElse(BigDecimal.ZERO);
+            BigDecimal hourlyRate = Optional.ofNullable(user.getHourlyRate()).orElse(BigDecimal.ZERO);
 
             if (hourlyRate.compareTo(BigDecimal.ZERO) <= 0 && baseSalary.compareTo(BigDecimal.ZERO) > 0) {
                 hourlyRate = baseSalary.divide(workingHoursPerMonth, 2, RoundingMode.HALF_UP);
             }
 
-            return new SalaryProfile(
-                    salaryType,
-                    baseSalary,
-                    hourlyRate.compareTo(BigDecimal.ZERO) > 0 ? hourlyRate : BigDecimal.valueOf(30000),
-                    config.getMinRequiredShifts(),
-                    config.isCountLateAsPresent(),
-                    workingHoursPerMonth);
+            if (baseSalary.compareTo(BigDecimal.ZERO) > 0 || hourlyRate.compareTo(BigDecimal.ZERO) > 0) {
+                return new SalaryProfile(
+                        salaryType,
+                        baseSalary,
+                        hourlyRate.compareTo(BigDecimal.ZERO) > 0 ? hourlyRate : BigDecimal.valueOf(30000),
+                        user.getMinRequiredShifts(),
+                        Optional.ofNullable(user.getCountLateAsPresent()).orElse(true),
+                        workingHoursPerMonth);
+            }
         }
 
         return new SalaryProfile(

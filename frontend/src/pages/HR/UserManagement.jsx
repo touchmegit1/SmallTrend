@@ -21,7 +21,13 @@ const UserManagement = () => {
         phone: '',
         address: '',
         roleId: 2,
-        status: 'active'
+        status: 'active',
+        salaryType: 'MONTHLY',
+        baseSalary: '',
+        hourlyRate: '',
+        minRequiredShifts: '',
+        countLateAsPresent: true,
+        workingHoursPerMonth: 208
     });
     const [error, setError] = useState('');
     const [validationErrors, setValidationErrors] = useState({});
@@ -100,6 +106,36 @@ const UserManagement = () => {
             errors.phone = 'Số điện thoại phải có 10-11 chữ số';
         }
 
+        const salaryType = String(formData.salaryType || '').toUpperCase();
+        const baseSalary = Number(formData.baseSalary);
+        const hourlyRate = Number(formData.hourlyRate);
+        const minRequiredShifts = Number(formData.minRequiredShifts);
+        const workingHoursPerMonth = Number(formData.workingHoursPerMonth);
+
+        if (!salaryType) {
+            errors.salaryType = 'Vui lòng chọn chế độ lương';
+        }
+
+        if ((salaryType === 'MONTHLY' || salaryType === 'MONTHLY_MIN_SHIFTS')
+            && (formData.baseSalary === '' || Number.isNaN(baseSalary) || baseSalary < 0)) {
+            errors.baseSalary = 'Lương cơ bản phải là số lớn hơn hoặc bằng 0';
+        }
+
+        if ((salaryType === 'HOURLY' || salaryType === 'MONTHLY' || salaryType === 'MONTHLY_MIN_SHIFTS')
+            && (formData.hourlyRate === '' || Number.isNaN(hourlyRate) || hourlyRate < 0)) {
+            errors.hourlyRate = 'Đơn giá giờ phải là số lớn hơn hoặc bằng 0';
+        }
+
+        if ((salaryType === 'MONTHLY' || salaryType === 'MONTHLY_MIN_SHIFTS')
+            && (formData.workingHoursPerMonth === '' || Number.isNaN(workingHoursPerMonth) || workingHoursPerMonth <= 0)) {
+            errors.workingHoursPerMonth = 'Giờ chuẩn/tháng phải lớn hơn 0';
+        }
+
+        if (salaryType === 'MONTHLY_MIN_SHIFTS'
+            && (formData.minRequiredShifts === '' || Number.isNaN(minRequiredShifts) || minRequiredShifts < 0)) {
+            errors.minRequiredShifts = 'Số ca tối thiểu phải là số lớn hơn hoặc bằng 0';
+        }
+
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -116,7 +152,13 @@ const UserManagement = () => {
             phone: user.phone || '',
             address: user.address || '',
             roleId: user.role?.id || 2,
-            status: (user.status || 'active').toLowerCase()
+            status: (user.status || 'active').toLowerCase(),
+            salaryType: user.salaryType || 'MONTHLY',
+            baseSalary: user.baseSalary ?? '',
+            hourlyRate: user.hourlyRate ?? '',
+            minRequiredShifts: user.minRequiredShifts ?? '',
+            countLateAsPresent: user.countLateAsPresent ?? true,
+            workingHoursPerMonth: user.workingHoursPerMonth ?? 208
         });
         setValidationErrors({});
         setError('');
@@ -135,7 +177,13 @@ const UserManagement = () => {
             phone: '',
             address: '',
             roleId: 2,
-            status: 'active'
+            status: 'active',
+            salaryType: 'MONTHLY',
+            baseSalary: '',
+            hourlyRate: '',
+            minRequiredShifts: '',
+            countLateAsPresent: true,
+            workingHoursPerMonth: 208
         });
         setValidationErrors({});
         setError('');
@@ -158,13 +206,19 @@ const UserManagement = () => {
                     phone: formData.phone || undefined,
                     address: formData.address || undefined,
                     roleId: formData.roleId,
-                    status: (formData.status || 'active').toUpperCase()
+                    status: (formData.status || 'active').toUpperCase(),
+                    ...buildSalaryPayload(formData)
                 };
                 await userService.create(payload);
             } else {
                 await userService.update(selectedUser.id, {
-                    ...formData,
-                    status: (formData.status || 'active').toUpperCase()
+                    fullName: formData.fullName,
+                    email: formData.email,
+                    phone: formData.phone || undefined,
+                    address: formData.address || undefined,
+                    roleId: formData.roleId,
+                    status: (formData.status || 'active').toUpperCase(),
+                    ...buildSalaryPayload(formData)
                 });
             }
             setShowModal(false);
@@ -332,6 +386,7 @@ const UserManagement = () => {
                                 {activeTab === 'approved' && (
                                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Trạng thái</th>
                                 )}
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cấu hình lương</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Thao tác</th>
                             </tr>
                         </thead>
@@ -382,6 +437,9 @@ const UserManagement = () => {
                                             />
                                         </td>
                                     )}
+                                    <td className="px-6 py-4 text-sm text-slate-700">
+                                        {summarizeSalary(user)}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div className="flex items-center gap-2">
                                             {activeTab === 'pending' ? (
@@ -591,6 +649,97 @@ const UserManagement = () => {
                                     </div>
                                 </div>
 
+                                <div className="rounded-lg border border-slate-200 p-4 space-y-4">
+                                    <h3 className="text-sm font-semibold text-slate-800">Cấu hình lương nhân viên</h3>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">Chế độ lương</label>
+                                        <CustomSelect
+                                            value={formData.salaryType}
+                                            onChange={(value) => setFormData({ ...formData, salaryType: value })}
+                                            options={[
+                                                { value: 'MONTHLY', label: 'Theo tháng' },
+                                                { value: 'MONTHLY_MIN_SHIFTS', label: 'Theo tháng (đủ số ca)' },
+                                                { value: 'HOURLY', label: 'Theo giờ' },
+                                            ]}
+                                        />
+                                        {validationErrors.salaryType && (
+                                            <p className="text-red-600 text-xs mt-1.5">{validationErrors.salaryType}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-2">Lương cơ bản (VND)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.baseSalary}
+                                                onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
+                                                min="0"
+                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.baseSalary ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                placeholder="7000000"
+                                            />
+                                            {validationErrors.baseSalary && (
+                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.baseSalary}</p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-2">Đơn giá theo giờ (VND)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.hourlyRate}
+                                                onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                                                min="0"
+                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.hourlyRate ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                placeholder="30000"
+                                            />
+                                            {validationErrors.hourlyRate && (
+                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.hourlyRate}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-2">Ca tối thiểu/tháng</label>
+                                            <input
+                                                type="number"
+                                                value={formData.minRequiredShifts}
+                                                onChange={(e) => setFormData({ ...formData, minRequiredShifts: e.target.value })}
+                                                min="0"
+                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.minRequiredShifts ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                placeholder="20"
+                                            />
+                                            {validationErrors.minRequiredShifts && (
+                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.minRequiredShifts}</p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-2">Giờ chuẩn/tháng</label>
+                                            <input
+                                                type="number"
+                                                value={formData.workingHoursPerMonth}
+                                                onChange={(e) => setFormData({ ...formData, workingHoursPerMonth: e.target.value })}
+                                                min="1"
+                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.workingHoursPerMonth ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                placeholder="208"
+                                            />
+                                            {validationErrors.workingHoursPerMonth && (
+                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.workingHoursPerMonth}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={Boolean(formData.countLateAsPresent)}
+                                            onChange={(e) => setFormData({ ...formData, countLateAsPresent: e.target.checked })}
+                                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        Tính đi trễ là có mặt khi xét lương tháng đủ ca
+                                    </label>
+                                </div>
+
                                 {error && (
                                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                                         {error}
@@ -630,5 +779,48 @@ const normalizeUsers = (payload) => {
 };
 
 const normalizeStatus = (status) => String(status || '').toLowerCase();
+
+const toNullableNumber = (value) => {
+    if (value === '' || value === null || value === undefined) {
+        return null;
+    }
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+};
+
+const buildSalaryPayload = (formData) => ({
+    salaryType: String(formData.salaryType || 'MONTHLY').toUpperCase(),
+    baseSalary: toNullableNumber(formData.baseSalary),
+    hourlyRate: toNullableNumber(formData.hourlyRate),
+    minRequiredShifts: toNullableNumber(formData.minRequiredShifts),
+    countLateAsPresent: Boolean(formData.countLateAsPresent),
+    workingHoursPerMonth: toNullableNumber(formData.workingHoursPerMonth)
+});
+
+const formatCurrencyCompact = (value) => {
+    if (value === null || value === undefined || value === '') return '-';
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        maximumFractionDigits: 0
+    }).format(Number(value) || 0);
+};
+
+const formatSalaryMode = (salaryType) => {
+    if (salaryType === 'HOURLY') return 'Theo giờ';
+    if (salaryType === 'MONTHLY_MIN_SHIFTS') return 'Tháng đủ ca';
+    return 'Theo tháng';
+};
+
+const summarizeSalary = (user) => {
+    const mode = formatSalaryMode(user.salaryType);
+    if (user.salaryType === 'HOURLY') {
+        return `${mode}: ${formatCurrencyCompact(user.hourlyRate)}/giờ`;
+    }
+    if (user.salaryType === 'MONTHLY_MIN_SHIFTS') {
+        return `${mode}: ${formatCurrencyCompact(user.baseSalary)} · Tối thiểu ${user.minRequiredShifts ?? 0} ca`;
+    }
+    return `${mode}: ${formatCurrencyCompact(user.baseSalary)}`;
+};
 
 export default UserManagement;

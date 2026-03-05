@@ -44,7 +44,10 @@ public class RegisterRequest {
     private String status;
 
     // Salary-related fields
-    private String salaryType; // "HOURLY" or "MONTHLY"
+    private String salaryType; // "HOURLY", "MONTHLY", "MONTHLY_MIN_SHIFTS"
     private BigDecimal baseSalary;
     private BigDecimal hourlyRate;
+    private Integer minRequiredShifts;
+    private Boolean countLateAsPresent;
+    private BigDecimal workingHoursPerMonth;
 }
