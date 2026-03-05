@@ -2,6 +2,7 @@ package com.smalltrend.service;
 
 import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
+import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.WorkShift;
 import com.smalltrend.entity.WorkShiftAssignment;
@@ -109,6 +110,48 @@ public class WorkShiftAssignmentService {
         assignment.setDeleted(true);
         assignmentRepository.save(assignment);
     }
+
+        public String executeSwap(ShiftSwapExecuteRequest request) {
+                if (request.getRequesterAssignmentId() == null || request.getTargetAssignmentId() == null) {
+                        throw new RuntimeException("Thiếu thông tin phân ca để thực hiện đổi ca");
+                }
+                if (request.getRequesterAssignmentId().equals(request.getTargetAssignmentId())) {
+                        throw new RuntimeException("Hai phân ca đổi không được trùng nhau");
+                }
+
+                WorkShiftAssignment requesterAssignment = assignmentRepository.findByIdAndDeletedFalse(request.getRequesterAssignmentId())
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người yêu cầu"));
+
+                WorkShiftAssignment targetAssignment = assignmentRepository.findByIdAndDeletedFalse(request.getTargetAssignmentId())
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người được đổi"));
+
+                Integer accepterUserId = request.getAccepterUserId();
+                if (accepterUserId == null) {
+                        throw new RuntimeException("Thiếu thông tin người xác nhận đổi ca");
+                }
+
+                if (!targetAssignment.getUser().getId().equals(accepterUserId)) {
+                        throw new RuntimeException("Chỉ nhân viên sở hữu ca đích mới có thể xác nhận đổi ca");
+                }
+
+                User requesterUser = requesterAssignment.getUser();
+                User targetUser = targetAssignment.getUser();
+
+                requesterAssignment.setUser(targetUser);
+                targetAssignment.setUser(requesterUser);
+
+                String requesterOldNote = requesterAssignment.getNotes() == null ? "" : requesterAssignment.getNotes();
+                String targetOldNote = targetAssignment.getNotes() == null ? "" : targetAssignment.getNotes();
+                String swapAuditText = " [SWAP EXECUTED]";
+
+                requesterAssignment.setNotes((requesterOldNote + swapAuditText).trim());
+                targetAssignment.setNotes((targetOldNote + swapAuditText).trim());
+
+                assignmentRepository.save(requesterAssignment);
+                assignmentRepository.save(targetAssignment);
+
+                return "Đổi ca thành công cho cả hai nhân viên";
+        }
 
     private ShiftAssignmentResponse toResponse(WorkShiftAssignment assignment) {
         return ShiftAssignmentResponse.builder()

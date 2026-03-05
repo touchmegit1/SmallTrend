@@ -66,4 +66,8 @@ export const shiftService = {
         });
         return res.data;
     },
+    async executeSwap(payload) {
+        const res = await api.post('/shifts/swap/execute', payload);
+        return res.data;
+    },
 };

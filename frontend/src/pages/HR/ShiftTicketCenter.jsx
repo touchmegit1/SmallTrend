@@ -10,11 +10,12 @@ const defaultForm = {
     ticketMode: 'SWAP',
     assignmentId: '',
     targetUserId: '',
+    targetAssignmentId: '',
     reason: '',
     priority: 'HIGH',
 };
 
-const TicketCard = ({ ticket, canApprove, onApprove, onReject }) => {
+const TicketCard = ({ ticket, canApprove, canAcceptSwap, onApprove, onReject, onAcceptSwap }) => {
     const getPriorityColor = (priority) => {
         const colors = {
             LOW: 'bg-blue-100 text-blue-800',
@@ -59,6 +60,23 @@ const TicketCard = ({ ticket, canApprove, onApprove, onReject }) => {
                 </div>
             </div>
 
+            {canAcceptSwap && ticket.status === 'OPEN' && (
+                <div className="flex gap-2 pt-3 border-t border-slate-200">
+                    <button
+                        onClick={() => onAcceptSwap(ticket)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
+                    >
+                        <Check size={16} /> Đồng ý đổi ca
+                    </button>
+                    <button
+                        onClick={() => onReject(ticket.id)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+                    >
+                        <XCircle size={16} /> Từ chối
+                    </button>
+                </div>
+            )}
+
             {canApprove && ticket.status === 'OPEN' && (
                 <div className="flex gap-2 pt-3 border-t border-slate-200">
                     <button
@@ -97,6 +115,7 @@ const ShiftTicketCenter = () => {
     const [users, setUsers] = useState([]);
     const [myAssignments, setMyAssignments] = useState([]);
     const [myAttendance, setMyAttendance] = useState([]);
+    const [targetAssignments, setTargetAssignments] = useState([]);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [createForm, setCreateForm] = useState(defaultForm);
     const [formErrors, setFormErrors] = useState({});
@@ -129,6 +148,14 @@ const ShiftTicketCenter = () => {
         [myAssignments]
     );
 
+    const targetAssignmentOptions = useMemo(
+        () => targetAssignments.map((assignment) => ({
+            value: String(assignment.id),
+            label: `${assignment.shiftDate} - ${assignment.shift?.shiftName || assignment.shift?.shiftCode || 'Ca làm'}`,
+        })),
+        [targetAssignments]
+    );
+
     const ticketSummary = useMemo(() => {
         const pending = tickets.filter((item) => item.status === 'OPEN' || item.status === 'IN_PROGRESS').length;
         const approved = tickets.filter((item) => item.status === 'RESOLVED').length;
@@ -157,6 +184,26 @@ const ShiftTicketCenter = () => {
     useEffect(() => {
         filterTickets();
     }, [tickets, activeTab, search]);
+
+    useEffect(() => {
+        const loadTargetAssignments = async () => {
+            if (createForm.ticketMode !== 'SWAP' || !createForm.targetUserId || !range.month) {
+                setTargetAssignments([]);
+                return;
+            }
+            try {
+                const data = await shiftService.getAssignments({
+                    startDate: `${range.month}-01`,
+                    endDate: `${range.month}-${getLastDayOfMonth(range.month)}`,
+                    userId: createForm.targetUserId,
+                });
+                setTargetAssignments(Array.isArray(data) ? data : []);
+            } catch (err) {
+                setTargetAssignments([]);
+            }
+        };
+        loadTargetAssignments();
+    }, [createForm.ticketMode, createForm.targetUserId, range.month]);
 
     const loadPageData = async () => {
         try {
@@ -244,7 +291,9 @@ const ShiftTicketCenter = () => {
         if (Object.keys(errors).length > 0) return;
 
         const selectedAssignment = myAssignments.find((item) => String(item.id) === String(createForm.assignmentId));
+        const selectedTargetAssignment = targetAssignments.find((item) => String(item.id) === String(createForm.targetAssignmentId));
         const shiftDate = selectedAssignment?.shiftDate || range.month;
+        const targetShiftDate = selectedTargetAssignment?.shiftDate || range.month;
         const assignedToUserId = createForm.ticketMode === 'SWAP'
             ? Number(createForm.targetUserId)
             : Number(createForm.targetUserId || managerUsers[0]?.id || users[0]?.id);
@@ -257,10 +306,16 @@ const ShiftTicketCenter = () => {
         try {
             setSubmitting(true);
             if (createForm.ticketMode === 'SWAP') {
+                const detailReason = [
+                    createForm.reason,
+                    `[SWAP_REQUESTER_ASSIGNMENT_ID=${createForm.assignmentId}]`,
+                    `[SWAP_TARGET_ASSIGNMENT_ID=${createForm.targetAssignmentId}]`,
+                ].join('\n');
+
                 await shiftTicketService.createShiftSwapTicket({
                     fromDate: shiftDate,
-                    toDate: shiftDate,
-                    reason: createForm.reason,
+                    toDate: targetShiftDate,
+                    reason: detailReason,
                     priority: createForm.priority,
                     relatedEntityId: Number(createForm.assignmentId),
                     assignedToUserId,
@@ -285,11 +340,38 @@ const ShiftTicketCenter = () => {
 
             setShowCreateModal(false);
             setCreateForm(defaultForm);
+            setTargetAssignments([]);
             await loadPageData();
         } catch (err) {
             setError(err.response?.data?.message || 'Không thể tạo ticket đổi ca.');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleAcceptSwap = async (ticket) => {
+        try {
+            const requesterAssignmentId = extractSwapId(ticket.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
+            const targetAssignmentId = extractSwapId(ticket.description, 'SWAP_TARGET_ASSIGNMENT_ID');
+
+            if (!requesterAssignmentId || !targetAssignmentId) {
+                alert('Ticket đổi ca thiếu thông tin ca để thực hiện swap.');
+                return;
+            }
+
+            await shiftService.executeSwap({
+                requesterAssignmentId,
+                targetAssignmentId,
+                accepterUserId: currentUserId,
+                ticketId: ticket.id,
+                note: 'Đổi ca được xác nhận bởi nhân viên nhận đổi',
+            });
+
+            await shiftTicketService.approveTicket(ticket.id, 'Nhân viên nhận đổi đã đồng ý. Hệ thống đã swap ca cho hai người.');
+            await loadPageData();
+            alert('Đã đồng ý đổi ca. Hệ thống đã hoán đổi ca cho cả hai nhân viên.');
+        } catch (err) {
+            alert('Không thể thực hiện đổi ca: ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -360,11 +442,10 @@ const ShiftTicketCenter = () => {
                 <div className="flex gap-4">
                     <button
                         onClick={() => setActiveTab('pending')}
-                        className={`px-4 py-2 font-medium border-b-2 transition ${
-                            activeTab === 'pending'
+                        className={`px-4 py-2 font-medium border-b-2 transition ${activeTab === 'pending'
                                 ? 'border-indigo-600 text-indigo-600'
                                 : 'border-transparent text-slate-600 hover:text-slate-900'
-                        }`}
+                            }`}
                     >
                         <div className="flex items-center gap-2">
                             <Clock size={18} />
@@ -373,11 +454,10 @@ const ShiftTicketCenter = () => {
                     </button>
                     <button
                         onClick={() => setActiveTab('approved')}
-                        className={`px-4 py-2 font-medium border-b-2 transition ${
-                            activeTab === 'approved'
+                        className={`px-4 py-2 font-medium border-b-2 transition ${activeTab === 'approved'
                                 ? 'border-indigo-600 text-indigo-600'
                                 : 'border-transparent text-slate-600 hover:text-slate-900'
-                        }`}
+                            }`}
                     >
                         <div className="flex items-center gap-2">
                             <Check size={18} />
@@ -386,11 +466,10 @@ const ShiftTicketCenter = () => {
                     </button>
                     <button
                         onClick={() => setActiveTab('rejected')}
-                        className={`px-4 py-2 font-medium border-b-2 transition ${
-                            activeTab === 'rejected'
+                        className={`px-4 py-2 font-medium border-b-2 transition ${activeTab === 'rejected'
                                 ? 'border-indigo-600 text-indigo-600'
                                 : 'border-transparent text-slate-600 hover:text-slate-900'
-                        }`}
+                            }`}
                     >
                         <div className="flex items-center gap-2">
                             <XCircle size={18} />
@@ -418,8 +497,12 @@ const ShiftTicketCenter = () => {
                             key={ticket.id}
                             ticket={ticket}
                             canApprove={(isAdmin || isManager) && Number(ticket.assignedToUserId) === Number(currentUserId)}
+                            canAcceptSwap={!(isAdmin || isManager)
+                                && ticket.relatedEntityType === 'SHIFT_SWAP'
+                                && Number(ticket.assignedToUserId) === Number(currentUserId)}
                             onApprove={handleApprove}
                             onReject={handleReject}
+                            onAcceptSwap={handleAcceptSwap}
                         />
                     ))}
                 </div>
@@ -472,7 +555,7 @@ const ShiftTicketCenter = () => {
                                 <div className="mt-1">
                                     <CustomSelect
                                         value={createForm.targetUserId}
-                                        onChange={(value) => setCreateForm((prev) => ({ ...prev, targetUserId: value }))}
+                                        onChange={(value) => setCreateForm((prev) => ({ ...prev, targetUserId: value, targetAssignmentId: '' }))}
                                         options={[
                                             { value: '', label: 'Chọn người xử lý' },
                                             ...(createForm.ticketMode === 'SWAP'
@@ -483,6 +566,20 @@ const ShiftTicketCenter = () => {
                                 </div>
                                 {formErrors.targetUserId && <p className="text-xs text-rose-600 mt-1">{formErrors.targetUserId}</p>}
                             </div>
+
+                            {createForm.ticketMode === 'SWAP' && (
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700">Ca của nhân viên muốn đổi</label>
+                                    <div className="mt-1">
+                                        <CustomSelect
+                                            value={createForm.targetAssignmentId}
+                                            onChange={(value) => setCreateForm((prev) => ({ ...prev, targetAssignmentId: value }))}
+                                            options={[{ value: '', label: 'Chọn ca của người kia' }, ...targetAssignmentOptions]}
+                                        />
+                                    </div>
+                                    {formErrors.targetAssignmentId && <p className="text-xs text-rose-600 mt-1">{formErrors.targetAssignmentId}</p>}
+                                </div>
+                            )}
 
                             <div>
                                 <label className="text-sm font-medium text-slate-700">Mức ưu tiên</label>
@@ -554,10 +651,22 @@ const validateCreateForm = (form) => {
     if (!form.targetUserId) {
         errors.targetUserId = 'Vui lòng chọn người xử lý/đổi ca.';
     }
+    if (form.ticketMode === 'SWAP' && !form.targetAssignmentId) {
+        errors.targetAssignmentId = 'Vui lòng chọn ca làm của nhân viên muốn đổi.';
+    }
     if (!form.reason || form.reason.trim().length < 5) {
         errors.reason = 'Lý do tối thiểu 5 ký tự để người duyệt xử lý nhanh.';
     }
     return errors;
+};
+
+const extractSwapId = (description, key) => {
+    const regex = new RegExp(`\\[${key}=(\\d+)\\]`);
+    const matched = String(description || '').match(regex);
+    if (!matched || !matched[1]) {
+        return null;
+    }
+    return Number(matched[1]);
 };
 
 const calcHours = (timeIn, timeOut) => {

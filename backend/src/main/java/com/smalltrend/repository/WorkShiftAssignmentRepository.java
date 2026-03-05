@@ -6,11 +6,14 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAssignment, Integer> {
 
     boolean existsByWorkShiftIdAndUserIdAndShiftDateAndDeletedFalse(Integer workShiftId, Integer userId, LocalDate shiftDate);
+
+    Optional<WorkShiftAssignment> findByIdAndDeletedFalse(Integer id);
 
     List<WorkShiftAssignment> findByShiftDateBetweenAndDeletedFalse(LocalDate startDate, LocalDate endDate);
 

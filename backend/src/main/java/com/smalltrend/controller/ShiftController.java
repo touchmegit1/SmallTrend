@@ -4,6 +4,7 @@ import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.shift.AttendanceResponse;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
 import com.smalltrend.dto.shift.PayrollSummaryResponse;
+import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
 import com.smalltrend.dto.shift.WorkShiftRequest;
@@ -160,6 +161,13 @@ public class ShiftController {
         }
         assignmentService.deleteAssignment(id);
         return ResponseEntity.ok(new MessageResponse("Assignment deleted"));
+    }
+
+    @PostMapping("/swap/execute")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> executeSwap(@RequestBody ShiftSwapExecuteRequest request) {
+        String message = assignmentService.executeSwap(request);
+        return ResponseEntity.ok(new MessageResponse(message));
     }
 
     @GetMapping("/attendance")
