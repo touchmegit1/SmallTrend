@@ -11,8 +11,8 @@ import ShiftManagement from "./pages/HR/ShiftManagement";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import PayrollManagement from "./pages/HR/PayrollManagement";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
-import ImportInventory from "./pages/Inventory/ImportInventory";
-import CreateImport from "./pages/Inventory/CreateImport";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
 import InventoryCountList from "./pages/Inventory/InventoryCountList";
 import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import LocationManagement from "./pages/Inventory/LocationManagement";
@@ -115,8 +115,18 @@ function App() {
         <Route path="pos/shift-handover" element={<ShiftHandover />} />
         {/* Module 2: Inventory (Kho) */}
         <Route path="inventory" element={<InventoryDashboard />} />
-        <Route path="inventory/import" element={<ImportInventory />} />
-        <Route path="inventory/import/create" element={<CreateImport />} />
+        <Route
+          path="inventory/purchase-orders"
+          element={<PurchaseOrderList />}
+        />
+        <Route
+          path="inventory/purchase-orders/create"
+          element={<CreatePurchaseOrder />}
+        />
+        <Route
+          path="inventory/purchase-orders/:id"
+          element={<CreatePurchaseOrder />}
+        />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
         <Route
           path="inventory/suppliers"

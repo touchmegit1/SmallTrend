@@ -1,13 +1,13 @@
 import React from "react";
 import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useImportList } from "../../hooks/useImportList";
-import ImportRecordsTable from "../../components/inventory/ImportRecordsTable";
+import { usePurchaseOrderList } from "../../hooks/usePurchaseOrderList";
+import PurchaseOrderRecordsTable from "../../components/inventory/PurchaseOrderRecordsTable";
 
-function ImportInventory() {
+function PurchaseOrderList() {
   const navigate = useNavigate();
-  const { suppliers, filteredRecords, loading, searchQuery, setSearchQuery } =
-    useImportList();
+  const { suppliers, filteredOrders, loading, searchQuery, setSearchQuery } =
+    usePurchaseOrderList();
 
   if (loading) {
     return (
@@ -36,7 +36,7 @@ function ImportInventory() {
               </div>
             </div>
             <button
-              onClick={() => navigate("/inventory/import/create")}
+              onClick={() => navigate("/inventory/purchase-orders/create")}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -70,8 +70,8 @@ function ImportInventory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              <ImportRecordsTable
-                records={filteredRecords}
+              <PurchaseOrderRecordsTable
+                records={filteredOrders}
                 suppliers={suppliers}
               />
             </tbody>
@@ -81,7 +81,7 @@ function ImportInventory() {
         <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between">
           <div className="text-sm text-gray-600">
             Hiển thị{" "}
-            <span className="font-medium">{filteredRecords.length}</span> dòng
+            <span className="font-medium">{filteredOrders.length}</span> dòng
           </div>
         </div>
       </div>
@@ -89,4 +89,4 @@ function ImportInventory() {
   );
 }
 
-export default ImportInventory;
+export default PurchaseOrderList;

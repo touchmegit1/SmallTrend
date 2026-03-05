@@ -6,6 +6,10 @@ import {
   getNextPOCode,
   createPurchaseOrder,
   confirmPurchaseOrder,
+  updatePurchaseOrder,
+  confirmExistingOrder,
+  cancelPurchaseOrder as cancelPurchaseOrderApi,
+  deletePurchaseOrder,
 } from "../services/inventoryService";
 import {
   PO_STATUS,
@@ -18,7 +22,7 @@ import {
   canTransitionTo,
 } from "../utils/purchaseOrder";
 
-export function usePurchaseOrder() {
+export function usePurchaseOrder(initialId = null) {
   // ─── Reference Data ────────────────────────────────────
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -39,18 +43,55 @@ export function usePurchaseOrder() {
   useEffect(() => {
     const init = async () => {
       try {
-        const [productsData, suppliersData, locationsData, nextCode] =
-          await Promise.all([
-            getProducts(),
-            getSuppliers(),
-            getLocations(),
-            getNextPOCode(),
-          ]);
-        setProducts(productsData);
-        setSuppliers(suppliersData);
-        setLocations(locationsData.filter((l) => l.status === "ACTIVE" || !l.status));
+        let nextCode = "";
+        let existingOrder = null;
 
-        setOrder((prev) => ({ ...prev, po_number: nextCode }));
+        const promises = [
+          getProducts(),
+          getSuppliers(),
+          getLocations(),
+        ];
+
+        if (initialId) {
+          promises.push(
+            import("../services/inventoryService").then((m) =>
+              m.getPurchaseOrderById(initialId)
+            )
+          );
+        } else {
+          promises.push(getNextPOCode());
+        }
+
+        const results = await Promise.all(promises);
+        
+        setProducts(results[0]);
+        setSuppliers(results[1]);
+        setLocations(results[2].filter((l) => l.status === "ACTIVE" || !l.status));
+
+        if (initialId) {
+          existingOrder = results[3];
+          setOrder(existingOrder);
+          
+          if (existingOrder.items) {
+             const mappedItems = existingOrder.items.map(item => ({
+                ...item,
+                _key: Math.random().toString(36).substr(2, 9),
+                product_id: item.productId || item.product_id,
+                unit_price: item.unitCost || item.unit_cost,
+                total: item.totalCost || item.total_cost,
+                quantity: item.quantity,
+                name: item.name || results[0].find(p => p.id === (item.productId || item.product_id))?.name || "Sản phẩm",
+             }));
+             setItems(mappedItems);
+          }
+          if (existingOrder.supplier_name) {
+             setSupplierQuery(existingOrder.supplier_name);
+          }
+        } else {
+          nextCode = results[3];
+          setOrder((prev) => ({ ...prev, po_number: nextCode }));
+        }
+
       } catch (err) {
         console.error("Init error:", err);
         setError(err.message);
@@ -59,7 +100,7 @@ export function usePurchaseOrder() {
       }
     };
     init();
-  }, []);
+  }, [initialId]);
 
   // ─── Financials (memoized) ─────────────────────────────
   const financials = useMemo(() => {
@@ -195,10 +236,14 @@ export function usePurchaseOrder() {
           items: items,
         };
 
-        await createPurchaseOrder(orderData);
+        if (initialId) {
+          await updatePurchaseOrder(initialId, orderData);
+        } else {
+          await createPurchaseOrder(orderData);
+        }
 
         alert("Đã lưu phiếu tạm thành công!");
-        if (navigate) navigate("/inventory/import");
+        if (navigate) navigate("/inventory/purchase-orders");
         return true;
       } catch (err) {
         console.error("Save draft error:", err);
@@ -236,10 +281,15 @@ export function usePurchaseOrder() {
           items: items,
         };
 
-        await confirmPurchaseOrder(orderData);
+        if (initialId) {
+          await updatePurchaseOrder(initialId, orderData);
+          await confirmExistingOrder(initialId);
+        } else {
+          await confirmPurchaseOrder(orderData);
+        }
 
         alert("Đã xác nhận nhập hàng và cập nhật tồn kho thành công!");
-        if (navigate) navigate("/inventory/import");
+        if (navigate) navigate("/inventory/purchase-orders");
         return true;
       } catch (err) {
         console.error("Confirm error:", err);
@@ -264,12 +314,54 @@ export function usePurchaseOrder() {
         return false;
       }
 
-      // For new unsaved orders, just navigate away
-      alert("Đã hủy phiếu nhập.");
-      if (navigate) navigate("/inventory/import");
-      return true;
+      if (initialId) {
+        setSaving(true);
+        try {
+          await cancelPurchaseOrderApi(initialId);
+          alert("Đã hủy phiếu nhập.");
+          if (navigate) navigate("/inventory/purchase-orders");
+          return true;
+        } catch (err) {
+          alert("Lỗi khi hủy phiếu: " + err.message);
+          return false;
+        } finally {
+          setSaving(false);
+        }
+      } else {
+        alert("Đã hủy phiếu nhập.");
+        if (navigate) navigate("/inventory/purchase-orders");
+        return true;
+      }
     },
     [order.status]
+  );
+
+  // ─── Delete Draft Order ────────────────────────────────
+  const deleteOrder = useCallback(
+    async (navigate) => {
+      if (!initialId) return false;
+      if (order.status !== PO_STATUS.DRAFT) {
+        alert("Chỉ có thể xóa phiếu nháp.");
+        return false;
+      }
+      if (!window.confirm("Bạn có chắc chắn muốn xóa phiếu nhập tạm này không?")) {
+        return false;
+      }
+      setSaving(true);
+      try {
+        await deletePurchaseOrder(initialId);
+        alert("Xóa thành công!");
+        if (navigate) navigate("/inventory/purchase-orders");
+        return true;
+      } catch (err) {
+        console.error("Delete order error", err);
+        alert("Lỗi khi xóa: " + err.message);
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [initialId, order.status]
   );
 
   return {
@@ -310,5 +402,6 @@ export function usePurchaseOrder() {
     saveDraft,
     confirmOrder,
     cancelOrder,
+    deleteOrder,
   };
 }

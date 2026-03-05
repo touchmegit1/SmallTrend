@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { usePurchaseOrder } from "../../hooks/usePurchaseOrder";
 import { PO_STATUS } from "../../utils/purchaseOrder";
 
@@ -11,7 +11,8 @@ import BatchEditorModal from "../../components/inventory/purchase/BatchEditorMod
 import SummaryPanel from "../../components/inventory/purchase/SummaryPanel";
 import ActionButtons from "../../components/inventory/purchase/ActionButtons";
 
-function CreateImport() {
+function CreatePurchaseOrder() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const {
     // Reference data
@@ -49,8 +50,8 @@ function CreateImport() {
     // Actions
     saveDraft,
     confirmOrder,
-    cancelOrder,
-  } = usePurchaseOrder();
+    deleteOrder,
+  } = usePurchaseOrder(id || null);
 
   // ─── Loading State ─────────────────────────────────────
   if (loading) {
@@ -94,7 +95,7 @@ function CreateImport() {
         {/* Header */}
         <PurchaseHeader
           order={order}
-          onBack={() => navigate("/inventory/import")}
+          onBack={() => navigate("/inventory/purchase-orders")}
         />
 
         {/* Search Bar */}
@@ -113,7 +114,7 @@ function CreateImport() {
       </div>
 
       {/* ─── Right Side: Summary + Actions ────────────────── */}
-      <div className="flex flex-col shrink-0">
+      <div className="flex flex-col w-[380px] bg-white border-l border-slate-200 shrink-0 h-full">
         <SummaryPanel
           order={order}
           items={items}
@@ -126,14 +127,16 @@ function CreateImport() {
           selectSupplier={selectSupplier}
           clearSupplier={clearSupplier}
           updateOrder={updateOrder}
+          isEditable={isEditable}
         />
 
         <ActionButtons
           status={order.status}
           saving={saving}
+          isEditMode={!!id}
           onSaveDraft={() => saveDraft(navigate)}
           onConfirm={() => confirmOrder(navigate)}
-          onCancel={() => cancelOrder(navigate)}
+          onDelete={() => deleteOrder(navigate)}
         />
       </div>
 
@@ -149,4 +152,4 @@ function CreateImport() {
   );
 }
 
-export default CreateImport;
+export default CreatePurchaseOrder;

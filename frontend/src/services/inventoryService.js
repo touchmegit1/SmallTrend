@@ -120,6 +120,15 @@ export const cancelPurchaseOrder = async (id) => {
   return response.json();
 };
 
+export const deletePurchaseOrder = async (id) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to delete purchase order");
+  return true;
+};
+
 export const updatePurchaseOrder = async (id, orderData) => {
   const payload = mapOrderToBackend(orderData);
   const response = await fetch(`${SPRING_API}/purchase-orders/${id}`, {

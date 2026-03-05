@@ -191,6 +191,24 @@ public class PurchaseOrderService {
         return toDetailResponse(order);
     }
 
+    // ─── Delete Draft Order ──────────────────────────────────
+    @Transactional
+    public void deleteOrder(Integer orderId) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT) {
+            throw new RuntimeException("Chỉ có thể xóa phiếu ở trạng thái Phiếu tạm.");
+        }
+
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            purchaseOrderItemRepository.deleteAll(order.getItems());
+        }
+        purchaseOrderRepository.delete(order);
+
+        log.info("🗑️ Purchase Order {} DELETED.", order.getOrderNumber());
+    }
+
     // ─── Get All Suppliers ───────────────────────────────────
     public List<SupplierResponse> getAllSuppliers() {
         return supplierRepository.findAll().stream()

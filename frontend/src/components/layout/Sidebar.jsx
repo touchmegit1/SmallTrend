@@ -50,7 +50,7 @@ const Sidebar = () => {
       path: "/inventory",
       children: [
         { label: "Tổng quan kho", path: "/inventory" },
-        { label: "Nhập kho", path: "/inventory/import" },
+        { label: "Nhập kho", path: "/inventory/purchase-orders" },
         { label: "Kiểm kê", path: "/inventory/audit" },
         { label: "Quản lý vị trí", path: "/inventory/locations" },
         { label: "Xuất hủy", path: "/inventory/disposal" },

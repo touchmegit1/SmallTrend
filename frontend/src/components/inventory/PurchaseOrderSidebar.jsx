@@ -1,7 +1,14 @@
 import React from "react";
 import { Save, Eye, Printer, Grid, Check } from "lucide-react";
 
-function ImportSidebar({ importForm, setImportForm, currentProducts, totalAmount, onSave, saving }) {
+function PurchaseOrderSidebar({
+  importForm,
+  setImportForm,
+  currentProducts,
+  totalAmount,
+  onSave,
+  saving,
+}) {
   return (
     <div className="w-[400px] bg-white border-l border-gray-200 flex flex-col">
       <div className="bg-blue-50 px-6 py-4 border-b border-gray-200">
@@ -24,7 +31,9 @@ function ImportSidebar({ importForm, setImportForm, currentProducts, totalAmount
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Tổng tiền hàng</span>
-            <span className="font-semibold text-gray-900">{currentProducts.length}</span>
+            <span className="font-semibold text-gray-900">
+              {currentProducts.length}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Giảm giá</span>
@@ -36,28 +45,38 @@ function ImportSidebar({ importForm, setImportForm, currentProducts, totalAmount
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Cần trả nhà cung cấp</span>
-            <span className="font-semibold text-blue-600">{totalAmount.toLocaleString()}</span>
+            <span className="font-semibold text-blue-600">
+              {totalAmount.toLocaleString()}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="flex-1 p-6 overflow-auto">
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Nhà cung cấp</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Nhà cung cấp
+          </label>
           <input
             type="text"
             value={importForm.supplier_name}
-            onChange={(e) => setImportForm({ ...importForm, supplier_name: e.target.value })}
+            onChange={(e) =>
+              setImportForm({ ...importForm, supplier_name: e.target.value })
+            }
             placeholder="Nhập tên nhà cung cấp"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Ghi chú
+          </label>
           <textarea
             value={importForm.notes}
-            onChange={(e) => setImportForm({ ...importForm, notes: e.target.value })}
+            onChange={(e) =>
+              setImportForm({ ...importForm, notes: e.target.value })
+            }
             placeholder="Ghi chú"
             rows="4"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 resize-none"
@@ -83,7 +102,9 @@ function ImportSidebar({ importForm, setImportForm, currentProducts, totalAmount
         </div>
         <button
           onClick={onSave}
-          disabled={saving || !importForm.supplier_name || currentProducts.length === 0}
+          disabled={
+            saving || !importForm.supplier_name || currentProducts.length === 0
+          }
           className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Check className="w-5 h-5" />
@@ -94,4 +115,4 @@ function ImportSidebar({ importForm, setImportForm, currentProducts, totalAmount
   );
 }
 
-export default ImportSidebar;
+export default PurchaseOrderSidebar;
