@@ -62,188 +62,8 @@ TRUNCATE TABLE brands;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- -----------------------------------------------------------------------------
--- HR/PAYROLL schema guard (đảm bảo seed chạy được cả khi DB local chưa sync cột mới)
--- -----------------------------------------------------------------------------
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'work_shift_assignments'
-          AND COLUMN_NAME = 'is_deleted') = 0,
-    'ALTER TABLE work_shift_assignments ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'salary_configs'
-          AND COLUMN_NAME = 'min_required_shifts') = 0,
-    'ALTER TABLE salary_configs ADD COLUMN min_required_shifts INT NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'salary_configs'
-          AND COLUMN_NAME = 'count_late_as_present') = 0,
-    'ALTER TABLE salary_configs ADD COLUMN count_late_as_present TINYINT(1) NOT NULL DEFAULT 1',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'salary_configs'
-          AND COLUMN_NAME = 'working_hours_per_month') = 0,
-    'ALTER TABLE salary_configs ADD COLUMN working_hours_per_month DECIMAL(6,2) NOT NULL DEFAULT 208.00',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'attendance'
-          AND COLUMN_NAME = 'assignment_id_snapshot') = 0,
-    'ALTER TABLE attendance ADD COLUMN assignment_id_snapshot INT NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'work_shifts'
-          AND COLUMN_NAME = 'effective_from') = 0,
-    'ALTER TABLE work_shifts ADD COLUMN effective_from DATE NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'work_shifts'
-          AND COLUMN_NAME = 'effective_to') = 0,
-    'ALTER TABLE work_shifts ADD COLUMN effective_to DATE NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'attendance'
-          AND COLUMN_NAME = 'shift_id_snapshot') = 0,
-    'ALTER TABLE attendance ADD COLUMN shift_id_snapshot INT NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'attendance'
-          AND COLUMN_NAME = 'shift_name_snapshot') = 0,
-    'ALTER TABLE attendance ADD COLUMN shift_name_snapshot VARCHAR(100) NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'attendance'
-          AND COLUMN_NAME = 'shift_start_snapshot') = 0,
-    'ALTER TABLE attendance ADD COLUMN shift_start_snapshot TIME NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'attendance'
-          AND COLUMN_NAME = 'shift_end_snapshot') = 0,
-    'ALTER TABLE attendance ADD COLUMN shift_end_snapshot TIME NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'attendance'
-          AND COLUMN_NAME = 'shift_working_minutes_snapshot') = 0,
-    'ALTER TABLE attendance ADD COLUMN shift_working_minutes_snapshot INT NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'users'
-          AND COLUMN_NAME = 'salary_type') = 0,
-    'ALTER TABLE users ADD COLUMN salary_type VARCHAR(30) NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'users'
-          AND COLUMN_NAME = 'base_salary') = 0,
-    'ALTER TABLE users ADD COLUMN base_salary DECIMAL(12,2) NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'users'
-          AND COLUMN_NAME = 'hourly_rate') = 0,
-    'ALTER TABLE users ADD COLUMN hourly_rate DECIMAL(8,2) NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'users'
-          AND COLUMN_NAME = 'min_required_shifts') = 0,
-    'ALTER TABLE users ADD COLUMN min_required_shifts INT NULL',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'users'
-          AND COLUMN_NAME = 'count_late_as_present') = 0,
-    'ALTER TABLE users ADD COLUMN count_late_as_present TINYINT(1) NOT NULL DEFAULT 1',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
-
-SET @stmt = IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'users'
-          AND COLUMN_NAME = 'working_hours_per_month') = 0,
-    'ALTER TABLE users ADD COLUMN working_hours_per_month DECIMAL(6,2) NOT NULL DEFAULT 208.00',
-    'SELECT 1'
-);
-PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
+-- Schema phải được quản lý bởi JPA/migration chính thức.
+-- data.sql chỉ chứa dữ liệu seed, không thay đổi cấu trúc bảng.
 
 -- 1. BRANDS & CATEGORIES
 INSERT IGNORE INTO brands (name) VALUES
@@ -312,16 +132,17 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 -- 5. USERS (Employee list with diverse roles and work patterns)
 INSERT INTO users (
     username, password, active, full_name, email, phone, address, status, role_id,
+    avatar_url,
     salary_type, base_salary, hourly_rate, min_required_shifts, count_late_as_present, working_hours_per_month,
     created_at, updated_at
 ) VALUES
-('admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, HCMC', 'ACTIVE', 1, 'MONTHLY', 30000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
-('manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, HCMC', 'ACTIVE', 2, 'MONTHLY', 18000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
-('cashier1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Le Van Cashier', 'cashier1@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3, 'HOURLY', 13500000.00, 75000.00, NULL, TRUE, 208.00, NOW(), NOW()),
-('cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Vo Thi Cashier 2', 'cashier2@smalltrend.com', '0968765432', '321 Ba Trieu, HCMC', 'ACTIVE', 3, 'HOURLY', 13200000.00, 72000.00, NULL, TRUE, 208.00, NOW(), NOW()),
-('inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4, 'MONTHLY', 13000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
-('sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5, 'HOURLY', 12600000.00, 70000.00, NULL, TRUE, 208.00, NOW(), NOW()),
-('sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Sales 2', 'sales2@smalltrend.com', '0987654012', '45 Hai Ba Trung, HCMC', 'ACTIVE', 5, 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 20, TRUE, 208.00, NOW(), NOW())
+('admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, HCMC', 'ACTIVE', 1, 'https://i.pravatar.cc/150?img=12', 'MONTHLY', 30000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
+('manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, HCMC', 'ACTIVE', 2, 'https://i.pravatar.cc/150?img=32', 'MONTHLY', 18000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
+('cashier1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Le Van Cashier', 'cashier1@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3, 'https://i.pravatar.cc/150?img=15', 'HOURLY', 13500000.00, 75000.00, NULL, TRUE, 208.00, NOW(), NOW()),
+('cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Vo Thi Cashier 2', 'cashier2@smalltrend.com', '0968765432', '321 Ba Trieu, HCMC', 'ACTIVE', 3, 'https://i.pravatar.cc/150?img=47', 'HOURLY', 13200000.00, 72000.00, NULL, TRUE, 208.00, NOW(), NOW()),
+('inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4, 'https://i.pravatar.cc/150?img=25', 'MONTHLY', 13000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
+('sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=41', 'HOURLY', 12600000.00, 70000.00, NULL, TRUE, 208.00, NOW(), NOW()),
+('sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Sales 2', 'sales2@smalltrend.com', '0987654012', '45 Hai Ba Trung, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=6', 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 20, TRUE, 208.00, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
 password = VALUES(password),
 active = VALUES(active),
@@ -331,6 +152,7 @@ phone = VALUES(phone),
 address = VALUES(address),
 status = VALUES(status),
 role_id = VALUES(role_id),
+avatar_url = VALUES(avatar_url),
 salary_type = VALUES(salary_type),
 base_salary = VALUES(base_salary),
 hourly_rate = VALUES(hourly_rate),

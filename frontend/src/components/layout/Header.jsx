@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { LogOut, Settings, UserCircle2 } from 'lucide-react';
+import { LogOut, Settings, UserCircle2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../../config/axiosConfig';
 
-const Header = () => {
+const Header = ({ sidebarCollapsed = false, onToggleSidebar }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [showDropdown, setShowDropdown] = useState(false);
@@ -40,7 +40,17 @@ const Header = () => {
         : '';
 
     return (
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 fixed top-0 right-0 left-64 z-40 px-8 flex items-center justify-end shadow-sm">
+        <header className={`h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 fixed top-0 right-0 ${sidebarCollapsed ? 'left-20' : 'left-64'} z-40 px-8 flex items-center justify-between shadow-sm transition-all duration-300`}>
+            <button
+                type="button"
+                onClick={onToggleSidebar}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                title={sidebarCollapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
+            >
+                {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+                <span className="hidden md:inline">{sidebarCollapsed ? 'Mở rộng' : 'Thu gọn'}</span>
+            </button>
+
             <div className="flex items-center gap-6">
 
                 <div className="relative">
