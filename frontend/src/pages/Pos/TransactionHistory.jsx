@@ -14,6 +14,7 @@ function TransactionHistory() {
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
     const loadAndSaveTransactions = async () => {
@@ -121,20 +122,19 @@ function TransactionHistory() {
   };
 
   const deleteTransaction = (transactionId) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa giao dịch này không? Hành động này không thể hoàn tác.")) {
-      const updatedTransactions = transactions.filter(t => t.id !== transactionId);
-      setTransactions(updatedTransactions);
-      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    const updatedTransactions = transactions.filter(t => t.id !== transactionId);
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
 
-      // Đồng thời xoá khỏi danh sách pendingOrders nếu có
-      const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
-      const updatedPendingOrders = pendingOrders.filter(o => o.id !== transactionId);
-      if (pendingOrders.length !== updatedPendingOrders.length) {
-        localStorage.setItem('pendingOrders', JSON.stringify(updatedPendingOrders));
-      }
-
-      setShowActionMenu(null);
+    // Đồng thời xoá khỏi danh sách pendingOrders nếu có
+    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+    const updatedPendingOrders = pendingOrders.filter(o => o.id !== transactionId);
+    if (pendingOrders.length !== updatedPendingOrders.length) {
+      localStorage.setItem('pendingOrders', JSON.stringify(updatedPendingOrders));
     }
+
+    setShowActionMenu(null);
+    setDeleteConfirm(null);
   };
 
   const parseDateTime = (timeStr) => {
@@ -523,7 +523,10 @@ function TransactionHistory() {
                           🖨 In hóa đơn
                         </button>
                         <button
-                          onClick={() => deleteTransaction(item.id)}
+                          onClick={() => {
+                            setDeleteConfirm(item);
+                            setShowActionMenu(null);
+                          }}
                           style={{
                             width: "100%",
                             padding: "8px 12px",
@@ -548,6 +551,84 @@ function TransactionHistory() {
           )}
         </tbody>
       </table>
+
+      {/* Modal xác nhận xóa */}
+      {deleteConfirm && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: "white",
+            borderRadius: "12px",
+            padding: "30px",
+            width: "400px",
+            maxWidth: "90%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            textAlign: "center"
+          }}>
+            <div style={{
+              width: "50px",
+              height: "50px",
+              borderRadius: "50%",
+              background: "#fff3f3",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 15px",
+              fontSize: "24px"
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ margin: "0 0 10px", fontSize: "18px", color: "#333" }}>
+              Xác nhận xóa giao dịch
+            </h3>
+            <p style={{ color: "#666", fontSize: "14px", margin: "0 0 20px" }}>
+              Bạn có chắc chắn muốn xóa giao dịch <strong style={{ color: "#0d6efd" }}>{deleteConfirm.id}</strong> không?<br />
+              Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                style={{
+                  padding: "10px 25px",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd",
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}
+              >
+                Không
+              </button>
+              <button
+                onClick={() => deleteTransaction(deleteConfirm.id)}
+                style={{
+                  padding: "10px 25px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "#dc3545",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showInvoice && (
         <Invoice

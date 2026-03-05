@@ -31,7 +31,7 @@ const Sidebar = () => {
                 { label: 'Lịch sử đơn hàng', path: '/pos/history' },
                 { label: 'Báo cáo doanh thu', path: '/pos/suspended' },
                 { label: 'Giao ca', path: '/pos/shift-handover' },
-                 { label: 'Khiếu nại', path: '/crm/complain' },
+                { label: 'Khiếu nại', path: '/pos/complain' },
             ]
         },
         {
