@@ -10,6 +10,7 @@ import EmployeeList from "./pages/HR/EmployeeList";
 import ShiftManagement from "./pages/HR/ShiftManagement";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import PayrollManagement from "./pages/HR/PayrollManagement";
+import MyPayrollSummary from "./pages/HR/MyPayrollSummary";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import ImportInventory from "./pages/Inventory/ImportInventory";
 import CreateImport from "./pages/Inventory/CreateImport";
@@ -228,8 +229,16 @@ function App() {
         <Route
           path="hr/payroll"
           element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
               <PayrollManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/my-payroll"
+          element={
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <MyPayrollSummary />
             </ProtectedRoute>
           }
         />

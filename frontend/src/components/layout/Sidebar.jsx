@@ -21,6 +21,19 @@ const Sidebar = () => {
         navigate('/login');
     };
 
+    const isAdmin = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
+    const isManager = user && (user.role === 'MANAGER' || user.role === 'ROLE_MANAGER');
+
+    const hrChildren = [
+        { label: 'Danh sách nhân viên', path: '/hr' },
+        { label: 'Phân ca làm việc', path: '/hr/shifts' },
+        { label: 'Chấm công', path: '/hr/attendance' },
+        ...(isAdmin || isManager
+            ? [{ label: 'Tính lương nhân sự', path: '/hr/payroll' }]
+            : []),
+        { label: 'Thông tin lương', path: '/hr/my-payroll' },
+    ];
+
     const navItems = [
         {
             icon: ShoppingCart,
@@ -76,12 +89,7 @@ const Sidebar = () => {
             icon: Clock,
             label: 'Nhân sự & Ca',
             path: '/hr',
-            children: [
-                { label: 'Danh sách nhân viên', path: '/hr' },
-                { label: 'Phân ca làm việc', path: '/hr/shifts' },
-                { label: 'Chấm công', path: '/hr/attendance' },
-                { label: 'Tính lương', path: '/hr/payroll' },
-            ]
+            children: hrChildren
         },
         {
             icon: BarChart3,
@@ -98,9 +106,6 @@ const Sidebar = () => {
             ]
         },
     ];
-
-    // Admin menu - compatible with new DB role naming
-    const isAdmin = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
 
     return (
         <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
