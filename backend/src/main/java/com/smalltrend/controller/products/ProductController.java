@@ -3,10 +3,15 @@ package com.smalltrend.controller.products;
 import com.smalltrend.dto.products.CreateProductRequest;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.dto.products.ProductResponse;
+import com.smalltrend.dto.products.UnitConversionRequest;
+import com.smalltrend.dto.products.UnitConversionResponse;
+import com.smalltrend.dto.products.UnitRequest;
+import com.smalltrend.dto.products.UnitResponse;
 import com.smalltrend.dto.pos.ProductVariantRespone;
-import com.smalltrend.entity.Unit;
 import com.smalltrend.service.products.ProductService;
 import com.smalltrend.service.ProductVariantService;
+import com.smalltrend.service.UnitConversionService;
+import com.smalltrend.service.UnitService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +30,8 @@ public class ProductController {
 
     private final ProductService productService;
     private final ProductVariantService productVariantService;
+    private final UnitConversionService unitConversionService;
+    private final UnitService unitService;
 
     // Lấy danh sách tất cả sản phẩm
     @GetMapping
@@ -82,10 +89,60 @@ public class ProductController {
         return ResponseEntity.ok("Variant deleted");
     }
 
+    // Lấy danh sách quy đổi đơn vị của biến thể
+    @GetMapping("/variants/{variantId}/conversions")
+    public ResponseEntity<List<UnitConversionResponse>> getConversionsByVariantId(@PathVariable Integer variantId) {
+        return ResponseEntity.ok(unitConversionService.getConversionsByVariantId(variantId));
+    }
+
+    // Thêm quy đổi đơn vị mới
+    @PostMapping("/variants/{variantId}/conversions")
+    public ResponseEntity<UnitConversionResponse> addConversion(
+            @PathVariable Integer variantId,
+            @RequestBody UnitConversionRequest request) {
+        return ResponseEntity.ok(unitConversionService.addConversion(variantId, request));
+    }
+
+    // Cập nhật quy đổi đơn vị
+    @PutMapping("/conversions/{conversionId}")
+    public ResponseEntity<UnitConversionResponse> updateConversion(
+            @PathVariable Integer conversionId,
+            @RequestBody UnitConversionRequest request) {
+        return ResponseEntity.ok(unitConversionService.updateConversion(conversionId, request));
+    }
+
+    // Xóa quy đổi đơn vị
+    @DeleteMapping("/conversions/{conversionId}")
+    public ResponseEntity<String> deleteConversion(@PathVariable Integer conversionId) {
+        unitConversionService.deleteConversion(conversionId);
+        return ResponseEntity.ok("Unit conversion deleted");
+    }
+
     // Lấy danh sách tất cả các đơn vị tính có trong hệ thống
     @GetMapping("/units")
-    public ResponseEntity<List<Unit>> getAllUnits() {
-        return ResponseEntity.ok(productVariantService.getAllUnits());
+    public ResponseEntity<List<UnitResponse>> getAllUnits() {
+        return ResponseEntity.ok(unitService.getAllUnits());
+    }
+
+    // Thêm đơn vị tính mới
+    @PostMapping("/units")
+    public ResponseEntity<UnitResponse> createUnit(@RequestBody UnitRequest request) {
+        return ResponseEntity.ok(unitService.createUnit(request));
+    }
+
+    // Cập nhật đơn vị tính
+    @PutMapping("/units/{id}")
+    public ResponseEntity<UnitResponse> updateUnit(
+            @PathVariable Integer id,
+            @RequestBody UnitRequest request) {
+        return ResponseEntity.ok(unitService.updateUnit(id, request));
+    }
+
+    // Xóa đơn vị tính
+    @DeleteMapping("/units/{id}")
+    public ResponseEntity<String> deleteUnit(@PathVariable Integer id) {
+        unitService.deleteUnit(id);
+        return ResponseEntity.ok("Unit deleted");
     }
 
     @PostMapping

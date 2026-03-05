@@ -1,7 +1,9 @@
 package com.smalltrend.dto.pos;
 
+import com.smalltrend.dto.products.UnitConversionResponse;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -24,4 +26,5 @@ public class ProductVariantRespone {
     private BigDecimal taxRate;
     private String taxName;
     private java.time.LocalDateTime createdAt;
+    private List<UnitConversionResponse> unitConversions;
 }
