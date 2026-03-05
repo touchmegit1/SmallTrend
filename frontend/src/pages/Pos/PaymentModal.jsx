@@ -1,8 +1,123 @@
 import { useState, useRef, useEffect } from "react";
 import CustomerSearch from "./CustomerSearch";
+
 import api from "../../config/axiosConfig";
 
+const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
+  const qrUrl = `https://api.vietqr.io/image/970422-0961390486-V0nKzcy.jpg?accountName=NGO%20QUANG%20HUY&amount=${amount}`;
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Prevent triggering parent modal handlers
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onSuccess();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+    // Use capture phase to intercept keydown before PaymentModal
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [onSuccess, onCancel]);
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: "rgba(0,0,0,0.7)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1001 // Higher than PaymentModal
+    }}>
+      <div style={{
+        background: "white",
+        borderRadius: "12px",
+        padding: "30px",
+        width: "90%",
+        maxWidth: "400px",
+        textAlign: "center",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.3)"
+      }}>
+        <h2 style={{ marginTop: 0, marginBottom: "20px", fontSize: "22px", color: "#333" }}>Quét mã QR để thanh toán</h2>
+
+        <div style={{
+          border: "2px solid #007bff",
+          borderRadius: "12px",
+          padding: "15px",
+          marginBottom: "20px",
+          display: "inline-block",
+          background: "#fff"
+        }}>
+          <img
+            src={qrUrl}
+            alt="Mã QR Chuyển khoản"
+            style={{ width: "100%", maxWidth: "300px", height: "auto", display: "block" }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "https://via.placeholder.com/300x300?text=L%E1%BB%97i+t%E1%BA%A3i+QR";
+            }}
+          />
+        </div>
+
+        <div style={{ fontSize: "16px", marginBottom: "8px", color: "#555" }}>
+          Chủ tài khoản: <strong>NGO QUANG HUY</strong>
+        </div>
+        <div style={{ fontSize: "16px", marginBottom: "15px", color: "#555" }}>
+          Số tiền: <strong style={{ color: "#d9534f", fontSize: "24px" }}>{amount.toLocaleString()}đ</strong>
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "20px" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "12px 20px",
+              background: "#6c757d",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "16px",
+              cursor: "pointer",
+              flex: 1,
+              transition: "background 0.2s"
+            }}
+            onMouseOver={(e) => e.target.style.background = "#5a6268"}
+            onMouseOut={(e) => e.target.style.background = "#6c757d"}
+          >
+            Hủy (ESC)
+          </button>
+          <button
+            onClick={onSuccess}
+            style={{
+              padding: "12px 20px",
+              background: "#28a745",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "16px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              flex: 1,
+              transition: "background 0.2s"
+            }}
+            onMouseOver={(e) => e.target.style.background = "#218838"}
+            onMouseOut={(e) => e.target.style.background = "#28a745"}
+          >
+            Hoàn tất (Enter)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 export default function PaymentModal({ cart, customer, onClose, onComplete, shortcuts }) {
+  const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
   const [usePoints, setUsePoints] = useState(false);
   const [voucher, setVoucher] = useState("");
@@ -167,12 +282,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
     ];
   };
 
-  const handlePayment = async () => {
-    if (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)) {
-      alert("Số tiền không đủ!");
-      return;
-    }
-
+  const completePaymentProcess = async (method, receivedAmt, changeAmt) => {
     let customerToUpdate = selectedCustomer;
 
     // Cập nhật điểm trung thành trong bảng customers
@@ -186,7 +296,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
         const newPoints = currentPoints - pointsUsed + earnedPoints;
 
         // Lưu vào cột loyalty_points trong bảng customers
-        await api.put(`/ crm / customers / ${selectedCustomer.id} `, {
+        await api.put(`/crm/customers/${selectedCustomer.id}`, {
           name: selectedCustomer.name,
           phone: selectedCustomer.phone,
           loyaltyPoints: newPoints
@@ -206,13 +316,26 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
       cart,
       customer: customerToUpdate,
       total: finalTotal,
-      customerMoney: paymentMethod === "cash" ? parseFloat(cashAmount) : finalTotal,
-      change: paymentMethod === "cash" ? change : 0,
+      customerMoney: receivedAmt,
+      change: changeAmt,
       pointsDiscount,
       discount,
       notes,
-      paymentMethod: paymentMethod === "cash" ? "Tiền mặt" : "Chuyển khoản"
+      paymentMethod: method === "cash" ? "Tiền mặt" : "Chuyển khoản"
     });
+  };
+
+  const initiatePayment = () => {
+    if (paymentMethod === "cash") {
+      if (!cashAmount || parseFloat(cashAmount) < finalTotal) {
+        alert("Số tiền không đủ!");
+        return;
+      }
+      completePaymentProcess("cash", parseFloat(cashAmount), change);
+    } else {
+      // Chuyển khoản -> mở QR Modal
+      setShowQRModal(true);
+    }
   };
 
   return (
@@ -576,10 +699,32 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
               </div>
             )}
 
+            {/* Chuyển khoản */}
+            {paymentMethod === "transfer" && (
+              <div style={{
+                padding: "20px",
+                background: "#f8f9fa",
+                borderRadius: "8px",
+                marginBottom: "20px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px dashed #007bff"
+              }}>
+                <div style={{ fontSize: "14px", fontWeight: "600", color: "#333", textAlign: "center", marginBottom: "5px" }}>
+                  Phương thức: Chuyển khoản ngân hàng (VietQR)
+                </div>
+                <div style={{ fontSize: "12px", color: "#666", textAlign: "center" }}>
+                  Bấm xác nhận bên dưới, hệ thống sẽ tự động tạo mã chờ thanh toán cho khách hàng quét.
+                </div>
+              </div>
+            )}
+
             {/* Nút thanh toán */}
             <button
               ref={paymentButtonRef}
-              onClick={handlePayment}
+              onClick={initiatePayment}
               onFocus={() => setFocusedField("paymentButton")}
               disabled={!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal))}
               style={{
@@ -604,6 +749,17 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
           </div>
         </div>
       </div>
+
+      {showQRModal && (
+        <QRTransferModal
+          amount={finalTotal}
+          onCancel={() => setShowQRModal(false)}
+          onSuccess={() => {
+            setShowQRModal(false);
+            completePaymentProcess("transfer", finalTotal, 0);
+          }}
+        />
+      )}
     </div>
   );
 }
