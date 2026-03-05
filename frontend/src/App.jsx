@@ -40,6 +40,8 @@ import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
 import CRMreport from "./pages/CRM/report";
 import NotFoundPage from "./pages/Common/NotFoundPage";
+import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
+import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -263,6 +265,24 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
               <MyPayrollSummary />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="account/profile"
+          element={
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <PersonalInfoPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="account/settings"
+          element={
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <AccountSettingsPage />
             </ProtectedRoute>
           }
         />

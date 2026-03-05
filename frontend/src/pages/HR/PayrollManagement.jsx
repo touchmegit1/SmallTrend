@@ -4,7 +4,7 @@ import { userService } from '../../services/userService';
 import { Wallet, Users, Clock3, BadgeDollarSign, Settings, X } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 
-const PayrollManagement = () => {
+const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken = 0 }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [users, setUsers] = useState([]);
@@ -27,8 +27,10 @@ const PayrollManagement = () => {
 
     const [filters, setFilters] = useState(() => {
         const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         return {
-            month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+            fromMonth: currentMonth,
+            toMonth: currentMonth,
             userId: '',
         };
     });
@@ -39,7 +41,19 @@ const PayrollManagement = () => {
 
     useEffect(() => {
         loadPayroll();
-    }, [filters.month, filters.userId]);
+    }, [filters.fromMonth, filters.toMonth, filters.userId, reloadToken]);
+
+    useEffect(() => {
+        if (!sharedRange) {
+            return;
+        }
+
+        setFilters((prev) => ({
+            ...prev,
+            fromMonth: sharedRange.fromMonth || prev.fromMonth,
+            toMonth: sharedRange.toMonth || prev.toMonth,
+        }));
+    }, [sharedRange?.fromMonth, sharedRange?.toMonth]);
 
     const loadUsers = async () => {
         try {
@@ -65,7 +79,8 @@ const PayrollManagement = () => {
         try {
             setLoading(true);
             const params = {
-                month: filters.month,
+                fromMonth: filters.fromMonth,
+                toMonth: filters.toMonth,
             };
 
             if (filters.userId) {
@@ -111,15 +126,17 @@ const PayrollManagement = () => {
 
     return (
         <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
-                        <Wallet size={24} className="text-indigo-600" />
-                        Tính lương
-                    </h1>
-                    <p className="text-sm text-slate-500 mt-1">Tổng hợp lương theo tháng dựa trên phân ca và dữ liệu chấm công.</p>
+            {!embedded && (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+                            <Wallet size={24} className="text-indigo-600" />
+                            Tính lương
+                        </h1>
+                        <p className="text-sm text-slate-500 mt-1">Tổng hợp lương theo khoảng tháng dựa trên phân ca và dữ liệu chấm công.</p>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {error && (
                 <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -127,14 +144,16 @@ const PayrollManagement = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <StatCard title="Nhân viên" value={summary.staffCount} icon={Users} />
-                <StatCard title="Tổng giờ công" value={Number(summary.totalHours || 0).toFixed(1)} icon={Clock3} />
-                <StatCard title="Tổng lương" value={formatCurrency(summary.totalPayroll || 0)} icon={BadgeDollarSign} />
-            </div>
+            {!embedded && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <StatCard title="Nhân viên" value={summary.staffCount} icon={Users} />
+                    <StatCard title="Tổng giờ công" value={Number(summary.totalHours || 0).toFixed(1)} icon={Clock3} />
+                    <StatCard title="Tổng lương" value={formatCurrency(summary.totalPayroll || 0)} icon={BadgeDollarSign} />
+                </div>
+            )}
 
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className={`grid gap-3 ${embedded ? 'md:grid-cols-2' : 'md:grid-cols-4'}`}>
                     <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-600">Tìm kiếm (tên / SĐT)</label>
                         <input
@@ -156,18 +175,37 @@ const PayrollManagement = () => {
                             ]}
                         />
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600">Tháng tính lương</label>
-                        <input
-                            type="month"
-                            value={filters.month}
-                            onChange={(event) => setFilters((prev) => ({ ...prev, month: event.target.value }))}
-                            className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.month ? 'border-rose-400' : 'border-slate-200'}`}
-                        />
-                        {filterErrors.month && <p className="text-xs text-rose-600">{filterErrors.month}</p>}
-                    </div>
+                    {!embedded && (
+                        <>
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-600">Từ tháng</label>
+                                <input
+                                    type="month"
+                                    value={filters.fromMonth}
+                                    onChange={(event) => setFilters((prev) => ({ ...prev, fromMonth: event.target.value }))}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.fromMonth ? 'border-rose-400' : 'border-slate-200'}`}
+                                />
+                                {filterErrors.fromMonth && <p className="text-xs text-rose-600">{filterErrors.fromMonth}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-600">Đến tháng</label>
+                                <input
+                                    type="month"
+                                    value={filters.toMonth}
+                                    onChange={(event) => setFilters((prev) => ({ ...prev, toMonth: event.target.value }))}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.toMonth ? 'border-rose-400' : 'border-slate-200'}`}
+                                />
+                                {filterErrors.toMonth && <p className="text-xs text-rose-600">{filterErrors.toMonth}</p>}
+                            </div>
+                        </>
+                    )}
 
                 </div>
+                {embedded && (
+                    <p className="mt-2 text-xs text-slate-500">
+                        Đang dùng phạm vi tháng từ dashboard phía trên: {filters.fromMonth} → {filters.toMonth}
+                    </p>
+                )}
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -435,8 +473,16 @@ const formatSalaryType = (salaryType) => {
 const validatePayrollFilters = (filters) => {
     const errors = {};
 
-    if (!filters.month) {
-        errors.month = 'Vui lòng chọn tháng tính lương.';
+    if (!filters.fromMonth) {
+        errors.fromMonth = 'Vui lòng chọn tháng bắt đầu.';
+    }
+
+    if (!filters.toMonth) {
+        errors.toMonth = 'Vui lòng chọn tháng kết thúc.';
+    }
+
+    if (filters.fromMonth && filters.toMonth && filters.fromMonth > filters.toMonth) {
+        errors.toMonth = 'Tháng kết thúc phải lớn hơn hoặc bằng tháng bắt đầu.';
     }
 
     return errors;

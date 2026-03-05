@@ -45,6 +45,7 @@ public class User {
 
     private String phone;
     private String address;
+    private String avatarUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "salary_type", length = 30)

@@ -25,4 +25,28 @@ export const userService = {
     const res = await api.delete(`/users/${id}`);
     return res.data;
   },
+  async getMyProfile() {
+    const res = await api.get('/users/me');
+    return res.data;
+  },
+  async changeMyPassword(payload) {
+    const res = await api.patch('/users/me/password', payload);
+    return res.data;
+  },
+  async uploadAvatar(userId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await api.post(`/users/${userId}/avatar`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+  async uploadMyAvatar(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await api.post('/users/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
 };

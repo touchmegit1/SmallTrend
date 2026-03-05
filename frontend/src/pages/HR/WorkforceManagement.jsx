@@ -3,6 +3,7 @@ import { Users, Wallet, Clock } from 'lucide-react';
 import EmployeeList from './EmployeeList';
 import PayrollManagement from './PayrollManagement';
 import AttendanceManagement from './AttendanceManagement';
+import WorkforceDashboardSummary from './WorkforceDashboardSummary';
 import { useAuth } from '../../context/AuthContext';
 
 const WorkforceManagement = ({ defaultTab = 'employees' }) => {
@@ -23,6 +24,18 @@ const WorkforceManagement = ({ defaultTab = 'employees' }) => {
 
     const initialTab = tabs.some((tab) => tab.key === defaultTab) ? defaultTab : 'employees';
     const [activeTab, setActiveTab] = useState(initialTab);
+    const [payrollRefreshToken, setPayrollRefreshToken] = useState(0);
+    const [dashboardFilters, setDashboardFilters] = useState(() => {
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const defaultDueDate = new Date(now.getFullYear(), now.getMonth() + 1, 5);
+        return {
+            date: now.toISOString().slice(0, 10),
+            fromMonth: currentMonth,
+            toMonth: currentMonth,
+            paymentDueDate: defaultDueDate.toISOString().slice(0, 10),
+        };
+    });
 
     if (!canViewPayroll) {
         return null;
@@ -30,8 +43,15 @@ const WorkforceManagement = ({ defaultTab = 'employees' }) => {
 
     return (
         <div className="space-y-4">
-            <div className="sticky top-20 z-20 bg-slate-50/95 backdrop-blur-sm pb-2">
-                <AttendanceManagement viewMode="summary" />
+            <div
+                className="sticky z-20 pb-2"
+                style={{ top: 'calc(var(--app-header-height, 4rem) + 1rem)' }}
+            >
+                <WorkforceDashboardSummary
+                    filters={dashboardFilters}
+                    onFiltersChange={setDashboardFilters}
+                    onPayrollPaid={() => setPayrollRefreshToken((prev) => prev + 1)}
+                />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -56,7 +76,13 @@ const WorkforceManagement = ({ defaultTab = 'employees' }) => {
 
             {activeTab === 'employees' && <EmployeeList />}
             {activeTab === 'attendance' && <AttendanceManagement viewMode="detail" />}
-            {activeTab === 'payroll' && <PayrollManagement />}
+            {activeTab === 'payroll' && (
+                <PayrollManagement
+                    embedded
+                    sharedRange={dashboardFilters}
+                    reloadToken={payrollRefreshToken}
+                />
+            )}
         </div>
     );
 };

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PayrollCalculationRepository extends JpaRepository<PayrollCalculation, Integer> {
@@ -18,4 +19,9 @@ public interface PayrollCalculationRepository extends JpaRepository<PayrollCalcu
             Integer userId,
             LocalDate startDate,
             LocalDate endDate);
+
+    Optional<PayrollCalculation> findByUserIdAndPayPeriodStartAndPayPeriodEnd(
+            Integer userId,
+            LocalDate payPeriodStart,
+            LocalDate payPeriodEnd);
 }

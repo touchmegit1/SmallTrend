@@ -489,7 +489,15 @@ INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, s
 (2, 4, '2026-03-05', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
 (1, 5, '2026-03-05', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
 (3, 6, '2026-03-05', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
-(1, 7, '2026-03-05', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW());
+(1, 7, '2026-03-05', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+
+(1, 1, '2026-03-06', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
+(2, 2, '2026-03-06', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
+(1, 3, '2026-03-06', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-06', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-06', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-06', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-06', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW());
 
 -- 14. CAMPAIGNS
 INSERT IGNORE INTO campaigns (campaign_code, campaign_name, campaign_type, description, start_date, end_date, status, budget, target_revenue, is_public, created_by, created_at, updated_at) VALUES
@@ -703,7 +711,15 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 (4, '2026-03-05', '13:00:00', '22:01:00', 'PRESENT'),
 (5, '2026-03-05', '08:00:00', '17:05:00', 'PRESENT'),
 (6, '2026-03-05', NULL, NULL, 'ABSENT'),
-(7, '2026-03-05', '08:04:00', '17:00:00', 'PRESENT');
+(7, '2026-03-05', '08:04:00', '17:00:00', 'PRESENT'),
+
+(1, '2026-03-06', '08:01:00', '17:02:00', 'PRESENT'),
+(2, '2026-03-06', '13:09:00', '22:00:00', 'LATE'),
+(3, '2026-03-06', '08:00:00', '17:01:00', 'PRESENT'),
+(4, '2026-03-06', '13:00:00', '22:00:00', 'PRESENT'),
+(5, '2026-03-06', '08:06:00', '17:00:00', 'PRESENT'),
+(6, '2026-03-06', NULL, NULL, 'ABSENT'),
+(7, '2026-03-06', '08:03:00', '17:00:00', 'PRESENT');
 
 -- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
 -- Each employee has individual salary setup - Manager can modify base salary for each person

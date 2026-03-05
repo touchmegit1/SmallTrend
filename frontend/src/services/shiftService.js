@@ -53,6 +53,14 @@ export const shiftService = {
         const res = await api.get('/shifts/payroll/summary', { params });
         return res.data;
     },
+    async markPayrollPaid(params = {}) {
+        const res = await api.post('/shifts/payroll/mark-paid', null, { params });
+        return res.data;
+    },
+    async getWorkforceDashboard(params = {}) {
+        const res = await api.get('/shifts/workforce/dashboard', { params });
+        return res.data;
+    },
     async clockIn(payload) {
         // Clock in automatically when user logs in
         const res = await api.post('/shifts/clock-in', {

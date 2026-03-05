@@ -1,6 +1,8 @@
 package com.smalltrend.controller;
 
 import com.smalltrend.dto.common.MessageResponse;
+import com.smalltrend.dto.user.ChangePasswordRequest;
+import com.smalltrend.dto.user.UserProfileDTO;
 import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserStatusRequest;
 import com.smalltrend.dto.user.UserUpdateRequest;
@@ -12,17 +14,20 @@ import com.smalltrend.validation.UserManagementValidator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"})
 public class UserController {
 
     private final UserService userService;
@@ -105,6 +110,52 @@ public class UserController {
 
         User user = userService.getUserById(id);
         return ResponseEntity.ok(UserDTO.fromEntity(user));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> getMyProfile(Authentication authentication) {
+        UserProfileDTO profile = userService.getCurrentUserProfile(authentication.getName());
+        return ResponseEntity.ok(profile);
+    }
+
+    @PatchMapping("/me/password")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> changeMyPassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        try {
+            userService.changeCurrentUserPassword(
+                    authentication.getName(),
+                    request.getCurrentPassword(),
+                    request.getNewPassword(),
+                    request.getConfirmPassword());
+            return ResponseEntity.ok(MessageResponse.builder().message("Đổi mật khẩu thành công").build());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());
+        }
+    }
+
+    @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> uploadUserAvatar(@PathVariable Integer id, @RequestPart("file") MultipartFile file) {
+        try {
+            UserDTO updatedUser = userService.updateUserAvatar(id, file);
+            return ResponseEntity.ok(updatedUser);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());
+        }
+    }
+
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> uploadMyAvatar(Authentication authentication, @RequestPart("file") MultipartFile file) {
+        try {
+            UserProfileDTO profile = userService.updateCurrentUserAvatar(authentication.getName(), file);
+            return ResponseEntity.ok(profile);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());
+        }
     }
 
     /**

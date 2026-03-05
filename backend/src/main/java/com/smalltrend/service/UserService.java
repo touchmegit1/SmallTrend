@@ -2,6 +2,7 @@ package com.smalltrend.service;
 
 import com.smalltrend.dto.auth.AuthResponse;
 import com.smalltrend.dto.auth.RegisterRequest;
+import com.smalltrend.dto.user.UserProfileDTO;
 import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserUpdateRequest;
 import com.smalltrend.entity.Role;
@@ -25,10 +26,18 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -146,6 +155,7 @@ public class UserService implements UserDetailsService {
                 .fullName(savedUser.getFullName())
                 .email(savedUser.getEmail())
                 .role(role.getName())
+                .avatarUrl(savedUser.getAvatarUrl())
                 .build();
     }
 
@@ -164,6 +174,7 @@ public class UserService implements UserDetailsService {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .role(user.getRole() != null ? user.getRole().getName() : "ROLE_USER")
+                .avatarUrl(user.getAvatarUrl())
                 .build();
     }
 
@@ -172,6 +183,10 @@ public class UserService implements UserDetailsService {
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
                 .map(UserCredential::getUser)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+    }
+
+    public UserProfileDTO getCurrentUserProfile(String username) {
+        return UserProfileDTO.fromEntity(getCurrentUser(username));
     }
 
     public List<User> getAllUsers() {
@@ -344,6 +359,75 @@ public class UserService implements UserDetailsService {
         User user = getUserById(id);
         user.setStatus(status != null ? status.toUpperCase() : user.getStatus());
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public void changeCurrentUserPassword(String username, String currentPassword, String newPassword, String confirmPassword) {
+        if (newPassword == null || !newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Xác nhận mật khẩu mới không khớp");
+        }
+
+        User user = getCurrentUser(username);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu hiện tại không đúng");
+        }
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+
+        Optional<UserCredential> credentials = userCredentialsRepository.findByUserId(user.getId());
+        if (credentials.isPresent()) {
+            UserCredential credential = credentials.get();
+            credential.setPasswordHash(encodedPassword);
+            userCredentialsRepository.save(credential);
+        }
+    }
+
+    @Transactional
+    public UserDTO updateUserAvatar(Integer userId, MultipartFile file) {
+        User user = getUserById(userId);
+        user.setAvatarUrl(storeAvatarFile(file));
+        return UserDTO.fromEntity(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserProfileDTO updateCurrentUserAvatar(String username, MultipartFile file) {
+        User user = getCurrentUser(username);
+        user.setAvatarUrl(storeAvatarFile(file));
+        return UserProfileDTO.fromEntity(userRepository.save(user));
+    }
+
+    private String storeAvatarFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ảnh đại diện");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
+            throw new IllegalArgumentException("File tải lên phải là hình ảnh");
+        }
+
+        try {
+            Path uploadPath = Paths.get("uploads/avatars");
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+            }
+
+            String fileName = UUID.randomUUID() + extension;
+            Path targetPath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+            return "/uploads/avatars/" + fileName;
+        } catch (IOException ex) {
+            throw new RuntimeException("Không thể lưu ảnh đại diện", ex);
+        }
     }
 
     private void applySalaryFields(User user,

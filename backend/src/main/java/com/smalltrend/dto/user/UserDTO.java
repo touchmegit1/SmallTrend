@@ -19,6 +19,7 @@ public class UserDTO {
     private String email;
     private String phone;
     private String address;
+    private String avatarUrl;
     private String status;
     private String salaryType;
     private BigDecimal baseSalary;
@@ -61,6 +62,7 @@ public class UserDTO {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .address(user.getAddress())
+                .avatarUrl(user.getAvatarUrl())
                 .status(user.getStatus())
                 .salaryType(user.getSalaryType() != null ? user.getSalaryType().name() : null)
                 .baseSalary(user.getBaseSalary())

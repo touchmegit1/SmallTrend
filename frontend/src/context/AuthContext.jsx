@@ -161,7 +161,9 @@ export const AuthProvider = ({ children }) => {
                 if (token && currentUser) {
                     const isValid = await authService.validateToken();
                     if (isValid) {
-                        setUser(currentUser);
+                        const latestUser = await authService.getMe().catch(() => currentUser);
+                        authService.updateStoredUser(latestUser);
+                        setUser(latestUser);
                         setIsAuthenticated(true);
                     } else {
                         authService.clearAuthData();
@@ -252,12 +254,19 @@ export const AuthProvider = ({ children }) => {
         return () => clearAttendanceTimer();
     }, [isAuthenticated, user]);
 
+    const updateAuthUser = (updates) => {
+        const nextUser = authService.updateStoredUser(updates);
+        setUser(nextUser);
+        return nextUser;
+    };
+
     const value = {
         user,
         isAuthenticated,
         isLoading,
         login,
         logout,
+        updateAuthUser,
     };
 
     if (isLoading) {

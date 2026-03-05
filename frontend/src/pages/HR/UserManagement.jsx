@@ -29,6 +29,7 @@ const UserManagement = () => {
         countLateAsPresent: true,
         workingHoursPerMonth: 208
     });
+    const [avatarFile, setAvatarFile] = useState(null);
     const [error, setError] = useState('');
     const [validationErrors, setValidationErrors] = useState({});
 
@@ -161,6 +162,7 @@ const UserManagement = () => {
             workingHoursPerMonth: user.workingHoursPerMonth ?? 208
         });
         setValidationErrors({});
+        setAvatarFile(null);
         setError('');
         setShowModal(true);
     };
@@ -186,6 +188,7 @@ const UserManagement = () => {
             workingHoursPerMonth: 208
         });
         setValidationErrors({});
+        setAvatarFile(null);
         setError('');
         setShowModal(true);
     };
@@ -209,7 +212,11 @@ const UserManagement = () => {
                     status: (formData.status || 'active').toUpperCase(),
                     ...buildSalaryPayload(formData)
                 };
-                await userService.create(payload);
+                const createdUser = await userService.create(payload);
+                const createdUserId = createdUser?.id || createdUser?.data?.id;
+                if (avatarFile && createdUserId) {
+                    await userService.uploadAvatar(createdUserId, avatarFile);
+                }
             } else {
                 await userService.update(selectedUser.id, {
                     fullName: formData.fullName,
@@ -549,6 +556,20 @@ const UserManagement = () => {
                                             />
                                             {validationErrors.confirmPassword && (
                                                 <p className="text-red-600 text-xs mt-1.5">{validationErrors.confirmPassword}</p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                Ảnh đại diện
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
+                                                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm"
+                                            />
+                                            {avatarFile && (
+                                                <p className="text-xs text-slate-500 mt-1.5">Đã chọn: {avatarFile.name}</p>
                                             )}
                                         </div>
                                     </div>

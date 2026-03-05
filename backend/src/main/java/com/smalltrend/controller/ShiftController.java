@@ -21,8 +21,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.math.BigDecimal;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/shifts")
@@ -194,9 +196,83 @@ public class ShiftController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> payrollSummary(
             @RequestParam(required = false) String month,
+            @RequestParam(required = false) String fromMonth,
+            @RequestParam(required = false) String toMonth,
             @RequestParam(required = false) Integer userId,
             @RequestParam(required = false) BigDecimal hourlyRate) {
-        PayrollSummaryResponse response = workforceService.buildPayrollSummary(month, userId, hourlyRate);
+        PayrollSummaryResponse response = workforceService.buildPayrollSummary(month, fromMonth, toMonth, userId,
+                hourlyRate);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/payroll/mark-paid")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<?> markPayrollAsPaid(
+            @RequestParam String month,
+            @RequestParam(required = false) Integer userId) {
+        String message = workforceService.markPayrollAsPaid(month, userId);
+        return ResponseEntity.ok(new MessageResponse(message));
+    }
+
+    @GetMapping("/workforce/dashboard")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> workforceDashboard(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Integer userId,
+            @RequestParam(required = false) String month,
+            @RequestParam(required = false) String fromMonth,
+            @RequestParam(required = false) String toMonth,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate paymentDueDate) {
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+        List<AttendanceResponse> attendanceRows = workforceService.listAttendance(targetDate, targetDate, targetDate,
+                userId, "ALL");
+
+        int total = attendanceRows.size();
+        int present = (int) attendanceRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
+        int late = (int) attendanceRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
+        int absent = (int) attendanceRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+
+        if (total == 0) {
+            YearMonth startMonth = fromMonth != null && !fromMonth.isBlank()
+                    ? YearMonth.parse(fromMonth)
+                    : (month != null && !month.isBlank() ? YearMonth.parse(month) : YearMonth.now());
+            YearMonth endMonth = toMonth != null && !toMonth.isBlank() ? YearMonth.parse(toMonth) : startMonth;
+
+            List<AttendanceResponse> monthlyRows = workforceService.listAttendance(
+                    startMonth.atDay(1),
+                    startMonth.atDay(1),
+                    endMonth.atEndOfMonth(),
+                    userId,
+                    "ALL");
+
+            if (!monthlyRows.isEmpty()) {
+                total = monthlyRows.size();
+                present = (int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
+                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
+                absent = (int) monthlyRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+            }
+        }
+
+        PayrollSummaryResponse payroll = workforceService.buildPayrollSummary(month, fromMonth, toMonth, userId, null);
+        Map<String, Object> paymentStatus = workforceService.buildPayrollPaymentStatus(
+                month,
+                fromMonth,
+                toMonth,
+                paymentDueDate,
+                userId);
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "date", targetDate,
+                "attendance", java.util.Map.of(
+                        "total", total,
+                        "present", present,
+                        "late", late,
+                        "absent", absent),
+                "payroll", java.util.Map.of(
+                        "staffCount", payroll.getStaffCount(),
+                        "totalHours", payroll.getTotalHours(),
+                        "totalPayroll", payroll.getTotalPayroll(),
+                        "month", payroll.getMonth()),
+                "paymentStatus", paymentStatus));
     }
 }

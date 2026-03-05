@@ -4,11 +4,13 @@ import com.smalltrend.dto.shift.AttendanceResponse;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
 import com.smalltrend.dto.shift.PayrollSummaryResponse;
 import com.smalltrend.entity.Attendance;
+import com.smalltrend.entity.PayrollCalculation;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.WorkShift;
 import com.smalltrend.entity.WorkShiftAssignment;
 import com.smalltrend.entity.enums.SalaryType;
 import com.smalltrend.repository.AttendanceRepository;
+import com.smalltrend.repository.PayrollCalculationRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,12 +22,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +40,7 @@ public class ShiftWorkforceService {
     private final AttendanceRepository attendanceRepository;
     private final WorkShiftAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
+    private final PayrollCalculationRepository payrollCalculationRepository;
 
     public List<AttendanceResponse> listAttendance(LocalDate date, LocalDate startDate, LocalDate endDate, Integer userId, String status) {
         LocalDate targetDate = Optional.ofNullable(date).orElse(LocalDate.now());
@@ -62,15 +68,16 @@ public class ShiftWorkforceService {
 
         List<AttendanceResponse> rows = new ArrayList<>();
 
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+
         for (WorkShiftAssignment assignment : assignments) {
             User user = assignment.getUser();
             WorkShift shift = assignment.getWorkShift();
             LocalDate shiftDate = assignment.getShiftDate();
 
             Attendance attendance = attendanceMap.get(key(user.getId(), shiftDate));
-            String attendanceStatus = attendance != null && attendance.getStatus() != null
-                    ? attendance.getStatus()
-                    : "PENDING";
+            String attendanceStatus = resolveAttendanceStatus(attendance, assignment, today, now);
 
             if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) {
                 if (!attendanceStatus.equalsIgnoreCase(status.trim())) {
@@ -161,13 +168,34 @@ public class ShiftWorkforceService {
                 .build();
     }
 
-    public PayrollSummaryResponse buildPayrollSummary(String month, Integer userId, BigDecimal hourlyRateOverride) {
-        YearMonth targetMonth = month != null && !month.isBlank()
-                ? YearMonth.parse(month)
-                : YearMonth.now();
+    public PayrollSummaryResponse buildPayrollSummary(String month,
+            String fromMonth,
+            String toMonth,
+            Integer userId,
+            BigDecimal hourlyRateOverride) {
+        YearMonth startMonth;
+        YearMonth endMonth;
 
-        LocalDate startDate = targetMonth.atDay(1);
-        LocalDate endDate = targetMonth.atEndOfMonth();
+        if (fromMonth != null && !fromMonth.isBlank()) {
+            startMonth = YearMonth.parse(fromMonth);
+        } else if (month != null && !month.isBlank()) {
+            startMonth = YearMonth.parse(month);
+        } else {
+            startMonth = YearMonth.now();
+        }
+
+        if (toMonth != null && !toMonth.isBlank()) {
+            endMonth = YearMonth.parse(toMonth);
+        } else {
+            endMonth = startMonth;
+        }
+
+        if (startMonth.isAfter(endMonth)) {
+            throw new RuntimeException("fromMonth must be before or equal to toMonth");
+        }
+
+        LocalDate startDate = startMonth.atDay(1);
+        LocalDate endDate = endMonth.atEndOfMonth();
 
         List<WorkShiftAssignment> assignments = userId != null
                 ? assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, startDate, endDate)
@@ -184,7 +212,27 @@ public class ShiftWorkforceService {
                         (first, second) -> second
                 ));
 
+        List<PayrollCalculation> paidPayrolls = userId != null
+                ? payrollCalculationRepository.findByUserIdAndPayPeriodStartGreaterThanEqualAndPayPeriodEndLessThanEqual(
+                        userId,
+                        startDate,
+                        endDate)
+                : payrollCalculationRepository.findByPayPeriodStartGreaterThanEqualAndPayPeriodEndLessThanEqual(
+                        startDate,
+                        endDate);
+
+        Map<String, Boolean> paidMonthMap = paidPayrolls.stream()
+                .filter(item -> "PAID".equalsIgnoreCase(Optional.ofNullable(item.getStatus()).orElse("")))
+                .filter(item -> item.getUser() != null && item.getUser().getId() != null)
+                .filter(item -> item.getPayPeriodStart() != null)
+                .collect(Collectors.toMap(
+                        item -> key(item.getUser().getId(), item.getPayPeriodStart()),
+                        item -> true,
+                        (first, second) -> first));
+
         Map<Integer, PayrollAccumulator> accumulators = new HashMap<>();
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
 
         for (WorkShiftAssignment assignment : assignments) {
             User user = assignment.getUser();
@@ -192,11 +240,15 @@ public class ShiftWorkforceService {
                 continue;
             }
 
+            if (Boolean.TRUE.equals(paidMonthMap.get(key(user.getId(), assignment.getShiftDate().withDayOfMonth(1))))) {
+                continue;
+            }
+
             PayrollAccumulator acc = accumulators.computeIfAbsent(user.getId(), ignored -> new PayrollAccumulator(user));
             acc.totalShifts += 1;
 
             Attendance attendance = attendanceMap.get(key(user.getId(), assignment.getShiftDate()));
-            String attendanceStatus = attendance != null ? normalizeStatus(attendance.getStatus()) : "PENDING";
+            String attendanceStatus = resolveAttendanceStatus(attendance, assignment, today, now);
 
             if ("ABSENT".equals(attendanceStatus)) {
                 acc.absentShifts += 1;
@@ -234,12 +286,160 @@ public class ShiftWorkforceService {
                 .setScale(2, RoundingMode.HALF_UP);
 
         return PayrollSummaryResponse.builder()
-                .month(targetMonth.toString())
+                .month(startMonth.equals(endMonth)
+                        ? startMonth.toString()
+                        : startMonth + "~" + endMonth)
                 .staffCount(rows.size())
                 .totalHours(totalHours)
                 .totalPayroll(totalPayroll)
                 .rows(rows)
                 .build();
+    }
+
+    public String markPayrollAsPaid(String month, Integer userId) {
+        if (month == null || month.isBlank()) {
+            throw new RuntimeException("Month is required");
+        }
+
+        YearMonth targetMonth = YearMonth.parse(month);
+        LocalDate periodStart = targetMonth.atDay(1);
+        LocalDate periodEnd = targetMonth.atEndOfMonth();
+
+        List<WorkShiftAssignment> assignments = userId != null
+                ? assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, periodStart, periodEnd)
+                : assignmentRepository.findByShiftDateBetweenAndDeletedFalse(periodStart, periodEnd);
+
+        Map<Integer, User> assignmentUsers = assignments.stream()
+                .map(WorkShiftAssignment::getUser)
+                .filter(user -> user != null && user.getId() != null)
+                .collect(Collectors.toMap(User::getId, user -> user, (first, second) -> first));
+
+        if (assignmentUsers.isEmpty()) {
+            return "Không có dữ liệu phân ca để xác nhận thanh toán tháng " + month;
+        }
+
+        PayrollSummaryResponse snapshot = buildPayrollSummary(month, null, null, userId, null);
+        Map<Integer, PayrollSummaryResponse.Row> rowMap = snapshot.getRows().stream()
+                .collect(Collectors.toMap(PayrollSummaryResponse.Row::getUserId, row -> row, (first, second) -> first));
+
+        LocalDateTime now = LocalDateTime.now();
+        int updated = 0;
+
+        for (User user : assignmentUsers.values()) {
+            PayrollCalculation calculation = payrollCalculationRepository
+                    .findByUserIdAndPayPeriodStartAndPayPeriodEnd(user.getId(), periodStart, periodEnd)
+                    .orElseGet(() -> PayrollCalculation.builder()
+                    .user(user)
+                    .payPeriodStart(periodStart)
+                    .payPeriodEnd(periodEnd)
+                    .paymentCycle("MONTHLY")
+                    .build());
+
+            PayrollSummaryResponse.Row row = rowMap.get(user.getId());
+
+            calculation.setUser(user);
+            calculation.setPayPeriodStart(periodStart);
+            calculation.setPayPeriodEnd(periodEnd);
+            calculation.setPaymentCycle("MONTHLY");
+            calculation.setStatus("PAID");
+            calculation.setPaidAt(now);
+            calculation.setCalculatedAt(now);
+            calculation.setBasePay(row != null ? row.getGrossPay() : BigDecimal.ZERO);
+            calculation.setTotalDeductions(row != null ? row.getDeductions() : BigDecimal.ZERO);
+            calculation.setNetPay(row != null ? row.getNetPay() : BigDecimal.ZERO);
+
+            payrollCalculationRepository.save(calculation);
+            updated += 1;
+        }
+
+        return "Đã xác nhận thanh toán lương tháng " + month + " cho " + updated + " nhân viên";
+    }
+
+    public Map<String, Object> buildPayrollPaymentStatus(
+            String month,
+            String fromMonth,
+            String toMonth,
+            LocalDate paymentDueDate,
+            Integer userId) {
+        YearMonth startMonth;
+        YearMonth endMonth;
+
+        if (fromMonth != null && !fromMonth.isBlank()) {
+            startMonth = YearMonth.parse(fromMonth);
+        } else if (month != null && !month.isBlank()) {
+            startMonth = YearMonth.parse(month);
+        } else {
+            startMonth = YearMonth.now();
+        }
+
+        if (toMonth != null && !toMonth.isBlank()) {
+            endMonth = YearMonth.parse(toMonth);
+        } else {
+            endMonth = startMonth;
+        }
+
+        if (!startMonth.equals(endMonth)) {
+            return Map.of(
+                    "month", startMonth + "~" + endMonth,
+                    "isPaid", false,
+                    "overdueDays", 0,
+                    "message", "Chỉ áp dụng chốt thanh toán khi chọn đúng 1 tháng",
+                    "supported", false);
+        }
+
+        LocalDate periodStart = startMonth.atDay(1);
+        LocalDate periodEnd = startMonth.atEndOfMonth();
+        LocalDate dueDate = paymentDueDate != null ? paymentDueDate : periodEnd.plusDays(5);
+
+        List<WorkShiftAssignment> assignments = userId != null
+                ? assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, periodStart, periodEnd)
+                : assignmentRepository.findByShiftDateBetweenAndDeletedFalse(periodStart, periodEnd);
+
+        Set<Integer> assignedUserIds = assignments.stream()
+                .map(WorkShiftAssignment::getUser)
+                .filter(user -> user != null && user.getId() != null)
+                .map(User::getId)
+                .collect(Collectors.toSet());
+
+        List<PayrollCalculation> calculations = userId != null
+                ? payrollCalculationRepository.findByUserIdAndPayPeriodStartGreaterThanEqualAndPayPeriodEndLessThanEqual(
+                        userId,
+                        periodStart,
+                        periodEnd)
+                : payrollCalculationRepository.findByPayPeriodStartGreaterThanEqualAndPayPeriodEndLessThanEqual(
+                        periodStart,
+                        periodEnd);
+
+        Set<Integer> paidUserIds = calculations.stream()
+                .filter(item -> "PAID".equalsIgnoreCase(Optional.ofNullable(item.getStatus()).orElse("")))
+                .map(PayrollCalculation::getUser)
+                .filter(user -> user != null && user.getId() != null)
+                .map(User::getId)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        boolean hasAssignments = !assignedUserIds.isEmpty();
+        boolean isPaid = hasAssignments && paidUserIds.containsAll(assignedUserIds);
+
+        int overdueDays = 0;
+        if (!isPaid && LocalDate.now().isAfter(dueDate)) {
+            overdueDays = (int) ChronoUnit.DAYS.between(dueDate, LocalDate.now());
+        }
+
+        int paidCount = (int) assignedUserIds.stream().filter(paidUserIds::contains).count();
+        int remainingCount = Math.max(0, assignedUserIds.size() - paidCount);
+
+        return Map.of(
+                "month", startMonth.toString(),
+                "dueDate", dueDate,
+                "isPaid", isPaid,
+                "overdueDays", overdueDays,
+                "assignedStaff", assignedUserIds.size(),
+                "paidStaff", paidCount,
+                "remainingStaff", remainingCount,
+                "supported", true,
+                "message", !hasAssignments
+                        ? "Không có phân ca trong tháng này"
+                        : (isPaid ? "Đã thanh toán lương tháng" : "Chưa thanh toán lương tháng"));
     }
 
     private PayrollSummaryResponse.Row toPayrollRow(PayrollAccumulator acc, BigDecimal hourlyRateOverride) {
@@ -412,6 +612,55 @@ public class ShiftWorkforceService {
             return "PENDING";
         }
         return status.trim().toUpperCase();
+    }
+
+    private String resolveAttendanceStatus(Attendance attendance,
+            WorkShiftAssignment assignment,
+            LocalDate today,
+            LocalTime now) {
+        if (attendance != null) {
+            String normalizedStatus = normalizeStatus(attendance.getStatus());
+            if (!"PENDING".equals(normalizedStatus)) {
+                return normalizedStatus;
+            }
+
+            if (hasShiftEndedWithoutCheckIn(attendance.getTimeIn(), assignment, today, now)) {
+                return "ABSENT";
+            }
+
+            return "PENDING";
+        }
+
+        if (hasShiftEndedWithoutCheckIn(null, assignment, today, now)) {
+            return "ABSENT";
+        }
+
+        return "PENDING";
+    }
+
+    private boolean hasShiftEndedWithoutCheckIn(LocalTime checkIn,
+            WorkShiftAssignment assignment,
+            LocalDate today,
+            LocalTime now) {
+        if (checkIn != null || assignment == null || assignment.getShiftDate() == null) {
+            return false;
+        }
+
+        LocalDate shiftDate = assignment.getShiftDate();
+        if (shiftDate.isBefore(today)) {
+            return true;
+        }
+
+        if (!shiftDate.isEqual(today)) {
+            return false;
+        }
+
+        WorkShift shift = assignment.getWorkShift();
+        if (shift == null || shift.getEndTime() == null) {
+            return false;
+        }
+
+        return !now.isBefore(shift.getEndTime());
     }
 
     private static class PayrollAccumulator {
