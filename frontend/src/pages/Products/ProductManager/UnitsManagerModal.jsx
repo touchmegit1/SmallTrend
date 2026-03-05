@@ -15,9 +15,7 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
         code: "",
         name: "",
         materialType: "Khác",
-        symbol: "",
-        defaultSellPrice: "",
-        defaultCostPrice: ""
+        symbol: ""
     });
 
     const [actionLoading, setActionLoading] = useState(false);
@@ -45,9 +43,7 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
             code: "",
             name: "",
             materialType: "Khác",
-            symbol: "",
-            defaultSellPrice: "",
-            defaultCostPrice: ""
+            symbol: ""
         });
         setIsAdding(false);
         setEditingId(null);
@@ -59,9 +55,7 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
             code: unit.code,
             name: unit.name,
             materialType: unit.materialType || "Khác",
-            symbol: unit.symbol || "",
-            defaultSellPrice: unit.defaultSellPrice || "",
-            defaultCostPrice: unit.defaultCostPrice || ""
+            symbol: unit.symbol || ""
         });
         setEditingId(unit.id);
         setIsAdding(false);
@@ -99,9 +93,7 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
                 code: formData.code,
                 name: formData.name,
                 materialType: formData.materialType,
-                symbol: formData.symbol,
-                defaultSellPrice: formData.defaultSellPrice ? parseFloat(formData.defaultSellPrice) : null,
-                defaultCostPrice: formData.defaultCostPrice ? parseFloat(formData.defaultCostPrice) : null
+                symbol: formData.symbol
             };
 
             if (editingId) {
@@ -223,26 +215,7 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
                                         <option value="Khác">Khác</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <Label>Giá nhập mặc định</Label>
-                                    <Input
-                                        type="number"
-                                        value={formData.defaultCostPrice}
-                                        onChange={e => setFormData({ ...formData, defaultCostPrice: e.target.value })}
-                                        placeholder="VD: 5000"
-                                        className="mt-1 bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <Label>Giá bán mặc định</Label>
-                                    <Input
-                                        type="number"
-                                        value={formData.defaultSellPrice}
-                                        onChange={e => setFormData({ ...formData, defaultSellPrice: e.target.value })}
-                                        placeholder="VD: 10000"
-                                        className="mt-1 bg-white"
-                                    />
-                                </div>
+
                             </div>
 
                             <div className="mt-5 flex justify-end gap-3">

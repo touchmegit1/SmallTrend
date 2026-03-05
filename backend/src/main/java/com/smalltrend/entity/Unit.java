@@ -34,12 +34,6 @@ public class Unit {
     @Column(length = 20)
     private String symbol;
 
-    @Column(name = "default_sell_price", precision = 12, scale = 2)
-    private BigDecimal defaultSellPrice;
-
-    @Column(name = "default_cost_price", precision = 12, scale = 2)
-    private BigDecimal defaultCostPrice;
-
     @OneToMany(mappedBy = "unit")
     @JsonIgnore
     private List<ProductVariant> variants;
