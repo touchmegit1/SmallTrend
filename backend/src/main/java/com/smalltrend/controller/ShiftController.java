@@ -52,8 +52,9 @@ public class ShiftController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> listShifts(
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) String status) {
-        List<WorkShiftResponse> shifts = workShiftService.listShifts(query, status);
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false, defaultValue = "false") boolean includeExpired) {
+        List<WorkShiftResponse> shifts = workShiftService.listShifts(query, status, includeExpired);
         return ResponseEntity.ok(shifts);
     }
 

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Data
@@ -33,6 +34,8 @@ public class WorkShiftRequest {
     private Integer lateClockOutMinutes;
     private Integer gracePeriodMinutes;
     private String status;
+    private LocalDate effectiveFrom;
+    private LocalDate effectiveTo;
     private Boolean requiresApproval;
     private Integer supervisorRoleId;
     private String description;

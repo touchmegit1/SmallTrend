@@ -10,9 +10,7 @@ const defaultForm = {
     ticketMode: 'SWAP',
     assignmentId: '',
     targetUserId: '',
-    targetAssignmentId: '',
     reason: '',
-    priority: 'HIGH',
 };
 
 const TicketCard = ({ ticket, canApprove, canAcceptSwap, onApprove, onReject, onAcceptSwap }) => {
@@ -115,9 +113,15 @@ const ShiftTicketCenter = () => {
     const [users, setUsers] = useState([]);
     const [myAssignments, setMyAssignments] = useState([]);
     const [myAttendance, setMyAttendance] = useState([]);
-    const [targetAssignments, setTargetAssignments] = useState([]);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showAcceptSwapModal, setShowAcceptSwapModal] = useState(false);
     const [createForm, setCreateForm] = useState(defaultForm);
+    const [acceptSwapTicket, setAcceptSwapTicket] = useState(null);
+    const [acceptSwapTargetAssignmentId, setAcceptSwapTargetAssignmentId] = useState('');
+    const [acceptSwapRequesterAssignment, setAcceptSwapRequesterAssignment] = useState(null);
+    const [acceptSwapRequesterLoading, setAcceptSwapRequesterLoading] = useState(false);
+    const [acceptSwapSubmitting, setAcceptSwapSubmitting] = useState(false);
+    const [acceptSwapError, setAcceptSwapError] = useState('');
     const [formErrors, setFormErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
     const [range, setRange] = useState(() => {
@@ -148,13 +152,68 @@ const ShiftTicketCenter = () => {
         [myAssignments]
     );
 
-    const targetAssignmentOptions = useMemo(
-        () => targetAssignments.map((assignment) => ({
-            value: String(assignment.id),
-            label: `${assignment.shiftDate} - ${assignment.shift?.shiftName || assignment.shift?.shiftCode || 'Ca làm'}`,
-        })),
-        [targetAssignments]
+    const acceptSwapRequesterAssignmentId = useMemo(
+        () => extractSwapId(acceptSwapTicket?.description, 'SWAP_REQUESTER_ASSIGNMENT_ID'),
+        [acceptSwapTicket]
     );
+
+    const acceptSwapSuggestedTargetAssignmentId = useMemo(
+        () => extractSwapId(acceptSwapTicket?.description, 'SWAP_TARGET_ASSIGNMENT_ID'),
+        [acceptSwapTicket]
+    );
+
+    const acceptSwapAssignmentOptions = useMemo(
+        () => myAssignments
+            .filter((assignment) => Number(assignment.id) !== Number(acceptSwapRequesterAssignmentId || 0))
+            .map((assignment) => ({
+                value: String(assignment.id),
+                label: `${assignment.shiftDate} - ${assignment.shift?.shiftName || assignment.shift?.shiftCode || 'Ca làm'}`,
+            })),
+        [myAssignments, acceptSwapRequesterAssignmentId]
+    );
+
+    const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+    const attendanceDoneDateSet = useMemo(() => {
+        const doneStatuses = new Set(['PRESENT', 'LATE']);
+        const result = new Set();
+        (myAttendance || []).forEach((item) => {
+            const status = String(item?.status || '').toUpperCase();
+            if (doneStatuses.has(status) && item?.date) {
+                result.add(String(item.date));
+            }
+        });
+        return result;
+    }, [myAttendance]);
+
+    const acceptSwapEligibleAssignmentOptions = useMemo(() => {
+        return acceptSwapAssignmentOptions.filter((option) => {
+            const assignment = myAssignments.find((entry) => String(entry.id) === String(option.value));
+            if (!assignment) {
+                return false;
+            }
+
+            const date = String(assignment.shiftDate || '');
+            if (!date || date < todayIso) {
+                return false;
+            }
+
+            if (attendanceDoneDateSet.has(date)) {
+                return false;
+            }
+
+            const requesterDate = String(acceptSwapRequesterAssignment?.shiftDate || '');
+            const requesterShiftId = acceptSwapRequesterAssignment?.shift?.id;
+            const ownShiftId = assignment?.shift?.id;
+            if (requesterDate && requesterShiftId && ownShiftId
+                && requesterDate === date
+                && Number(requesterShiftId) === Number(ownShiftId)) {
+                return false;
+            }
+
+            return true;
+        });
+    }, [acceptSwapAssignmentOptions, myAssignments, todayIso, attendanceDoneDateSet, acceptSwapRequesterAssignment]);
 
     const ticketSummary = useMemo(() => {
         const pending = tickets.filter((item) => item.status === 'OPEN' || item.status === 'IN_PROGRESS').length;
@@ -185,26 +244,6 @@ const ShiftTicketCenter = () => {
         filterTickets();
     }, [tickets, activeTab, search]);
 
-    useEffect(() => {
-        const loadTargetAssignments = async () => {
-            if (createForm.ticketMode !== 'SWAP' || !createForm.targetUserId || !range.month) {
-                setTargetAssignments([]);
-                return;
-            }
-            try {
-                const data = await shiftService.getAssignments({
-                    startDate: `${range.month}-01`,
-                    endDate: `${range.month}-${getLastDayOfMonth(range.month)}`,
-                    userId: createForm.targetUserId,
-                });
-                setTargetAssignments(Array.isArray(data) ? data : []);
-            } catch (err) {
-                setTargetAssignments([]);
-            }
-        };
-        loadTargetAssignments();
-    }, [createForm.ticketMode, createForm.targetUserId, range.month]);
-
     const loadPageData = async () => {
         try {
             setLoading(true);
@@ -216,7 +255,11 @@ const ShiftTicketCenter = () => {
                     endDate: `${range.month}-${getLastDayOfMonth(range.month)}`,
                     userId: currentUserId,
                 }),
-                shiftService.getAttendance({ userId: currentUserId }),
+                shiftService.getAttendance({
+                    userId: currentUserId,
+                    startDate: `${range.month}-01`,
+                    endDate: `${range.month}-${getLastDayOfMonth(range.month)}`,
+                }),
             ]);
 
             const userPayload = userRes?.content ? userRes.content : userRes;
@@ -291,9 +334,7 @@ const ShiftTicketCenter = () => {
         if (Object.keys(errors).length > 0) return;
 
         const selectedAssignment = myAssignments.find((item) => String(item.id) === String(createForm.assignmentId));
-        const selectedTargetAssignment = targetAssignments.find((item) => String(item.id) === String(createForm.targetAssignmentId));
         const shiftDate = selectedAssignment?.shiftDate || range.month;
-        const targetShiftDate = selectedTargetAssignment?.shiftDate || range.month;
         const assignedToUserId = createForm.ticketMode === 'SWAP'
             ? Number(createForm.targetUserId)
             : Number(createForm.targetUserId || managerUsers[0]?.id || users[0]?.id);
@@ -308,21 +349,19 @@ const ShiftTicketCenter = () => {
             if (createForm.ticketMode === 'SWAP') {
                 await shiftTicketService.createShiftSwapTicket({
                     fromDate: shiftDate,
-                    toDate: targetShiftDate,
+                    toDate: null,
                     reason: createForm.reason,
-                    priority: createForm.priority,
                     requesterUserId: Number(currentUserId),
                     requesterAssignmentId: Number(createForm.assignmentId),
                     targetUserId: Number(createForm.targetUserId),
-                    targetAssignmentId: createForm.targetAssignmentId ? Number(createForm.targetAssignmentId) : null,
-                    swapMode: createForm.targetAssignmentId ? 'DIRECT' : 'TAKE_OVER',
+                    targetAssignmentId: null,
+                    swapMode: 'TAKE_OVER',
                     assignedToUserId,
                 });
             } else if (createForm.ticketMode === 'CANCEL') {
                 await shiftTicketService.createShiftCancelTicket({
                     shiftDate,
                     reason: createForm.reason,
-                    priority: createForm.priority,
                     assignmentId: Number(createForm.assignmentId),
                     assignedToUserId,
                 });
@@ -330,7 +369,6 @@ const ShiftTicketCenter = () => {
                 await shiftTicketService.createShiftUpdateTicket({
                     shiftDate,
                     reason: createForm.reason,
-                    priority: createForm.priority,
                     assignmentId: Number(createForm.assignmentId),
                     assignedToUserId,
                 });
@@ -338,7 +376,6 @@ const ShiftTicketCenter = () => {
 
             setShowCreateModal(false);
             setCreateForm(defaultForm);
-            setTargetAssignments([]);
             await loadPageData();
         } catch (err) {
             setError(err.response?.data?.message || 'Không thể tạo ticket đổi ca.');
@@ -347,54 +384,94 @@ const ShiftTicketCenter = () => {
         }
     };
 
-    const handleAcceptSwap = async (ticket) => {
+    const handleAcceptSwap = (ticket) => {
+        const requesterAssignmentId = extractSwapId(ticket.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
+        if (!requesterAssignmentId) {
+            alert('Ticket đổi ca thiếu thông tin ca của người yêu cầu.');
+            return;
+        }
+
+        const suggestedTargetAssignmentId = extractSwapId(ticket.description, 'SWAP_TARGET_ASSIGNMENT_ID');
+        setAcceptSwapTicket(ticket);
+        setAcceptSwapTargetAssignmentId(suggestedTargetAssignmentId ? String(suggestedTargetAssignmentId) : '');
+        setAcceptSwapRequesterAssignment(null);
+        setAcceptSwapError('');
+        setShowAcceptSwapModal(true);
+
+        (async () => {
+            try {
+                setAcceptSwapRequesterLoading(true);
+                const assignment = await shiftService.getAssignment(requesterAssignmentId);
+                setAcceptSwapRequesterAssignment(assignment || null);
+            } catch (err) {
+                setAcceptSwapRequesterAssignment(null);
+            } finally {
+                setAcceptSwapRequesterLoading(false);
+            }
+        })();
+    };
+
+    useEffect(() => {
+        if (!showAcceptSwapModal) {
+            return;
+        }
+
+        if (!acceptSwapTargetAssignmentId) {
+            return;
+        }
+
+        const exists = acceptSwapEligibleAssignmentOptions.some(
+            (option) => String(option.value) === String(acceptSwapTargetAssignmentId)
+        );
+
+        if (!exists) {
+            setAcceptSwapTargetAssignmentId('');
+        }
+    }, [showAcceptSwapModal, acceptSwapTargetAssignmentId, acceptSwapEligibleAssignmentOptions]);
+
+    const handleConfirmAcceptSwap = async () => {
+        if (!acceptSwapTicket) {
+            return;
+        }
+
+        if (acceptSwapRequesterLoading) {
+            setAcceptSwapError('Đang tải thông tin ca yêu cầu, vui lòng chờ một chút rồi xác nhận lại.');
+            return;
+        }
+
         try {
-            const requesterAssignmentId = extractSwapId(ticket.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
-            const suggestedTargetAssignmentId = extractSwapId(ticket.description, 'SWAP_TARGET_ASSIGNMENT_ID');
+            const requesterAssignmentId = extractSwapId(acceptSwapTicket.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
 
             if (!requesterAssignmentId) {
-                alert('Ticket đổi ca thiếu thông tin ca của người yêu cầu.');
+                setAcceptSwapError('Ticket đổi ca thiếu thông tin ca của người yêu cầu.');
                 return;
             }
 
-            const availableOwnAssignments = myAssignments
-                .filter((assignment) => Number(assignment.id) !== Number(requesterAssignmentId))
-                .map((assignment) => `${assignment.id} - ${assignment.shiftDate} - ${assignment.shift?.shiftName || assignment.shift?.shiftCode || 'Ca làm'}`)
-                .join('\n');
-
-            const promptMessage = [
-                'Nhập ID ca của bạn để đổi 2 chiều.',
-                'Để trống nếu bạn muốn NHẬN CA THAY (không cần đưa ca của bạn).',
-                availableOwnAssignments ? `\nCa của bạn:\n${availableOwnAssignments}` : '\nBạn không có ca phù hợp, hệ thống sẽ xử lý theo mode nhận ca thay.',
-            ].join('\n');
-
-            const inputValue = window.prompt(promptMessage, suggestedTargetAssignmentId ? String(suggestedTargetAssignmentId) : '');
-            if (inputValue === null) {
-                return;
-            }
-
-            const normalized = String(inputValue).trim();
-            const targetAssignmentId = normalized ? Number(normalized) : null;
-
-            if (normalized && Number.isNaN(targetAssignmentId)) {
-                alert('ID ca không hợp lệ.');
-                return;
-            }
+            setAcceptSwapSubmitting(true);
+            const targetAssignmentId = acceptSwapTargetAssignmentId ? Number(acceptSwapTargetAssignmentId) : null;
 
             await shiftService.executeSwap({
                 requesterAssignmentId,
                 targetAssignmentId,
                 accepterUserId: currentUserId,
-                ticketId: ticket.id,
+                ticketId: acceptSwapTicket.id,
                 note: 'Đổi ca được xác nhận bởi nhân viên nhận đổi',
             });
 
             await shiftTicketService.approveTicket(
-                ticket.id,
+                acceptSwapTicket.id,
                 targetAssignmentId
                     ? 'Nhân viên nhận đổi đã đồng ý. Hệ thống đã swap ca hai chiều.'
                     : 'Nhân viên nhận đổi đã đồng ý. Hệ thống đã chuyển ca theo mode nhận ca thay.'
             );
+
+            setShowAcceptSwapModal(false);
+            setAcceptSwapTicket(null);
+            setAcceptSwapTargetAssignmentId('');
+            setAcceptSwapRequesterAssignment(null);
+            setAcceptSwapRequesterLoading(false);
+            setAcceptSwapError('');
+
             await loadPageData();
             alert(
                 targetAssignmentId
@@ -402,7 +479,9 @@ const ShiftTicketCenter = () => {
                     : 'Đã đồng ý nhận ca thay. Hệ thống đã chuyển ca cho bạn.'
             );
         } catch (err) {
-            alert('Không thể thực hiện đổi ca: ' + (err.response?.data?.message || err.message));
+            setAcceptSwapError(err.response?.data?.message || err.message || 'Không thể thực hiện đổi ca.');
+        } finally {
+            setAcceptSwapSubmitting(false);
         }
     };
 
@@ -586,7 +665,7 @@ const ShiftTicketCenter = () => {
                                 <div className="mt-1">
                                     <CustomSelect
                                         value={createForm.targetUserId}
-                                        onChange={(value) => setCreateForm((prev) => ({ ...prev, targetUserId: value, targetAssignmentId: '' }))}
+                                        onChange={(value) => setCreateForm((prev) => ({ ...prev, targetUserId: value }))}
                                         options={[
                                             { value: '', label: 'Chọn người xử lý' },
                                             ...(createForm.ticketMode === 'SWAP'
@@ -596,36 +675,6 @@ const ShiftTicketCenter = () => {
                                     />
                                 </div>
                                 {formErrors.targetUserId && <p className="text-xs text-rose-600 mt-1">{formErrors.targetUserId}</p>}
-                            </div>
-
-                            {createForm.ticketMode === 'SWAP' && (
-                                <div>
-                                    <label className="text-sm font-medium text-slate-700">Ca của nhân viên muốn đổi (không bắt buộc)</label>
-                                    <div className="mt-1">
-                                        <CustomSelect
-                                            value={createForm.targetAssignmentId}
-                                            onChange={(value) => setCreateForm((prev) => ({ ...prev, targetAssignmentId: value }))}
-                                            options={[{ value: '', label: 'Để trống nếu chỉ nhờ nhận ca thay' }, ...targetAssignmentOptions]}
-                                        />
-                                    </div>
-                                    {formErrors.targetAssignmentId && <p className="text-xs text-rose-600 mt-1">{formErrors.targetAssignmentId}</p>}
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="text-sm font-medium text-slate-700">Mức ưu tiên</label>
-                                <div className="mt-1">
-                                    <CustomSelect
-                                        value={createForm.priority}
-                                        onChange={(value) => setCreateForm((prev) => ({ ...prev, priority: value }))}
-                                        options={[
-                                            { value: 'LOW', label: 'Thấp' },
-                                            { value: 'NORMAL', label: 'Bình thường' },
-                                            { value: 'HIGH', label: 'Cao' },
-                                            { value: 'URGENT', label: 'Khẩn cấp' },
-                                        ]}
-                                    />
-                                </div>
                             </div>
 
                             <div>
@@ -657,6 +706,101 @@ const ShiftTicketCenter = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {showAcceptSwapModal && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                    <div className="w-full max-w-lg rounded-xl bg-white border border-slate-200 shadow-xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                            <h3 className="text-lg font-semibold text-slate-900">Xác nhận xử lý đổi ca</h3>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowAcceptSwapModal(false);
+                                    setAcceptSwapTicket(null);
+                                    setAcceptSwapTargetAssignmentId('');
+                                    setAcceptSwapRequesterAssignment(null);
+                                    setAcceptSwapRequesterLoading(false);
+                                    setAcceptSwapError('');
+                                }}
+                                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            {acceptSwapError && (
+                                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                                    {acceptSwapError}
+                                </div>
+                            )}
+
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                <p className="font-medium text-slate-900">{acceptSwapTicket?.title || 'Ticket đổi ca'}</p>
+                                <p className="mt-1 text-xs text-slate-500">{acceptSwapTicket?.ticketCode ? `Mã ticket: ${acceptSwapTicket.ticketCode}` : ''}</p>
+                                {acceptSwapRequesterLoading ? (
+                                    <p className="mt-1 text-xs text-slate-500">Đang tải thông tin ca yêu cầu...</p>
+                                ) : (
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {acceptSwapRequesterAssignment?.shiftDate
+                                            ? `Ca cần xử lý: ${acceptSwapRequesterAssignment.shiftDate} - ${acceptSwapRequesterAssignment?.shift?.shiftName || acceptSwapRequesterAssignment?.shift?.shiftCode || 'Ca làm'}`
+                                            : 'Không tải được chi tiết ca yêu cầu. Hệ thống vẫn sẽ kiểm tra ở backend khi xác nhận.'}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium text-slate-700">Ca của bạn để đổi 2 chiều (không bắt buộc)</label>
+                                <div className="mt-1">
+                                    <CustomSelect
+                                        value={acceptSwapTargetAssignmentId}
+                                        onChange={(value) => setAcceptSwapTargetAssignmentId(value)}
+                                        options={[
+                                            { value: '', label: 'Không chọn: nhận ca thay hộ' },
+                                            ...acceptSwapEligibleAssignmentOptions,
+                                        ]}
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Chọn ca của bạn nếu muốn đổi 2 chiều. Để trống nếu chỉ nhận ca của người kia.
+                                </p>
+                                {acceptSwapEligibleAssignmentOptions.length === 0 && (
+                                    <p className="mt-1 text-xs text-amber-600">
+                                        Hiện không có ca hợp lệ để đổi hai chiều. Bạn vẫn có thể chọn nhận ca thay.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowAcceptSwapModal(false);
+                                        setAcceptSwapTicket(null);
+                                        setAcceptSwapTargetAssignmentId('');
+                                        setAcceptSwapRequesterAssignment(null);
+                                        setAcceptSwapRequesterLoading(false);
+                                        setAcceptSwapError('');
+                                    }}
+                                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmAcceptSwap}
+                                    disabled={acceptSwapSubmitting || acceptSwapRequesterLoading}
+                                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-60"
+                                >
+                                    {acceptSwapRequesterLoading
+                                        ? 'Đang tải dữ liệu...'
+                                        : (acceptSwapSubmitting ? 'Đang xử lý...' : 'Xác nhận')}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

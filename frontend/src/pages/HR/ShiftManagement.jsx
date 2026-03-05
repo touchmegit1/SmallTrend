@@ -25,6 +25,8 @@ const defaultShiftForm = {
     lateClockOutMinutes: '',
     gracePeriodMinutes: '',
     status: 'ACTIVE',
+    effectiveFrom: '',
+    effectiveTo: '',
     requiresApproval: false,
     description: '',
 };
@@ -49,6 +51,7 @@ const ShiftManagement = () => {
 
     const [shiftQuery, setShiftQuery] = useState('');
     const [shiftStatus, setShiftStatus] = useState('all');
+    const [includeExpiredShifts, setIncludeExpiredShifts] = useState(false);
 
     const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
     const [editingShift, setEditingShift] = useState(null);
@@ -74,7 +77,7 @@ const ShiftManagement = () => {
 
     useEffect(() => {
         loadShifts();
-    }, [shiftQuery, shiftStatus]);
+    }, [shiftQuery, shiftStatus, includeExpiredShifts]);
 
     useEffect(() => {
         if (activeTab === 'assignments' || activeTab === 'calendar') {
@@ -87,6 +90,7 @@ const ShiftManagement = () => {
             const params = {};
             if (shiftQuery.trim()) params.query = shiftQuery.trim();
             if (shiftStatus !== 'all') params.status = shiftStatus;
+            if (includeExpiredShifts) params.includeExpired = true;
             const data = await shiftService.getShifts(params);
             setShifts(Array.isArray(data) ? data : []);
             setError('');
@@ -146,6 +150,8 @@ const ShiftManagement = () => {
                 lateClockOutMinutes: shift.lateClockOutMinutes ?? '',
                 gracePeriodMinutes: shift.gracePeriodMinutes ?? '',
                 status: shift.status || 'ACTIVE',
+                effectiveFrom: shift.effectiveFrom ? toDateInput(shift.effectiveFrom) : '',
+                effectiveTo: shift.effectiveTo ? toDateInput(shift.effectiveTo) : '',
                 requiresApproval: !!shift.requiresApproval,
                 description: shift.description || '',
             });
@@ -355,6 +361,14 @@ const ShiftManagement = () => {
                                 { value: 'INACTIVE', label: 'Ngưng hoạt động' },
                             ]}
                         />
+                        <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                            <input
+                                type="checkbox"
+                                checked={includeExpiredShifts}
+                                onChange={(event) => setIncludeExpiredShifts(event.target.checked)}
+                            />
+                            Hiển thị cả ca đã hết hạn
+                        </label>
                     </div>
 
                     <div className="grid gap-4 lg:grid-cols-3">
@@ -380,6 +394,7 @@ const ShiftManagement = () => {
                                     <div>Staff: {shift.minimumStaffRequired ?? '-'} / {shift.maximumStaffAllowed ?? '-'}</div>
                                     <div>Break: {formatTime(shift.breakStartTime)} - {formatTime(shift.breakEndTime)}</div>
                                     <div>Approval: {shift.requiresApproval ? 'Yes' : 'No'}</div>
+                                    <div className="col-span-2">Hiệu lực: {formatDate(shift.effectiveFrom)} - {formatDate(shift.effectiveTo)}</div>
                                 </div>
                                 <div className="mt-4 flex items-center gap-2">
                                     <button
@@ -651,6 +666,26 @@ const ShiftManagement = () => {
                                             { value: 'INACTIVE', label: 'Ngưng hoạt động' },
                                         ]}
                                     />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Hiệu lực từ ngày</label>
+                                    <input
+                                        type="date"
+                                        value={shiftForm.effectiveFrom}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, effectiveFrom: event.target.value })}
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.effectiveFrom ? 'border-rose-400' : 'border-slate-200'}`}
+                                    />
+                                    {shiftFormErrors.effectiveFrom && <p className="text-xs text-rose-600">{shiftFormErrors.effectiveFrom}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Hiệu lực đến ngày</label>
+                                    <input
+                                        type="date"
+                                        value={shiftForm.effectiveTo}
+                                        onChange={(event) => setShiftForm({ ...shiftForm, effectiveTo: event.target.value })}
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.effectiveTo ? 'border-rose-400' : 'border-slate-200'}`}
+                                    />
+                                    {shiftFormErrors.effectiveTo && <p className="text-xs text-rose-600">{shiftFormErrors.effectiveTo}</p>}
                                 </div>
                             </div>
 
@@ -989,7 +1024,7 @@ const formatTime = (value) => {
 };
 
 const formatDate = (value) => {
-    if (!value) return '-';
+    if (!value) return 'Không giới hạn';
     return new Date(value).toLocaleDateString('vi-VN');
 };
 
@@ -1026,6 +1061,8 @@ const buildShiftPayload = (form) => ({
     lateClockOutMinutes: form.lateClockOutMinutes !== '' ? Number(form.lateClockOutMinutes) : null,
     gracePeriodMinutes: form.gracePeriodMinutes !== '' ? Number(form.gracePeriodMinutes) : null,
     status: form.status,
+    effectiveFrom: form.effectiveFrom || null,
+    effectiveTo: form.effectiveTo || null,
     requiresApproval: form.requiresApproval,
     description: form.description || null,
 });
@@ -1051,6 +1088,10 @@ const validateShiftForm = (form) => {
 
     if (form.startTime && form.endTime && form.startTime >= form.endTime) {
         errors.endTime = 'Giờ kết thúc phải sau giờ bắt đầu.';
+    }
+
+    if (form.effectiveFrom && form.effectiveTo && form.effectiveTo < form.effectiveFrom) {
+        errors.effectiveTo = 'Ngày kết thúc hiệu lực phải sau hoặc bằng ngày bắt đầu hiệu lực.';
     }
 
     const minStaff = form.minimumStaffRequired === '' ? null : Number(form.minimumStaffRequired);

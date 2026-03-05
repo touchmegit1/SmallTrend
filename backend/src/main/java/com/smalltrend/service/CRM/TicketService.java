@@ -86,20 +86,20 @@ public class TicketService {
         if (ticketType == TicketType.SHIFT_CHANGE && "SHIFT_SWAP".equalsIgnoreCase(request.getRelatedEntityType())) {
             requesterAssignment = validateShiftSwapTicketRequest(request);
             requesterUser = userRepository.findById(request.getRequesterUserId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên tạo yêu cầu đổi ca"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên tạo yêu cầu đổi ca"));
 
             Integer targetUserId = request.getSwapTargetUserId() != null
-                ? request.getSwapTargetUserId()
-                : request.getAssignedToUserId();
+                    ? request.getSwapTargetUserId()
+                    : request.getAssignedToUserId();
 
             if (targetUserId != null) {
-            targetSwapUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên được đề nghị đổi ca"));
+                targetSwapUser = userRepository.findById(targetUserId)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên được đề nghị đổi ca"));
             }
 
             if (request.getSwapTargetAssignmentId() != null) {
-            targetAssignment = workShiftAssignmentRepository.findByIdAndDeletedFalse(request.getSwapTargetAssignmentId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca phía nhân viên còn lại"));
+                targetAssignment = workShiftAssignmentRepository.findByIdAndDeletedFalse(request.getSwapTargetAssignmentId())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy ca phía nhân viên còn lại"));
             }
         }
 
@@ -107,12 +107,12 @@ public class TicketService {
                 .ticketCode(generateTicketCode(ticketType))
                 .ticketType(ticketType)
                 .title(request.getTitle())
-            .description(buildTicketDescription(request, requesterAssignment, targetAssignment))
+                .description(buildTicketDescription(request, requesterAssignment, targetAssignment))
                 .priority(request.getPriority() != null
                         ? TicketPriority.valueOf(request.getPriority())
                         : TicketPriority.NORMAL)
                 .relatedEntityType(request.getRelatedEntityType())
-            .relatedEntityId(resolveRelatedEntityId(request, requesterAssignment))
+                .relatedEntityId(resolveRelatedEntityId(request, requesterAssignment))
                 .build();
 
         if (requesterUser != null) {
@@ -243,8 +243,8 @@ public class TicketService {
     }
 
     private String buildTicketDescription(CreateTicketRequest request,
-                                          WorkShiftAssignment requesterAssignment,
-                                          WorkShiftAssignment targetAssignment) {
+            WorkShiftAssignment requesterAssignment,
+            WorkShiftAssignment targetAssignment) {
         StringBuilder builder = new StringBuilder();
         if (request.getDescription() != null) {
             builder.append(request.getDescription().trim());
@@ -276,8 +276,8 @@ public class TicketService {
     }
 
     /**
-     * Add quantity back to inventory_stock for the given variant.
-     * Finds the first stock record for the variant and increases its quantity.
+     * Add quantity back to inventory_stock for the given variant. Finds the
+     * first stock record for the variant and increases its quantity.
      */
     private void restockInventory(Integer variantId, Integer quantity) {
         List<InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
@@ -290,7 +290,8 @@ public class TicketService {
     }
 
     /**
-     * Lookup product variant by SKU — runs in transaction to access lazy collections.
+     * Lookup product variant by SKU — runs in transaction to access lazy
+     * collections.
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> lookupVariantBySku(String sku) {

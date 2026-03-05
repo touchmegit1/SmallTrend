@@ -89,6 +89,12 @@ public class WorkShift {
     private String status; // ACTIVE, INACTIVE, SEASONAL
 
     @Column
+    private LocalDate effectiveFrom;
+
+    @Column
+    private LocalDate effectiveTo;
+
+    @Column
     private Boolean requiresApproval; // Ca này có cần duyệt không
 
     @ManyToOne

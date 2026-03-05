@@ -8,9 +8,12 @@ export const shiftTicketService = {
     },
 
     createShiftSwapTicket: async (swapData) => {
+        const title = swapData.toDate
+            ? `Yêu cầu đổi ca: ${swapData.fromDate} ↔ ${swapData.toDate}`
+            : `Yêu cầu nhờ nhận ca thay: ${swapData.fromDate}`;
         const res = await api.post('/crm/tickets', {
             ticketType: 'SHIFT_CHANGE',
-            title: `Yêu cầu đổi ca: ${swapData.fromDate} ↔ ${swapData.toDate}`,
+            title,
             description: swapData.reason,
             priority: swapData.priority || 'HIGH',
             relatedEntityType: 'SHIFT_SWAP',

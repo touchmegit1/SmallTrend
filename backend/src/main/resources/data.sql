@@ -118,6 +118,26 @@ PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
 SET @stmt = IF(
     (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'work_shifts'
+          AND COLUMN_NAME = 'effective_from') = 0,
+    'ALTER TABLE work_shifts ADD COLUMN effective_from DATE NULL',
+    'SELECT 1'
+);
+PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
+
+SET @stmt = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'work_shifts'
+          AND COLUMN_NAME = 'effective_to') = 0,
+    'ALTER TABLE work_shifts ADD COLUMN effective_to DATE NULL',
+    'SELECT 1'
+);
+PREPARE seed_stmt FROM @stmt; EXECUTE seed_stmt; DEALLOCATE PREPARE seed_stmt;
+
+SET @stmt = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
           AND TABLE_NAME = 'attendance'
           AND COLUMN_NAME = 'shift_id_snapshot') = 0,
     'ALTER TABLE attendance ADD COLUMN shift_id_snapshot INT NULL',
@@ -393,14 +413,14 @@ INSERT IGNORE INTO work_shifts (
    shift_code, shift_name, start_time, end_time, break_start_time, break_end_time,
    shift_type, overtime_multiplier, night_shift_bonus, weekend_bonus, holiday_bonus,
    minimum_staff_required, maximum_staff_allowed, allow_early_clock_in, allow_late_clock_out,
-   early_clock_in_minutes, late_clock_out_minutes, grace_peroid_minutes, status,
+    early_clock_in_minutes, late_clock_out_minutes, grace_peroid_minutes, status, effective_from, effective_to,
    requires_approval, description
 ) VALUES
-('SHIFT-MORNING', 'Ca Sáng', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 2, 5, TRUE, TRUE, 15, 30, 10, 'ACTIVE', FALSE, 'Ca sáng từ 8h đến 17h, nghỉ trưa 1 tiếng'),
-('SHIFT-AFTERNOON', 'Ca Chiều', '13:00:00', '22:00:00', '18:00:00', '18:30:00', 'REGULAR', 1.50, 10.00, 0.00, 0.00, 2, 4, TRUE, TRUE, 15, 30, 10, 'ACTIVE', FALSE, 'Ca chiều từ 13h đến 22h, nghỉ 30 phút'),
-('SHIFT-EVENING', 'Ca Tối', '18:00:00', '23:00:00', NULL, NULL, 'NIGHT', 1.50, 15.00, 0.00, 0.00, 2, 3, TRUE, TRUE, 10, 20, 5, 'ACTIVE', FALSE, 'Ca tối từ 18h đến 23h, phụ cấp ca đêm 15%'),
-('SHIFT-WEEKEND', 'Ca Cuối Tuần', '09:00:00', '18:00:00', '12:30:00', '13:30:00', 'WEEKEND', 2.00, 0.00, 20.00, 0.00, 3, 6, TRUE, TRUE, 15, 30, 10, 'ACTIVE', TRUE, 'Ca cuối tuần từ 9h đến 18h, phụ cấp 20%'),
-('SHIFT-FULLTIME', 'Ca Full-time', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 1, 3, TRUE, TRUE, 15, 30, 10, 'ACTIVE', FALSE, 'Ca full-time chuẩn 8 tiếng');
+('SHIFT-MORNING', 'Ca Sáng', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 2, 5, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca sáng từ 8h đến 17h, nghỉ trưa 1 tiếng'),
+('SHIFT-AFTERNOON', 'Ca Chiều', '13:00:00', '22:00:00', '18:00:00', '18:30:00', 'REGULAR', 1.50, 10.00, 0.00, 0.00, 2, 4, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca chiều từ 13h đến 22h, nghỉ 30 phút'),
+('SHIFT-EVENING', 'Ca Tối', '18:00:00', '23:00:00', NULL, NULL, 'NIGHT', 1.50, 15.00, 0.00, 0.00, 2, 3, TRUE, TRUE, 10, 20, 5, 'ACTIVE', NULL, NULL, FALSE, 'Ca tối từ 18h đến 23h, phụ cấp ca đêm 15%'),
+('SHIFT-WEEKEND', 'Ca Cuối Tuần', '09:00:00', '18:00:00', '12:30:00', '13:30:00', 'WEEKEND', 2.00, 0.00, 20.00, 0.00, 3, 6, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, TRUE, 'Ca cuối tuần từ 9h đến 18h, phụ cấp 20%'),
+('SHIFT-FULLTIME', 'Ca Full-time', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 1, 3, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca full-time chuẩn 8 tiếng');
 
 -- 13. WORK SHIFT ASSIGNMENTS (with expanded employee coverage)
 INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, status, notes, created_at, updated_at) VALUES

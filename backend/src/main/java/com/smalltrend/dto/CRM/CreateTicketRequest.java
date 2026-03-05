@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class CreateTicketRequest {
+
     private String ticketType;
     private String title;
     private String description;

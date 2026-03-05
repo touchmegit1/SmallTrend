@@ -30,6 +30,8 @@ public class WorkShiftAssignmentService {
     public ShiftAssignmentResponse createAssignment(ShiftAssignmentRequest request) {
         WorkShift shift = workShiftRepository.findById(request.getWorkShiftId())
                 .orElseThrow(() -> new RuntimeException("Shift not found"));
+        validateShiftForDate(shift, request.getShiftDate());
+
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -58,6 +60,8 @@ public class WorkShiftAssignmentService {
 
         WorkShift shift = workShiftRepository.findById(request.getWorkShiftId())
                 .orElseThrow(() -> new RuntimeException("Shift not found"));
+        validateShiftForDate(shift, request.getShiftDate());
+
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -211,6 +215,27 @@ public class WorkShiftAssignmentService {
                     return "PRESENT".equals(status) || "LATE".equals(status);
                 })
                 .orElse(false);
+    }
+
+    private void validateShiftForDate(WorkShift shift, LocalDate shiftDate) {
+        if (shiftDate == null) {
+            throw new RuntimeException("Shift date is required");
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(Optional.ofNullable(shift.getStatus()).orElse(""))) {
+            throw new RuntimeException("Ca làm đã ngưng hoạt động");
+        }
+
+        LocalDate effectiveFrom = shift.getEffectiveFrom();
+        LocalDate effectiveTo = shift.getEffectiveTo();
+
+        if (effectiveFrom != null && shiftDate.isBefore(effectiveFrom)) {
+            throw new RuntimeException("Ngày phân ca trước thời gian hiệu lực của ca");
+        }
+
+        if (effectiveTo != null && shiftDate.isAfter(effectiveTo)) {
+            throw new RuntimeException("Ca làm đã hết hiệu lực theo thời gian cấu hình");
+        }
     }
 
     private ShiftAssignmentResponse toResponse(WorkShiftAssignment assignment) {

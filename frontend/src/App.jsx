@@ -41,6 +41,7 @@ import TicketCenter from "./pages/Admin/TicketCenter";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
 import CRMreport from "./pages/CRM/report";
+import NotFoundPage from "./pages/Common/NotFoundPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -322,10 +323,10 @@ function App() {
           element={<div className="p-4">Nhật ký hoạt động</div>}
         />
 
-        <Route path="*" element={<Navigate to="/pos" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

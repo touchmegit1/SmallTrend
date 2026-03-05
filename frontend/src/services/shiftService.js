@@ -25,6 +25,10 @@ export const shiftService = {
         const res = await api.get('/shifts/assignments', { params });
         return res.data;
     },
+    async getAssignment(id) {
+        const res = await api.get(`/shifts/assignments/${id}`);
+        return res.data;
+    },
     async createAssignment(payload) {
         const res = await api.post('/shifts/assignments', payload);
         return res.data;

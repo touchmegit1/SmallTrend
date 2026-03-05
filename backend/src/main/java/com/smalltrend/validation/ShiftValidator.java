@@ -58,6 +58,12 @@ public class ShiftValidator {
             errors.add("Minimum staff cannot exceed maximum staff");
         }
 
+        LocalDate effectiveFrom = request.getEffectiveFrom();
+        LocalDate effectiveTo = request.getEffectiveTo();
+        if (effectiveFrom != null && effectiveTo != null && effectiveTo.isBefore(effectiveFrom)) {
+            errors.add("Effective to date must be after or equal to effective from date");
+        }
+
         return errors;
     }
 
