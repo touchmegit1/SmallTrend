@@ -174,9 +174,11 @@ public class ShiftController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> listAttendance(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Integer userId,
             @RequestParam(required = false) String status) {
-        List<AttendanceResponse> responses = workforceService.listAttendance(date, userId, status);
+        List<AttendanceResponse> responses = workforceService.listAttendance(date, startDate, endDate, userId, status);
         return ResponseEntity.ok(responses);
     }
 

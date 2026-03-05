@@ -306,18 +306,16 @@ const ShiftTicketCenter = () => {
         try {
             setSubmitting(true);
             if (createForm.ticketMode === 'SWAP') {
-                const detailReason = [
-                    createForm.reason,
-                    `[SWAP_REQUESTER_ASSIGNMENT_ID=${createForm.assignmentId}]`,
-                    `[SWAP_TARGET_ASSIGNMENT_ID=${createForm.targetAssignmentId}]`,
-                ].join('\n');
-
                 await shiftTicketService.createShiftSwapTicket({
                     fromDate: shiftDate,
                     toDate: targetShiftDate,
-                    reason: detailReason,
+                    reason: createForm.reason,
                     priority: createForm.priority,
-                    relatedEntityId: Number(createForm.assignmentId),
+                    requesterUserId: Number(currentUserId),
+                    requesterAssignmentId: Number(createForm.assignmentId),
+                    targetUserId: Number(createForm.targetUserId),
+                    targetAssignmentId: createForm.targetAssignmentId ? Number(createForm.targetAssignmentId) : null,
+                    swapMode: createForm.targetAssignmentId ? 'DIRECT' : 'TAKE_OVER',
                     assignedToUserId,
                 });
             } else if (createForm.ticketMode === 'CANCEL') {
@@ -352,10 +350,34 @@ const ShiftTicketCenter = () => {
     const handleAcceptSwap = async (ticket) => {
         try {
             const requesterAssignmentId = extractSwapId(ticket.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
-            const targetAssignmentId = extractSwapId(ticket.description, 'SWAP_TARGET_ASSIGNMENT_ID');
+            const suggestedTargetAssignmentId = extractSwapId(ticket.description, 'SWAP_TARGET_ASSIGNMENT_ID');
 
-            if (!requesterAssignmentId || !targetAssignmentId) {
-                alert('Ticket đổi ca thiếu thông tin ca để thực hiện swap.');
+            if (!requesterAssignmentId) {
+                alert('Ticket đổi ca thiếu thông tin ca của người yêu cầu.');
+                return;
+            }
+
+            const availableOwnAssignments = myAssignments
+                .filter((assignment) => Number(assignment.id) !== Number(requesterAssignmentId))
+                .map((assignment) => `${assignment.id} - ${assignment.shiftDate} - ${assignment.shift?.shiftName || assignment.shift?.shiftCode || 'Ca làm'}`)
+                .join('\n');
+
+            const promptMessage = [
+                'Nhập ID ca của bạn để đổi 2 chiều.',
+                'Để trống nếu bạn muốn NHẬN CA THAY (không cần đưa ca của bạn).',
+                availableOwnAssignments ? `\nCa của bạn:\n${availableOwnAssignments}` : '\nBạn không có ca phù hợp, hệ thống sẽ xử lý theo mode nhận ca thay.',
+            ].join('\n');
+
+            const inputValue = window.prompt(promptMessage, suggestedTargetAssignmentId ? String(suggestedTargetAssignmentId) : '');
+            if (inputValue === null) {
+                return;
+            }
+
+            const normalized = String(inputValue).trim();
+            const targetAssignmentId = normalized ? Number(normalized) : null;
+
+            if (normalized && Number.isNaN(targetAssignmentId)) {
+                alert('ID ca không hợp lệ.');
                 return;
             }
 
@@ -367,9 +389,18 @@ const ShiftTicketCenter = () => {
                 note: 'Đổi ca được xác nhận bởi nhân viên nhận đổi',
             });
 
-            await shiftTicketService.approveTicket(ticket.id, 'Nhân viên nhận đổi đã đồng ý. Hệ thống đã swap ca cho hai người.');
+            await shiftTicketService.approveTicket(
+                ticket.id,
+                targetAssignmentId
+                    ? 'Nhân viên nhận đổi đã đồng ý. Hệ thống đã swap ca hai chiều.'
+                    : 'Nhân viên nhận đổi đã đồng ý. Hệ thống đã chuyển ca theo mode nhận ca thay.'
+            );
             await loadPageData();
-            alert('Đã đồng ý đổi ca. Hệ thống đã hoán đổi ca cho cả hai nhân viên.');
+            alert(
+                targetAssignmentId
+                    ? 'Đã đồng ý đổi ca. Hệ thống đã hoán đổi ca cho cả hai nhân viên.'
+                    : 'Đã đồng ý nhận ca thay. Hệ thống đã chuyển ca cho bạn.'
+            );
         } catch (err) {
             alert('Không thể thực hiện đổi ca: ' + (err.response?.data?.message || err.message));
         }
@@ -443,8 +474,8 @@ const ShiftTicketCenter = () => {
                     <button
                         onClick={() => setActiveTab('pending')}
                         className={`px-4 py-2 font-medium border-b-2 transition ${activeTab === 'pending'
-                                ? 'border-indigo-600 text-indigo-600'
-                                : 'border-transparent text-slate-600 hover:text-slate-900'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-slate-600 hover:text-slate-900'
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -455,8 +486,8 @@ const ShiftTicketCenter = () => {
                     <button
                         onClick={() => setActiveTab('approved')}
                         className={`px-4 py-2 font-medium border-b-2 transition ${activeTab === 'approved'
-                                ? 'border-indigo-600 text-indigo-600'
-                                : 'border-transparent text-slate-600 hover:text-slate-900'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-slate-600 hover:text-slate-900'
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -467,8 +498,8 @@ const ShiftTicketCenter = () => {
                     <button
                         onClick={() => setActiveTab('rejected')}
                         className={`px-4 py-2 font-medium border-b-2 transition ${activeTab === 'rejected'
-                                ? 'border-indigo-600 text-indigo-600'
-                                : 'border-transparent text-slate-600 hover:text-slate-900'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-slate-600 hover:text-slate-900'
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -569,12 +600,12 @@ const ShiftTicketCenter = () => {
 
                             {createForm.ticketMode === 'SWAP' && (
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Ca của nhân viên muốn đổi</label>
+                                    <label className="text-sm font-medium text-slate-700">Ca của nhân viên muốn đổi (không bắt buộc)</label>
                                     <div className="mt-1">
                                         <CustomSelect
                                             value={createForm.targetAssignmentId}
                                             onChange={(value) => setCreateForm((prev) => ({ ...prev, targetAssignmentId: value }))}
-                                            options={[{ value: '', label: 'Chọn ca của người kia' }, ...targetAssignmentOptions]}
+                                            options={[{ value: '', label: 'Để trống nếu chỉ nhờ nhận ca thay' }, ...targetAssignmentOptions]}
                                         />
                                     </div>
                                     {formErrors.targetAssignmentId && <p className="text-xs text-rose-600 mt-1">{formErrors.targetAssignmentId}</p>}
@@ -650,9 +681,6 @@ const validateCreateForm = (form) => {
     }
     if (!form.targetUserId) {
         errors.targetUserId = 'Vui lòng chọn người xử lý/đổi ca.';
-    }
-    if (form.ticketMode === 'SWAP' && !form.targetAssignmentId) {
-        errors.targetAssignmentId = 'Vui lòng chọn ca làm của nhân viên muốn đổi.';
     }
     if (!form.reason || form.reason.trim().length < 5) {
         errors.reason = 'Lý do tối thiểu 5 ký tự để người duyệt xử lý nhanh.';

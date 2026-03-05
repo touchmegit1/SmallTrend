@@ -18,6 +18,17 @@ const MyPayrollSummary = () => {
     const [attendanceRows, setAttendanceRows] = useState([]);
 
     const currentUserId = useMemo(() => user?.id || user?.userId, [user]);
+    const monthRange = useMemo(() => {
+        const [year, month] = String(filters.month || '').split('-').map(Number);
+        if (!year || !month) {
+            return { startDate: null, endDate: null };
+        }
+        const lastDay = new Date(year, month, 0).getDate();
+        return {
+            startDate: `${year}-${String(month).padStart(2, '0')}-01`,
+            endDate: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+        };
+    }, [filters.month]);
 
     useEffect(() => {
         if (!currentUserId) {
@@ -38,7 +49,12 @@ const MyPayrollSummary = () => {
             const row = Array.isArray(payroll?.rows) && payroll.rows.length > 0 ? payroll.rows[0] : null;
             setPayrollRow(row);
 
-            const attendance = await shiftService.getAttendance({ userId: currentUserId });
+            const attendanceParams = {
+                userId: currentUserId,
+                startDate: monthRange.startDate,
+                endDate: monthRange.endDate,
+            };
+            const attendance = await shiftService.getAttendance(attendanceParams);
             const monthRows = Array.isArray(attendance)
                 ? attendance.filter((entry) => String(entry.date || '').startsWith(filters.month))
                 : [];

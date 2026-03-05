@@ -6,6 +6,7 @@ import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.WorkShift;
 import com.smalltrend.entity.WorkShiftAssignment;
+import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
 import com.smalltrend.repository.WorkShiftRepository;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +25,7 @@ public class WorkShiftAssignmentService {
     private final WorkShiftAssignmentRepository assignmentRepository;
     private final WorkShiftRepository workShiftRepository;
     private final UserRepository userRepository;
+    private final AttendanceRepository attendanceRepository;
 
     public ShiftAssignmentResponse createAssignment(ShiftAssignmentRequest request) {
         WorkShift shift = workShiftRepository.findById(request.getWorkShiftId())
@@ -111,47 +114,104 @@ public class WorkShiftAssignmentService {
         assignmentRepository.save(assignment);
     }
 
-        public String executeSwap(ShiftSwapExecuteRequest request) {
-                if (request.getRequesterAssignmentId() == null || request.getTargetAssignmentId() == null) {
-                        throw new RuntimeException("Thiếu thông tin phân ca để thực hiện đổi ca");
-                }
-                if (request.getRequesterAssignmentId().equals(request.getTargetAssignmentId())) {
-                        throw new RuntimeException("Hai phân ca đổi không được trùng nhau");
-                }
-
-                WorkShiftAssignment requesterAssignment = assignmentRepository.findByIdAndDeletedFalse(request.getRequesterAssignmentId())
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người yêu cầu"));
-
-                WorkShiftAssignment targetAssignment = assignmentRepository.findByIdAndDeletedFalse(request.getTargetAssignmentId())
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người được đổi"));
-
-                Integer accepterUserId = request.getAccepterUserId();
-                if (accepterUserId == null) {
-                        throw new RuntimeException("Thiếu thông tin người xác nhận đổi ca");
-                }
-
-                if (!targetAssignment.getUser().getId().equals(accepterUserId)) {
-                        throw new RuntimeException("Chỉ nhân viên sở hữu ca đích mới có thể xác nhận đổi ca");
-                }
-
-                User requesterUser = requesterAssignment.getUser();
-                User targetUser = targetAssignment.getUser();
-
-                requesterAssignment.setUser(targetUser);
-                targetAssignment.setUser(requesterUser);
-
-                String requesterOldNote = requesterAssignment.getNotes() == null ? "" : requesterAssignment.getNotes();
-                String targetOldNote = targetAssignment.getNotes() == null ? "" : targetAssignment.getNotes();
-                String swapAuditText = " [SWAP EXECUTED]";
-
-                requesterAssignment.setNotes((requesterOldNote + swapAuditText).trim());
-                targetAssignment.setNotes((targetOldNote + swapAuditText).trim());
-
-                assignmentRepository.save(requesterAssignment);
-                assignmentRepository.save(targetAssignment);
-
-                return "Đổi ca thành công cho cả hai nhân viên";
+    public String executeSwap(ShiftSwapExecuteRequest request) {
+        if (request.getRequesterAssignmentId() == null) {
+            throw new RuntimeException("Thiếu thông tin ca của người yêu cầu");
         }
+
+        WorkShiftAssignment requesterAssignment = assignmentRepository.findByIdAndDeletedFalse(request.getRequesterAssignmentId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người yêu cầu"));
+
+        Integer accepterUserId = request.getAccepterUserId();
+        if (accepterUserId == null) {
+            throw new RuntimeException("Thiếu thông tin người xác nhận đổi ca");
+        }
+
+        if (!isFutureOrToday(requesterAssignment.getShiftDate())) {
+            throw new RuntimeException("Ca của người yêu cầu đã qua, không thể xử lý đổi ca");
+        }
+
+        if (isAttendanceCompleted(requesterAssignment.getUser().getId(), requesterAssignment.getShiftDate())) {
+            throw new RuntimeException("Ca của người yêu cầu đã chấm công, không thể đổi");
+        }
+
+        if (requesterAssignment.getUser().getId().equals(accepterUserId)) {
+            throw new RuntimeException("Không thể tự chấp nhận đổi ca cho chính ca của mình");
+        }
+
+        WorkShiftAssignment targetAssignment = null;
+        boolean twoWaySwap = request.getTargetAssignmentId() != null;
+
+        if (twoWaySwap) {
+            if (request.getRequesterAssignmentId().equals(request.getTargetAssignmentId())) {
+                throw new RuntimeException("Hai phân ca đổi không được trùng nhau");
+            }
+
+            targetAssignment = assignmentRepository.findByIdAndDeletedFalse(request.getTargetAssignmentId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người được đổi"));
+
+            if (!targetAssignment.getUser().getId().equals(accepterUserId)) {
+                throw new RuntimeException("Chỉ nhân viên sở hữu ca đối ứng mới có thể xác nhận đổi hai chiều");
+            }
+
+            if (!isFutureOrToday(targetAssignment.getShiftDate())) {
+                throw new RuntimeException("Ca đối ứng đã qua, không thể dùng để đổi");
+            }
+
+            if (isAttendanceCompleted(targetAssignment.getUser().getId(), targetAssignment.getShiftDate())) {
+                throw new RuntimeException("Ca đối ứng đã chấm công, không thể dùng để đổi");
+            }
+
+            if (requesterAssignment.getShiftDate().equals(targetAssignment.getShiftDate())
+                    && requesterAssignment.getWorkShift() != null
+                    && targetAssignment.getWorkShift() != null
+                    && requesterAssignment.getWorkShift().getId().equals(targetAssignment.getWorkShift().getId())) {
+                throw new RuntimeException("Không thể đổi ca với người đã được xếp cùng ca");
+            }
+        }
+
+        User accepterUser = userRepository.findById(accepterUserId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người chấp nhận đổi ca"));
+
+        if (twoWaySwap) {
+            User requesterUser = requesterAssignment.getUser();
+            User targetUser = targetAssignment.getUser();
+
+            requesterAssignment.setUser(targetUser);
+            targetAssignment.setUser(requesterUser);
+        } else {
+            requesterAssignment.setUser(accepterUser);
+        }
+
+        String requesterOldNote = requesterAssignment.getNotes() == null ? "" : requesterAssignment.getNotes();
+        String swapAuditText = twoWaySwap ? " [SWAP EXECUTED - TWO_WAY]" : " [SWAP EXECUTED - TAKE_OVER]";
+
+        requesterAssignment.setNotes((requesterOldNote + swapAuditText).trim());
+
+        assignmentRepository.save(requesterAssignment);
+        if (twoWaySwap) {
+            String targetOldNote = targetAssignment.getNotes() == null ? "" : targetAssignment.getNotes();
+            targetAssignment.setNotes((targetOldNote + swapAuditText).trim());
+            assignmentRepository.save(targetAssignment);
+        }
+
+        return twoWaySwap
+                ? "Đổi ca hai chiều thành công"
+                : "Nhận ca thay thành công";
+    }
+
+    private boolean isFutureOrToday(LocalDate date) {
+        return date != null && !date.isBefore(LocalDate.now());
+    }
+
+    private boolean isAttendanceCompleted(Integer userId, LocalDate date) {
+        return attendanceRepository.findByUserIdAndDate(userId, date)
+                .map(attendance -> {
+                    String status = Optional.ofNullable(attendance.getStatus()).orElse("").trim().toUpperCase();
+                    return "PRESENT".equals(status) || "LATE".equals(status);
+                })
+                .orElse(false);
+    }
 
     private ShiftAssignmentResponse toResponse(WorkShiftAssignment assignment) {
         return ShiftAssignmentResponse.builder()

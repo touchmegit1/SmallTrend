@@ -14,8 +14,13 @@ export const shiftTicketService = {
             description: swapData.reason,
             priority: swapData.priority || 'HIGH',
             relatedEntityType: 'SHIFT_SWAP',
-            relatedEntityId: swapData.relatedEntityId || null,
+            relatedEntityId: swapData.relatedEntityId || swapData.requesterAssignmentId || null,
             assignedToUserId: swapData.assignedToUserId,
+            requesterUserId: swapData.requesterUserId,
+            swapRequesterAssignmentId: swapData.requesterAssignmentId,
+            swapTargetUserId: swapData.targetUserId,
+            swapTargetAssignmentId: swapData.targetAssignmentId || null,
+            swapMode: swapData.swapMode || 'DIRECT',
         });
         return res.data;
     },

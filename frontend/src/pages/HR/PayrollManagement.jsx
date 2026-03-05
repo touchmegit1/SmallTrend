@@ -136,14 +136,14 @@ const PayrollManagement = () => {
             <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="grid gap-3 md:grid-cols-3">
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600">Tháng tính lương</label>
+                        <label className="text-xs font-medium text-slate-600">Tìm kiếm (tên / SĐT)</label>
                         <input
-                            type="month"
-                            value={filters.month}
-                            onChange={(event) => setFilters((prev) => ({ ...prev, month: event.target.value }))}
-                            className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.month ? 'border-rose-400' : 'border-slate-200'}`}
+                            type="text"
+                            value={searchTerm}
+                            onChange={(event) => setSearchTerm(event.target.value)}
+                            placeholder="Nhập tên hoặc số điện thoại"
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                         />
-                        {filterErrors.month && <p className="text-xs text-rose-600">{filterErrors.month}</p>}
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-600">Nhân viên</label>
@@ -157,15 +157,16 @@ const PayrollManagement = () => {
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600">Tìm kiếm (tên / SĐT)</label>
+                        <label className="text-xs font-medium text-slate-600">Tháng tính lương</label>
                         <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(event) => setSearchTerm(event.target.value)}
-                            placeholder="Nhập tên hoặc số điện thoại"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            type="month"
+                            value={filters.month}
+                            onChange={(event) => setFilters((prev) => ({ ...prev, month: event.target.value }))}
+                            className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.month ? 'border-rose-400' : 'border-slate-200'}`}
                         />
+                        {filterErrors.month && <p className="text-xs text-rose-600">{filterErrors.month}</p>}
                     </div>
+
                 </div>
             </div>
 

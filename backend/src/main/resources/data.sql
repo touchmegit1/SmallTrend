@@ -444,7 +444,32 @@ INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, s
 (1, 7, '2026-03-02', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
 (4, 1, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần quản lý', NOW(), NOW()),
 (4, 3, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần thu ngân', NOW(), NOW()),
-(4, 6, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần bán hàng', NOW(), NOW());
+(4, 6, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần bán hàng', NOW(), NOW()),
+
+-- Bổ sung đủ dữ liệu tháng 3 cho toàn bộ nhân sự để test payroll cá nhân
+(1, 1, '2026-03-03', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
+(2, 2, '2026-03-03', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
+(1, 3, '2026-03-03', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-03', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-03', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-03', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-03', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+
+(1, 1, '2026-03-04', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
+(2, 2, '2026-03-04', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
+(1, 3, '2026-03-04', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-04', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-04', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-04', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-04', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+
+(1, 1, '2026-03-05', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
+(2, 2, '2026-03-05', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
+(1, 3, '2026-03-05', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-05', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-05', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-05', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-05', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW());
 
 -- 14. CAMPAIGNS
 INSERT IGNORE INTO campaigns (campaign_code, campaign_name, campaign_type, description, start_date, end_date, status, budget, target_revenue, is_public, created_by, created_at, updated_at) VALUES
@@ -634,7 +659,31 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 (4, '2026-03-02', '13:00:00', '22:03:00', 'PRESENT'),
 (5, '2026-03-02', '08:05:00', '17:02:00', 'PRESENT'),
 (6, '2026-03-02', '18:02:00', '23:00:00', 'PRESENT'),
-(7, '2026-03-02', NULL, NULL, 'ABSENT');
+(7, '2026-03-02', NULL, NULL, 'ABSENT'),
+
+(1, '2026-03-03', '08:00:00', '17:04:00', 'PRESENT'),
+(2, '2026-03-03', '13:05:00', '22:00:00', 'PRESENT'),
+(3, '2026-03-03', '08:06:00', '17:00:00', 'PRESENT'),
+(4, '2026-03-03', '13:16:00', '22:00:00', 'LATE'),
+(5, '2026-03-03', '08:00:00', '17:00:00', 'PRESENT'),
+(6, '2026-03-03', '18:00:00', '23:08:00', 'PRESENT'),
+(7, '2026-03-03', '08:10:00', '17:00:00', 'LATE'),
+
+(1, '2026-03-04', '08:03:00', '17:01:00', 'PRESENT'),
+(2, '2026-03-04', '13:22:00', '22:00:00', 'LATE'),
+(3, '2026-03-04', '08:00:00', '17:12:00', 'PRESENT'),
+(4, '2026-03-04', NULL, NULL, 'ABSENT'),
+(5, '2026-03-04', '08:08:00', '17:00:00', 'PRESENT'),
+(6, '2026-03-04', '18:01:00', '23:00:00', 'PRESENT'),
+(7, '2026-03-04', '08:00:00', '17:03:00', 'PRESENT'),
+
+(1, '2026-03-05', '08:02:00', '17:00:00', 'PRESENT'),
+(2, '2026-03-05', '13:00:00', '22:06:00', 'PRESENT'),
+(3, '2026-03-05', '08:12:00', '17:00:00', 'LATE'),
+(4, '2026-03-05', '13:00:00', '22:01:00', 'PRESENT'),
+(5, '2026-03-05', '08:00:00', '17:05:00', 'PRESENT'),
+(6, '2026-03-05', NULL, NULL, 'ABSENT'),
+(7, '2026-03-05', '08:04:00', '17:00:00', 'PRESENT');
 
 -- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
 -- Each employee has individual salary setup - Manager can modify base salary for each person

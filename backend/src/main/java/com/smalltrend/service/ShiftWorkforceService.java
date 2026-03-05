@@ -36,16 +36,22 @@ public class ShiftWorkforceService {
     private final WorkShiftAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
 
-    public List<AttendanceResponse> listAttendance(LocalDate date, Integer userId, String status) {
+    public List<AttendanceResponse> listAttendance(LocalDate date, LocalDate startDate, LocalDate endDate, Integer userId, String status) {
         LocalDate targetDate = Optional.ofNullable(date).orElse(LocalDate.now());
+        LocalDate fromDate = Optional.ofNullable(startDate).orElse(targetDate);
+        LocalDate toDate = Optional.ofNullable(endDate).orElse(targetDate);
+
+        if (fromDate.isAfter(toDate)) {
+            throw new RuntimeException("Start date must be before or equal to end date");
+        }
 
         List<WorkShiftAssignment> assignments = userId != null
-                ? assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, targetDate, targetDate)
-                : assignmentRepository.findByShiftDateBetweenAndDeletedFalse(targetDate, targetDate);
+                ? assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, fromDate, toDate)
+                : assignmentRepository.findByShiftDateBetweenAndDeletedFalse(fromDate, toDate);
 
         List<Attendance> attendances = userId != null
-                ? attendanceRepository.findByUserIdAndDateBetween(userId, targetDate, targetDate)
-                : attendanceRepository.findByDateBetween(targetDate, targetDate);
+                ? attendanceRepository.findByUserIdAndDateBetween(userId, fromDate, toDate)
+                : attendanceRepository.findByDateBetween(fromDate, toDate);
 
         Map<String, Attendance> attendanceMap = attendances.stream()
                 .collect(Collectors.toMap(
