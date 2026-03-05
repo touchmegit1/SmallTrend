@@ -7,8 +7,10 @@ function TransactionHistory() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState("desc");
+  const [sortBy, setSortBy] = useState("time_desc");
   const [selectedDate, setSelectedDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
@@ -17,7 +19,7 @@ function TransactionHistory() {
     const loadAndSaveTransactions = async () => {
       const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       setTransactions(savedTransactions);
-      
+
       // Lưu tất cả transactions có customer vào database
       for (const transaction of savedTransactions) {
         if (!transaction.savedToDb && transaction.customer && transaction.status === "Hoàn thành") {
@@ -25,7 +27,7 @@ function TransactionHistory() {
         }
       }
     };
-    
+
     loadAndSaveTransactions();
   }, []);
 
@@ -50,7 +52,7 @@ function TransactionHistory() {
       };
 
       await api.post('/pos/purchase-history', request);
-      
+
       // Đánh dấu đã lưu
       const updatedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       const index = updatedTransactions.findIndex(t => t.id === transaction.id);
@@ -65,21 +67,91 @@ function TransactionHistory() {
   };
 
   const restorePendingOrder = (transaction) => {
-    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
-    const orderExists = pendingOrders.some(order => order.id === transaction.id);
-    
-    if (!orderExists) {
-      pendingOrders.push(transaction);
+    let pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+    let orders = JSON.parse(localStorage.getItem('posOrders') || '[{ "id": 1, "cart": [], "customer": null, "usePoints": false }]');
+    let activeId = parseInt(localStorage.getItem('activeOrderId') || '1');
+
+    // Xem đơn hàng hiện tại có đang trống không
+    const activeOrderIndex = orders.findIndex(o => o.id === activeId);
+    const isActiveEmpty = activeOrderIndex !== -1 && (!orders[activeOrderIndex].cart || orders[activeOrderIndex].cart.length === 0);
+
+    // Chuẩn bị dữ liệu giỏ hàng và khách hàng từ transaction
+    const cartToRestore = transaction.cart || transaction.items || [];
+    const customerToRestore = transaction.customer || null;
+    const usePointsToRestore = transaction.usePoints || false;
+
+    if (isActiveEmpty) {
+      // Ghi đè lên đơn hiện tại đang trống
+      orders[activeOrderIndex].cart = cartToRestore;
+      orders[activeOrderIndex].customer = customerToRestore;
+      orders[activeOrderIndex].usePoints = usePointsToRestore;
+
+      // Không thay đổi activeId vì đang dùng đơn hiện tại
+    } else {
+      // Tạo một tab đơn hàng mới
+      const newId = Math.max(...orders.map(o => o.id), 0) + 1;
+      orders.push({
+        id: newId,
+        cart: cartToRestore,
+        customer: customerToRestore,
+        usePoints: usePointsToRestore
+      });
+      activeId = newId;
+    }
+
+    // Cập nhật lại orders và activeId cho màn hình POS
+    localStorage.setItem('posOrders', JSON.stringify(orders));
+    localStorage.setItem('activeOrderId', activeId.toString());
+
+    // Nếu muốn duy trì order này trong danh sách pendingOrders (cho đến khi thanh toán xong)
+    const existingOrderIndex = pendingOrders.findIndex(order => order.id === transaction.id);
+    if (existingOrderIndex === -1) {
+      // Nếu không tìm thấy, tạo một đơn mới dựa trên transaction cũ
+      const newOrder = {
+        ...transaction,
+        id: `HD${Math.floor(Math.random() * 10000)}`, // Tạo id mới để tránh trùng lặp
+        time: new Date().toLocaleString('vi-VN'),
+        status: "Chờ thanh toán"
+      };
+      pendingOrders.push(newOrder);
       localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
     }
+
     navigate('/pos');
   };
 
   const deleteTransaction = (transactionId) => {
-    const updatedTransactions = transactions.filter(t => t.id !== transactionId);
-    setTransactions(updatedTransactions);
-    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
-    setShowActionMenu(null);
+    if (window.confirm("Bạn có chắc chắn muốn xóa giao dịch này không? Hành động này không thể hoàn tác.")) {
+      const updatedTransactions = transactions.filter(t => t.id !== transactionId);
+      setTransactions(updatedTransactions);
+      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+
+      // Đồng thời xoá khỏi danh sách pendingOrders nếu có
+      const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+      const updatedPendingOrders = pendingOrders.filter(o => o.id !== transactionId);
+      if (pendingOrders.length !== updatedPendingOrders.length) {
+        localStorage.setItem('pendingOrders', JSON.stringify(updatedPendingOrders));
+      }
+
+      setShowActionMenu(null);
+    }
+  };
+
+  const parseDateTime = (timeStr) => {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(/[\s,]+/);
+    if (parts.length >= 2) {
+      const dateParts = parts[0].split('/');
+      if (dateParts.length === 3) {
+        const [day, month, year] = dateParts;
+        const timeParts = parts[1].split(':');
+        const hour = timeParts[0] || '0';
+        const min = timeParts[1] || '0';
+        const sec = timeParts[2] || '0';
+        return new Date(year, month - 1, day, hour, min, sec).getTime();
+      }
+    }
+    return new Date(timeStr).getTime() || 0;
   };
 
   // Lọc và sắp xếp transactions
@@ -87,17 +159,41 @@ function TransactionHistory() {
     .filter(t => {
       // Tìm kiếm theo mã đơn
       const matchSearch = searchTerm === "" ||
-        t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.id.replace('#HD', '').includes(searchTerm);
+        (t.id && t.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (t.id && t.id.replace('#HD', '').includes(searchTerm));
 
-      return matchSearch;
+      // Lọc theo ngày
+      let matchDate = true;
+      if (selectedDate) {
+        const dateObj = new Date(selectedDate);
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const year = dateObj.getFullYear();
+        const formattedDate = `${day}/${month}/${year}`;
+        matchDate = t.time && t.time.includes(formattedDate);
+      }
+
+      // Lọc theo trạng thái
+      const matchStatus = statusFilter === "all" || t.status === statusFilter;
+
+      // Lọc theo thanh toán
+      const matchPayment = paymentFilter === "all" || t.payment === paymentFilter;
+
+      return matchSearch && matchDate && matchStatus && matchPayment;
     })
     .sort((a, b) => {
-      // Sắp xếp theo giá tiền
-      const amountA = parseInt(a.total.replace(/[^0-9]/g, ''));
-      const amountB = parseInt(b.total.replace(/[^0-9]/g, ''));
-      return sortOrder === "desc" ? amountB - amountA : amountA - amountB;
+      if (sortBy.startsWith("time")) {
+        const timeA = parseDateTime(a.time);
+        const timeB = parseDateTime(b.time);
+        return sortBy === "time_desc" ? timeB - timeA : timeA - timeB;
+      } else {
+        const amountA = parseInt((a.total || "").toString().replace(/[^0-9]/g, '')) || 0;
+        const amountB = parseInt((b.total || "").toString().replace(/[^0-9]/g, '')) || 0;
+        return sortBy === "price_desc" ? amountB - amountA : amountA - amountB;
+      }
     });
+
+  const uniquePayments = [...new Set(transactions.map(t => t.payment).filter(Boolean))];
 
   // Tính toán thống kê
   const totalTransactions = filteredTransactions.length;
@@ -178,6 +274,8 @@ function TransactionHistory() {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: "15px",
+          gap: "15px",
+          flexWrap: "wrap",
         }}
       >
         <input
@@ -185,7 +283,8 @@ function TransactionHistory() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
-            width: "70%",
+            width: "100%",
+            maxWidth: "300px",
             padding: "10px 12px",
             borderRadius: "8px",
             border: "1px solid #ddd",
@@ -193,10 +292,24 @@ function TransactionHistory() {
           }}
         />
 
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, justifyContent: "flex-end" }}>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{
+              padding: "8px 14px",
+              borderRadius: "8px",
+              border: "1px solid #ddd",
+              background: "white",
+              outline: "none",
+              color: selectedDate ? "#000" : "#757575",
+            }}
+          />
+
           <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
             style={{
               padding: "8px 14px",
               borderRadius: "8px",
@@ -205,15 +318,53 @@ function TransactionHistory() {
               cursor: "pointer",
             }}
           >
-            <option value="desc">Giá: Cao → Thấp</option>
-            <option value="asc">Giá: Thấp → Cao</option>
+            <option value="all">Tất cả trạng thái</option>
+            <option value="Hoàn thành">Hoàn thành</option>
+            <option value="Chờ thanh toán">Chờ thanh toán (Đơn treo)</option>
           </select>
 
-          {(searchTerm || sortOrder !== "desc") && (
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value)}
+            style={{
+              padding: "8px 14px",
+              borderRadius: "8px",
+              border: "1px solid #ddd",
+              background: "white",
+              cursor: "pointer",
+            }}
+          >
+            <option value="all">Tất cả thanh toán</option>
+            {uniquePayments.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{
+              padding: "8px 14px",
+              borderRadius: "8px",
+              border: "1px solid #ddd",
+              background: "white",
+              cursor: "pointer",
+            }}
+          >
+            <option value="time_desc">Mới nhất</option>
+            <option value="time_asc">Cũ nhất</option>
+            <option value="price_desc">Giá: Cao → Thấp</option>
+            <option value="price_asc">Giá: Thấp → Cao</option>
+          </select>
+
+          {(searchTerm || selectedDate || statusFilter !== "all" || paymentFilter !== "all" || sortBy !== "time_desc") && (
             <button
               onClick={() => {
                 setSearchTerm("");
-                setSortOrder("desc");
+                setSelectedDate("");
+                setStatusFilter("all");
+                setPaymentFilter("all");
+                setSortBy("time_desc");
               }}
               style={{
                 padding: "8px 14px",
@@ -222,6 +373,7 @@ function TransactionHistory() {
                 background: "#dc3545",
                 color: "white",
                 cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
             >
               Xóa lọc
@@ -274,7 +426,7 @@ function TransactionHistory() {
                 <td style={{ padding: "12px" }}>{item.payment}</td>
                 <td style={{ padding: "12px" }}>{item.total}</td>
                 <td style={{ padding: "12px" }}>
-                  <span 
+                  <span
                     style={{
                       padding: "6px 10px",
                       borderRadius: "20px",
