@@ -639,9 +639,9 @@ export default function CustomerComplaintSystem() {
                       if (!customerPhone.trim()) return;
                       try {
                         setLoadingCustomer(true);
-                        const customers = await customerService.searchByPhone(customerPhone.trim());
-                        if (customers && customers.length > 0) {
-                          setCustomerName(customers[0].name);
+                        const customer = await customerService.searchByPhone(customerPhone.trim());
+                        if (customer && customer.name) {
+                          setCustomerName(customer.name);
                         } else {
                           setCustomerName('Khách lạ');
                         }
