@@ -44,7 +44,7 @@ const WorkforceManagement = ({ defaultTab = 'employees' }) => {
     return (
         <div className="space-y-4">
             <div
-                className="sticky z-20 pb-2"
+                className="z-20 pb-2"
                 style={{ top: 'calc(var(--app-header-height, 4rem) + 1rem)' }}
             >
                 <WorkforceDashboardSummary
