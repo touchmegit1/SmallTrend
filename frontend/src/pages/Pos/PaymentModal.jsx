@@ -3,25 +3,63 @@ import CustomerSearch from "./CustomerSearch";
 
 import api from "../../config/axiosConfig";
 
-const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
-  const qrUrl = `https://api.vietqr.io/image/970422-0961390486-V0nKzcy.jpg?accountName=NGO%20QUANG%20HUY&amount=${amount}`;
+const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
+const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
+  const [paymentCode] = useState(() => "DH" + Date.now());
+  const [status, setStatus] = useState("waiting"); // waiting | success | error
+  const pollingRef = useRef(null);
+
+  const qrUrl = `https://qr.sepay.vn/img?bank=MBBank&acc=0961390486&template=compact&amount=${amount}&des=${paymentCode}`;
+
+  // Auto-poll SePay API to check for payment
+  useEffect(() => {
+    const checkPayment = async () => {
+      try {
+        const response = await fetch(
+          `/sepay-api/userapi/transactions/list?amount_in=${amount}&content=${paymentCode}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${SEPAY_API_TOKEN}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+        const data = await response.json();
+        if (data.transactions && data.transactions.length > 0) {
+          setStatus("success");
+          clearInterval(pollingRef.current);
+          // Auto-complete after showing success briefly
+          setTimeout(() => {
+            onSuccess();
+          }, 1500);
+        }
+
+      } catch (err) {
+        console.error("SePay polling error:", err);
+      }
+    };
+
+    // Start polling every 3 seconds
+    pollingRef.current = setInterval(checkPayment, 3000);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [amount, paymentCode, onSuccess]);
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Prevent triggering parent modal handlers
       e.stopPropagation();
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        onSuccess();
-      } else if (e.key === 'Escape') {
+      if (e.key === 'Escape') {
         e.preventDefault();
         onCancel();
       }
     };
-    // Use capture phase to intercept keydown before PaymentModal
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [onSuccess, onCancel]);
+  }, [onCancel]);
 
   return (
     <div style={{
@@ -34,84 +72,83 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      zIndex: 1001 // Higher than PaymentModal
+      zIndex: 1001
     }}>
       <div style={{
         background: "white",
         borderRadius: "12px",
         padding: "30px",
         width: "90%",
-        maxWidth: "400px",
+        maxWidth: "420px",
         textAlign: "center",
         boxShadow: "0 10px 30px rgba(0,0,0,0.3)"
       }}>
-        <h2 style={{ marginTop: 0, marginBottom: "20px", fontSize: "22px", color: "#333" }}>Quét mã QR để thanh toán</h2>
+        {status === "success" ? (
+          <>
+            <div style={{ fontSize: "60px", marginBottom: "10px" }}>✅</div>
+            <h2 style={{ marginTop: 0, marginBottom: "10px", fontSize: "22px", color: "#28a745" }}>
+              Thanh toán thành công!
+            </h2>
+            <p style={{ color: "#666", fontSize: "14px" }}>Đang xử lý hóa đơn...</p>
+          </>
+        ) : (
+          <>
+            <h2 style={{ marginTop: 0, marginBottom: "15px", fontSize: "22px", color: "#333" }}>
+              Quét mã QR để thanh toán
+            </h2>
 
-        <div style={{
-          border: "2px solid #007bff",
-          borderRadius: "12px",
-          padding: "15px",
-          marginBottom: "20px",
-          display: "inline-block",
-          background: "#fff"
-        }}>
-          <img
-            src={qrUrl}
-            alt="Mã QR Chuyển khoản"
-            style={{ width: "100%", maxWidth: "300px", height: "auto", display: "block" }}
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "https://via.placeholder.com/300x300?text=L%E1%BB%97i+t%E1%BA%A3i+QR";
-            }}
-          />
-        </div>
+            <div style={{
+              border: "2px solid #007bff",
+              borderRadius: "12px",
+              padding: "10px",
+              marginBottom: "15px",
+              display: "inline-block",
+              background: "#fff"
+            }}>
+              <img
+                src={qrUrl}
+                alt="Mã QR Chuyển khoản"
+                style={{ width: "100%", maxWidth: "280px", height: "auto", display: "block" }}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://via.placeholder.com/300x300?text=L%E1%BB%97i+t%E1%BA%A3i+QR";
+                }}
+              />
+            </div>
 
-        <div style={{ fontSize: "16px", marginBottom: "8px", color: "#555" }}>
-          Chủ tài khoản: <strong>NGO QUANG HUY</strong>
-        </div>
-        <div style={{ fontSize: "16px", marginBottom: "15px", color: "#555" }}>
-          Số tiền: <strong style={{ color: "#d9534f", fontSize: "24px" }}>{amount.toLocaleString()}đ</strong>
-        </div>
+            <div style={{ fontSize: "14px", marginBottom: "6px", color: "#555" }}>
+              Ngân hàng: <strong>MBBank</strong> — STK: <strong>0961390486</strong>
+            </div>
+            <div style={{ fontSize: "14px", marginBottom: "6px", color: "#555" }}>
+              Nội dung CK: <strong style={{ color: "#007bff", fontSize: "16px", letterSpacing: "1px" }}>{paymentCode}</strong>
+            </div>
+            <div style={{ fontSize: "16px", marginBottom: "15px", color: "#555" }}>
+              Số tiền: <strong style={{ color: "#d9534f", fontSize: "24px" }}>{amount.toLocaleString()}đ</strong>
+            </div>
 
-        <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "20px" }}>
-          <button
-            onClick={onCancel}
-            style={{
-              padding: "12px 20px",
-              background: "#6c757d",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "16px",
-              cursor: "pointer",
-              flex: 1,
-              transition: "background 0.2s"
-            }}
-            onMouseOver={(e) => e.target.style.background = "#5a6268"}
-            onMouseOut={(e) => e.target.style.background = "#6c757d"}
-          >
-            Hủy (ESC)
-          </button>
-          <button
-            onClick={onSuccess}
-            style={{
-              padding: "12px 20px",
-              background: "#28a745",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "16px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              flex: 1,
-              transition: "background 0.2s"
-            }}
-            onMouseOver={(e) => e.target.style.background = "#218838"}
-            onMouseOut={(e) => e.target.style.background = "#28a745"}
-          >
-            Hoàn tất (Enter)
-          </button>
-        </div>
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                onClick={onCancel}
+                style={{
+                  padding: "12px 20px",
+                  background: "#6c757d",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  flex: 1,
+                  transition: "background 0.2s"
+                }}
+                onMouseOver={(e) => e.target.style.background = "#5a6268"}
+                onMouseOut={(e) => e.target.style.background = "#6c757d"}
+              >
+                Hủy (ESC)
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
