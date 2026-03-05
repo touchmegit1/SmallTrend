@@ -88,6 +88,18 @@ const shiftTypePresets = {
         requiresApproval: true,
         gracePeriodMinutes: '10',
     },
+    TEMPORARY: {
+        overtimeMultiplier: '1.0',
+        nightShiftBonus: '0',
+        weekendBonus: '0',
+        holidayBonus: '0',
+        allowEarlyClockIn: true,
+        allowLateClockOut: true,
+        earlyClockInMinutes: '15',
+        lateClockOutMinutes: '30',
+        requiresApproval: false,
+        gracePeriodMinutes: '10',
+    },
 };
 
 const ShiftManagement = ({ viewMode = 'full' }) => {
@@ -109,6 +121,7 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
     const [editingShift, setEditingShift] = useState(null);
     const [shiftForm, setShiftForm] = useState(defaultShiftForm);
     const [shiftFormErrors, setShiftFormErrors] = useState({});
+    const [showAdvancedShiftOptions, setShowAdvancedShiftOptions] = useState(false);
 
     const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
     const [editingAssignment, setEditingAssignment] = useState(null);
@@ -241,8 +254,10 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                 requiresApproval: !!shift.requiresApproval,
                 description: shift.description || '',
             });
+            setShowAdvancedShiftOptions(true);
         } else {
             setShiftForm(defaultShiftForm);
+            setShowAdvancedShiftOptions(false);
         }
         setIsShiftModalOpen(true);
     };
@@ -291,6 +306,8 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
         setShiftForm((prev) => ({
             ...prev,
             shiftType: value,
+            effectiveFrom: value === 'TEMPORARY' ? prev.effectiveFrom : '',
+            effectiveTo: value === 'TEMPORARY' ? prev.effectiveTo : '',
             ...preset,
         }));
     };
@@ -675,7 +692,7 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                                 <h2 className="text-lg font-semibold text-slate-900">
                                     {editingShift ? 'Cập nhật ca' : 'Tạo ca mới'}
                                 </h2>
-                                <p className="text-xs text-slate-500">Thiết lập khung giờ, số lượng nhân sự và chính sách ca.</p>
+                                <p className="text-xs text-slate-500">Nhập thông tin cơ bản trước, tùy chọn nâng cao có thể mở thêm khi cần.</p>
                             </div>
                             <button onClick={() => setIsShiftModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                                 <X size={18} />
@@ -752,6 +769,7 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                                         onChange={handleShiftTypeChange}
                                         options={[
                                             { value: 'REGULAR', label: 'Thường' },
+                                            { value: 'TEMPORARY', label: 'Tạm thời' },
                                             { value: 'WEEKEND', label: 'Cuối tuần' },
                                             { value: 'HOLIDAY', label: 'Ngày lễ' },
                                             { value: 'NIGHT', label: 'Ca đêm' },
@@ -770,26 +788,32 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                                         ]}
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Hiệu lực từ ngày</label>
-                                    <input
-                                        type="date"
-                                        value={shiftForm.effectiveFrom}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, effectiveFrom: event.target.value })}
-                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.effectiveFrom ? 'border-rose-400' : 'border-slate-200'}`}
-                                    />
-                                    {shiftFormErrors.effectiveFrom && <p className="text-xs text-rose-600">{shiftFormErrors.effectiveFrom}</p>}
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Hiệu lực đến ngày</label>
-                                    <input
-                                        type="date"
-                                        value={shiftForm.effectiveTo}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, effectiveTo: event.target.value })}
-                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.effectiveTo ? 'border-rose-400' : 'border-slate-200'}`}
-                                    />
-                                    {shiftFormErrors.effectiveTo && <p className="text-xs text-rose-600">{shiftFormErrors.effectiveTo}</p>}
-                                </div>
+                                {shiftForm.shiftType === 'TEMPORARY' && (
+                                    <>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Hiệu lực từ ngày</label>
+                                            <input
+                                                type="date"
+                                                value={shiftForm.effectiveFrom}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, effectiveFrom: event.target.value })}
+                                                className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.effectiveFrom ? 'border-rose-400' : 'border-slate-200'}`}
+                                                required
+                                            />
+                                            {shiftFormErrors.effectiveFrom && <p className="text-xs text-rose-600">{shiftFormErrors.effectiveFrom}</p>}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Hiệu lực đến ngày</label>
+                                            <input
+                                                type="date"
+                                                value={shiftForm.effectiveTo}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, effectiveTo: event.target.value })}
+                                                className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.effectiveTo ? 'border-rose-400' : 'border-slate-200'}`}
+                                                required
+                                            />
+                                            {shiftFormErrors.effectiveTo && <p className="text-xs text-rose-600">{shiftFormErrors.effectiveTo}</p>}
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-3">
@@ -827,112 +851,126 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                                 </div>
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-3">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Hệ số tăng ca</label>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        value={shiftForm.overtimeMultiplier}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, overtimeMultiplier: event.target.value })}
-                                        placeholder="Ví dụ: 1.5"
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Phụ cấp ca đêm (%)</label>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        value={shiftForm.nightShiftBonus}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, nightShiftBonus: event.target.value })}
-                                        placeholder="Nhập phần trăm"
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Phụ cấp cuối tuần (%)</label>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        value={shiftForm.weekendBonus}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, weekendBonus: event.target.value })}
-                                        placeholder="Nhập phần trăm"
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    />
-                                </div>
+                            <div className="rounded-lg border border-slate-200 px-3 py-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAdvancedShiftOptions((prev) => !prev)}
+                                    className="w-full text-left text-sm font-medium text-slate-700"
+                                >
+                                    {showAdvancedShiftOptions ? 'Ẩn thiết lập nâng cao' : 'Mở thiết lập nâng cao'}
+                                </button>
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-3">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Phụ cấp ngày lễ (%)</label>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        value={shiftForm.holidayBonus}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, holidayBonus: event.target.value })}
-                                        placeholder="Nhập phần trăm"
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Vào sớm tối đa (phút)</label>
-                                    <input
-                                        type="number"
-                                        value={shiftForm.earlyClockInMinutes}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, earlyClockInMinutes: event.target.value })}
-                                        placeholder="Nhập phút"
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Ra muộn tối đa (phút)</label>
-                                    <input
-                                        type="number"
-                                        value={shiftForm.lateClockOutMinutes}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, lateClockOutMinutes: event.target.value })}
-                                        placeholder="Nhập phút"
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    />
-                                </div>
-                            </div>
+                            {showAdvancedShiftOptions && (
+                                <>
+                                    <div className="grid gap-4 md:grid-cols-3">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Hệ số tăng ca</label>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={shiftForm.overtimeMultiplier}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, overtimeMultiplier: event.target.value })}
+                                                placeholder="Ví dụ: 1.5"
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Phụ cấp ca đêm (%)</label>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={shiftForm.nightShiftBonus}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, nightShiftBonus: event.target.value })}
+                                                placeholder="Nhập phần trăm"
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Phụ cấp cuối tuần (%)</label>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={shiftForm.weekendBonus}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, weekendBonus: event.target.value })}
+                                                placeholder="Nhập phần trăm"
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    </div>
 
-                            <div className="grid gap-4 md:grid-cols-3">
-                                <label className="flex items-center gap-2 text-sm text-slate-600">
-                                    <input
-                                        type="checkbox"
-                                        checked={shiftForm.allowEarlyClockIn}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, allowEarlyClockIn: event.target.checked })}
-                                    />
-                                    Allow early clock-in
-                                </label>
-                                <label className="flex items-center gap-2 text-sm text-slate-600">
-                                    <input
-                                        type="checkbox"
-                                        checked={shiftForm.allowLateClockOut}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, allowLateClockOut: event.target.checked })}
-                                    />
-                                    Allow late clock-out
-                                </label>
-                                <label className="flex items-center gap-2 text-sm text-slate-600">
-                                    <input
-                                        type="checkbox"
-                                        checked={shiftForm.requiresApproval}
-                                        onChange={(event) => setShiftForm({ ...shiftForm, requiresApproval: event.target.checked })}
-                                    />
-                                    Requires approval
-                                </label>
-                            </div>
+                                    <div className="grid gap-4 md:grid-cols-3">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Phụ cấp ngày lễ (%)</label>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={shiftForm.holidayBonus}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, holidayBonus: event.target.value })}
+                                                placeholder="Nhập phần trăm"
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Vào sớm tối đa (phút)</label>
+                                            <input
+                                                type="number"
+                                                value={shiftForm.earlyClockInMinutes}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, earlyClockInMinutes: event.target.value })}
+                                                placeholder="Nhập phút"
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Ra muộn tối đa (phút)</label>
+                                            <input
+                                                type="number"
+                                                value={shiftForm.lateClockOutMinutes}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, lateClockOutMinutes: event.target.value })}
+                                                placeholder="Nhập phút"
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    </div>
 
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Ghi chú ca làm</label>
-                                <textarea
-                                    value={shiftForm.description}
-                                    onChange={(event) => setShiftForm({ ...shiftForm, description: event.target.value })}
-                                    placeholder="Nhập ghi chú"
-                                    className="min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                />
-                            </div>
+                                    <div className="grid gap-4 md:grid-cols-3">
+                                        <label className="flex items-center gap-2 text-sm text-slate-600">
+                                            <input
+                                                type="checkbox"
+                                                checked={shiftForm.allowEarlyClockIn}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, allowEarlyClockIn: event.target.checked })}
+                                            />
+                                            Cho phép vào sớm
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm text-slate-600">
+                                            <input
+                                                type="checkbox"
+                                                checked={shiftForm.allowLateClockOut}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, allowLateClockOut: event.target.checked })}
+                                            />
+                                            Cho phép ra muộn
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm text-slate-600">
+                                            <input
+                                                type="checkbox"
+                                                checked={shiftForm.requiresApproval}
+                                                onChange={(event) => setShiftForm({ ...shiftForm, requiresApproval: event.target.checked })}
+                                            />
+                                            Cần duyệt trước
+                                        </label>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-slate-600">Ghi chú ca làm</label>
+                                        <textarea
+                                            value={shiftForm.description}
+                                            onChange={(event) => setShiftForm({ ...shiftForm, description: event.target.value })}
+                                            placeholder="Nhập ghi chú"
+                                            className="min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                </>
+                            )}
 
                             <div className="flex justify-end gap-2">
                                 <button
@@ -1145,34 +1183,38 @@ const toDateInput = (value) => {
     return `${year}-${month}-${day}`;
 };
 
-const buildShiftPayload = (form) => ({
-    shiftCode: form.shiftCode.trim(),
-    shiftName: form.shiftName.trim(),
-    startTime: form.startTime || null,
-    endTime: form.endTime || null,
-    breakStartTime: form.breakStartTime || null,
-    breakEndTime: form.breakEndTime || null,
-    shiftType: form.shiftType,
-    overtimeMultiplier: form.overtimeMultiplier !== '' ? Number(form.overtimeMultiplier) : null,
-    nightShiftBonus: form.nightShiftBonus !== '' ? Number(form.nightShiftBonus) : null,
-    weekendBonus: form.weekendBonus !== '' ? Number(form.weekendBonus) : null,
-    holidayBonus: form.holidayBonus !== '' ? Number(form.holidayBonus) : null,
-    minimumStaffRequired: form.minimumStaffRequired !== '' ? Number(form.minimumStaffRequired) : null,
-    maximumStaffAllowed: form.maximumStaffAllowed !== '' ? Number(form.maximumStaffAllowed) : null,
-    allowEarlyClockIn: form.allowEarlyClockIn,
-    allowLateClockOut: form.allowLateClockOut,
-    earlyClockInMinutes: form.earlyClockInMinutes !== '' ? Number(form.earlyClockInMinutes) : null,
-    lateClockOutMinutes: form.lateClockOutMinutes !== '' ? Number(form.lateClockOutMinutes) : null,
-    gracePeriodMinutes: form.gracePeriodMinutes !== '' ? Number(form.gracePeriodMinutes) : null,
-    status: form.status,
-    effectiveFrom: form.effectiveFrom || null,
-    effectiveTo: form.effectiveTo || null,
-    requiresApproval: form.requiresApproval,
-    description: form.description || null,
-});
+const buildShiftPayload = (form) => {
+    const isTemporary = String(form.shiftType || '').toUpperCase() === 'TEMPORARY';
+    return {
+        shiftCode: form.shiftCode.trim(),
+        shiftName: form.shiftName.trim(),
+        startTime: form.startTime || null,
+        endTime: form.endTime || null,
+        breakStartTime: form.breakStartTime || null,
+        breakEndTime: form.breakEndTime || null,
+        shiftType: form.shiftType,
+        overtimeMultiplier: form.overtimeMultiplier !== '' ? Number(form.overtimeMultiplier) : null,
+        nightShiftBonus: form.nightShiftBonus !== '' ? Number(form.nightShiftBonus) : null,
+        weekendBonus: form.weekendBonus !== '' ? Number(form.weekendBonus) : null,
+        holidayBonus: form.holidayBonus !== '' ? Number(form.holidayBonus) : null,
+        minimumStaffRequired: form.minimumStaffRequired !== '' ? Number(form.minimumStaffRequired) : null,
+        maximumStaffAllowed: form.maximumStaffAllowed !== '' ? Number(form.maximumStaffAllowed) : null,
+        allowEarlyClockIn: form.allowEarlyClockIn,
+        allowLateClockOut: form.allowLateClockOut,
+        earlyClockInMinutes: form.earlyClockInMinutes !== '' ? Number(form.earlyClockInMinutes) : null,
+        lateClockOutMinutes: form.lateClockOutMinutes !== '' ? Number(form.lateClockOutMinutes) : null,
+        gracePeriodMinutes: form.gracePeriodMinutes !== '' ? Number(form.gracePeriodMinutes) : null,
+        status: form.status,
+        effectiveFrom: isTemporary ? (form.effectiveFrom || null) : null,
+        effectiveTo: isTemporary ? (form.effectiveTo || null) : null,
+        requiresApproval: form.requiresApproval,
+        description: form.description || null,
+    };
+};
 
 const validateShiftForm = (form) => {
     const errors = {};
+    const isTemporary = String(form.shiftType || '').toUpperCase() === 'TEMPORARY';
 
     if (!form.shiftCode?.trim()) {
         errors.shiftCode = 'Vui lòng nhập mã ca.';
@@ -1194,8 +1236,16 @@ const validateShiftForm = (form) => {
         errors.endTime = 'Giờ kết thúc phải sau giờ bắt đầu.';
     }
 
-    if (form.effectiveFrom && form.effectiveTo && form.effectiveTo < form.effectiveFrom) {
-        errors.effectiveTo = 'Ngày kết thúc hiệu lực phải sau hoặc bằng ngày bắt đầu hiệu lực.';
+    if (isTemporary) {
+        if (!form.effectiveFrom) {
+            errors.effectiveFrom = 'Vui lòng chọn ngày bắt đầu hiệu lực cho ca tạm thời.';
+        }
+        if (!form.effectiveTo) {
+            errors.effectiveTo = 'Vui lòng chọn ngày kết thúc hiệu lực cho ca tạm thời.';
+        }
+        if (form.effectiveFrom && form.effectiveTo && form.effectiveTo < form.effectiveFrom) {
+            errors.effectiveTo = 'Ngày kết thúc hiệu lực phải sau hoặc bằng ngày bắt đầu hiệu lực.';
+        }
     }
 
     const minStaff = form.minimumStaffRequired === '' ? null : Number(form.minimumStaffRequired);

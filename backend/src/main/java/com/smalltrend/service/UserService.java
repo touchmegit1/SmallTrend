@@ -28,16 +28,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -45,6 +40,7 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final UserCredentialsRepository userCredentialsRepository;
     private final RoleRepository roleRepository;
+    private final CloudinaryService cloudinaryService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -52,11 +48,13 @@ public class UserService implements UserDetailsService {
             UserRepository userRepository,
             UserCredentialsRepository userCredentialsRepository,
             RoleRepository roleRepository,
+            CloudinaryService cloudinaryService,
             @Lazy PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.userCredentialsRepository = userCredentialsRepository;
         this.roleRepository = roleRepository;
+        this.cloudinaryService = cloudinaryService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
     }
@@ -408,26 +406,12 @@ public class UserService implements UserDetailsService {
             throw new IllegalArgumentException("File tải lên phải là hình ảnh");
         }
 
-        try {
-            Path uploadPath = Paths.get("uploads/avatars");
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
-            }
-
-            String fileName = UUID.randomUUID() + extension;
-            Path targetPath = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-
-            return "/uploads/avatars/" + fileName;
-        } catch (IOException ex) {
-            throw new RuntimeException("Không thể lưu ảnh đại diện", ex);
+        Map<String, Object> uploadResult = cloudinaryService.uploadFile(file, "avatars");
+        Object secureUrl = uploadResult.get("secure_url");
+        if (secureUrl == null || String.valueOf(secureUrl).isBlank()) {
+            throw new RuntimeException("Không thể lưu ảnh đại diện");
         }
+        return String.valueOf(secureUrl);
     }
 
     private void applySalaryFields(User user,

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Edit, Trash2, X, Search, Filter, UserCheck, Clock, Plus, Check, Ban } from 'lucide-react';
+import { Users, Edit, Trash2, X, Search, Plus, Loader2 } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import { userService } from '../../services/userService';
+import api from '../../config/axiosConfig';
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
@@ -11,7 +12,6 @@ const UserManagement = () => {
     const [isCreate, setIsCreate] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [activeTab, setActiveTab] = useState('approved');
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -30,8 +30,20 @@ const UserManagement = () => {
         workingHoursPerMonth: 208
     });
     const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isListLoading, setIsListLoading] = useState(false);
+    const [actionLoadingKey, setActionLoadingKey] = useState('');
     const [error, setError] = useState('');
     const [validationErrors, setValidationErrors] = useState({});
+
+    useEffect(() => {
+        return () => {
+            if (avatarPreviewUrl && avatarPreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(avatarPreviewUrl);
+            }
+        };
+    }, [avatarPreviewUrl]);
 
     useEffect(() => {
         fetchUsers();
@@ -39,10 +51,11 @@ const UserManagement = () => {
 
     useEffect(() => {
         filterUsers();
-    }, [users, searchTerm, statusFilter, activeTab]);
+    }, [users, searchTerm, statusFilter]);
 
     const fetchUsers = async () => {
         try {
+            setIsListLoading(true);
             const response = await userService.getAll({ page: 0, size: 100 });
             setUsers(normalizeUsers(response));
             setError('');
@@ -50,18 +63,13 @@ const UserManagement = () => {
             setUsers([]);
             setError('Không thể tải danh sách người dùng: ' + (err.response?.data?.message || err.message));
         } finally {
+            setIsListLoading(false);
             setLoading(false);
         }
     };
 
     const filterUsers = () => {
         let filtered = normalizeUsers(users);
-
-        if (activeTab === 'pending') {
-            filtered = filtered.filter(user => normalizeStatus(user.status) === 'pending');
-        } else {
-            filtered = filtered.filter(user => normalizeStatus(user.status) !== 'pending');
-        }
 
         if (searchTerm) {
             filtered = filtered.filter(user =>
@@ -71,7 +79,7 @@ const UserManagement = () => {
             );
         }
 
-        if (activeTab === 'approved' && statusFilter !== 'all') {
+        if (statusFilter !== 'all') {
             filtered = filtered.filter(user => normalizeStatus(user.status) === statusFilter);
         }
 
@@ -163,6 +171,7 @@ const UserManagement = () => {
         });
         setValidationErrors({});
         setAvatarFile(null);
+        setAvatarPreviewUrl('');
         setError('');
         setShowModal(true);
     };
@@ -189,17 +198,32 @@ const UserManagement = () => {
         });
         setValidationErrors({});
         setAvatarFile(null);
+        setAvatarPreviewUrl('');
         setError('');
         setShowModal(true);
     };
 
+    const handleAvatarFileChange = (file) => {
+        setAvatarFile(file || null);
+        if (avatarPreviewUrl && avatarPreviewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(avatarPreviewUrl);
+        }
+        if (file) {
+            setAvatarPreviewUrl(URL.createObjectURL(file));
+        } else {
+            setAvatarPreviewUrl('');
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
         setError('');
 
         if (!validateForm()) return;
 
         try {
+            setIsSubmitting(true);
             if (isCreate) {
                 const payload = {
                     username: formData.username,
@@ -227,66 +251,69 @@ const UserManagement = () => {
                     status: (formData.status || 'active').toUpperCase(),
                     ...buildSalaryPayload(formData)
                 });
+                if (avatarFile) {
+                    await userService.uploadAvatar(selectedUser.id, avatarFile);
+                }
             }
             setShowModal(false);
-            fetchUsers();
+            await fetchUsers();
         } catch (err) {
             setError(err.response?.data?.message || 'Có lỗi xảy ra');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (userId) => {
         if (window.confirm('Bạn có chắc muốn xóa người dùng này?')) {
             try {
+                setActionLoadingKey(`delete-${userId}`);
                 await userService.remove(userId);
-                fetchUsers();
+                await fetchUsers();
             } catch (err) {
                 setError('Không thể xóa người dùng: ' + (err.response?.data?.message || err.message));
+            } finally {
+                setActionLoadingKey('');
             }
         }
     };
 
     const handleStatusToggle = async (userId, newStatus) => {
         try {
+            setActionLoadingKey(`status-${userId}`);
             await userService.updateStatus(userId, newStatus);
-            fetchUsers();
+            await fetchUsers();
         } catch (err) {
             setError('Không thể cập nhật trạng thái: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setActionLoadingKey('');
         }
     };
 
     const handleRoleChange = async (userId, newRoleId) => {
         try {
+            setActionLoadingKey(`role-${userId}`);
             await userService.update(userId, { roleId: parseInt(newRoleId) });
-            fetchUsers();
+            await fetchUsers();
         } catch (err) {
             setError('Không thể cập nhật vai trò: ' + (err.response?.data?.message || err.message));
-        }
-    };
-
-    const handleApprove = async (userId) => {
-        try {
-            await userService.updateStatus(userId, 'active');
-            fetchUsers();
-        } catch (err) {
-            setError('Không thể duyệt người dùng: ' + (err.response?.data?.message || err.message));
-        }
-    };
-
-    const handleReject = async (userId) => {
-        if (window.confirm('Bạn có chắc muốn từ chối yêu cầu đăng ký này?')) {
-            try {
-                await userService.remove(userId);
-                fetchUsers();
-            } catch (err) {
-                setError('Không thể từ chối: ' + (err.response?.data?.message || err.message));
-            }
+        } finally {
+            setActionLoadingKey('');
         }
     };
 
     const safeUsers = normalizeUsers(users);
-    const pendingCount = safeUsers.filter(u => normalizeStatus(u.status) === 'pending').length;
-    const approvedCount = safeUsers.filter(u => normalizeStatus(u.status) !== 'pending').length;
+    const totalCount = safeUsers.length;
+    const backendOrigin = (api.defaults.baseURL || '').replace(/\/api\/?$/, '');
+    const currentAvatarUrl = selectedUser?.avatarUrl
+        ? (selectedUser.avatarUrl.startsWith('http') ? selectedUser.avatarUrl : `${backendOrigin}${selectedUser.avatarUrl}`)
+        : '';
+    const displayAvatarUrl = avatarPreviewUrl || currentAvatarUrl;
+    const isActionBusy = isListLoading || Boolean(actionLoadingKey);
+    const resolveAvatarUrl = (avatarUrl) => {
+        if (!avatarUrl) return '';
+        return avatarUrl.startsWith('http') ? avatarUrl : `${backendOrigin}${avatarUrl}`;
+    };
 
     if (loading) {
         return (
@@ -305,7 +332,8 @@ const UserManagement = () => {
                 </h1>
                 <button
                     onClick={handleCreateOpen}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                    disabled={isActionBusy}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <Plus size={16} />
                     Tạo người dùng
@@ -317,29 +345,6 @@ const UserManagement = () => {
                     {error}
                 </div>
             )}
-
-            <div className="flex gap-2">
-                <button
-                    onClick={() => setActiveTab('approved')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${activeTab === 'approved'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'bg-white text-slate-600 hover:bg-slate-50'
-                        }`}
-                >
-                    <UserCheck size={20} />
-                    Đã duyệt ({approvedCount})
-                </button>
-                <button
-                    onClick={() => setActiveTab('pending')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${activeTab === 'pending'
-                        ? 'bg-orange-600 text-white shadow-md'
-                        : 'bg-white text-slate-600 hover:bg-slate-50'
-                        }`}
-                >
-                    <Clock size={20} />
-                    Chờ duyệt ({pendingCount})
-                </button>
-            </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -355,32 +360,35 @@ const UserManagement = () => {
                             />
                         </div>
                     </div>
-                    {activeTab === 'approved' && (
-                        <div>
-                            <CustomSelect
-                                value={statusFilter}
-                                onChange={(val) => setStatusFilter(val)}
-                                variant="status"
-                                options={[
-                                    { value: 'all', label: 'Tất cả trạng thái' },
-                                    { value: 'active', label: 'Hoạt động' },
-                                    { value: 'inactive', label: 'Vô hiệu' }
-                                ]}
-                            />
-                        </div>
-                    )}
+                    <div>
+                        <CustomSelect
+                            value={statusFilter}
+                            onChange={(val) => setStatusFilter(val)}
+                            variant="status"
+                            options={[
+                                { value: 'all', label: 'Tất cả trạng thái' },
+                                { value: 'active', label: 'Hoạt động' },
+                                { value: 'inactive', label: 'Vô hiệu' }
+                            ]}
+                        />
+                    </div>
                 </div>
                 <div className="mt-3 text-sm text-slate-600">
-                    Hiển thị <span className="font-semibold">{filteredUsers.length}</span> / {activeTab === 'pending' ? pendingCount : approvedCount} người dùng
+                    Hiển thị <span className="font-semibold">{filteredUsers.length}</span> / {totalCount} người dùng
                 </div>
             </div>
+
+            {isListLoading && !loading && (
+                <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-2 rounded-lg text-sm inline-flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" />
+                    Đang tải danh sách người dùng...
+                </div>
+            )}
 
             {filteredUsers.length === 0 ? (
                 <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
                     <Users size={48} className="mx-auto text-slate-300 mb-4" />
-                    <p className="text-slate-600">
-                        {activeTab === 'pending' ? 'Không có yêu cầu đăng ký nào' : 'Không tìm thấy người dùng nào'}
-                    </p>
+                    <p className="text-slate-600">Không tìm thấy người dùng nào</p>
                 </div>
             ) : (
                 <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -390,9 +398,7 @@ const UserManagement = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Họ tên</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vai trò</th>
-                                {activeTab === 'approved' && (
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Trạng thái</th>
-                                )}
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Trạng thái</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cấu hình lương</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Thao tác</th>
                             </tr>
@@ -403,11 +409,19 @@ const UserManagement = () => {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="h-10 w-10 flex-shrink-0">
-                                                <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                                                    <span className="text-indigo-600 font-medium text-sm">
-                                                        {user.fullName?.charAt(0).toUpperCase()}
-                                                    </span>
-                                                </div>
+                                                {resolveAvatarUrl(user.avatarUrl) ? (
+                                                    <img
+                                                        src={resolveAvatarUrl(user.avatarUrl)}
+                                                        alt={user.fullName || 'Avatar'}
+                                                        className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                                                    />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                        <span className="text-indigo-600 font-medium text-sm">
+                                                            {user.fullName?.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="ml-4">
                                                 <div className="text-sm font-medium text-slate-900">{user.fullName}</div>
@@ -421,6 +435,7 @@ const UserManagement = () => {
                                         <CustomSelect
                                             value={user.role?.id || 2}
                                             onChange={(newRoleId) => handleRoleChange(user.id, newRoleId)}
+                                            disabled={isActionBusy || actionLoadingKey === `role-${user.id}`}
                                             variant="role"
                                             options={[
                                                 { value: 1, label: 'Admin' },
@@ -431,59 +446,39 @@ const UserManagement = () => {
                                             ]}
                                         />
                                     </td>
-                                    {activeTab === 'approved' && (
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <CustomSelect
-                                                value={(user.status || '').toLowerCase()}
-                                                onChange={(newStatus) => handleStatusToggle(user.id, newStatus)}
-                                                variant="status"
-                                                options={[
-                                                    { value: 'active', label: 'Hoạt động' },
-                                                    { value: 'inactive', label: 'Vô hiệu' }
-                                                ]}
-                                            />
-                                        </td>
-                                    )}
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <CustomSelect
+                                            value={(user.status || '').toLowerCase()}
+                                            onChange={(newStatus) => handleStatusToggle(user.id, newStatus)}
+                                            disabled={isActionBusy || actionLoadingKey === `status-${user.id}`}
+                                            variant="status"
+                                            options={[
+                                                { value: 'active', label: 'Hoạt động' },
+                                                { value: 'inactive', label: 'Vô hiệu' }
+                                            ]}
+                                        />
+                                    </td>
                                     <td className="px-6 py-4 text-sm text-slate-700">
                                         {summarizeSalary(user)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div className="flex items-center gap-2">
-                                            {activeTab === 'pending' ? (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleApprove(user.id)}
-                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-medium"
-                                                        title="Duyệt"
-                                                    >
-                                                        <Check size={14} /> Duyệt
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleReject(user.id)}
-                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xs font-medium"
-                                                        title="Từ chối"
-                                                    >
-                                                        <Ban size={14} /> Từ chối
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleEdit(user)}
-                                                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <Edit size={18} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(user.id)}
-                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                                        title="Xóa"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </>
-                                            )}
+                                            <button
+                                                onClick={() => handleEdit(user)}
+                                                disabled={isActionBusy}
+                                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
+                                                title="Chỉnh sửa"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(user.id)}
+                                                disabled={isActionBusy}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
+                                                title="Xóa"
+                                            >
+                                                {actionLoadingKey === `delete-${user.id}` ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -495,14 +490,15 @@ const UserManagement = () => {
 
             {showModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-y-auto">
                         <div className="flex justify-between items-center p-6 border-b border-slate-200">
                             <h2 className="text-xl font-semibold text-slate-800">
                                 {isCreate ? 'Tạo người dùng' : 'Chỉnh sửa người dùng'}
                             </h2>
                             <button
-                                onClick={() => setShowModal(false)}
+                                onClick={() => !isSubmitting && setShowModal(false)}
                                 className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition"
+                                disabled={isSubmitting}
                             >
                                 <X size={20} />
                             </button>
@@ -510,255 +506,271 @@ const UserManagement = () => {
 
                         <div className="p-6">
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {/* Two-column grid similar to Register page */}
-                                {isCreate && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                Username <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.username}
-                                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.username ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                                placeholder="nhap_username"
-                                            />
-                                            {validationErrors.username && (
-                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.username}</p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                Mật khẩu <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="password"
-                                                value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.password ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                                placeholder="••••••"
-                                            />
-                                            {validationErrors.password && (
-                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.password}</p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                Xác nhận mật khẩu <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="password"
-                                                value={formData.confirmPassword}
-                                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.confirmPassword ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                                placeholder="••••••"
-                                            />
-                                            {validationErrors.confirmPassword && (
-                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.confirmPassword}</p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                Ảnh đại diện
-                                            </label>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <div className="lg:col-span-1">
+                                        <div className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50">
+                                            <p className="text-sm font-semibold text-slate-800">Ảnh đại diện</p>
+                                            <div className="w-full aspect-square rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center">
+                                                {displayAvatarUrl ? (
+                                                    <img src={displayAvatarUrl} alt="Avatar preview" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-slate-400 text-sm">Chưa có ảnh</span>
+                                                )}
+                                            </div>
                                             <input
                                                 type="file"
                                                 accept="image/*"
-                                                onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
-                                                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm"
+                                                onChange={(e) => handleAvatarFileChange(e.target.files?.[0] || null)}
+                                                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white"
                                             />
                                             {avatarFile && (
-                                                <p className="text-xs text-slate-500 mt-1.5">Đã chọn: {avatarFile.name}</p>
+                                                <p className="text-xs text-slate-500">Đã chọn: {avatarFile.name}</p>
+                                            )}
+                                            {!avatarFile && !isCreate && currentAvatarUrl && (
+                                                <p className="text-xs text-slate-500">Đang dùng ảnh hiện tại.</p>
                                             )}
                                         </div>
                                     </div>
-                                )}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                            Họ tên <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.fullName}
-                                            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.fullName ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                            placeholder="Nhập họ tên đầy đủ"
-                                        />
-                                        {validationErrors.fullName && (
-                                            <p className="text-red-600 text-xs mt-1.5">{validationErrors.fullName}</p>
+
+                                    <div className="lg:col-span-2 space-y-4">
+                                        {/* Two-column grid similar to Register page */}
+                                        {isCreate && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                        Username <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.username}
+                                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.username ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                        placeholder="nhap_username"
+                                                    />
+                                                    {validationErrors.username && (
+                                                        <p className="text-red-600 text-xs mt-1.5">{validationErrors.username}</p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                        Mật khẩu <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="password"
+                                                        value={formData.password}
+                                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.password ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                        placeholder="••••••"
+                                                    />
+                                                    {validationErrors.password && (
+                                                        <p className="text-red-600 text-xs mt-1.5">{validationErrors.password}</p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                        Xác nhận mật khẩu <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="password"
+                                                        value={formData.confirmPassword}
+                                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.confirmPassword ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                        placeholder="••••••"
+                                                    />
+                                                    {validationErrors.confirmPassword && (
+                                                        <p className="text-red-600 text-xs mt-1.5">{validationErrors.confirmPassword}</p>
+                                                    )}
+                                                </div>
+                                                <div className="hidden md:block" />
+                                            </div>
                                         )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                            Email <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.email ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                            placeholder="example@email.com"
-                                        />
-                                        {validationErrors.email && (
-                                            <p className="text-red-600 text-xs mt-1.5">{validationErrors.email}</p>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                            Số điện thoại
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.phone ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                            placeholder="0123456789"
-                                        />
-                                        {validationErrors.phone && (
-                                            <p className="text-red-600 text-xs mt-1.5">{validationErrors.phone}</p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                            Địa chỉ
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.address}
-                                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                            placeholder="Nhập địa chỉ"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                            Vai trò
-                                        </label>
-                                        <CustomSelect
-                                            value={formData.roleId}
-                                            onChange={(val) => setFormData({ ...formData, roleId: parseInt(val) })}
-                                            variant="role"
-                                            options={[
-                                                { value: 1, label: 'Admin' },
-                                                { value: 2, label: 'Manager' },
-                                                { value: 3, label: 'Cashier' },
-                                                { value: 4, label: 'Inventory Staff' },
-                                                { value: 5, label: 'Sales Staff' }
-                                            ]}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                            Trạng thái
-                                        </label>
-                                        <CustomSelect
-                                            value={formData.status}
-                                            onChange={(val) => setFormData({ ...formData, status: val })}
-                                            variant="status"
-                                            options={[
-                                                { value: 'active', label: 'Hoạt động' },
-                                                { value: 'inactive', label: 'Vô hiệu hóa' }
-                                            ]}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="rounded-lg border border-slate-200 p-4 space-y-4">
-                                    <h3 className="text-sm font-semibold text-slate-800">Cấu hình lương nhân viên</h3>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">Chế độ lương</label>
-                                        <CustomSelect
-                                            value={formData.salaryType}
-                                            onChange={(value) => setFormData({ ...formData, salaryType: value })}
-                                            options={[
-                                                { value: 'MONTHLY', label: 'Theo tháng' },
-                                                { value: 'MONTHLY_MIN_SHIFTS', label: 'Theo tháng (đủ số ca)' },
-                                                { value: 'HOURLY', label: 'Theo giờ' },
-                                            ]}
-                                        />
-                                        {validationErrors.salaryType && (
-                                            <p className="text-red-600 text-xs mt-1.5">{validationErrors.salaryType}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">Lương cơ bản (VND)</label>
-                                            <input
-                                                type="number"
-                                                value={formData.baseSalary}
-                                                onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
-                                                min="0"
-                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.baseSalary ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                                placeholder="7000000"
-                                            />
-                                            {validationErrors.baseSalary && (
-                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.baseSalary}</p>
-                                            )}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                    Họ tên <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.fullName}
+                                                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.fullName ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                    placeholder="Nhập họ tên đầy đủ"
+                                                />
+                                                {validationErrors.fullName && (
+                                                    <p className="text-red-600 text-xs mt-1.5">{validationErrors.fullName}</p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                    Email <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.email ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                    placeholder="example@email.com"
+                                                />
+                                                {validationErrors.email && (
+                                                    <p className="text-red-600 text-xs mt-1.5">{validationErrors.email}</p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">Đơn giá theo giờ (VND)</label>
-                                            <input
-                                                type="number"
-                                                value={formData.hourlyRate}
-                                                onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                                                min="0"
-                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.hourlyRate ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                                placeholder="30000"
-                                            />
-                                            {validationErrors.hourlyRate && (
-                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.hourlyRate}</p>
-                                            )}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                    Số điện thoại
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.phone}
+                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.phone ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                    placeholder="0123456789"
+                                                />
+                                                {validationErrors.phone && (
+                                                    <p className="text-red-600 text-xs mt-1.5">{validationErrors.phone}</p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                    Địa chỉ
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.address}
+                                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                    placeholder="Nhập địa chỉ"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                    Vai trò
+                                                </label>
+                                                <CustomSelect
+                                                    value={formData.roleId}
+                                                    onChange={(val) => setFormData({ ...formData, roleId: parseInt(val) })}
+                                                    variant="role"
+                                                    options={[
+                                                        { value: 1, label: 'Admin' },
+                                                        { value: 2, label: 'Manager' },
+                                                        { value: 3, label: 'Cashier' },
+                                                        { value: 4, label: 'Inventory Staff' },
+                                                        { value: 5, label: 'Sales Staff' }
+                                                    ]}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                                    Trạng thái
+                                                </label>
+                                                <CustomSelect
+                                                    value={formData.status}
+                                                    onChange={(val) => setFormData({ ...formData, status: val })}
+                                                    variant="status"
+                                                    options={[
+                                                        { value: 'active', label: 'Hoạt động' },
+                                                        { value: 'inactive', label: 'Vô hiệu hóa' }
+                                                    ]}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
+                                            <h3 className="text-sm font-semibold text-slate-800">Cấu hình lương nhân viên</h3>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-2">Chế độ lương</label>
+                                                <CustomSelect
+                                                    value={formData.salaryType}
+                                                    onChange={(value) => setFormData({ ...formData, salaryType: value })}
+                                                    options={[
+                                                        { value: 'MONTHLY', label: 'Theo tháng' },
+                                                        { value: 'MONTHLY_MIN_SHIFTS', label: 'Theo tháng (đủ số ca)' },
+                                                        { value: 'HOURLY', label: 'Theo giờ' },
+                                                    ]}
+                                                />
+                                                {validationErrors.salaryType && (
+                                                    <p className="text-red-600 text-xs mt-1.5">{validationErrors.salaryType}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-2">Lương cơ bản (VND)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.baseSalary}
+                                                        onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
+                                                        min="0"
+                                                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.baseSalary ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                        placeholder="7000000"
+                                                    />
+                                                    {validationErrors.baseSalary && (
+                                                        <p className="text-red-600 text-xs mt-1.5">{validationErrors.baseSalary}</p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-2">Đơn giá theo giờ (VND)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.hourlyRate}
+                                                        onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                                                        min="0"
+                                                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.hourlyRate ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                        placeholder="30000"
+                                                    />
+                                                    {validationErrors.hourlyRate && (
+                                                        <p className="text-red-600 text-xs mt-1.5">{validationErrors.hourlyRate}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-2">Ca tối thiểu/tháng</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.minRequiredShifts}
+                                                        onChange={(e) => setFormData({ ...formData, minRequiredShifts: e.target.value })}
+                                                        min="0"
+                                                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.minRequiredShifts ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                        placeholder="20"
+                                                    />
+                                                    {validationErrors.minRequiredShifts && (
+                                                        <p className="text-red-600 text-xs mt-1.5">{validationErrors.minRequiredShifts}</p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-700 mb-2">Giờ chuẩn/tháng</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.workingHoursPerMonth}
+                                                        onChange={(e) => setFormData({ ...formData, workingHoursPerMonth: e.target.value })}
+                                                        min="1"
+                                                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.workingHoursPerMonth ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
+                                                        placeholder="208"
+                                                    />
+                                                    {validationErrors.workingHoursPerMonth && (
+                                                        <p className="text-red-600 text-xs mt-1.5">{validationErrors.workingHoursPerMonth}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={Boolean(formData.countLateAsPresent)}
+                                                    onChange={(e) => setFormData({ ...formData, countLateAsPresent: e.target.checked })}
+                                                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                Tính đi trễ là có mặt khi xét lương tháng đủ ca
+                                            </label>
                                         </div>
                                     </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">Ca tối thiểu/tháng</label>
-                                            <input
-                                                type="number"
-                                                value={formData.minRequiredShifts}
-                                                onChange={(e) => setFormData({ ...formData, minRequiredShifts: e.target.value })}
-                                                min="0"
-                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.minRequiredShifts ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                                placeholder="20"
-                                            />
-                                            {validationErrors.minRequiredShifts && (
-                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.minRequiredShifts}</p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">Giờ chuẩn/tháng</label>
-                                            <input
-                                                type="number"
-                                                value={formData.workingHoursPerMonth}
-                                                onChange={(e) => setFormData({ ...formData, workingHoursPerMonth: e.target.value })}
-                                                min="1"
-                                                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.workingHoursPerMonth ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
-                                                placeholder="208"
-                                            />
-                                            {validationErrors.workingHoursPerMonth && (
-                                                <p className="text-red-600 text-xs mt-1.5">{validationErrors.workingHoursPerMonth}</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                                        <input
-                                            type="checkbox"
-                                            checked={Boolean(formData.countLateAsPresent)}
-                                            onChange={(e) => setFormData({ ...formData, countLateAsPresent: e.target.checked })}
-                                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        Tính đi trễ là có mặt khi xét lương tháng đủ ca
-                                    </label>
                                 </div>
 
                                 {error && (
@@ -771,15 +783,18 @@ const UserManagement = () => {
                                     <button
                                         type="button"
                                         onClick={() => setShowModal(false)}
-                                        className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition"
+                                        className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                                        disabled={isSubmitting}
                                     >
                                         Hủy
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                                        disabled={isSubmitting}
                                     >
-                                        {isCreate ? 'Tạo mới' : 'Cập nhật'}
+                                        {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                                        {isSubmitting ? 'Đang lưu...' : (isCreate ? 'Tạo mới' : 'Cập nhật')}
                                     </button>
                                 </div>
                             </form>

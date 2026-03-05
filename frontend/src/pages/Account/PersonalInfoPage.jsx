@@ -6,6 +6,7 @@ const PersonalInfoPage = () => {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -42,7 +43,14 @@ const PersonalInfoPage = () => {
             <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
                 <div className="flex items-center gap-4">
                     {avatarUrl ? (
-                        <img src={avatarUrl} alt={profile?.fullName || 'Avatar'} className="w-16 h-16 rounded-full object-cover border border-slate-200" />
+                        <button
+                            type="button"
+                            onClick={() => setShowAvatarModal(true)}
+                            className="rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            title="Phóng to ảnh đại diện"
+                        >
+                            <img src={avatarUrl} alt={profile?.fullName || 'Avatar'} className="w-16 h-16 rounded-full object-cover border border-slate-200" />
+                        </button>
                     ) : (
                         <div className="w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xl font-semibold">
                             {(profile?.fullName || 'U').slice(0, 1).toUpperCase()}
@@ -63,6 +71,32 @@ const PersonalInfoPage = () => {
 
                 <InfoRow label="Địa chỉ" value={profile?.address} />
             </div>
+
+            {showAvatarModal && avatarUrl && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={() => setShowAvatarModal(false)}
+                >
+                    <div
+                        className="relative bg-white rounded-2xl p-3 max-w-2xl w-full"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setShowAvatarModal(false)}
+                            className="absolute top-3 right-3 rounded-full bg-black/70 text-white w-8 h-8 flex items-center justify-center"
+                            title="Đóng"
+                        >
+                            ×
+                        </button>
+                        <img
+                            src={avatarUrl}
+                            alt={profile?.fullName || 'Avatar'}
+                            className="w-full max-h-[80vh] object-contain rounded-xl"
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
