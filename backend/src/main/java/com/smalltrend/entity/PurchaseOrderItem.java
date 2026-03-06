@@ -29,7 +29,10 @@ public class PurchaseOrderItem {
     private Integer quantity;
 
     @Column(name = "unit_price", precision = 15, scale = 2)
-    private BigDecimal unitPrice;
+    private BigDecimal unitCost;
+
+    @Column(name = "total_cost", precision = 15, scale = 2)
+    private BigDecimal totalCost;
 
     @Column(name = "received_quantity")
     @Builder.Default
@@ -37,4 +40,7 @@ public class PurchaseOrderItem {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @Column(name = "expiry_date")
+    private java.time.LocalDate expiryDate;
 }

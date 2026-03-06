@@ -10,6 +10,11 @@ import {
   confirmInventoryCount,
   createAndConfirmInventoryCount,
   cancelInventoryCount,
+  submitInventoryCount,
+  createAndSubmitInventoryCount,
+  approveInventoryCount,
+  rejectInventoryCount,
+  getLocationStocks,
 } from "../services/inventoryService";
 import {
   IC_STATUS,
@@ -118,9 +123,31 @@ export function useInventoryCount(voucherId) {
             sessionData.status === IC_STATUS.DRAFT ||
             sessionData.status === IC_STATUS.COUNTING
           ) {
+            let locStockMap = null;
+            if (sessionData.location_id) {
+              try {
+                const stocks = await getLocationStocks(sessionData.location_id);
+                locStockMap = {};
+                stocks.forEach((s) => {
+                  locStockMap[s.variant_id] = (locStockMap[s.variant_id] || 0) + s.quantity;
+                });
+              } catch (e) {
+                console.error("Failed to load location stocks", e);
+              }
+            }
+
             for (const p of productsData) {
               if (!countedProductIds.has(p.id)) {
-                mergedItems.push(createCountItem(p));
+                if (locStockMap) {
+                  // Only add if it exists in the location
+                  if (locStockMap[p.id] !== undefined) {
+                    const newItem = createCountItem(p);
+                    newItem.system_quantity = locStockMap[p.id];
+                    mergedItems.push(newItem);
+                  }
+                } else {
+                  mergedItems.push(createCountItem(p));
+                }
               }
             }
           }
@@ -138,6 +165,59 @@ export function useInventoryCount(voucherId) {
       cancelled = true;
     };
   }, [voucherId, isCreateMode]);
+
+  // ─── Refetch items when location changes ─────────
+  useEffect(() => {
+    // Only in edit mode (DRAFT or COUNTING) after initial load
+    if (loading || !products.length || !session) return;
+    if (session.status !== IC_STATUS.DRAFT && session.status !== IC_STATUS.COUNTING) return;
+
+    let cancelled = false;
+    const fetchLocationData = async () => {
+      try {
+        setLoading(true);
+        let locStockMap = null;
+        if (session.location_id) {
+          const stocks = await getLocationStocks(session.location_id);
+          locStockMap = {};
+          stocks.forEach((s) => {
+            locStockMap[s.variant_id] = (locStockMap[s.variant_id] || 0) + s.quantity;
+          });
+        }
+
+        setItems((prevItems) => {
+          // Keep items that are already counted/modified
+          const countedItems = prevItems.filter(i => i.actual_quantity !== null);
+          const countedProductIds = new Set(countedItems.map(i => i.product_id));
+          
+          const newItems = [...countedItems];
+          
+          for (const p of products) {
+            if (!countedProductIds.has(p.id)) {
+              if (locStockMap) {
+                if (locStockMap[p.id] !== undefined) {
+                  const newItem = createCountItem(p);
+                  newItem.system_quantity = locStockMap[p.id];
+                  newItems.push(newItem);
+                }
+              } else {
+                newItems.push(createCountItem(p));
+              }
+            }
+          }
+          return newItems;
+        });
+
+      } catch (err) {
+        console.error("Failed to fetch location stocks on change", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchLocationData();
+    return () => { cancelled = true; };
+  }, [session?.location_id]);
 
   // ─── Item Filtering ──────────────────────────────
   const filteredItems = useMemo(() => {
@@ -330,6 +410,86 @@ export function useInventoryCount(voucherId) {
     [session, items, stats, isCreateMode, voucherId]
   );
 
+  // ─── Submit for Approval ───────────────────────
+  const submitForApproval = useCallback(
+    async (navigate) => {
+      const result = validateConfirmCount(session, items);
+      if (!result.valid) {
+        alert("Không thể gửi duyệt:\n" + result.errors.join("\n"));
+        return;
+      }
+
+      if (!window.confirm(`Gửi phiếu kiểm kho ${session.code} cho Manager duyệt?`)) return;
+
+      setSaving(true);
+      try {
+        const request = {
+          code: session.code,
+          location_id: session.location_id,
+          notes: session.notes,
+          items: items,
+        };
+
+        if (isCreateMode) {
+          await createAndSubmitInventoryCount(request);
+        } else {
+          await submitInventoryCount(voucherId, request);
+        }
+
+        alert("Đã gửi phiếu kiểm kho cho Manager duyệt!");
+        if (navigate) navigate("/inventory-counts");
+      } catch (err) {
+        alert("Lỗi khi gửi duyệt: " + err.message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [session, items, isCreateMode, voucherId]
+  );
+
+  // ─── Approve (Manager) ────────────────────────
+  const approveCount = useCallback(
+    async (navigate) => {
+      if (!window.confirm(`Duyệt phiếu kiểm kho ${session.code}? Tồn kho sẽ được cập nhật theo số thực tế.`)) return;
+
+      setSaving(true);
+      try {
+        await approveInventoryCount(voucherId);
+        alert("Đã duyệt phiếu kiểm kho và cập nhật tồn kho!");
+        if (navigate) navigate("/inventory-counts");
+      } catch (err) {
+        alert("Lỗi khi duyệt: " + err.message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [session, voucherId]
+  );
+
+  // ─── Reject (Manager) ─────────────────────────
+  const rejectCount = useCallback(
+    async (rejectionReason, navigate) => {
+      if (!rejectionReason || !rejectionReason.trim()) {
+        alert("Vui lòng nhập lý do từ chối.");
+        return;
+      }
+
+      if (!window.confirm(`Từ chối phiếu kiểm kho ${session.code}?`)) return;
+
+      setSaving(true);
+      try {
+        await rejectInventoryCount(voucherId, rejectionReason);
+        alert("Đã từ chối phiếu kiểm kho!");
+        if (navigate) navigate("/inventory-counts");
+      } catch (err) {
+        alert("Lỗi khi từ chối: " + err.message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [session, voucherId]
+  );
+
   // ─── Cancel ──────────────────────────────────────
   const cancelCount = useCallback(
     async (navigate) => {
@@ -384,6 +544,9 @@ export function useInventoryCount(voucherId) {
 
     saveDraft,
     confirmCount,
+    submitForApproval,
+    approveCount,
+    rejectCount,
     cancelCount,
   };
 }

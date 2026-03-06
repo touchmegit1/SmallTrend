@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MapPin, Truck, ChevronDown, X, Search } from "lucide-react";
 import { PO_STATUS_CONFIG, formatVND } from "../../../utils/purchaseOrder";
+import ContractSelector from "./ContractSelector";
 
 export default function SummaryPanel({
   order,
@@ -9,11 +10,15 @@ export default function SummaryPanel({
   suppliers,
   filteredSuppliers,
   locations,
+  contracts,
   supplierQuery,
   setSupplierQuery,
   selectSupplier,
   clearSupplier,
+  selectContract,
+  clearContract,
   updateOrder,
+  isEditable = true,
 }) {
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const supplierRef = useRef(null);
@@ -32,7 +37,7 @@ export default function SummaryPanel({
   const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
 
   return (
-    <div className="w-[380px] bg-white border-l border-slate-200 flex flex-col shrink-0 overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 overflow-auto bg-white">
       {/* ─── Order Info Header ─────────────────────────────── */}
       <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-indigo-50/30">
         <div className="space-y-2.5 text-sm">
@@ -81,12 +86,14 @@ export default function SummaryPanel({
                       ""}
                   </p>
                 </div>
-                <button
-                  onClick={clearSupplier}
-                  className="p-1 hover:bg-indigo-100 rounded transition-colors shrink-0"
-                >
-                  <X size={14} className="text-indigo-500" />
-                </button>
+                {isEditable && (
+                  <button
+                    onClick={clearSupplier}
+                    className="p-1 hover:bg-indigo-100 rounded transition-colors shrink-0"
+                  >
+                    <X size={14} className="text-indigo-500" />
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -104,7 +111,8 @@ export default function SummaryPanel({
                     }}
                     onFocus={() => setShowSupplierDropdown(true)}
                     placeholder="Tìm nhà cung cấp..."
-                    className="w-full pl-8 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    disabled={!isEditable}
+                    className="w-full pl-8 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
                 {showSupplierDropdown && (
@@ -137,6 +145,19 @@ export default function SummaryPanel({
           </div>
         </div>
 
+        {/* Contract Selector (sau khi chọn NCC) */}
+        {order.supplier_id && contracts && contracts.length > 0 && (
+          <div className="px-5 py-4 border-b border-slate-100">
+            <ContractSelector
+              contracts={contracts}
+              selectedContractId={order.contract_id}
+              onSelect={selectContract}
+              onClear={clearContract}
+              disabled={!isEditable}
+            />
+          </div>
+        )}
+
         {/* Location Selector */}
         <div className="px-5 py-4 border-b border-slate-100">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -150,7 +171,8 @@ export default function SummaryPanel({
                 e.target.value ? parseInt(e.target.value) : null,
               )
             }
-            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+            disabled={!isEditable}
+            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-500"
           >
             <option value="">Chọn vị trí...</option>
             {locations.map((loc) => (
@@ -177,15 +199,25 @@ export default function SummaryPanel({
             {/* Order Discount */}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500">Giảm giá</span>
-              <input
-                type="number"
-                value={order.discount || 0}
-                onChange={(e) =>
-                  updateOrder("discount", parseFloat(e.target.value) || 0)
-                }
-                min="0"
-                className="w-28 px-2 py-1 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={order.discount ? order.discount / 1000 : ""}
+                  onChange={(e) =>
+                    updateOrder(
+                      "discount",
+                      (parseFloat(e.target.value) || 0) * 1000,
+                    )
+                  }
+                  min="0"
+                  step="any"
+                  disabled={!isEditable}
+                  className="w-28 px-2 py-1 pr-9 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">
+                  .000
+                </span>
+              </div>
             </div>
 
             {/* Tax */}
@@ -200,7 +232,8 @@ export default function SummaryPanel({
                   }
                   min="0"
                   max="100"
-                  className="w-16 px-2 py-1 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  disabled={!isEditable}
+                  className="w-16 px-2 py-1 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
                 />
                 <span className="text-xs text-slate-400">
                   = {formatVND(financials.taxAmount)}
@@ -211,15 +244,25 @@ export default function SummaryPanel({
             {/* Shipping */}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500">Phí vận chuyển</span>
-              <input
-                type="number"
-                value={order.shipping_fee || 0}
-                onChange={(e) =>
-                  updateOrder("shipping_fee", parseFloat(e.target.value) || 0)
-                }
-                min="0"
-                className="w-28 px-2 py-1 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={order.shipping_fee ? order.shipping_fee / 1000 : ""}
+                  onChange={(e) =>
+                    updateOrder(
+                      "shipping_fee",
+                      (parseFloat(e.target.value) || 0) * 1000,
+                    )
+                  }
+                  min="0"
+                  step="any"
+                  disabled={!isEditable}
+                  className="w-28 px-2 py-1 pr-9 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">
+                  .000
+                </span>
+              </div>
             </div>
 
             <div className="border-t border-slate-200 pt-2.5">
@@ -234,15 +277,25 @@ export default function SummaryPanel({
             {/* Paid Amount */}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500">Đã thanh toán</span>
-              <input
-                type="number"
-                value={order.paid_amount || 0}
-                onChange={(e) =>
-                  updateOrder("paid_amount", parseFloat(e.target.value) || 0)
-                }
-                min="0"
-                className="w-28 px-2 py-1 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={order.paid_amount ? order.paid_amount / 1000 : ""}
+                  onChange={(e) =>
+                    updateOrder(
+                      "paid_amount",
+                      (parseFloat(e.target.value) || 0) * 1000,
+                    )
+                  }
+                  min="0"
+                  step="any"
+                  disabled={!isEditable}
+                  className="w-28 px-2 py-1 pr-9 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">
+                  .000
+                </span>
+              </div>
             </div>
 
             <div className="flex justify-between text-sm">
@@ -268,7 +321,8 @@ export default function SummaryPanel({
             onChange={(e) => updateOrder("notes", e.target.value)}
             placeholder="Ghi chú cho phiếu nhập..."
             rows={3}
-            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition"
+            disabled={!isEditable}
+            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
       </div>

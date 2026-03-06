@@ -5,13 +5,15 @@ import {
   MapPin,
   Edit2,
   Trash2,
-  MoreVertical,
+  ChevronDown,
   ChevronRight,
   Store,
   Warehouse,
   Package,
   Loader2,
   X,
+  Box,
+  Eye,
 } from "lucide-react";
 import {
   getLocations,
@@ -26,6 +28,9 @@ function LocationManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
+  const [expandedLocationId, setExpandedLocationId] = useState(null);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockModalData, setStockModalData] = useState(null);
   const [formData, setFormData] = useState({
     location_name: "",
     location_code: "",
@@ -36,7 +41,7 @@ function LocationManagement() {
   });
 
   const locationTypes = [
-    { value: "DISPLAY_AREA", label: "Khu vực trưng bày", icon: Store },
+    { value: "DISPLAY", label: "Khu vực trưng bày", icon: Store },
     { value: "STORAGE", label: "Kho lưu trữ", icon: Warehouse },
     { value: "SHELF", label: "Kệ hàng", icon: Package },
     { value: "COLD_STORAGE", label: "Kho lạnh", icon: MapPin },
@@ -109,6 +114,15 @@ function LocationManagement() {
         alert("Không thể xóa vị trí này!");
       }
     }
+  };
+
+  const toggleExpand = (locId) => {
+    setExpandedLocationId(expandedLocationId === locId ? null : locId);
+  };
+
+  const openStockModal = (loc) => {
+    setStockModalData(loc);
+    setIsStockModalOpen(true);
   };
 
   const filteredLocations = locations.filter(
@@ -190,82 +204,245 @@ function LocationManagement() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold">
-                <th className="px-6 py-4">Tên & Mã vị trí</th>
-                <th className="px-6 py-4">Loại hình</th>
-                <th className="px-6 py-4">Địa chỉ / Vị trí</th>
-                <th className="px-6 py-4 text-center">Sức chứa</th>
-                <th className="px-6 py-4">Trạng thái</th>
-                <th className="px-6 py-4 text-right">Thao tác</th>
+                <th className="px-3 py-4 w-10"></th>
+                <th className="px-4 py-4">Tên & Mã vị trí</th>
+                <th className="px-4 py-4">Loại hình</th>
+                <th className="px-4 py-4">Địa chỉ / Vị trí</th>
+                <th className="px-4 py-4 text-center">Sức chứa</th>
+                <th className="px-4 py-4 text-center">Tồn kho</th>
+                <th className="px-4 py-4">Trạng thái</th>
+                <th className="px-4 py-4 text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {filteredLocations.map((loc) => {
                 const Icon = getIcon(loc.location_type);
+                const isExpanded = expandedLocationId === loc.id;
+                const stockItems = loc.stock_items || [];
+                const totalProducts = loc.total_products || 0;
+
                 return (
-                  <tr
-                    key={loc.id}
-                    className="hover:bg-slate-50 transition-colors group"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                          <Icon size={20} />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-900">
-                            {loc.location_name}
-                          </p>
-                          <p className="text-xs text-slate-500 font-mono uppercase">
-                            {loc.location_code}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-                        {getLabel(loc.location_type)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">
-                      {loc.address}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="inline-flex items-center justify-center min-w-[32px] px-2 py-1 bg-slate-50 border border-slate-200 rounded text-sm font-medium text-slate-700">
-                        {loc.capacity}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          loc.status === "ACTIVE"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                            : "bg-slate-100 text-slate-600 border border-slate-200"
-                        }`}
-                      >
-                        {loc.status === "ACTIVE"
-                          ? "Đang hoạt động"
-                          : "Tạm ngưng"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <React.Fragment key={loc.id}>
+                    <tr
+                      className={`hover:bg-slate-50 transition-colors group cursor-pointer ${
+                        isExpanded ? "bg-indigo-50/30" : ""
+                      }`}
+                      onClick={() => toggleExpand(loc.id)}
+                    >
+                      <td className="px-3 py-4 text-center">
                         <button
-                          onClick={() => handleOpenModal(loc)}
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                          title="Chỉnh sửa"
+                          className="p-1 rounded hover:bg-slate-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExpand(loc.id);
+                          }}
                         >
-                          <Edit2 size={18} />
+                          {isExpanded ? (
+                            <ChevronDown
+                              size={16}
+                              className="text-indigo-600"
+                            />
+                          ) : (
+                            <ChevronRight
+                              size={16}
+                              className="text-slate-400"
+                            />
+                          )}
                         </button>
-                        <button
-                          onClick={() => handleDelete(loc.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Xóa"
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
+                            <Icon size={20} />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {loc.location_name}
+                            </p>
+                            <p className="text-xs text-slate-500 font-mono uppercase">
+                              {loc.location_code}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-sm text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                          {getLabel(loc.location_type)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-500 max-w-xs truncate">
+                        {loc.address}
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="inline-flex items-center justify-center min-w-[32px] px-2 py-1 bg-slate-50 border border-slate-200 rounded text-sm font-medium text-slate-700">
+                          {loc.capacity}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        {totalProducts > 0 ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openStockModal(loc);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold hover:bg-emerald-100 transition-colors cursor-pointer"
+                            title="Xem chi tiết sản phẩm"
+                          >
+                            <Box size={14} />
+                            {totalProducts}
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg text-sm">
+                            0
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            loc.status === "ACTIVE"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                              : "bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}
                         >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          {loc.status === "ACTIVE"
+                            ? "Đang hoạt động"
+                            : "Tạm ngưng"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openStockModal(loc);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                            title="Xem sản phẩm"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenModal(loc);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(loc.id);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Xóa"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Expanded Row - Inline Stock Preview */}
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan="8" className="p-0">
+                          <div className="bg-gradient-to-b from-indigo-50/50 to-slate-50/50 px-6 py-4 border-t border-indigo-100">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <Box size={16} className="text-indigo-500" />
+                                Sản phẩm tại vị trí "{loc.location_name}"
+                                <span className="text-xs font-normal text-slate-400 ml-1">
+                                  (Tổng: {totalProducts} sản phẩm)
+                                </span>
+                              </h4>
+                              {stockItems.length > 0 && (
+                                <button
+                                  onClick={() => openStockModal(loc)}
+                                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 hover:underline"
+                                >
+                                  Xem chi tiết
+                                  <ChevronRight size={14} />
+                                </button>
+                              )}
+                            </div>
+
+                            {stockItems.length > 0 ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {stockItems.slice(0, 6).map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                                  >
+                                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                      <Package
+                                        size={18}
+                                        className="text-indigo-600"
+                                      />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-slate-900 truncate">
+                                        {item.product_name || "N/A"}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-xs text-slate-400 font-mono">
+                                          {item.sku || "—"}
+                                        </span>
+                                        {item.batch_code && (
+                                          <>
+                                            <span className="text-slate-300">
+                                              •
+                                            </span>
+                                            <span className="text-xs text-slate-400">
+                                              Lô: {item.batch_code}
+                                            </span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                      <p className="text-sm font-bold text-indigo-600">
+                                        {item.quantity}
+                                      </p>
+                                      <p className="text-xs text-slate-400">
+                                        {item.variant_unit || "đơn vị"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                                {stockItems.length > 6 && (
+                                  <button
+                                    onClick={() => openStockModal(loc)}
+                                    className="flex items-center justify-center gap-2 bg-white/60 p-3 rounded-xl border border-dashed border-slate-300 text-slate-500 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-all"
+                                  >
+                                    <span className="text-sm font-medium">
+                                      +{stockItems.length - 6} sản phẩm khác
+                                    </span>
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center py-6 bg-white rounded-xl border border-dashed border-slate-200">
+                                <Package
+                                  size={32}
+                                  className="mx-auto text-slate-300 mb-2"
+                                />
+                                <p className="text-sm text-slate-400">
+                                  Chưa có sản phẩm nào tại vị trí này
+                                </p>
+                                <p className="text-xs text-slate-300 mt-1">
+                                  Tạo đơn nhập kho để thêm sản phẩm vào vị trí
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
@@ -284,7 +461,145 @@ function LocationManagement() {
         </div>
       </div>
 
-      {/* Modal Tool */}
+      {/* Stock Detail Modal */}
+      {isStockModalOpen && stockModalData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Box size={20} className="text-indigo-600" />
+                  Sản phẩm tại {stockModalData.location_name}
+                </h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Mã: {stockModalData.location_code} •{" "}
+                  {getLabel(stockModalData.location_type)} • Tổng:{" "}
+                  <span className="font-semibold text-indigo-600">
+                    {stockModalData.total_products || 0}
+                  </span>{" "}
+                  sản phẩm
+                </p>
+              </div>
+              <button
+                onClick={() => setIsStockModalOpen(false)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6">
+              {(stockModalData.stock_items || []).length > 0 ? (
+                <div className="space-y-0">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                        <th className="py-3 px-3 font-semibold">#</th>
+                        <th className="py-3 px-3 font-semibold">Sản phẩm</th>
+                        <th className="py-3 px-3 font-semibold">SKU</th>
+                        <th className="py-3 px-3 font-semibold">Lô hàng</th>
+                        <th className="py-3 px-3 font-semibold text-center">
+                          Đơn vị
+                        </th>
+                        <th className="py-3 px-3 font-semibold text-right">
+                          Số lượng
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {stockModalData.stock_items.map((item, idx) => (
+                        <tr
+                          key={idx}
+                          className="hover:bg-slate-50 transition-colors"
+                        >
+                          <td className="py-3 px-3 text-sm text-slate-400">
+                            {idx + 1}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <Package
+                                  size={14}
+                                  className="text-indigo-600"
+                                />
+                              </div>
+                              <span className="text-sm font-semibold text-slate-800 truncate max-w-[200px]">
+                                {item.product_name || "N/A"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                              {item.sku || "—"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            {item.batch_code ? (
+                              <span className="text-xs text-slate-500 bg-amber-50 border border-amber-200 px-2 py-1 rounded">
+                                {item.batch_code}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-300">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="text-xs text-slate-500">
+                              {item.variant_unit || "—"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                              {item.quantity}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-slate-200 bg-slate-50/50">
+                        <td
+                          colSpan="5"
+                          className="py-3 px-3 text-sm font-bold text-slate-700 text-right"
+                        >
+                          Tổng số lượng:
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <span className="text-base font-bold text-indigo-700">
+                            {stockModalData.total_products || 0}
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <div className="inline-flex p-4 bg-slate-50 rounded-full mb-4">
+                    <Package size={40} className="text-slate-300" />
+                  </div>
+                  <p className="text-slate-500 font-medium text-lg">
+                    Chưa có sản phẩm nào
+                  </p>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Tạo đơn nhập kho để thêm sản phẩm vào vị trí này
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
+              <button
+                onClick={() => setIsStockModalOpen(false)}
+                className="w-full px-4 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-white transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Location Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">

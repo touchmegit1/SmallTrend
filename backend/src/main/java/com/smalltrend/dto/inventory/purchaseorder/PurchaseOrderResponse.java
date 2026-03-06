@@ -16,35 +16,42 @@ import java.util.List;
 @AllArgsConstructor
 public class PurchaseOrderResponse {
     private Integer id;
-    private String poNumber;
+    private String orderNumber;
 
     // Supplier info
+    private Integer locationId;
     private Integer supplierId;
     private String supplierName;
 
-    // Location
-    private Integer locationId;
-    private String locationName;
+    // Contract info
+    private Long contractId;
+    private String contractNumber;
+    private String contractTitle;
 
-    // Status & dates
+    // User info
+    private Integer createdById;
+    private String createdByName;
+
+    // Dates & Status
     private String status;
     private LocalDate orderDate;
+    private LocalDate expectedDeliveryDate;
+    private LocalDate actualDeliveryDate;
     private LocalDateTime createdAt;
-    private LocalDateTime confirmedAt;
+    private LocalDateTime updatedAt;
 
     // Financials
-    private BigDecimal discount;
+    private BigDecimal discountAmount;
+    private BigDecimal taxAmount;
     private BigDecimal taxPercent;
+    private BigDecimal subtotal;
+    private BigDecimal totalAmount;
     private BigDecimal shippingFee;
     private BigDecimal paidAmount;
-    private BigDecimal subtotal;
-    private BigDecimal taxAmount;
-    private BigDecimal totalAmount;
-    private BigDecimal remainingAmount;
 
     private String notes;
-    private String receivedByName;
+    private String rejectionReason;
 
-    // Items (only for detail view)
+    // Items
     private List<PurchaseOrderItemResponse> items;
 }

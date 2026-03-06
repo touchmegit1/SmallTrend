@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { getSuppliers, getPurchaseOrders } from "../services/inventoryService";
 
-export function useImportList() {
+export function usePurchaseOrderList() {
   const [suppliers, setSuppliers] = useState([]);
-  const [importRecords, setImportRecords] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -15,9 +15,9 @@ export function useImportList() {
           getPurchaseOrders(),
         ]);
         setSuppliers(suppliersData);
-        setImportRecords(ordersData);
+        setPurchaseOrders(ordersData);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error loading purchase orders:", error);
       } finally {
         setLoading(false);
       }
@@ -25,12 +25,13 @@ export function useImportList() {
     fetchData();
   }, []);
 
-  const filteredRecords = importRecords.filter((record) => {
-    const poNumber = (record.po_number || record.poNumber || "").toLowerCase();
-    const supplierName = (record.supplier_name || record.supplierName || "").toLowerCase();
+  const filteredOrders = purchaseOrders.filter((record) => {
     const query = searchQuery.toLowerCase();
+    if (!query) return true;
+    const poNumber = (record.order_number || "").toLowerCase();
+    const supplierName = (record.supplier_name || "").toLowerCase();
     return poNumber.includes(query) || supplierName.includes(query);
   });
 
-  return { suppliers, filteredRecords, loading, searchQuery, setSearchQuery };
+  return { suppliers, filteredOrders, loading, searchQuery, setSearchQuery };
 }

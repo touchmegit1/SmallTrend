@@ -15,6 +15,7 @@ import java.util.List;
 public class InventoryCountRequest {
     private Integer locationId;
     private String notes;
-    private String status; // DRAFT, COUNTING, CONFIRMED, CANCELLED
+    private String status; // DRAFT, COUNTING, PENDING, CONFIRMED, REJECTED, CANCELLED
+    private String rejectionReason;
     private List<InventoryCountItemRequest> items;
 }

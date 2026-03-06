@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Save, Plus, X, Search } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
@@ -46,16 +51,19 @@ const CreateCombo = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   // Thêm một Variant (sản phẩm con) vào danh sách Combo dự kiến
   const addVariant = (variant) => {
-    const existing = selectedVariants.find(v => v.id === variant.id);
+    const existing = selectedVariants.find((v) => v.id === variant.id);
     if (existing) {
-      setSelectedVariants(selectedVariants.map(v =>
-        v.id === variant.id ? { ...v, quantity: v.quantity + 1 } : v
-      ));
+      setSelectedVariants(
+        selectedVariants.map((v) =>
+          v.id === variant.id ? { ...v, quantity: v.quantity + 1 } : v,
+        ),
+      );
     } else {
       setSelectedVariants([...selectedVariants, { ...variant, quantity: 1 }]);
     }
@@ -65,7 +73,7 @@ const CreateCombo = () => {
 
   // Xóa một Variant (sản phẩm con) khỏi danh sách Combo
   const removeVariant = (variantId) => {
-    setSelectedVariants(selectedVariants.filter(v => v.id !== variantId));
+    setSelectedVariants(selectedVariants.filter((v) => v.id !== variantId));
   };
 
   // Điều chỉnh số lượng cho mỗi Variant trong Combo
@@ -78,11 +86,15 @@ const CreateCombo = () => {
 
   const totalPrice = selectedVariants.reduce((sum, v) => sum + ((v.sellPrice || 0) * v.quantity), 0);
   const discountAmount = totalPrice - (formData.comboPrice || 0);
-  const discountPercent = totalPrice > 0 && formData.comboPrice ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
+  const discountPercent =
+    totalPrice > 0 && formData.comboPrice
+      ? ((discountAmount / totalPrice) * 100).toFixed(0)
+      : 0;
 
-  const filteredVariants = availableVariants.filter(v =>
-    v.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredVariants = availableVariants.filter(
+    (v) =>
+      v.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.sku?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Xử lý gửi API để lưu danh sách con thành Combo duy nhất
@@ -100,15 +112,15 @@ const CreateCombo = () => {
         comboPrice: Number(formData.comboPrice),
         originalPrice: totalPrice,
         isActive: formData.isActive === true || formData.isActive === "true",
-        items: selectedVariants.map(v => ({
+        items: selectedVariants.map((v) => ({
           productVariantId: v.id,
-          quantity: v.quantity
-        }))
+          quantity: v.quantity,
+        })),
       };
 
       await createCombo(payload);
       navigate("/products/combo", {
-        state: { message: "Tạo combo thành công!" }
+        state: { message: "Tạo combo thành công!" },
       });
     } catch (err) {
       alert(err.message || "Có lỗi xảy ra khi tạo combo");
@@ -131,7 +143,9 @@ const CreateCombo = () => {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Tạo Combo mới
             </h1>
-            <p className="text-gray-600 mt-2">Chọn sản phẩm và thiết lập giá combo</p>
+            <p className="text-gray-600 mt-2">
+              Chọn sản phẩm và thiết lập giá combo
+            </p>
           </div>
         </div>
 
@@ -140,11 +154,15 @@ const CreateCombo = () => {
             {/* Left - Combo Info */}
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl">
               <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-200">
-                <CardTitle className="text-xl font-bold text-gray-800">Thông tin Combo</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-800">
+                  Thông tin Combo
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5 p-6">
                 <div>
-                  <Label className="text-sm font-semibold text-gray-700">Tên Combo <span className="text-red-500">*</span></Label>
+                  <Label className="text-sm font-semibold text-gray-700">
+                    Tên Combo <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="VD: Combo Sáng Năng Động"
@@ -156,7 +174,9 @@ const CreateCombo = () => {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-semibold text-gray-700">Mô tả</Label>
+                  <Label className="text-sm font-semibold text-gray-700">
+                    Mô tả
+                  </Label>
                   <Textarea
                     className="mt-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     name="description"
@@ -169,7 +189,9 @@ const CreateCombo = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-semibold text-gray-700">Giá gốc</Label>
+                    <Label className="text-sm font-semibold text-gray-700">
+                      Giá gốc
+                    </Label>
                     <Input
                       className="mt-2 h-11 bg-gray-100 border-gray-200 rounded-xl"
                       value={totalPrice.toLocaleString()}
@@ -177,7 +199,9 @@ const CreateCombo = () => {
                     />
                   </div>
                   <div>
-                    <Label className="text-sm font-semibold text-gray-700">Giá Combo <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm font-semibold text-gray-700">
+                      Giá Combo <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       type="number"
@@ -193,13 +217,18 @@ const CreateCombo = () => {
                 {formData.comboPrice && (
                   <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
                     <p className="text-sm text-green-700">
-                      Giảm giá: <span className="font-bold">{discountAmount.toLocaleString()}đ ({discountPercent}%)</span>
+                      Giảm giá:{" "}
+                      <span className="font-bold">
+                        {discountAmount.toLocaleString()}đ ({discountPercent}%)
+                      </span>
                     </p>
                   </div>
                 )}
 
                 <div>
-                  <Label className="text-sm font-semibold text-gray-700">Trạng thái</Label>
+                  <Label className="text-sm font-semibold text-gray-700">
+                    Trạng thái
+                  </Label>
                   <select
                     name="isActive"
                     className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -243,7 +272,7 @@ const CreateCombo = () => {
                       />
                     </div>
                     <div className="max-h-48 overflow-y-auto space-y-1">
-                      {filteredVariants.map(variant => (
+                      {filteredVariants.map((variant) => (
                         <button
                           key={variant.id}
                           type="button"
@@ -268,8 +297,11 @@ const CreateCombo = () => {
                 )}
 
                 <div className="space-y-3">
-                  {selectedVariants.map(variant => (
-                    <div key={variant.id} className="flex items-center gap-3 p-4 bg-gradient-to-r from-white to-gray-50 rounded-xl border border-gray-200 shadow-sm">
+                  {selectedVariants.map((variant) => (
+                    <div
+                      key={variant.id}
+                      className="flex items-center gap-3 p-4 bg-gradient-to-r from-white to-gray-50 rounded-xl border border-gray-200 shadow-sm"
+                    >
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-gray-800">{variant.name}</p>
                         {variant.attributes && Object.keys(variant.attributes).length > 0 && (
@@ -284,15 +316,21 @@ const CreateCombo = () => {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => updateQuantity(variant.id, variant.quantity - 1)}
+                          onClick={() =>
+                            updateQuantity(variant.id, variant.quantity - 1)
+                          }
                           className="w-8 h-8 flex items-center justify-center bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold"
                         >
                           -
                         </button>
-                        <span className="w-10 text-center text-sm font-bold text-blue-600">{variant.quantity}</span>
+                        <span className="w-10 text-center text-sm font-bold text-blue-600">
+                          {variant.quantity}
+                        </span>
                         <button
                           type="button"
-                          onClick={() => updateQuantity(variant.id, variant.quantity + 1)}
+                          onClick={() =>
+                            updateQuantity(variant.id, variant.quantity + 1)
+                          }
                           className="w-8 h-8 flex items-center justify-center bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold"
                         >
                           +
@@ -314,7 +352,9 @@ const CreateCombo = () => {
                     <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
                       <Plus className="w-8 h-8 text-gray-400" />
                     </div>
-                    <p className="text-gray-400 font-medium">Chưa có sản phẩm nào</p>
+                    <p className="text-gray-400 font-medium">
+                      Chưa có sản phẩm nào
+                    </p>
                   </div>
                 )}
               </CardContent>

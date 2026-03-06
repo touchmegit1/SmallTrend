@@ -1,58 +1,60 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { usePurchaseOrder } from "../../hooks/usePurchaseOrder";
 import { PO_STATUS } from "../../utils/purchaseOrder";
 
-// Purchase Order Components
 import PurchaseHeader from "../../components/inventory/purchase/PurchaseHeader";
 import ProductSearchBar from "../../components/inventory/purchase/ProductSearchBar";
 import PurchaseItemTable from "../../components/inventory/purchase/PurchaseItemTable";
 import BatchEditorModal from "../../components/inventory/purchase/BatchEditorModal";
 import SummaryPanel from "../../components/inventory/purchase/SummaryPanel";
 import ActionButtons from "../../components/inventory/purchase/ActionButtons";
+import RejectionModal from "../../components/inventory/purchase/RejectionModal";
+import GoodsReceiptTable from "../../components/inventory/purchase/GoodsReceiptTable";
 
-function CreateImport() {
+function CreatePurchaseOrder() {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+
   const {
-    // Reference data
     products,
     suppliers,
     locations,
+    contracts,
     filteredSuppliers,
     loading,
     saving,
     error,
-
-    // Order state
     order,
     items,
     financials,
-
-    // Supplier autocomplete
     supplierQuery,
     setSupplierQuery,
     selectSupplier,
     clearSupplier,
-
-    // Order management
+    selectContract,
+    clearContract,
     updateOrder,
     addProduct,
+    importProducts,
     removeItem,
     updateItem,
-
-    // Batch management
     batchEditData,
     openBatchEditor,
     closeBatchEditor,
     updateItemBatches,
-
-    // Actions
+    receiptItems,
+    updateReceiptItem,
     saveDraft,
+    submitForApproval,
     confirmOrder,
-    cancelOrder,
-  } = usePurchaseOrder();
+    startChecking,
+    receiveGoods,
+    rejectOrder,
+    deleteOrder,
+  } = usePurchaseOrder(id || null);
 
-  // ─── Loading State ─────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50">
@@ -67,7 +69,6 @@ function CreateImport() {
     );
   }
 
-  // ─── Error State ───────────────────────────────────────
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50">
@@ -85,35 +86,57 @@ function CreateImport() {
     );
   }
 
-  const isEditable = order.status === PO_STATUS.DRAFT;
+  const isEditable =
+    order.status === PO_STATUS.DRAFT || order.status === PO_STATUS.REJECTED;
+
+  const isChecking = order.status === PO_STATUS.CHECKING;
+
+  const handleRejectClick = () => {
+    setShowRejectionModal(true);
+  };
+
+  const handleRejectSubmit = async (reason) => {
+    const result = await rejectOrder(navigate, reason);
+    if (result) {
+      setShowRejectionModal(false);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* ─── Left Side: Products ──────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <PurchaseHeader
           order={order}
-          onBack={() => navigate("/inventory/import")}
+          onBack={() => navigate("/inventory/purchase-orders")}
         />
 
-        {/* Search Bar */}
         {isEditable && (
-          <ProductSearchBar products={products} onAddProduct={addProduct} />
+          <ProductSearchBar
+            products={products}
+            onAddProduct={addProduct}
+            onImportProducts={importProducts}
+          />
         )}
 
-        {/* Items Table */}
-        <PurchaseItemTable
-          items={items}
-          isEditable={isEditable}
-          onUpdate={updateItem}
-          onRemove={removeItem}
-          onOpenBatch={openBatchEditor}
-        />
+        {/* Bảng kiểm kê cho NV kho (trạng thái CHECKING) */}
+        {isChecking ? (
+          <GoodsReceiptTable
+            items={items}
+            receiptItems={receiptItems}
+            onUpdateReceiptItem={updateReceiptItem}
+          />
+        ) : (
+          <PurchaseItemTable
+            items={items}
+            isEditable={isEditable}
+            onUpdate={updateItem}
+            onRemove={removeItem}
+            onOpenBatch={openBatchEditor}
+          />
+        )}
       </div>
 
-      {/* ─── Right Side: Summary + Actions ────────────────── */}
-      <div className="flex flex-col shrink-0">
+      <div className="flex flex-col w-[380px] bg-white border-l border-slate-200 shrink-0 h-full">
         <SummaryPanel
           order={order}
           items={items}
@@ -121,23 +144,31 @@ function CreateImport() {
           suppliers={suppliers}
           filteredSuppliers={filteredSuppliers}
           locations={locations}
+          contracts={contracts}
           supplierQuery={supplierQuery}
           setSupplierQuery={setSupplierQuery}
           selectSupplier={selectSupplier}
           clearSupplier={clearSupplier}
+          selectContract={selectContract}
+          clearContract={clearContract}
           updateOrder={updateOrder}
+          isEditable={isEditable}
         />
 
         <ActionButtons
           status={order.status}
           saving={saving}
+          isEditMode={!!id}
           onSaveDraft={() => saveDraft(navigate)}
+          onSubmitForApproval={() => submitForApproval(navigate)}
           onConfirm={() => confirmOrder(navigate)}
-          onCancel={() => cancelOrder(navigate)}
+          onReject={handleRejectClick}
+          onDelete={() => deleteOrder(navigate)}
+          onStartChecking={() => startChecking()}
+          onReceiveGoods={() => receiveGoods(navigate)}
         />
       </div>
 
-      {/* ─── Batch Editor Modal ───────────────────────────── */}
       {batchEditData && (
         <BatchEditorModal
           item={batchEditData}
@@ -145,8 +176,15 @@ function CreateImport() {
           onClose={closeBatchEditor}
         />
       )}
+
+      <RejectionModal
+        isOpen={showRejectionModal}
+        onClose={() => setShowRejectionModal(false)}
+        onSubmit={handleRejectSubmit}
+        isLoading={saving}
+      />
     </div>
   );
 }
 
-export default CreateImport;
+export default CreatePurchaseOrder;

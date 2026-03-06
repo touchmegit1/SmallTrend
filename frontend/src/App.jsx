@@ -1,12 +1,19 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
-import MainLayout from "./components/layout/MainLayout";
-import { useAuth } from "./context/AuthContext";
-import AiChatPage from "./pages/Admin/AiChatPage";
-import AuditLogPage from "./pages/Admin/AuditLogPage";
-import TicketCenter from "./pages/Admin/TicketCenter";
-import Login from "./pages/Auth/Login";
+import UserManagement from "./pages/HR/UserManagement";
+import EmployeeList from "./pages/HR/EmployeeList";
+import ShiftManagement from "./pages/HR/ShiftManagement";
+import AttendanceManagement from "./pages/HR/AttendanceManagement";
+import PayrollManagement from "./pages/HR/PayrollManagement";
+import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
+import InventoryCountList from "./pages/Inventory/InventoryCountList";
+import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
+import LocationManagement from "./pages/Inventory/LocationManagement";
+import DisposalList from "./pages/Inventory/DisposalList";
+import DisposalDetail from "./pages/Inventory/DisposalDetail";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -67,7 +74,11 @@ function RootRedirect() {
     );
   }
 
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/crm/homepage" replace />
+  );
 }
 
 function App() {
@@ -108,30 +119,26 @@ function App() {
 
         {/* Module 1: POS (Bán hàng) */}
         <Route path="pos" element={<POS />} />
-        <Route
-          path="pos/history"
-          element={<TransactionHistory />}
-        />
-        <Route
-          path="pos/suspended"
-          element={<ReportforCashier />}
-        />
-        <Route
-          path="pos/shift-handover"
-          element={<ShiftHandover />}
-        />
+        <Route path="pos/history" element={<TransactionHistory />} />
+        <Route path="pos/suspended" element={<ReportforCashier />} />
+        <Route path="pos/shift-handover" element={<ShiftHandover />} />
         {/* Module 2: Inventory (Kho) */}
-        < Route path="inventory" element={<InventoryDashboard />} />
-        <Route path="inventory/import" element={<ImportInventory />} />
-        <Route path="inventory/import/create" element={<CreateImport />} />
-        <Route path="inventory/export" element={<DisposalList />} />
+        <Route path="inventory" element={<InventoryDashboard />} />
+        <Route
+          path="inventory/purchase-orders"
+          element={<PurchaseOrderList />}
+        />
+        <Route
+          path="inventory/purchase-orders/create"
+          element={<CreatePurchaseOrder />}
+        />
+        <Route
+          path="inventory/purchase-orders/:id"
+          element={<CreatePurchaseOrder />}
+        />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
         <Route
           path="inventory/suppliers" element={<Suppliers />}
-        />
-        <Route
-          path="inventory/audit"
-          element={<Navigate to="/inventory-counts" replace />}
         />
         <Route path="inventory-counts" element={<InventoryCountList />} />
         <Route
@@ -145,18 +152,9 @@ function App() {
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
 
         {/* Module 3: Products (Sản phẩm) */}
-        <Route
-          path="products"
-          element={<ProductList />}
-        />
-        <Route
-          path="products/addproduct"
-          element={<AddNewProduct />}
-        />
-        <Route
-          path="products/detail/:id"
-          element={<ProductDetail />}
-        />
+        <Route path="products" element={<ProductList />} />
+        <Route path="products/addproduct" element={<AddNewProduct />} />
+        <Route path="products/detail/:id" element={<ProductDetail />} />
         <Route
           path="products/addproduct_variant"
           element={<AddNewProductVariant />}
@@ -165,10 +163,7 @@ function App() {
           path="products/categories"
           element={<div className="p-4">{<CategoryAndBrand />}</div>}
         />
-        <Route
-          path="products/price"
-          element={<PriceSetting />}
-        />
+        <Route path="products/price" element={<div className="p-4">{}</div>} />
         <Route
           path="products/combo"
           element={<div className="p-4">{<ComboManage />}</div>}
@@ -182,16 +177,24 @@ function App() {
           element={<div className="p-4">{<ComboDetail />}</div>}
         />
         {/* Module 4: CRM (Khách hàng) */}
-        <Route path="crm" element={<div className="p-4">CRM &amp; Promotion</div>} />
+        <Route
+          path="crm"
+          element={<div className="p-4">CRM &amp; Promotion</div>}
+        />
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
         <Route path="crm/report" element={<CRMreport />} />
-        <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
-        <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
-        <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
-        <Route path="pos/complain" element={<CRMcomplain />} />
-        <Route path="pos/complaints" element={<CRMcomplain />} />
+        <Route
+          path="crm/promotions"
+          element={<div className="p-4">Chương trình KM</div>}
+        />
+        <Route
+          path="crm/vouchers"
+          element={<div className="p-4">Voucher/Coupon</div>}
+        />
+        <Route path="crm/complain" element={<CRMcomplain />} />
+        <Route path="crm/complaints" element={<CRMcomplain />} />
 
         {/* Module 5: HR (Nhân sự) */}
         <Route path="hr" element={<Navigate to="/hr/employees" replace />} />

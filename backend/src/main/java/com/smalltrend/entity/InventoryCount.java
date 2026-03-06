@@ -32,6 +32,7 @@ public class InventoryCount {
     private Location location;
 
     private String notes;
+    private String rejectionReason;
 
     private BigDecimal totalShortageValue;
     private BigDecimal totalOverageValue;
