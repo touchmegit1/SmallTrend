@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Gift, Search, Plus, Trash2, X, Star, History, Package } from 'lucide-react';
 import loyaltyService from '../../services/loyaltyService';
 import ticketService from '../../services/ticketService';
 import { useFetchCustomers } from '../../hooks/Customers';
+import { useToast, ToastContainer } from '../../hooks/useToast.jsx';
+import { useGifts } from '../../hooks/useGifts';
 
 // ─── STAT CARD ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, color }) => (
@@ -18,14 +20,14 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 );
 
 const GiftRewardManagement = () => {
-  const [gifts, setGifts] = useState([]);
-  const [loadingGifts, setLoadingGifts] = useState(false);
+  const { gifts, loading: loadingGifts, refetch: refetchGifts } = useGifts();
   const [searchPhone, setSearchPhone] = useState('');
   const [currentCustomer, setCurrentCustomer] = useState(null);
   const [redemptionHistory, setRedemptionHistory] = useState([]);
   const [searchError, setSearchError] = useState('');
   const [searchingCustomer, setSearchingCustomer] = useState(false);
   const { findByPhone } = useFetchCustomers();
+  const { toasts, showToast, removeToast } = useToast();
 
   // Modal thêm quà
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,20 +37,6 @@ const GiftRewardManagement = () => {
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [formData, setFormData] = useState({ name: '', requiredPoints: '', stock: '' });
   const [savingGift, setSavingGift] = useState(false);
-
-  useEffect(() => { fetchGifts(); }, []);
-
-  const fetchGifts = async () => {
-    try {
-      setLoadingGifts(true);
-      const data = await loyaltyService.getAllGifts();
-      setGifts(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingGifts(false);
-    }
-  };
 
   const handleSearchCustomer = async (e) => {
     if (e) e.preventDefault();
@@ -74,17 +62,17 @@ const GiftRewardManagement = () => {
   const handleRedeemGift = async (gift) => {
     if (!currentCustomer) return;
     if (currentCustomer.loyaltyPoints < gift.requiredPoints) {
-      alert(`Không đủ điểm! Cần ${gift.requiredPoints} điểm.`); return;
+      showToast(`Không đủ điểm! Cần ${gift.requiredPoints} điểm.`, 'warning'); return;
     }
-    if (gift.stock <= 0) { alert('Quà đã hết hàng!'); return; }
+    if (gift.stock <= 0) { showToast('Quà đã hết hàng!', 'warning'); return; }
     if (window.confirm(`Xác nhận đổi [${gift.name}] cho ${currentCustomer.name}? Trừ ${gift.requiredPoints} điểm.`)) {
       try {
         await loyaltyService.redeemGift(currentCustomer.id, gift.id);
-        alert('Đổi quà thành công!');
-        await fetchGifts();
+        showToast('Đổi quà thành công!');
+        await refetchGifts();
         await handleSearchCustomer();
       } catch (err) {
-        alert('Lỗi: ' + (err?.response?.data?.message || err.message));
+        showToast('Lỗi: ' + (err?.response?.data?.message || err.message), 'error');
       }
     }
   };
@@ -103,7 +91,7 @@ const GiftRewardManagement = () => {
       setSkuVariants(result);
       setSelectedVariant(null);
     } catch (err) {
-      alert('Lỗi khi tìm sản phẩm');
+      showToast('Lỗi khi tìm sản phẩm', 'error');
     } finally {
       setLoadingVariants(false);
     }
@@ -111,7 +99,7 @@ const GiftRewardManagement = () => {
 
   const handleSubmitGift = async (e) => {
     e.preventDefault();
-    if (!selectedVariant) { alert('Vui lòng chọn sản phẩm!'); return; }
+    if (!selectedVariant) { showToast('Vui lòng chọn sản phẩm!', 'warning'); return; }
     try {
       setSavingGift(true);
       await loyaltyService.createGift({
@@ -120,11 +108,11 @@ const GiftRewardManagement = () => {
         requiredPoints: parseInt(formData.requiredPoints),
         stock: parseInt(formData.stock),
       });
-      alert('Thêm quà thành công!');
+      showToast('Thêm quà thành công!');
       setIsModalOpen(false);
-      await fetchGifts();
+      await refetchGifts();
     } catch (err) {
-      alert('Lỗi: ' + (err?.response?.data?.message || err.message));
+      showToast('Lỗi: ' + (err?.response?.data?.message || err.message), 'error');
     } finally {
       setSavingGift(false);
     }
@@ -134,9 +122,9 @@ const GiftRewardManagement = () => {
     if (!window.confirm('Xóa quà tặng này?')) return;
     try {
       await loyaltyService.deleteGift(id);
-      await fetchGifts();
+      await refetchGifts();
     } catch (err) {
-      alert('Lỗi khi xóa');
+      showToast('Lỗi khi xóa quà tặng', 'error');
     }
   };
 
@@ -145,6 +133,7 @@ const GiftRewardManagement = () => {
 
   return (
     <div className="space-y-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       {/* ── HEADER ── */}
       <div className="flex justify-between items-end">
         <div>

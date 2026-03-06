@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Users, Gift, Megaphone, Tag, TrendingUp, ShoppingBag,
     ChevronRight, X, Calendar, Search, BarChart2, Award
@@ -6,8 +6,8 @@ import {
 import { useFetchCustomers } from '../../hooks/Customers';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useCoupons } from '../../hooks/useCoupons';
-import loyaltyService from '../../services/loyaltyService';
-import eventService from '../../services/eventService';
+import { useGifts } from '../../hooks/useGifts';
+import { useDiscountedVariants } from '../../hooks/useEventData';
 
 // ─── STAT CARD (clickable) ────────────────────────────────────────────────────
 const ReportCard = ({ icon: Icon, label, value, sub, color, onClick }) => (
@@ -88,25 +88,11 @@ export default function CRMReport() {
     const { customers, loading: loadingCustomers } = useFetchCustomers();
     const { campaigns, loading: loadingCampaigns } = useCampaigns();
     const { coupons, loading: loadingCoupons } = useCoupons();
-    const [gifts, setGifts] = useState([]);
-    const [variants, setVariants] = useState([]);
-    const [loadingGifts, setLoadingGifts] = useState(true);
-    const [loadingVariants, setLoadingVariants] = useState(true);
+    const { gifts, loading: loadingGifts } = useGifts();
+    const { variants, loading: loadingVariants } = useDiscountedVariants();
 
     const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'discounted'
     const [search, setSearch] = useState('');
-
-    useEffect(() => {
-        loyaltyService.getAllGifts()
-            .then(d => setGifts(Array.isArray(d) ? d : []))
-            .catch(() => { })
-            .finally(() => setLoadingGifts(false));
-
-        eventService.getVariantsWithCoupon()
-            .then(d => setVariants(Array.isArray(d) ? d : []))
-            .catch(() => { })
-            .finally(() => setLoadingVariants(false));
-    }, []);
 
     const openModal = (key) => { setActiveModal(key); setSearch(''); };
     const closeModal = () => { setActiveModal(null); setSearch(''); };
@@ -326,8 +312,7 @@ export default function CRMReport() {
                                         <td className="px-4 py-3 text-slate-700 font-medium text-sm">{c.couponName}</td>
                                         <td className="px-4 py-3 font-bold text-rose-500 text-sm">
                                             {c.couponType === 'PERCENTAGE' ? `-${c.discountPercent}%` :
-                                                c.couponType === 'FIXED_AMOUNT' ? `-${fmt(c.discountAmount)}` :
-                                                    c.couponType === 'FREE_SHIPPING' ? 'Free Ship' : '-'}
+                                                c.couponType === 'FIXED_AMOUNT' ? `-${fmt(c.discountAmount)}` : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-slate-500 text-sm">
                                             {c.currentUsageCount ?? 0} / {c.totalUsageLimit ?? '∞'}
