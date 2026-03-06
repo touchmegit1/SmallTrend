@@ -44,6 +44,8 @@ function ProductDetail() {
   const [deleteVariant, setDeleteVariant] = useState(null);
   const [expandedVariantId, setExpandedVariantId] = useState(null); // Quản lý đóng/mở phần quy đổi đơn vị
   const [showUnitsManager, setShowUnitsManager] = useState(false); // Trạng thái hiển thị Quản lý Đơn vị
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false); // Trạng thái hiển thị modal Barcode
+  const [selectedBarcodeVariant, setSelectedBarcodeVariant] = useState(null); // Variant đang chọn để xem barcode
   const [, forceUpdate] = useState(0); // Dùng để re-render khi hết 2 phút
 
   const { units, fetchUnits } = useFetchUnits(); // Tải danh sách đơn vị để truyền cho form quy đổi
@@ -562,7 +564,18 @@ function ProductDetail() {
                       </TableCell>
 
                       <TableCell>
-                        <span className="font-mono text-xs text-gray-500">{variant.barcode || "—"}</span>
+                        <span
+                          onClick={() => {
+                            if (variant.barcode || variant.sku) {
+                              setSelectedBarcodeVariant(variant);
+                              setShowBarcodeModal(true);
+                            }
+                          }}
+                          className={`font-mono text-xs ${(variant.barcode || variant.sku) ? 'text-indigo-600 hover:text-indigo-800 cursor-pointer underline decoration-dotted font-semibold' : 'text-gray-500'}`}
+                          title="Nhấp để xem mã vạch"
+                        >
+                          {variant.barcode || "—"}
+                        </span>
                       </TableCell>
 
                       <TableCell>
@@ -701,8 +714,83 @@ function ProductDetail() {
         />
       )}
 
+      {/* Modal Xem Barcode Biến thể */}
+      {showBarcodeModal && selectedBarcodeVariant && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200" onClick={() => setShowBarcodeModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full transform transition-all overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">Mã vạch sản phẩm</h3>
+              <button
+                onClick={() => setShowBarcodeModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-8 flex flex-col items-center justify-center bg-white min-h-[220px]">
+              <BarcodeGenerator value={selectedBarcodeVariant.barcode || selectedBarcodeVariant.sku} />
+              <p className="text-sm font-medium text-gray-500 mt-4 text-center">
+                {selectedBarcodeVariant.name || product.name}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 border-t flex gap-3">
+              <Button
+
+                className="flex-1 h-10 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md border-0 transition-all"
+                onClick={() => handlePrintBarcode(selectedBarcodeVariant)}
+              >
+                In mã vạch
+              </Button>
+              <Button
+                className="flex-1 h-10 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md border-0 transition-all"
+                onClick={() => setShowBarcodeModal(false)}
+              >
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+
+// Component sinh ảnh mã vạch ngay tại frontend sử dụng thư viện jsbarcode
+const BarcodeGenerator = ({ value }) => {
+  const svgRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!value) return;
+
+    const generateBarcode = () => {
+      // Đảm bảo DOM đã ready và có JsBarcode
+      if (window.JsBarcode && svgRef.current) {
+        window.JsBarcode(svgRef.current, value, {
+          format: "CODE128",
+          width: 2.2,
+          height: 70,
+          displayValue: true,
+          fontSize: 15,
+          margin: 10,
+          background: "#ffffff",
+          lineColor: "#000000"
+        });
+      }
+    };
+
+    if (window.JsBarcode) {
+      // Đợi 1 frame nếu cần đảm bảo SVG đã render
+      requestAnimationFrame(generateBarcode);
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js";
+      script.onload = () => requestAnimationFrame(generateBarcode);
+      document.body.appendChild(script);
+    }
+  }, [value]);
+
+  return <svg ref={svgRef} className="w-full max-w-full h-auto"></svg>;
+};
 
 export default ProductDetail;
