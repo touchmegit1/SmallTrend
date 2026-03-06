@@ -71,6 +71,18 @@ const validateToken = async () => {
     }
 };
 
+const getMe = async () => {
+    const response = await api.get('/auth/me');
+    return response.data;
+};
+
+const updateStoredUser = (updates = {}) => {
+    const currentUser = getCurrentUser() || {};
+    const nextUser = { ...currentUser, ...updates };
+    localStorage.setItem('user', JSON.stringify(nextUser));
+    return nextUser;
+};
+
 const authService = {
     login,
     register,
@@ -78,7 +90,9 @@ const authService = {
     clearAuthData,
     getCurrentUser,
     getToken,
-    validateToken
+    validateToken,
+    getMe,
+    updateStoredUser
 };
 
 export default authService;

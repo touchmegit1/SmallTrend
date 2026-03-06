@@ -70,7 +70,7 @@ public class CustomerService {
         response.setName(customer.getName());
         response.setPhone(customer.getPhone());
         response.setLoyaltyPoints(customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0);
-        
+        response.setSpentAmount(customer.getSpentAmount() != null ? customer.getSpentAmount() : 0L);
         return response;
     }
 }

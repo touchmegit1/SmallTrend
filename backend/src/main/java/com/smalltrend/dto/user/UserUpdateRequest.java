@@ -1,5 +1,7 @@
 package com.smalltrend.dto.user;
 
+import java.math.BigDecimal;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -27,4 +29,10 @@ public class UserUpdateRequest {
     private String address;
     private Integer roleId;
     private String status; // optional, allow updating status via PUT
+    private String salaryType;
+    private BigDecimal baseSalary;
+    private BigDecimal hourlyRate;
+    private Integer minRequiredShifts;
+    private Boolean countLateAsPresent;
+    private BigDecimal workingHoursPerMonth;
 }

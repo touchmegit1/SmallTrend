@@ -58,6 +58,23 @@ public class ShiftValidator {
             errors.add("Minimum staff cannot exceed maximum staff");
         }
 
+        LocalDate effectiveFrom = request.getEffectiveFrom();
+        LocalDate effectiveTo = request.getEffectiveTo();
+        String shiftType = request.getShiftType() != null ? request.getShiftType().trim().toUpperCase() : "REGULAR";
+
+        if ("TEMPORARY".equals(shiftType)) {
+            if (effectiveFrom == null) {
+                errors.add("Effective from date is required for temporary shift");
+            }
+            if (effectiveTo == null) {
+                errors.add("Effective to date is required for temporary shift");
+            }
+        }
+
+        if (effectiveFrom != null && effectiveTo != null && effectiveTo.isBefore(effectiveFrom)) {
+            errors.add("Effective to date must be after or equal to effective from date");
+        }
+
         return errors;
     }
 

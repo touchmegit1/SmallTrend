@@ -150,7 +150,7 @@ public class UserManagementValidator {
 
         // Validate salary type
         if (salaryType != null && !isValidSalaryType(salaryType)) {
-            errors.add("Loại lương không hợp lệ (MONTHLY, HOURLY)");
+            errors.add("Loại lương không hợp lệ (MONTHLY, MONTHLY_MIN_SHIFTS, HOURLY)");
         }
 
         // Validate based on salary type
@@ -232,7 +232,9 @@ public class UserManagementValidator {
     }
 
     private boolean isValidSalaryType(String salaryType) {
-        return "MONTHLY".equals(salaryType) || "HOURLY".equals(salaryType);
+        return "MONTHLY".equals(salaryType)
+                || "MONTHLY_MIN_SHIFTS".equals(salaryType)
+                || "HOURLY".equals(salaryType);
     }
 
     private boolean isValidRoleName(String roleName) {

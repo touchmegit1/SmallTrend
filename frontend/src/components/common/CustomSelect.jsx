@@ -22,13 +22,10 @@ const STATUS_COLORS = {
 const CustomSelect = ({ value, onChange, options, className = '', variant = 'default', disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const menuRef = useRef(null);
+    const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, minWidth: 200, maxHeight: 240 });
 
     const selectedOption = options.find(opt => opt.value === value);
-
-    // Force update when options change
-    useEffect(() => {
-        // This ensures the component re-renders when options change
-    }, [options]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -40,6 +37,64 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (disabled) {
+            setIsOpen(false);
+        }
+    }, [disabled]);
+
+    useEffect(() => {
+        if (!isOpen || !dropdownRef.current) {
+            return;
+        }
+
+        const updatePosition = () => {
+            if (!dropdownRef.current) {
+                return;
+            }
+
+            const rect = dropdownRef.current.getBoundingClientRect();
+            const viewportPadding = 8;
+            const gap = 8;
+            const estimatedMenuHeight = menuRef.current?.offsetHeight || 260;
+
+            const spaceBelow = window.innerHeight - rect.bottom - gap - viewportPadding;
+            const spaceAbove = rect.top - gap - viewportPadding;
+
+            const shouldOpenAbove = spaceBelow < Math.min(200, estimatedMenuHeight) && spaceAbove > spaceBelow;
+
+            const top = shouldOpenAbove
+                ? Math.max(viewportPadding, rect.top - estimatedMenuHeight - gap)
+                : rect.bottom + gap;
+
+            const minWidth = rect.width || 200;
+            const left = Math.min(
+                Math.max(viewportPadding, rect.left),
+                Math.max(viewportPadding, window.innerWidth - minWidth - viewportPadding)
+            );
+
+            const availableHeight = shouldOpenAbove ? spaceAbove : spaceBelow;
+
+            setMenuPosition({
+                top,
+                left,
+                minWidth,
+                maxHeight: Math.max(120, Math.min(320, availableHeight)),
+            });
+        };
+
+        updatePosition();
+        const rafId = window.requestAnimationFrame(updatePosition);
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.cancelAnimationFrame(rafId);
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [isOpen]);
 
     const getVariantStyles = () => {
         if (variant === 'role') {
@@ -65,10 +120,7 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
-                className={`w-full px-4 py-2.5 text-sm font-medium rounded-xl border-none outline-none transition-all shadow-md flex items-center justify-between ${disabled
-                        ? 'cursor-not-allowed opacity-50'
-                        : 'cursor-pointer hover:opacity-90 hover:scale-[1.02] focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 hover:shadow-lg'
-                    }`}
+                className="w-full px-4 py-2.5 text-sm font-medium rounded-xl border-none outline-none transition-all cursor-pointer hover:opacity-90 hover:scale-[1.02] focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 shadow-md hover:shadow-lg flex items-center justify-between disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
                 style={{
                     backgroundColor: variantStyle.bg,
                     color: variantStyle.color
@@ -83,16 +135,20 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
 
             {isOpen && (
                 <div
+                    ref={menuRef}
                     className="fixed bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-fadeIn"
                     style={{
                         zIndex: 9999,
-                        minWidth: dropdownRef.current?.offsetWidth || 200,
+                        minWidth: menuPosition.minWidth,
                         maxWidth: 400,
-                        top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + window.scrollY + 8 : 0,
-                        left: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().left + window.scrollX : 0,
+                        top: menuPosition.top,
+                        left: menuPosition.left,
                     }}
                 >
-                    <div className="py-1 max-h-60 overflow-y-auto custom-scrollbar">
+                    <div
+                        className="py-1 overflow-y-auto custom-scrollbar"
+                        style={{ maxHeight: menuPosition.maxHeight }}
+                    >
                         {options.map((option) => {
                             const optionStyle = variant === 'role' ?
                                 {

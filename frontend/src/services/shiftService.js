@@ -25,6 +25,10 @@ export const shiftService = {
         const res = await api.get('/shifts/assignments', { params });
         return res.data;
     },
+    async getAssignment(id) {
+        const res = await api.get(`/shifts/assignments/${id}`);
+        return res.data;
+    },
     async createAssignment(payload) {
         const res = await api.post('/shifts/assignments', payload);
         return res.data;
@@ -47,6 +51,35 @@ export const shiftService = {
     },
     async getPayrollSummary(params = {}) {
         const res = await api.get('/shifts/payroll/summary', { params });
+        return res.data;
+    },
+    async markPayrollPaid(params = {}) {
+        const res = await api.post('/shifts/payroll/mark-paid', null, { params });
+        return res.data;
+    },
+    async getWorkforceDashboard(params = {}) {
+        const res = await api.get('/shifts/workforce/dashboard', { params });
+        return res.data;
+    },
+    async clockIn(payload) {
+        // Clock in automatically when user logs in
+        const res = await api.post('/shifts/clock-in', {
+            userId: payload.userId,
+            clockInTime: payload.clockInTime,
+            location: payload.location || 'Office'
+        });
+        return res.data;
+    },
+    async clockOut(payload) {
+        const res = await api.post('/shifts/clock-out', {
+            userId: payload.userId,
+            clockOutTime: payload.clockOutTime,
+            location: payload.location || 'Office'
+        });
+        return res.data;
+    },
+    async executeSwap(payload) {
+        const res = await api.post('/shifts/swap/execute', payload);
         return res.data;
     },
 };

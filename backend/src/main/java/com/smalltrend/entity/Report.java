@@ -41,7 +41,10 @@ public class Report {
     private LocalDateTime completedAt;
 
     @Column(name = "file_path")
-    private String filePath; // Path to generated report file
+    private String filePath; // kept for backward compat
+
+    @Column(name = "download_url")
+    private String downloadUrl; // Cloudinary secure_url — the direct cloud download link
 
     @Column(name = "report_name")
     private String reportName;

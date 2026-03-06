@@ -61,6 +61,17 @@ public class SalaryConfig {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "min_required_shifts")
+    private Integer minRequiredShifts;
+
+    @Column(name = "count_late_as_present", nullable = false)
+    @Builder.Default
+    private boolean countLateAsPresent = true;
+
+    @Column(name = "working_hours_per_month", precision = 6, scale = 2)
+    @Builder.Default
+    private BigDecimal workingHoursPerMonth = BigDecimal.valueOf(208);
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "work_shift_assignments", uniqueConstraints = {
-        @UniqueConstraint(columnNames = { "work_shift_id", "user_id", "shift_date" })
+    @UniqueConstraint(columnNames = {"work_shift_id", "user_id", "shift_date"})
 })
 @Data
 @NoArgsConstructor
@@ -40,6 +40,10 @@ public class WorkShiftAssignment {
     @Column(length = 1000)
     private String notes;
 
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private boolean deleted = false;
+
     @Column
     private LocalDateTime createdAt;
 
@@ -53,6 +57,7 @@ public class WorkShiftAssignment {
         if (status == null || status.isBlank()) {
             status = "ASSIGNED";
         }
+        deleted = false;
     }
 
     @PreUpdate

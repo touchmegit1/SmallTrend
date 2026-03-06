@@ -1,45 +1,22 @@
 package com.smalltrend.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.UUID;
 
+/**
+ * @deprecated Use {@link CloudinaryService#uploadFile(byte[], String, String)} directly.
+ * This class is kept only for backward compatibility and will be removed in a future cleanup.
+ */
+@Deprecated
 @Service
+@RequiredArgsConstructor
 public class FileStorageService {
 
-    private final Path fileStorageLocation;
+    private final CloudinaryService cloudinaryService;
 
-    public FileStorageService() {
-        this.fileStorageLocation = Paths.get("uploads/reports").toAbsolutePath().normalize();
-
-        try {
-            Files.createDirectories(this.fileStorageLocation);
-        } catch (Exception ex) {
-            throw new RuntimeException("Could not create the directory where the uploaded files will be stored.", ex);
-        }
-    }
-
+    /** @deprecated Use CloudinaryService.uploadFile() instead. */
+    @Deprecated
     public String storeFile(byte[] content, String originalFileName) {
-        // Normalize file name
-        String fileName = UUID.randomUUID().toString() + "_" + originalFileName;
-
-        try {
-            // Check if the file's name contains invalid characters
-            if(fileName.contains("..")) {
-                throw new RuntimeException("Sorry! Filename contains invalid path sequence " + fileName);
-            }
-
-            // Copy file to the target location (Replacing existing file with the same name)
-            Path targetLocation = this.fileStorageLocation.resolve(fileName);
-            Files.write(targetLocation, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-
-            return "/uploads/reports/" + fileName;
-        } catch (IOException ex) {
-            throw new RuntimeException("Could not store file " + fileName + ". Please try again!", ex);
-        }
+        return cloudinaryService.uploadFile(content, "reports", originalFileName);
     }
 }

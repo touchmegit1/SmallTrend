@@ -27,4 +27,19 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.orderDate BETWEEN :start AND :end")
     Long countOrders(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE UPPER(o.status) = UPPER(:status)")
+    Long countByStatus(@Param("status") String status);
+
+    @Query("""
+        SELECT o.paymentMethod, COUNT(o), SUM(o.totalAmount)
+        FROM Order o
+        WHERE o.orderDate BETWEEN :start AND :end
+        AND o.status = 'COMPLETED'
+        GROUP BY o.paymentMethod
+        """)
+    List<Object[]> revenueByPaymentMethod(
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end
+    );
 }

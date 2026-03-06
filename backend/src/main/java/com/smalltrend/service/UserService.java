@@ -2,11 +2,13 @@ package com.smalltrend.service;
 
 import com.smalltrend.dto.auth.AuthResponse;
 import com.smalltrend.dto.auth.RegisterRequest;
+import com.smalltrend.dto.user.UserProfileDTO;
 import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserUpdateRequest;
 import com.smalltrend.entity.Role;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.UserCredential;
+import com.smalltrend.entity.enums.SalaryType;
 import com.smalltrend.exception.UserException;
 import com.smalltrend.repository.RoleRepository;
 import com.smalltrend.repository.UserCredentialsRepository;
@@ -24,9 +26,13 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -34,6 +40,7 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final UserCredentialsRepository userCredentialsRepository;
     private final RoleRepository roleRepository;
+    private final CloudinaryService cloudinaryService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -41,11 +48,13 @@ public class UserService implements UserDetailsService {
             UserRepository userRepository,
             UserCredentialsRepository userCredentialsRepository,
             RoleRepository roleRepository,
+            CloudinaryService cloudinaryService,
             @Lazy PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.userCredentialsRepository = userCredentialsRepository;
         this.roleRepository = roleRepository;
+        this.cloudinaryService = cloudinaryService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
     }
@@ -123,6 +132,14 @@ public class UserService implements UserDetailsService {
                 .role(role)
                 .build();
 
+        applySalaryFields(user,
+                request.getSalaryType(),
+                request.getBaseSalary(),
+                request.getHourlyRate(),
+                request.getMinRequiredShifts(),
+                request.getCountLateAsPresent(),
+                request.getWorkingHoursPerMonth());
+
         User savedUser = userRepository.save(user);
 
         // Generate JWT token
@@ -136,6 +153,7 @@ public class UserService implements UserDetailsService {
                 .fullName(savedUser.getFullName())
                 .email(savedUser.getEmail())
                 .role(role.getName())
+                .avatarUrl(savedUser.getAvatarUrl())
                 .build();
     }
 
@@ -154,6 +172,7 @@ public class UserService implements UserDetailsService {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .role(user.getRole() != null ? user.getRole().getName() : "ROLE_USER")
+                .avatarUrl(user.getAvatarUrl())
                 .build();
     }
 
@@ -162,6 +181,10 @@ public class UserService implements UserDetailsService {
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
                 .map(UserCredential::getUser)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+    }
+
+    public UserProfileDTO getCurrentUserProfile(String username) {
+        return UserProfileDTO.fromEntity(getCurrentUser(username));
     }
 
     public List<User> getAllUsers() {
@@ -208,8 +231,17 @@ public class UserService implements UserDetailsService {
                 .phone(request.getPhone())
                 .address(request.getAddress())
                 .status("ACTIVE")
+                .active(true)
                 .role(role)
                 .build();
+
+        applySalaryFields(user,
+                request.getSalaryType(),
+                request.getBaseSalary(),
+                request.getHourlyRate(),
+                request.getMinRequiredShifts(),
+                request.getCountLateAsPresent(),
+                request.getWorkingHoursPerMonth());
 
         User savedUser = userRepository.save(user);
 
@@ -305,6 +337,14 @@ public class UserService implements UserDetailsService {
             user.setStatus(request.getStatus().toUpperCase());
         }
 
+        applySalaryFields(user,
+                request.getSalaryType(),
+                request.getBaseSalary(),
+                request.getHourlyRate(),
+                request.getMinRequiredShifts(),
+                request.getCountLateAsPresent(),
+                request.getWorkingHoursPerMonth());
+
         return userRepository.save(user);
     }
 
@@ -317,5 +357,106 @@ public class UserService implements UserDetailsService {
         User user = getUserById(id);
         user.setStatus(status != null ? status.toUpperCase() : user.getStatus());
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public void changeCurrentUserPassword(String username, String currentPassword, String newPassword, String confirmPassword) {
+        if (newPassword == null || !newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Xác nhận mật khẩu mới không khớp");
+        }
+
+        User user = getCurrentUser(username);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu hiện tại không đúng");
+        }
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+
+        Optional<UserCredential> credentials = userCredentialsRepository.findByUserId(user.getId());
+        if (credentials.isPresent()) {
+            UserCredential credential = credentials.get();
+            credential.setPasswordHash(encodedPassword);
+            userCredentialsRepository.save(credential);
+        }
+    }
+
+    @Transactional
+    public UserDTO updateUserAvatar(Integer userId, MultipartFile file) {
+        User user = getUserById(userId);
+        user.setAvatarUrl(storeAvatarFile(file));
+        return UserDTO.fromEntity(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserProfileDTO updateCurrentUserAvatar(String username, MultipartFile file) {
+        User user = getCurrentUser(username);
+        user.setAvatarUrl(storeAvatarFile(file));
+        return UserProfileDTO.fromEntity(userRepository.save(user));
+    }
+
+    private String storeAvatarFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ảnh đại diện");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
+            throw new IllegalArgumentException("File tải lên phải là hình ảnh");
+        }
+
+        Map<String, Object> uploadResult = cloudinaryService.uploadFile(file, "avatars");
+        Object secureUrl = uploadResult.get("secure_url");
+        if (secureUrl == null || String.valueOf(secureUrl).isBlank()) {
+            throw new RuntimeException("Không thể lưu ảnh đại diện");
+        }
+        return String.valueOf(secureUrl);
+    }
+
+    private void applySalaryFields(User user,
+            String salaryType,
+            BigDecimal baseSalary,
+            BigDecimal hourlyRate,
+            Integer minRequiredShifts,
+            Boolean countLateAsPresent,
+            BigDecimal workingHoursPerMonth) {
+        SalaryType parsedSalaryType = parseSalaryType(salaryType);
+        if (parsedSalaryType != null) {
+            user.setSalaryType(parsedSalaryType);
+        } else if (user.getSalaryType() == null) {
+            user.setSalaryType(SalaryType.MONTHLY);
+        }
+
+        if (baseSalary != null) {
+            user.setBaseSalary(baseSalary);
+        }
+        if (hourlyRate != null) {
+            user.setHourlyRate(hourlyRate);
+        }
+        if (minRequiredShifts != null) {
+            user.setMinRequiredShifts(minRequiredShifts);
+        }
+        if (countLateAsPresent != null) {
+            user.setCountLateAsPresent(countLateAsPresent);
+        } else if (user.getCountLateAsPresent() == null) {
+            user.setCountLateAsPresent(true);
+        }
+        if (workingHoursPerMonth != null && workingHoursPerMonth.compareTo(BigDecimal.ZERO) > 0) {
+            user.setWorkingHoursPerMonth(workingHoursPerMonth);
+        } else if (user.getWorkingHoursPerMonth() == null) {
+            user.setWorkingHoursPerMonth(BigDecimal.valueOf(208));
+        }
+    }
+
+    private SalaryType parseSalaryType(String salaryType) {
+        if (salaryType == null || salaryType.isBlank()) {
+            return null;
+        }
+        try {
+            return SalaryType.valueOf(salaryType.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 }
