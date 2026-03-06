@@ -67,8 +67,10 @@ TRUNCATE TABLE supplier_contracts;
 TRUNCATE TABLE suppliers;
 TRUNCATE TABLE categories;
 TRUNCATE TABLE brands;
+TRUNCATE TABLE advertisements;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
 
 -- Schema phải được quản lý bởi JPA/migration chính thức.
 -- data.sql chỉ chứa dữ liệu seed, không thay đổi cấu trúc bảng.
@@ -882,6 +884,61 @@ INSERT IGNORE INTO audit_logs (user_id, action, entity_name, entity_id, changes,
 (1, 'LOGIN', 'User', 1, '{"event":"seed login"}', NOW(), 'OK', 'SYSTEM', 'Initial seed log'),
 (2, 'CREATE', 'Campaign', 1, '{"campaign_code":"CAMP-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created campaign seed'),
 (5, 'CREATE', 'InventoryCount', 1, '{"count_code":"IC-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created inventory count');
+
+-- =============================================================================
+-- ADVERTISEMENTS & AD CONTRACTS
+-- =============================================================================
+INSERT INTO advertisements (
+    slot, sponsor_name, title, subtitle, image_url, link_url,
+    cta_text, cta_color, bg_color, is_active,
+    contract_number, contract_value, contract_start, contract_end,
+    payment_terms, contact_person, contact_email, contact_phone, notes,
+    created_at, updated_at
+) VALUES
+(
+    'LEFT',
+    'SmallTrend Brand',
+    'Mega Sale 50% OFF',
+    'Ưu đãi cuối tuần cho mọi sản phẩm',
+    'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80',
+    '',
+    'Mua ngay',
+    '#4f46e5',
+    '#ffffff',
+    TRUE,
+    'AD-2026-LEFT-001',
+    5000000.00,
+    '2026-01-01',
+    '2026-12-31',
+    'Thanh toán hàng quý, net 30 ngày',
+    'Nguyễn Văn Marketing',
+    'marketing@smalltrend.vn',
+    '0901-234-567',
+    'Hợp đồng quảng cáo nội bộ, ưu tiên slot trái toàn năm 2026',
+    NOW(), NOW()
+),
+(
+    'RIGHT',
+    'Express Delivery Partner',
+    'Giao hàng miễn phí',
+    'Đơn từ 200.000đ — giao trong 2h',
+    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80',
+    '',
+    'Đặt ngay',
+    '#059669',
+    '#f0fdf4',
+    TRUE,
+    'AD-2026-RIGHT-001',
+    12000000.00,
+    '2026-01-01',
+    '2026-06-30',
+    'Thanh toán hàng tháng vào ngày 15',
+    'Trần Thị Logistics',
+    'ads@expressdelivery.vn',
+    '0912-345-678',
+    'Đối tác giao hàng nhanh khu vực HCM & Hà Nội. Hợp đồng gia hạn mỗi 6 tháng.',
+    NOW(), NOW()
+);
 
 -- =============================================================================
 -- End of SmallTrend Combined Sample Data

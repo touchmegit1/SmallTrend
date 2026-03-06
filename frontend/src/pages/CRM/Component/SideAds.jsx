@@ -1,43 +1,8 @@
 import { useState, useEffect } from "react";
-
-const STORAGE_KEY = "smalltrend_side_ads";
-
-const DEFAULT_ADS = [
-  {
-    slot: "left",
-    active: true,
-    imageUrl: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80",
-    title: "Mega Sale 50% OFF",
-    subtitle: "Ưu đãi cuối tuần",
-    ctaText: "Mua ngay",
-    ctaColor: "#4f46e5",
-    bgColor: "#ffffff",
-    linkUrl: "",
-  },
-  {
-    slot: "right",
-    active: true,
-    imageUrl: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80",
-    title: "Free Shipping",
-    subtitle: "Đơn từ 200.000đ",
-    ctaText: "Tìm hiểu thêm",
-    ctaColor: "#059669",
-    bgColor: "#ffffff",
-    linkUrl: "",
-  },
-];
-
-function loadAds() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_ADS;
-  } catch {
-    return DEFAULT_ADS;
-  }
-}
+import adService from "../../../services/adService";
 
 function AdPanel({ ad }) {
-  if (!ad || !ad.active) return null;
+  if (!ad || !ad.isActive) return null;
 
   const content = (
     <div
@@ -45,22 +10,17 @@ function AdPanel({ ad }) {
       style={{ backgroundColor: ad.bgColor || "#ffffff" }}
     >
       {ad.imageUrl ? (
-        <img
-          src={ad.imageUrl}
-          alt={ad.title}
-          className="h-2/3 w-full object-cover"
-          onError={(e) => { e.target.style.display = "none"; }}
-        />
+        <img src={ad.imageUrl} alt={ad.title} className="h-2/3 w-full object-cover"
+          onError={(e) => { e.target.style.display = "none"; }} />
       ) : (
         <div className="h-2/3 w-full bg-slate-100" />
       )}
       <div className="flex-1 p-4 flex flex-col justify-center text-center gap-2">
-        <p className="text-base font-bold text-slate-800 leading-tight">
-          {ad.title}
-        </p>
-        {ad.subtitle && (
-          <p className="text-xs text-slate-500">{ad.subtitle}</p>
+        {ad.sponsorName && (
+          <p className="text-[10px] text-slate-400">{ad.sponsorName}</p>
         )}
+        <p className="font-bold text-slate-800 leading-tight">{ad.title}</p>
+        {ad.subtitle && <p className="text-xs text-slate-500">{ad.subtitle}</p>}
         <button
           className="mt-2 text-white text-sm px-4 py-2 rounded-full font-semibold"
           style={{ backgroundColor: ad.ctaColor || "#4f46e5" }}
@@ -81,31 +41,28 @@ function AdPanel({ ad }) {
 }
 
 export default function SideAds() {
-  const [ads, setAds] = useState(loadAds);
+  const [leftAd, setLeftAd] = useState(null);
+  const [rightAd, setRightAd] = useState(null);
 
-  // Sync mỗi khi storage thay đổi (khi trang quản lý lưu)
   useEffect(() => {
-    const handler = (e) => {
-      if (e.key === STORAGE_KEY) setAds(loadAds());
-    };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
+    adService.getActive()
+      .then((data) => {
+        setLeftAd(data.LEFT || null);
+        setRightAd(data.RIGHT || null);
+      })
+      .catch(() => {/* silently fail — no ads shown */ });
   }, []);
-
-  const leftAd = ads.find((a) => a.slot === "left");
-  const rightAd = ads.find((a) => a.slot === "right");
 
   return (
     <>
-      {/* Left Ad */}
       <div className="hidden xl:flex fixed left-6 top-10 bottom-10 z-40">
         <AdPanel ad={leftAd} />
       </div>
-
-      {/* Right Ad */}
       <div className="hidden xl:flex fixed right-6 top-10 bottom-10 z-40">
         <AdPanel ad={rightAd} />
       </div>
     </>
   );
 }
+
+
