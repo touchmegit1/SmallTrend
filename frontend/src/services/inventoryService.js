@@ -521,6 +521,7 @@ export const getInventoryCounts = async () => {
     confirmed_by: ic.confirmedBy || ic.confirmed_by,
     created_at: ic.createdAt || ic.created_at,
     confirmed_at: ic.confirmedAt || ic.confirmed_at,
+    rejection_reason: ic.rejectionReason || ic.rejection_reason || "",
   }));
 };
 
@@ -542,6 +543,7 @@ export const getInventoryCountById = async (id) => {
     confirmed_by: ic.confirmedBy || ic.confirmed_by,
     created_at: ic.createdAt || ic.created_at,
     confirmed_at: ic.confirmedAt || ic.confirmed_at,
+    rejection_reason: ic.rejectionReason || ic.rejection_reason || "",
     items: (ic.items || []).map((item) => ({
       ...item,
       product_id: item.productId || item.product_id,
@@ -623,6 +625,53 @@ export const createAndConfirmInventoryCount = async (request) => {
   });
   if (!response.ok)
     throw new Error("Failed to create and confirm inventory count");
+  return response.json();
+};
+
+export const submitInventoryCount = async (id, request) => {
+  const body = mapCountRequestToBackend(request);
+  const response = await fetch(`${SPRING_API}/inventory-counts/${id}/submit`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error("Lỗi khi gửi duyệt phiếu kiểm kho");
+  return response.json();
+};
+
+export const createAndSubmitInventoryCount = async (request) => {
+  const body = mapCountRequestToBackend(request);
+  const response = await fetch(`${SPRING_API}/inventory-counts/submit`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error("Lỗi khi tạo và gửi duyệt phiếu kiểm kho");
+  return response.json();
+};
+
+export const approveInventoryCount = async (id) => {
+  const response = await fetch(`${SPRING_API}/inventory-counts/${id}/approve`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi duyệt phiếu kiểm kho");
+  }
+  return response.json();
+};
+
+export const rejectInventoryCount = async (id, rejectionReason) => {
+  const response = await fetch(`${SPRING_API}/inventory-counts/${id}/reject`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ rejectionReason }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi từ chối phiếu kiểm kho");
+  }
   return response.json();
 };
 

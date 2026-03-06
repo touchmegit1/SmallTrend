@@ -199,16 +199,25 @@ export default function SummaryPanel({
             {/* Order Discount */}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500">Giảm giá</span>
-              <input
-                type="number"
-                value={order.discount || 0}
-                onChange={(e) =>
-                  updateOrder("discount", parseFloat(e.target.value) || 0)
-                }
-                min="0"
-                disabled={!isEditable}
-                className="w-28 px-2 py-1 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={order.discount ? order.discount / 1000 : ""}
+                  onChange={(e) =>
+                    updateOrder(
+                      "discount",
+                      (parseFloat(e.target.value) || 0) * 1000,
+                    )
+                  }
+                  min="0"
+                  step="any"
+                  disabled={!isEditable}
+                  className="w-28 px-2 py-1 pr-9 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">
+                  .000
+                </span>
+              </div>
             </div>
 
             {/* Tax */}
@@ -235,16 +244,25 @@ export default function SummaryPanel({
             {/* Shipping */}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500">Phí vận chuyển</span>
-              <input
-                type="number"
-                value={order.shipping_fee || 0}
-                onChange={(e) =>
-                  updateOrder("shipping_fee", parseFloat(e.target.value) || 0)
-                }
-                min="0"
-                disabled={!isEditable}
-                className="w-28 px-2 py-1 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={order.shipping_fee ? order.shipping_fee / 1000 : ""}
+                  onChange={(e) =>
+                    updateOrder(
+                      "shipping_fee",
+                      (parseFloat(e.target.value) || 0) * 1000,
+                    )
+                  }
+                  min="0"
+                  step="any"
+                  disabled={!isEditable}
+                  className="w-28 px-2 py-1 pr-9 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">
+                  .000
+                </span>
+              </div>
             </div>
 
             <div className="border-t border-slate-200 pt-2.5">
@@ -259,16 +277,25 @@ export default function SummaryPanel({
             {/* Paid Amount */}
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500">Đã thanh toán</span>
-              <input
-                type="number"
-                value={order.paid_amount || 0}
-                onChange={(e) =>
-                  updateOrder("paid_amount", parseFloat(e.target.value) || 0)
-                }
-                min="0"
-                disabled={!isEditable}
-                className="w-28 px-2 py-1 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={order.paid_amount ? order.paid_amount / 1000 : ""}
+                  onChange={(e) =>
+                    updateOrder(
+                      "paid_amount",
+                      (parseFloat(e.target.value) || 0) * 1000,
+                    )
+                  }
+                  min="0"
+                  step="any"
+                  disabled={!isEditable}
+                  className="w-28 px-2 py-1 pr-9 text-right text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">
+                  .000
+                </span>
+              </div>
             </div>
 
             <div className="flex justify-between text-sm">

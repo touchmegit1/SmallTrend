@@ -37,6 +37,7 @@ function CreatePurchaseOrder() {
     clearContract,
     updateOrder,
     addProduct,
+    importProducts,
     removeItem,
     updateItem,
     batchEditData,
@@ -110,7 +111,11 @@ function CreatePurchaseOrder() {
         />
 
         {isEditable && (
-          <ProductSearchBar products={products} onAddProduct={addProduct} />
+          <ProductSearchBar
+            products={products}
+            onAddProduct={addProduct}
+            onImportProducts={importProducts}
+          />
         )}
 
         {/* Bảng kiểm kê cho NV kho (trạng thái CHECKING) */}

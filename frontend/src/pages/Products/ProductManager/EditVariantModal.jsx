@@ -3,11 +3,22 @@ import { X, Save, Image as ImageIcon, Upload } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../ProductComponents/card";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
-export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSave }) {
+export function EditVariantModal({
+  variant,
+  parentProduct,
+  isOpen,
+  onClose,
+  onSave,
+}) {
   const { units, loading: unitsLoading } = useFetchUnits();
 
   const [formData, setFormData] = useState({
@@ -33,12 +44,23 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sku: variant.sku || "",
         barcode: variant.barcode || "",
         unit_id: variant.unit_id ? String(variant.unit_id) : "",
-        unit_value: variant.unit_value != null ? String(variant.unit_value) : "",
-        sell_price: variant.sell_price != null ? String(variant.sell_price) : "",
-        is_active: parentProduct?.is_active === false ? false : (variant.is_active ?? true),
+        unit_value:
+          variant.unit_value != null ? String(variant.unit_value) : "",
+        sell_price:
+          variant.sell_price != null ? String(variant.sell_price) : "",
+        is_active:
+          parentProduct?.is_active === false
+            ? false
+            : (variant.is_active ?? true),
       });
       setImageFile(null);
-      setImagePreview(variant.image_url ? (variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`) : null);
+      setImagePreview(
+        variant.image_url
+          ? variant.image_url.startsWith("http")
+            ? variant.image_url
+            : `http://localhost:8081${variant.image_url.startsWith("/") ? "" : "/"}${variant.image_url}`
+          : null,
+      );
       setErrorMsg("");
     }
   }, [variant, isOpen, parentProduct]);
@@ -151,7 +173,9 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sku: formData.sku,
         barcode: formData.barcode,
         unit_id: parseInt(formData.unit_id),
-        unit_value: formData.unit_value ? parseFloat(formData.unit_value) : null,
+        unit_value: formData.unit_value
+          ? parseFloat(formData.unit_value)
+          : null,
         sell_price: parseFloat(formData.sell_price),
         image_url: imageUrl,
         is_active: formData.is_active,
@@ -301,7 +325,8 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                 </select>
                 {parentProduct?.is_active === false && (
                   <p className="text-xs text-red-500 mt-1">
-                    Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt biến thể.
+                    Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt biến
+                    thể.
                   </p>
                 )}
               </div>
@@ -311,7 +336,9 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
           {/* Image Upload */}
           <Card className="border border-gray-300 rounded-lg bg-white mt-4">
             <CardHeader>
-              <CardTitle className="text-xl font-bold">Hình ảnh biến thể</CardTitle>
+              <CardTitle className="text-xl font-bold">
+                Hình ảnh biến thể
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <input
@@ -323,7 +350,10 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
               />
 
               {imagePreview ? (
-                <div className="relative rounded-2xl overflow-hidden group border border-gray-200" style={{ height: '300px' }}>
+                <div
+                  className="relative rounded-2xl overflow-hidden group border border-gray-200"
+                  style={{ height: "300px" }}
+                >
                   <img
                     src={imagePreview}
                     alt="Preview"
@@ -352,7 +382,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   tabIndex={0}
                   onClick={() => fileInputRef.current?.click()}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       fileInputRef.current?.click();
                     }
@@ -360,11 +390,12 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
-                    ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]'
-                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
-                    }`}
-                  style={{ height: '300px' }}
+                  className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                    isDragging
+                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
+                      : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
+                  }`}
+                  style={{ height: "300px" }}
                 >
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
                     <ImageIcon className="w-10 h-10 text-blue-600" />

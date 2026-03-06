@@ -43,6 +43,9 @@ function InventoryCountDetail() {
 
     saveDraft,
     confirmCount,
+    submitForApproval,
+    approveCount,
+    rejectCount,
     cancelCount,
   } = useInventoryCount(id);
 
@@ -142,6 +145,9 @@ function InventoryCountDetail() {
           saving={saving}
           onSaveDraft={() => saveDraft(navigate)}
           onConfirm={() => confirmCount(navigate)}
+          onSubmitForApproval={() => submitForApproval(navigate)}
+          onApprove={() => approveCount(navigate)}
+          onReject={(reason) => rejectCount(reason, navigate)}
           onCancel={() => cancelCount(navigate)}
         />
       </div>

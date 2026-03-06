@@ -5,8 +5,10 @@ import {
   TrendingUp,
   Scale,
   StickyNote,
+  AlertTriangle,
 } from "lucide-react";
 import { IC_STATUS, formatVNDCount } from "../../../utils/inventoryCount";
+import LocationSelect from "./LocationSelect";
 
 export default function CountSummaryPanel({
   session,
@@ -27,20 +29,11 @@ export default function CountSummaryPanel({
           Vị trí kiểm kho
         </label>
         {isEditable ? (
-          <select
-            value={session?.location_id || ""}
-            onChange={(e) =>
-              updateSession({ location_id: parseInt(e.target.value) || null })
-            }
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
-            <option value="">— Chọn vị trí —</option>
-            {locations.map((loc) => (
-              <option key={loc.id} value={loc.id}>
-                {loc.location_name}
-              </option>
-            ))}
-          </select>
+          <LocationSelect
+            value={session?.location_id || null}
+            onChange={(val) => updateSession({ location_id: val })}
+            locations={locations}
+          />
         ) : (
           <p className="text-sm text-slate-700 font-medium">
             {locations.find((l) => l.id === session?.location_id)
@@ -48,6 +41,19 @@ export default function CountSummaryPanel({
           </p>
         )}
       </div>
+
+      {/* ─── Rejection Reason (if rejected) ──────── */}
+      {session?.status === IC_STATUS.REJECTED && session?.rejection_reason && (
+        <div className="p-4 border-b border-slate-100 bg-red-50/50">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">
+            <AlertTriangle size={12} />
+            Lý do từ chối
+          </label>
+          <p className="text-sm text-red-700 bg-red-100/60 rounded-lg px-3 py-2 border border-red-200">
+            {session.rejection_reason}
+          </p>
+        </div>
+      )}
 
       {/* ─── Counting Summary ─────────────────────── */}
       <div className="p-4 border-b border-slate-100">

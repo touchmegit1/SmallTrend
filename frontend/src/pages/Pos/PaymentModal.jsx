@@ -13,10 +13,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const currentLoyaltyPoints = selectedCustomer?.loyaltyPoints || 0;
-  const pointsDiscount = usePoints && selectedCustomer ? Math.min(currentLoyaltyPoints * 100, subtotal) : 0;
+  const pointsDiscount =
+    usePoints && selectedCustomer
+      ? Math.min(currentLoyaltyPoints * 100, subtotal)
+      : 0;
   const totalDiscount = pointsDiscount + discount;
   const finalTotal = subtotal - totalDiscount;
-  const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
+  const change = cashAmount
+    ? Math.max(0, parseFloat(cashAmount) - finalTotal)
+    : 0;
 
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
@@ -24,25 +29,28 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
     return [
       parseInt(firstDigit + "0000"),
       parseInt(firstDigit + "00000"),
-      parseInt(firstDigit + "000000")
+      parseInt(firstDigit + "000000"),
     ];
   };
 
   const handlePayment = async () => {
-    if (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)) {
+    if (
+      paymentMethod === "cash" &&
+      (!cashAmount || parseFloat(cashAmount) < finalTotal)
+    ) {
       alert("Số tiền không đủ!");
       return;
     }
 
     let customerToUpdate = selectedCustomer;
-    
+
     // Cập nhật điểm trung thành trong bảng customers
     if (selectedCustomer && selectedCustomer.id) {
       try {
         const earnedPoints = Math.floor(finalTotal / 10000); // 1 điểm/10,000đ
         const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
         const currentPoints = selectedCustomer.loyaltyPoints || 0;
-        
+
         // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
         const newPoints = currentPoints - pointsUsed + earnedPoints;
 
@@ -50,16 +58,16 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
         await api.put(`/crm/customers/${selectedCustomer.id}`, {
           name: selectedCustomer.name,
           phone: selectedCustomer.phone,
-          loyaltyPoints: newPoints
+          loyaltyPoints: newPoints,
         });
 
         customerToUpdate = {
           ...selectedCustomer,
-          loyaltyPoints: newPoints
+          loyaltyPoints: newPoints,
         };
       } catch (error) {
-        console.error('Error updating customer loyalty points:', error);
-        alert('Không thể cập nhật điểm khách hàng');
+        console.error("Error updating customer loyalty points:", error);
+        alert("Không thể cập nhật điểm khách hàng");
       }
     }
 
@@ -67,46 +75,53 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
       cart,
       customer: customerToUpdate,
       total: finalTotal,
-      customerMoney: paymentMethod === "cash" ? parseFloat(cashAmount) : finalTotal,
+      customerMoney:
+        paymentMethod === "cash" ? parseFloat(cashAmount) : finalTotal,
       change: paymentMethod === "cash" ? change : 0,
       pointsDiscount,
       discount,
       notes,
-      paymentMethod: paymentMethod === "cash" ? "Tiền mặt" : "Chuyển khoản"
+      paymentMethod: paymentMethod === "cash" ? "Tiền mặt" : "Chuyển khoản",
     });
   };
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: "rgba(0,0,0,0.5)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 1000
-    }}>
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        width: "90%",
-        maxWidth: "1000px",
-        maxHeight: "90vh",
-        overflow: "hidden",
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0,0,0,0.5)",
         display: "flex",
-        flexDirection: "column"
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: "20px",
-          borderBottom: "1px solid #e9ecef",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          background: "white",
+          borderRadius: "12px",
+          width: "90%",
+          maxWidth: "1000px",
+          maxHeight: "90vh",
+          overflow: "hidden",
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}>
+          flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: "20px",
+            borderBottom: "1px solid #e9ecef",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <h2 style={{ margin: 0, fontSize: "20px" }}>Thanh toán</h2>
           <button
             onClick={onClose}
@@ -115,7 +130,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
               border: "none",
               fontSize: "24px",
               cursor: "pointer",
-              color: "#6c757d"
+              color: "#6c757d",
             }}
           >
             ×
@@ -123,59 +138,96 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
         </div>
 
         {/* Body - 2 columns */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "20px",
-          padding: "20px",
-          overflow: "auto"
-        }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "20px",
+            padding: "20px",
+            overflow: "auto",
+          }}
+        >
           {/* Left: Tạm tính */}
           <div>
-            <h3 style={{ margin: "0 0 15px 0", fontSize: "16px" }}>Tạm tính tiền</h3>
-            
+            <h3 style={{ margin: "0 0 15px 0", fontSize: "16px" }}>
+              Tạm tính tiền
+            </h3>
+
             {/* Danh sách sản phẩm */}
-            <div style={{
-              maxHeight: "200px",
-              overflow: "auto",
-              marginBottom: "15px",
-              padding: "10px",
-              background: "#f8f9fa",
-              borderRadius: "6px"
-            }}>
-              {cart.map(item => (
-                <div key={item.id} style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "8px",
-                  fontSize: "13px"
-                }}>
-                  <span>{item.name} x{item.qty}</span>
-                  <span style={{ fontWeight: "bold" }}>{(item.price * item.qty).toLocaleString()}đ</span>
+            <div
+              style={{
+                maxHeight: "200px",
+                overflow: "auto",
+                marginBottom: "15px",
+                padding: "10px",
+                background: "#f8f9fa",
+                borderRadius: "6px",
+              }}
+            >
+              {cart.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    fontSize: "13px",
+                  }}
+                >
+                  <span>
+                    {item.name} x{item.qty}
+                  </span>
+                  <span style={{ fontWeight: "bold" }}>
+                    {(item.price * item.qty).toLocaleString()}đ
+                  </span>
                 </div>
               ))}
             </div>
 
             {/* Tổng tạm tính */}
-            <div style={{
-              padding: "12px",
-              background: "#d1ecf1",
-              borderRadius: "6px",
-              marginBottom: "15px",
-              border: "1px solid #007bff"
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+            <div
+              style={{
+                padding: "12px",
+                background: "#d1ecf1",
+                borderRadius: "6px",
+                marginBottom: "15px",
+                border: "1px solid #007bff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "8px",
+                }}
+              >
                 <span>Tạm tính:</span>
-                <span style={{ fontWeight: "bold" }}>{subtotal.toLocaleString()}đ</span>
+                <span style={{ fontWeight: "bold" }}>
+                  {subtotal.toLocaleString()}đ
+                </span>
               </div>
               {pointsDiscount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "#17a2b8" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "#17a2b8",
+                  }}
+                >
                   <span>Giảm điểm:</span>
                   <span>-{pointsDiscount.toLocaleString()}đ</span>
                 </div>
               )}
               {discount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "#17a2b8" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "#17a2b8",
+                  }}
+                >
                   <span>Giảm giá:</span>
                   <span>-{discount.toLocaleString()}đ</span>
                 </div>
@@ -190,26 +242,43 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
 
             {/* Thông tin khách hàng */}
             {selectedCustomer && (
-              <div style={{
-                padding: "12px",
-                background: "#d1ecf1",
-                borderRadius: "6px",
-                marginBottom: "15px",
-                fontSize: "13px",
-                border: "1px solid #007bff"
-              }}>
+              <div
+                style={{
+                  padding: "12px",
+                  background: "#d1ecf1",
+                  borderRadius: "6px",
+                  marginBottom: "15px",
+                  fontSize: "13px",
+                  border: "1px solid #007bff",
+                }}
+              >
                 <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
                   {selectedCustomer.name} - {selectedCustomer.phone}
                 </div>
                 <div>Điểm hiện tại: {currentLoyaltyPoints}</div>
                 {currentLoyaltyPoints > 0 && (
-                  <label style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px", cursor: "pointer" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginTop: "8px",
+                      cursor: "pointer",
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={usePoints}
                       onChange={(e) => setUsePoints(e.target.checked)}
                     />
-                    <span>Sử dụng điểm (-{Math.min(currentLoyaltyPoints * 100, subtotal).toLocaleString()}đ)</span>
+                    <span>
+                      Sử dụng điểm (-
+                      {Math.min(
+                        currentLoyaltyPoints * 100,
+                        subtotal,
+                      ).toLocaleString()}
+                      đ)
+                    </span>
                   </label>
                 )}
               </div>
@@ -217,7 +286,14 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
 
             {/* Voucher */}
             <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", marginBottom: "5px", fontSize: "13px", fontWeight: "500" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "5px",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                }}
+              >
                 Mã voucher:
               </label>
               <div style={{ display: "flex", gap: "8px" }}>
@@ -231,7 +307,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     padding: "8px",
                     border: "1px solid #ddd",
                     borderRadius: "4px",
-                    fontSize: "13px"
+                    fontSize: "13px",
                   }}
                 />
                 <button
@@ -246,7 +322,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     border: "none",
                     borderRadius: "4px",
                     cursor: "pointer",
-                    fontSize: "13px"
+                    fontSize: "13px",
                   }}
                 >
                   Áp dụng
@@ -256,7 +332,14 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
 
             {/* Giảm giá thủ công */}
             <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", marginBottom: "5px", fontSize: "13px", fontWeight: "500" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "5px",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                }}
+              >
                 Giảm giá:
               </label>
               <input
@@ -269,14 +352,21 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                   padding: "8px",
                   border: "1px solid #ddd",
                   borderRadius: "4px",
-                  fontSize: "13px"
+                  fontSize: "13px",
                 }}
               />
             </div>
 
             {/* Ghi chú */}
             <div>
-              <label style={{ display: "block", marginBottom: "5px", fontSize: "13px", fontWeight: "500" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "5px",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                }}
+              >
                 Ghi chú:
               </label>
               <textarea
@@ -290,7 +380,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                   border: "1px solid #ddd",
                   borderRadius: "4px",
                   fontSize: "13px",
-                  resize: "none"
+                  resize: "none",
                 }}
               />
             </div>
@@ -298,61 +388,101 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
 
           {/* Right: Khách cần trả */}
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "15px",
+              }}
+            >
               <h3 style={{ margin: 0, fontSize: "16px" }}>Khách cần trả</h3>
-              <div style={{ fontSize: "24px", fontWeight: "bold", color: "#007bff" }}>
+              <div
+                style={{
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  color: "#007bff",
+                }}
+              >
                 {finalTotal.toLocaleString()}đ
               </div>
             </div>
 
             {/* Hình thức thanh toán */}
             <div style={{ marginBottom: "20px" }}>
-              <label style={{ display: "block", marginBottom: "10px", fontSize: "13px", fontWeight: "500" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "10px",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                }}
+              >
                 Hình thức thanh toán:
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px",
+                }}
+              >
                 <button
                   onClick={() => setPaymentMethod("cash")}
                   style={{
                     padding: "15px",
                     background: paymentMethod === "cash" ? "#007bff" : "white",
                     color: paymentMethod === "cash" ? "white" : "#333",
-                    border: "2px solid " + (paymentMethod === "cash" ? "#007bff" : "#ddd"),
+                    border:
+                      "2px solid " +
+                      (paymentMethod === "cash" ? "#007bff" : "#ddd"),
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontSize: "13px",
-                    fontWeight: "500"
+                    fontWeight: "500",
                   }}
                 >
-                   Tiền mặt
+                  Tiền mặt
                 </button>
                 <button
                   onClick={() => setPaymentMethod("transfer")}
                   style={{
                     padding: "15px",
-                    background: paymentMethod === "transfer" ? "#007bff" : "white",
+                    background:
+                      paymentMethod === "transfer" ? "#007bff" : "white",
                     color: paymentMethod === "transfer" ? "white" : "#333",
-                    border: "2px solid " + (paymentMethod === "transfer" ? "#007bff" : "#ddd"),
+                    border:
+                      "2px solid " +
+                      (paymentMethod === "transfer" ? "#007bff" : "#ddd"),
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontSize: "13px",
-                    fontWeight: "500"
+                    fontWeight: "500",
                   }}
                 >
-                   Chuyển khoản
+                  Chuyển khoản
                 </button>
               </div>
             </div>
 
             {/* Tiền mặt */}
             {paymentMethod === "cash" && (
-              <div style={{
-                padding: "15px",
-                background: "#f8f9fa",
-                borderRadius: "8px",
-                marginBottom: "20px"
-              }}>
-                <label style={{ display: "block", marginBottom: "8px", fontSize: "13px", fontWeight: "500" }}>
+              <div
+                style={{
+                  padding: "15px",
+                  background: "#f8f9fa",
+                  borderRadius: "8px",
+                  marginBottom: "20px",
+                }}
+              >
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "13px",
+                    fontWeight: "500",
+                  }}
+                >
                   Tiền khách đưa:
                 </label>
                 <input
@@ -366,16 +496,24 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     border: "2px solid #ddd",
                     borderRadius: "6px",
                     fontSize: "16px",
-                    marginBottom: "10px"
+                    marginBottom: "10px",
                   }}
                 />
-                
+
                 {/* Gợi ý tiền */}
                 {cashAmount && getSuggestedAmounts().length > 0 && (
                   <div style={{ marginBottom: "10px" }}>
-                    <div style={{ fontSize: "12px", marginBottom: "6px", color: "#666" }}>Gợi ý:</div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        marginBottom: "6px",
+                        color: "#666",
+                      }}
+                    >
+                      Gợi ý:
+                    </div>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      {getSuggestedAmounts().map(amount => (
+                      {getSuggestedAmounts().map((amount) => (
                         <button
                           key={amount}
                           onClick={() => setCashAmount(amount.toString())}
@@ -388,7 +526,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                             borderRadius: "4px",
                             cursor: "pointer",
                             fontSize: "12px",
-                            fontWeight: "500"
+                            fontWeight: "500",
                           }}
                         >
                           {amount.toLocaleString()}đ
@@ -399,17 +537,31 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 )}
 
                 {cashAmount && parseFloat(cashAmount) >= finalTotal && (
-                  <div style={{
-                    padding: "12px",
-                    background: "#d1ecf1",
-                    borderRadius: "6px",
-                    textAlign: "center",
-                    border: "1px solid #007bff"
-                  }}>
-                    <div style={{ fontSize: "12px", color: "#0c5460", marginBottom: "4px" }}>
+                  <div
+                    style={{
+                      padding: "12px",
+                      background: "#d1ecf1",
+                      borderRadius: "6px",
+                      textAlign: "center",
+                      border: "1px solid #007bff",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#0c5460",
+                        marginBottom: "4px",
+                      }}
+                    >
                       Tiền thừa
                     </div>
-                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#007bff" }}>
+                    <div
+                      style={{
+                        fontSize: "24px",
+                        fontWeight: "bold",
+                        color: "#007bff",
+                      }}
+                    >
                       {change.toLocaleString()}đ
                     </div>
                   </div>
@@ -420,29 +572,40 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
             {/* Nút thanh toán */}
             <button
               onClick={handlePayment}
-              disabled={!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal))}
+              disabled={
+                !paymentMethod ||
+                (paymentMethod === "cash" &&
+                  (!cashAmount || parseFloat(cashAmount) < finalTotal))
+              }
               style={{
                 width: "100%",
                 padding: "18px",
-                background: (!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)))
-                  ? "#6c757d"
-                  : "#007bff",
+                background:
+                  !paymentMethod ||
+                  (paymentMethod === "cash" &&
+                    (!cashAmount || parseFloat(cashAmount) < finalTotal))
+                    ? "#6c757d"
+                    : "#007bff",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
                 fontSize: "18px",
                 fontWeight: "bold",
-                cursor: (!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)))
-                  ? "not-allowed"
-                  : "pointer",
-                boxShadow: "0 4px 12px rgba(0,123,255,0.3)"
+                cursor:
+                  !paymentMethod ||
+                  (paymentMethod === "cash" &&
+                    (!cashAmount || parseFloat(cashAmount) < finalTotal))
+                    ? "not-allowed"
+                    : "pointer",
+                boxShadow: "0 4px 12px rgba(0,123,255,0.3)",
               }}
             >
               {!paymentMethod
                 ? "CHỌN HÌNH THỨC THANH TOÁN"
                 : paymentMethod === "cash" && !cashAmount
                   ? "NHẬP TIỀN KHÁCH ĐƯA"
-                  : paymentMethod === "cash" && parseFloat(cashAmount) < finalTotal
+                  : paymentMethod === "cash" &&
+                      parseFloat(cashAmount) < finalTotal
                     ? "TIỀN KHÔNG ĐỦ"
                     : "THANH TOÁN"}
             </button>

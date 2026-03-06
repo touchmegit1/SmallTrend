@@ -83,7 +83,9 @@ function InventoryCountList() {
     { key: "ALL", label: "Tất cả" },
     { key: IC_STATUS.DRAFT, label: "Phiếu tạm" },
     { key: IC_STATUS.COUNTING, label: "Đang kiểm" },
+    { key: IC_STATUS.PENDING, label: "Chờ duyệt" },
     { key: IC_STATUS.CONFIRMED, label: "Đã xác nhận" },
+    { key: IC_STATUS.REJECTED, label: "Từ chối" },
     { key: IC_STATUS.CANCELLED, label: "Đã hủy" },
   ];
 
@@ -228,6 +230,7 @@ function InventoryCountList() {
                   const isDraft =
                     v.status === IC_STATUS.DRAFT ||
                     v.status === IC_STATUS.COUNTING;
+                  const isPending = v.status === IC_STATUS.PENDING;
                   const diffVal = v.total_difference_value || 0;
 
                   return (

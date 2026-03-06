@@ -243,6 +243,38 @@ export function usePurchaseOrder(initialId = null) {
     []
   );
 
+  const importProducts = useCallback(
+    (importedList) => {
+      setItems((prev) => {
+        const newItems = [...prev];
+        importedList.forEach(importedInfo => {
+           const existingIndex = newItems.findIndex(i => i.product_id === importedInfo.product.id);
+           if (existingIndex >= 0) {
+              const item = newItems[existingIndex];
+              const newQty = item.quantity + (importedInfo.quantity || 1);
+              const newPrice = importedInfo.unit_price !== undefined ? importedInfo.unit_price : item.unit_price;
+              newItems[existingIndex] = {
+                 ...item,
+                 quantity: newQty,
+                 unit_price: newPrice,
+                 total: calcItemTotal(newQty, newPrice, item.discount)
+              };
+           } else {
+              const newItem = createOrderItem(importedInfo.product);
+              newItem.quantity = importedInfo.quantity || 1;
+              if (importedInfo.unit_price !== undefined) {
+                 newItem.unit_price = importedInfo.unit_price;
+              }
+              newItem.total = calcItemTotal(newItem.quantity, newItem.unit_price, newItem.discount);
+              newItems.push(newItem);
+           }
+        });
+        return newItems;
+      });
+    },
+    []
+  );
+
   const removeItem = useCallback((_key) => {
     setItems((prev) => prev.filter((i) => i._key !== _key));
   }, []);
@@ -542,6 +574,7 @@ export function usePurchaseOrder(initialId = null) {
     clearContract,
     updateOrder,
     addProduct,
+    importProducts,
     removeItem,
     updateItem,
     batchEditItem,

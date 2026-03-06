@@ -1,6 +1,11 @@
 import { useState, useRef } from "react";
 import { ArrowLeft, Save, Image as ImageIcon, X, Upload } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
@@ -136,7 +141,10 @@ const AddNewProductVariant = () => {
       });
     } catch (err) {
       console.error("Error creating variant:", err);
-      const msg = err.response?.data?.message || err.response?.data || "Lỗi khi thêm biến thể!";
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data ||
+        "Lỗi khi thêm biến thể!";
       setErrorMsg(typeof msg === "string" ? msg : "Lỗi khi thêm biến thể!");
     } finally {
       setSaving(false);
@@ -195,7 +203,8 @@ const AddNewProductVariant = () => {
               Thêm biến thể mới
             </h1>
             <p className="text-gray-600 mt-2">
-              Sản phẩm gốc: <span className="font-semibold">{product.name}</span>
+              Sản phẩm gốc:{" "}
+              <span className="font-semibold">{product.name}</span>
             </p>
           </div>
         </div>
@@ -232,7 +241,9 @@ const AddNewProductVariant = () => {
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-semibold text-gray-700">Barcode</Label>
+                      <Label className="text-sm font-semibold text-gray-700">
+                        Barcode
+                      </Label>
                       <Input
                         className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
                         placeholder="VD: 893458..."
@@ -264,7 +275,9 @@ const AddNewProductVariant = () => {
                       </select>
                     </div>
                     <div>
-                      <Label className="text-sm font-semibold text-gray-700">Giá trị đơn vị</Label>
+                      <Label className="text-sm font-semibold text-gray-700">
+                        Giá trị đơn vị
+                      </Label>
                       <Input
                         type="number"
                         step="any"
@@ -294,7 +307,9 @@ const AddNewProductVariant = () => {
                   </div>
 
                   <div>
-                    <Label className="text-sm font-semibold text-gray-700">Trạng thái</Label>
+                    <Label className="text-sm font-semibold text-gray-700">
+                      Trạng thái
+                    </Label>
                     <select
                       name="is_active"
                       className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
@@ -307,12 +322,15 @@ const AddNewProductVariant = () => {
                       }
                       disabled={product?.is_active === false}
                     >
-                      {product?.is_active !== false && <option value="true">Đang hoạt động</option>}
+                      {product?.is_active !== false && (
+                        <option value="true">Đang hoạt động</option>
+                      )}
                       <option value="false">Ngừng hoạt động</option>
                     </select>
                     {product?.is_active === false && (
                       <p className="text-xs text-red-500 mt-1">
-                        Sản phẩm gốc đang ngừng hoạt động, không thể tạo biến thể kích hoạt.
+                        Sản phẩm gốc đang ngừng hoạt động, không thể tạo biến
+                        thể kích hoạt.
                       </p>
                     )}
                   </div>
@@ -343,7 +361,7 @@ const AddNewProductVariant = () => {
                         src={imagePreview}
                         alt="Preview"
                         className="w-full h-full object-contain bg-white"
-                        style={{ minHeight: '300px' }}
+                        style={{ minHeight: "300px" }}
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-2xl" />
                       <button
@@ -368,7 +386,7 @@ const AddNewProductVariant = () => {
                       tabIndex={0}
                       onClick={() => fileInputRef.current?.click()}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
+                        if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
                           fileInputRef.current?.click();
                         }
@@ -376,11 +394,12 @@ const AddNewProductVariant = () => {
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
-                        ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]'
-                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
-                        }`}
-                      style={{ minHeight: '300px' }}
+                      className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                        isDragging
+                          ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
+                          : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
+                      }`}
+                      style={{ minHeight: "300px" }}
                     >
                       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
                         <ImageIcon className="w-10 h-10 text-blue-600" />

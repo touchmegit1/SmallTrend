@@ -62,30 +62,50 @@ const PurchaseItemRow = memo(function PurchaseItemRow({
 
         {/* Unit Price */}
         <td className="px-3 py-3 w-32">
-          <input
-            type="number"
-            value={item.unit_price}
-            onChange={(e) =>
-              onUpdate(item._key, "unit_price", parseFloat(e.target.value) || 0)
-            }
-            disabled={!isEditable}
-            min="0"
-            className="w-full px-2.5 py-1.5 text-sm text-right border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-400"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              value={item.unit_price ? item.unit_price / 1000 : ""}
+              onChange={(e) =>
+                onUpdate(
+                  item._key,
+                  "unit_price",
+                  (parseFloat(e.target.value) || 0) * 1000,
+                )
+              }
+              disabled={!isEditable}
+              min="0"
+              step="any"
+              className="w-full px-2.5 py-1.5 pr-10 text-sm text-right border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-400"
+            />
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none select-none">
+              .000
+            </span>
+          </div>
         </td>
 
         {/* Discount */}
         <td className="px-3 py-3 w-28">
-          <input
-            type="number"
-            value={item.discount || 0}
-            onChange={(e) =>
-              onUpdate(item._key, "discount", parseFloat(e.target.value) || 0)
-            }
-            disabled={!isEditable}
-            min="0"
-            className="w-full px-2.5 py-1.5 text-sm text-right border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-400"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              value={item.discount ? item.discount / 1000 : ""}
+              onChange={(e) =>
+                onUpdate(
+                  item._key,
+                  "discount",
+                  (parseFloat(e.target.value) || 0) * 1000,
+                )
+              }
+              disabled={!isEditable}
+              min="0"
+              step="any"
+              className="w-full px-2.5 py-1.5 pr-10 text-sm text-right border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-400"
+            />
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none select-none">
+              .000
+            </span>
+          </div>
         </td>
 
         {/* Total */}

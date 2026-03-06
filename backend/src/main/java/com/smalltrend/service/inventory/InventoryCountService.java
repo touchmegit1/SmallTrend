@@ -178,6 +178,104 @@ public class InventoryCountService {
         return toDetailResponse(count);
     }
 
+    // ─── SUBMIT FOR APPROVAL ─────────────────────────────────
+
+    @Transactional
+    public InventoryCountResponse submitForApproval(Integer id, InventoryCountRequest request) {
+        InventoryCount count = countRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay phieu kiem kho."));
+
+        if (!"DRAFT".equals(count.getStatus()) && !"COUNTING".equals(count.getStatus())) {
+            throw new RuntimeException("Chi co the gui duyet phieu nhap hoac dang kiem.");
+        }
+
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("Phieu kiem kho phai co it nhat 1 san pham.");
+        }
+
+        count.setStatus("PENDING");
+        count.setNotes(request.getNotes());
+        count.setRejectionReason(null);
+
+        setLocation(count, request.getLocationId());
+        calculateTotals(count, request.getItems());
+
+        // Delete old items and save new ones
+        itemRepository.deleteByInventoryCountId(id);
+        count = countRepository.save(count);
+        saveItems(count, request.getItems());
+
+        return toDetailResponse(count);
+    }
+
+    // ─── SUBMIT FOR APPROVAL (create new + submit) ──────────
+
+    @Transactional
+    public InventoryCountResponse createAndSubmitForApproval(InventoryCountRequest request) {
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("Phieu kiem kho phai co it nhat 1 san pham.");
+        }
+
+        String code = generateCode();
+
+        InventoryCount count = InventoryCount.builder()
+                .code(code)
+                .status("PENDING")
+                .notes(request.getNotes())
+                .createdBy(1) // TODO: from auth
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        setLocation(count, request.getLocationId());
+        calculateTotals(count, request.getItems());
+
+        count = countRepository.save(count);
+        saveItems(count, request.getItems());
+
+        return toDetailResponse(count);
+    }
+
+    // ─── APPROVE ─────────────────────────────────────────────
+
+    @Transactional
+    public InventoryCountResponse approveCount(Integer id) {
+        InventoryCount count = countRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay phieu kiem kho."));
+
+        if (!"PENDING".equals(count.getStatus())) {
+            throw new RuntimeException("Chi co the duyet phieu dang cho duyet.");
+        }
+
+        count.setStatus("CONFIRMED");
+        count.setConfirmedBy(1); // TODO: from auth
+        count.setConfirmedAt(LocalDateTime.now());
+        count.setRejectionReason(null);
+
+        count = countRepository.save(count);
+
+        // TODO: Update actual stock quantities in inventory_stock
+
+        return toDetailResponse(count);
+    }
+
+    // ─── REJECT ──────────────────────────────────────────────
+
+    @Transactional
+    public InventoryCountResponse rejectCount(Integer id, String rejectionReason) {
+        InventoryCount count = countRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay phieu kiem kho."));
+
+        if (!"PENDING".equals(count.getStatus())) {
+            throw new RuntimeException("Chi co the tu choi phieu dang cho duyet.");
+        }
+
+        count.setStatus("REJECTED");
+        count.setRejectionReason(rejectionReason);
+
+        count = countRepository.save(count);
+        return toDetailResponse(count);
+    }
+
     // ─── CANCEL ──────────────────────────────────────────────
 
     @Transactional
@@ -281,6 +379,7 @@ public class InventoryCountService {
                 .locationId(count.getLocation() != null ? count.getLocation().getId() : null)
                 .locationName(count.getLocation() != null ? count.getLocation().getName() : "")
                 .notes(count.getNotes())
+                .rejectionReason(count.getRejectionReason())
                 .totalShortageValue(count.getTotalShortageValue())
                 .totalOverageValue(count.getTotalOverageValue())
                 .totalDifferenceValue(count.getTotalDifferenceValue())
