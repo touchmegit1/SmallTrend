@@ -8,7 +8,7 @@ import UnitConversionSection from "./UnitConversionSection";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
-// Modal Component hiển thị thông tin và cho phép Chỉnh sửa một Variant (Biến thể)
+// Modal Component hiển thị thông tin và cho phép Chỉnh sửa một Variant (Loại sản phẩm)
 // Cho phép update giá bán, hình ảnh...
 export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSave }) {
   const { units, loading: unitsLoading } = useFetchUnits();
@@ -194,8 +194,8 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       const msg =
         err.response?.data?.message ||
         err.response?.data ||
-        "Lỗi khi cập nhật biến thể!";
-      setErrorMsg(typeof msg === "string" ? msg : "Lỗi khi cập nhật biến thể!");
+        "Lỗi khi cập nhật loại sản phẩm!";
+      setErrorMsg(typeof msg === "string" ? msg : "Lỗi khi cập nhật loại sản phẩm!");
     } finally {
       setSaving(false);
     }
@@ -209,9 +209,9 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold">Chỉnh sửa biến thể</h2>
+            <h2 className="text-2xl font-bold">Chỉnh sửa loại sản phẩm</h2>
             <p className="text-gray-500 text-sm mt-1">
-              Cập nhật thông tin biến thể sản phẩm
+              Cập nhật thông tin loại sản phẩm sản phẩm
             </p>
           </div>
           <button
@@ -232,7 +232,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
           <Card className="border border-gray-300 rounded-lg bg-white">
             <CardHeader>
               <CardTitle className="text-xl font-bold">
-                Thông tin biến thể
+                Thông tin loại sản phẩm
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -334,7 +334,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                 </select>
                 {parentProduct?.is_active === false && (
                   <p className="text-xs text-red-500 mt-1">
-                    Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt biến thể.
+                    Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt loại sản phẩm.
                   </p>
                 )}
               </div>
@@ -393,7 +393,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
           {/* Image Upload */}
           <Card className="border border-gray-300 rounded-lg bg-white mt-4">
             <CardHeader>
-              <CardTitle className="text-xl font-bold">Hình ảnh biến thể</CardTitle>
+              <CardTitle className="text-xl font-bold">Hình ảnh loại sản phẩm</CardTitle>
             </CardHeader>
             <CardContent>
               <input

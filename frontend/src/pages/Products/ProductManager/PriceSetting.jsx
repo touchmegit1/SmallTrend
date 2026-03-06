@@ -172,7 +172,7 @@ const PriceSetting = () => {
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Thiết lập giá sản phẩm</h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            Quản lý giá nhập, giá bán và theo dõi lợi nhuận sau thuế của các biến thể.
+                            Quản lý giá nhập, giá bán và theo dõi lợi nhuận sau thuế của các loại sản phẩm.
                         </p>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
