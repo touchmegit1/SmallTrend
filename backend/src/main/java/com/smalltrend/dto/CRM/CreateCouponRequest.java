@@ -9,7 +9,7 @@ public class CreateCouponRequest {
     private String couponCode;
     private String couponName;
     private String description;
-    private String couponType; // PERCENTAGE, FIXED_AMOUNT, FREE_SHIPPING, BUY_X_GET_Y
+    private String couponType; // PERCENTAGE, FIXED_AMOUNT
     private BigDecimal discountPercent;
     private BigDecimal discountAmount;
     private BigDecimal maxDiscountAmount;

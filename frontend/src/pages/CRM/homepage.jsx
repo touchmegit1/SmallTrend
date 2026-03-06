@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import eventService from "../../services/eventService";
+import { useActiveCampaigns, useDiscountedVariants, useAllVariants } from '../../hooks/useEventData';
 
 // ─── PLACEHOLDER IMAGE ────────────────────────────────────────────────────────
 const PLACEHOLDER = "https://placehold.co/400x300?text=No+Image";
@@ -17,12 +17,6 @@ function DiscountBadge({ couponType, discountPercent, discountAmount }) {
     return (
       <span className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-0.5 text-xs rounded font-bold shadow">
         -{Number(discountAmount).toLocaleString("vi-VN")}đ
-      </span>
-    );
-  if (couponType === "FREE_SHIPPING")
-    return (
-      <span className="absolute top-2 left-2 bg-teal-600 text-white px-2 py-0.5 text-xs rounded font-bold shadow">
-        Free Ship
       </span>
     );
   return null;
@@ -85,10 +79,11 @@ function ProductCard({ v, highlight = false }) {
 const PAGE_SIZE = 3; // Số sp hiển thị mỗi "trang" trong slider
 
 export default function EcommerceUI() {
-  const [activeCampaign, setActiveCampaign] = useState(null);
-  const [discountedVariants, setDiscountedVariants] = useState([]);
-  const [allVariants, setAllVariants] = useState([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const { campaigns: activeCampaigns, loading: loadingCampaign } = useActiveCampaigns();
+  const activeCampaign = activeCampaigns.length > 0 ? activeCampaigns[0] : null;
+  const { variants: discountedVariants, loading: loadingDiscounted } = useDiscountedVariants();
+  const { variants: allVariants, loading: loadingAll } = useAllVariants();
+  const loadingProducts = loadingDiscounted || loadingAll;
 
   // Slider state (Event Promotion)
   const [sliderPage, setSliderPage] = useState(0);
@@ -96,27 +91,6 @@ export default function EcommerceUI() {
   // Modal "View All" state
   const [showViewAll, setShowViewAll] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
-
-  useEffect(() => {
-    eventService
-      .getActiveCampaigns()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setActiveCampaign(data[0]);
-      })
-      .catch(() => { });
-
-    setLoadingProducts(true);
-    Promise.all([
-      eventService.getVariantsWithCoupon(),
-      eventService.getAllVariants(),
-    ])
-      .then(([withCoupon, all]) => {
-        setDiscountedVariants(Array.isArray(withCoupon) ? withCoupon : []);
-        setAllVariants(Array.isArray(all) ? all : []);
-      })
-      .catch(() => { })
-      .finally(() => setLoadingProducts(false));
-  }, []);
 
   // ── Slider logic ──────────────────────────────────────────────────────────
   const totalPages = Math.ceil(discountedVariants.length / PAGE_SIZE);
@@ -206,7 +180,6 @@ export default function EcommerceUI() {
           <div className="text-center py-10 text-gray-400">Đang tải...</div>
         ) : discountedVariants.length === 0 ? (
           <div className="text-center py-10 text-gray-400">
-            <div className="text-4xl mb-2">🎟️</div>
             <p className="text-sm">Chưa có sản phẩm khuyến mãi nào.</p>
           </div>
         ) : (
@@ -225,8 +198,8 @@ export default function EcommerceUI() {
                   onClick={prevSlide}
                   disabled={sliderPage === 0}
                   className={`absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${sliderPage === 0
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-white hover:bg-blue-600 hover:text-white text-gray-700"
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-white hover:bg-blue-600 hover:text-white text-gray-700"
                     }`}
                 >
                   ‹
@@ -236,8 +209,8 @@ export default function EcommerceUI() {
                   onClick={nextSlide}
                   disabled={sliderPage >= totalPages - 1}
                   className={`absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${sliderPage >= totalPages - 1
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-white hover:bg-blue-600 hover:text-white text-gray-700"
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-white hover:bg-blue-600 hover:text-white text-gray-700"
                     }`}
                 >
                   ›
@@ -272,7 +245,6 @@ export default function EcommerceUI() {
           </div>
         ) : allVariants.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
-            <div className="text-4xl">📦</div>
             <p className="mt-2">Chưa có sản phẩm nào.</p>
           </div>
         ) : (

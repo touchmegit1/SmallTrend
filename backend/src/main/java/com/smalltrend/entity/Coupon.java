@@ -31,7 +31,7 @@ public class Coupon {
     private String description;
 
     @Column(length = 30)
-    private String couponType; // PERCENTAGE, FIXED_AMOUNT, FREE_SHIPPING, BUY_X_GET_Y, CASHBACK
+    private String couponType; // PERCENTAGE, FIXED_AMOUNT
 
     @ManyToOne
     @JoinColumn(name = "campaign_id")

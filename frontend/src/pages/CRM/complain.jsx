@@ -25,6 +25,8 @@ import {
   ArrowDownCircle
 } from 'lucide-react';
 import ticketService from '../../services/ticketService';
+import { useToast, ToastContainer } from '../../hooks/useToast.jsx';
+import { useTickets } from '../../hooks/useTickets';
 
 const PAGE_SIZE = 5;
 
@@ -59,9 +61,7 @@ const RELATED_ENTITY_TYPES = [
 ];
 
 export default function CustomerComplaintSystem() {
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { tickets, loading, error, refetch: refetchTickets } = useTickets();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -74,6 +74,7 @@ export default function CustomerComplaintSystem() {
   const [detailTicket, setDetailTicket] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const { toasts, showToast, removeToast } = useToast();
 
   // Lookup states
   const [roleIdInput, setRoleIdInput] = useState('');
@@ -97,25 +98,6 @@ export default function CustomerComplaintSystem() {
     sku: '',
     refundQuantity: 1
   });
-
-  // Fetch tickets
-  const fetchTickets = async () => {
-    try {
-      setLoading(true);
-      const data = await ticketService.getAllTickets();
-      setTickets(data);
-      setError(null);
-    } catch (err) {
-      setError('Không thể tải danh sách ticket');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTickets();
-  }, []);
 
   // Filter & search
   const filtered = tickets.filter(t => {
@@ -206,6 +188,7 @@ export default function CustomerComplaintSystem() {
           assignedToUserId: form.assignedToUserId ? Number(form.assignedToUserId) : null,
           resolution: form.resolution
         });
+        showToast('Cập nhật ticket thành công');
       } else {
         await ticketService.createTicket({
           ticketType: form.ticketType,
@@ -218,15 +201,16 @@ export default function CustomerComplaintSystem() {
           sku: form.sku || null,
           refundQuantity: form.refundQuantity ? Number(form.refundQuantity) : null
         });
+        showToast('Tạo ticket mới thành công');
       }
       setShowModal(false);
       resetForm();
       setPage(1);
-      await fetchTickets();
+      await refetchTickets();
     } catch (err) {
       console.error(err);
       const msg = err?.response?.data?.message || err?.response?.data || err?.message || 'Lỗi không xác định';
-      alert('Lỗi khi lưu ticket: ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)));
+      showToast('Lỗi khi lưu ticket: ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)), 'error');
     } finally {
       setSaving(false);
     }
@@ -236,10 +220,11 @@ export default function CustomerComplaintSystem() {
     try {
       await ticketService.deleteTicket(id);
       setShowDeleteConfirm(null);
-      await fetchTickets();
+      showToast('Xóa ticket thành công');
+      await refetchTickets();
     } catch (err) {
       console.error(err);
-      alert('Lỗi khi xóa ticket');
+      showToast('Lỗi khi xóa ticket', 'error');
     }
   };
 
@@ -278,6 +263,7 @@ export default function CustomerComplaintSystem() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
