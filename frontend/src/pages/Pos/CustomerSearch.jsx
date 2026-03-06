@@ -1,11 +1,33 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import customerService from "../../services/customerService";
 
-export default function CustomerSearch({ onSelectCustomer, cart }) {
+const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, ref) => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [showRegister, setShowRegister] = useState(false);
   const [loading, setLoading] = useState(false);
+  const phoneInputRef = useRef(null);
+  const nameInputRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => phoneInputRef.current?.focus()
+  }));
+
+  useEffect(() => {
+    if (showRegister && nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  }, [showRegister]);
+
+  const handleKeyDown = (e, action) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      action();
+    } else if (e.key === 'ArrowDown' && !showRegister && onNavigateDown) {
+      e.preventDefault();
+      onNavigateDown();
+    }
+  };
 
   const handleSearch = async () => {
     if (!phone || phone.length < 10 || phone.length > 11) {
@@ -36,22 +58,22 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
         setShowRegister(false);
       } else {
         // Tìm trong backend
-        const customers = await customerService.searchByPhone(phone);
-        
-        if (customers && customers.length > 0) {
-          const customer = customers[0];
+        try {
+          const customer = await customerService.searchByPhone(phone);
+          
           onSelectCustomer({
             id: customer.id,
             phone: customer.phone,
             name: customer.name,
-            loyaltyPoints,
-            existingPoints: customer.loyaltyPoints || 0,
+            loyaltyPoints: customer.loyaltyPoints || 0,
             isNew: false
           });
           setPhone("");
           setShowRegister(false);
-        } else {
+        } catch (error) {
+          // Không tìm thấy -> hiện form đăng ký và focus vào name input
           setShowRegister(true);
+          setTimeout(() => nameInputRef.current?.focus(), 100);
         }
       }
     } catch (error) {
@@ -75,6 +97,7 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
         setShowRegister(false);
       } else {
         setShowRegister(true);
+        setTimeout(() => nameInputRef.current?.focus(), 100);
       }
     } finally {
       setLoading(false);
@@ -96,15 +119,11 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
       // Lưu vào backend CRM
       const savedCustomer = await customerService.createCustomer(name, phone);
       
-      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-      const loyaltyPoints = Math.floor(totalAmount / 10000);
-      
       onSelectCustomer({
         id: savedCustomer.id,
         phone: savedCustomer.phone,
         name: savedCustomer.name,
-        loyaltyPoints,
-        existingPoints: savedCustomer.loyaltyPoints || 0,
+        loyaltyPoints: savedCustomer.loyaltyPoints || 0,
         isNew: false
       });
       
@@ -124,10 +143,12 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
     <div style={{ marginBottom: "15px" }}>
       <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
         <input
+          ref={phoneInputRef}
           type="tel"
           placeholder="Tìm số điện thoại (10-11 số)"
           value={phone}
           onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
+          onKeyDown={(e) => handleKeyDown(e, handleSearch)}
           maxLength={11}
           style={{
             flex: 1,
@@ -197,10 +218,12 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
             </div>
           )}
           <input
+            ref={nameInputRef}
             type="text"
             placeholder="Tên khách hàng"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => handleKeyDown(e, handleRegister)}
             style={{
               width: "100%",
               padding: "8px",
@@ -230,4 +253,6 @@ export default function CustomerSearch({ onSelectCustomer, cart }) {
       )}
     </div>
   );
-}
+});
+
+export default CustomerSearch;

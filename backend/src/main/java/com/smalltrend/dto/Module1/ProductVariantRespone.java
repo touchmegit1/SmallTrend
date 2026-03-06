@@ -8,6 +8,7 @@ public class ProductVariantRespone {
     private Integer id;
     private String name; // Tên product
     private String sku;
+    private String barcode;
     private BigDecimal sellPrice;
     private String imageUrl; // Ảnh variant (hoặc product)
     private boolean isActive;

@@ -100,7 +100,7 @@ function App() {
         <Route
           path="dashboard"
           element={
-            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES, ...SALES_ROLES, ...INVENTORY_ROLES, ...CASHIER_ROLES]}>
               <Dashboard />
             </ProtectedRoute>
           }
@@ -189,8 +189,9 @@ function App() {
         <Route path="crm/report" element={<CRMreport />} />
         <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
         <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
-        <Route path="crm/complain" element={<CRMcomplain />} />
-        <Route path="crm/complaints" element={<CRMcomplain />} />
+        <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
+        <Route path="pos/complain" element={<CRMcomplain />} />
+        <Route path="pos/complaints" element={<CRMcomplain />} />
 
         {/* Module 5: HR (Nhân sự) */}
         <Route path="hr" element={<Navigate to="/hr/employees" replace />} />
