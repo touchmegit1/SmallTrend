@@ -48,7 +48,7 @@ const AddNewProduct = () => {
   const [showBrandModal, setShowBrandModal] = useState(false);
 
   const [newCategory, setNewCategory] = useState({ code: "", name: "", description: "" });
-  const [newBrand, setNewBrand] = useState({ name: "", description: "", country: "" });
+  const [newBrand, setNewBrand] = useState({ name: "", description: "", country: "", category: null });
 
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [creatingBrand, setCreatingBrand] = useState(false);
@@ -148,7 +148,7 @@ const AddNewProduct = () => {
     try {
       const created = await createBrand(newBrand);
       setFormData((prev) => ({ ...prev, brandId: String(created.id) }));
-      setNewBrand({ name: "", description: "", country: "" });
+      setNewBrand({ name: "", description: "", country: "", category: null });
       setShowBrandModal(false);
     } catch (error) {
       console.error("Error creating brand:", error);
@@ -550,6 +550,27 @@ const AddNewProduct = () => {
                   onChange={(e) => setNewBrand((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="Vd: Vinamilk, PepsiCo."
                 />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Thuộc danh mục</Label>
+                <select
+                  className="w-full mt-2 h-11 px-4 text-base bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                  value={newBrand.category?.id || ''}
+                  onChange={(e) =>
+                    setNewBrand({
+                      ...newBrand,
+                      category: e.target.value ? { id: parseInt(e.target.value) } : null
+                    })
+                  }
+                >
+                  <option value="">-- Chọn danh mục (Không bắt buộc) --</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                {categories && categories.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Chưa có danh mục nào. Vui lòng tạo danh mục trước!</p>
+                )}
               </div>
               <div>
                 <Label className="text-sm font-semibold text-gray-700">Quốc gia</Label>

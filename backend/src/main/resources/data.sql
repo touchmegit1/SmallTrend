@@ -169,12 +169,12 @@ INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_
 ('Oishi Snack', 'Potato Chips 50g', 7, 5, 1, TRUE, NOW(6), NOW(6));
 
 -- 8.1 UNITS
-INSERT IGNORE INTO units (code, name, material_type, symbol, default_sell_price, default_cost_price) VALUES
-('L', 'Lít', 'LIQUID', 'L', 25000.00, 20000.00),
-('ML', 'Mililit', 'LIQUID', 'ml', 12000.00, 8000.00),
-('G', 'Gram', 'SOLID', 'g', 15000.00, 12000.00),
-('KG', 'Kilogram', 'SOLID', 'kg', 150000.00, 120000.00),
-('EA', 'Cái', 'SOLID', 'ea', 8000.00, 6000.00);
+INSERT IGNORE INTO units (code, name, material_type, symbol) VALUES
+('L', 'Lít', 'LIQUID', 'L'),
+('ML', 'Mililit', 'LIQUID', 'ml'),
+('G', 'Gram', 'SOLID', 'g'),
+('KG', 'Kilogram', 'SOLID', 'kg'),
+('EA', 'Cái', 'SOLID', 'ea');
 
 -- 9. PRODUCT VARIANTS
 INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active, created_at, updated_at) VALUES

@@ -5,74 +5,71 @@ import { Input } from '../ProductComponents/input';
 import { Label } from '../ProductComponents/label';
 import api from '../../../config/axiosConfig';
 
-export default function UnitsManagerModal({ onClose, onDataChange }) {
-    const [units, setUnits] = useState([]);
+export default function TaxRateManagerModal({ onClose, onDataChange }) {
+    const [taxRates, setTaxRates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
     const [formData, setFormData] = useState({
-        code: "",
         name: "",
-        materialType: "Khác",
-        symbol: ""
+        rate: 0,
+        active: true
     });
 
     const [actionLoading, setActionLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
-    const fetchUnits = async () => {
+    const fetchTaxRates = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/products/units');
-            setUnits(res.data);
+            const res = await api.get('/tax-rates');
+            setTaxRates(res.data);
         } catch (err) {
-            console.error("Lỗi lấy danh sách đơn vị:", err);
-            setErrorMsg("Không thể tải danh sách đơn vị");
+            console.error("Lỗi lấy danh sách thuế suất:", err);
+            setErrorMsg("Không thể tải danh sách thuế suất");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchUnits();
+        fetchTaxRates();
     }, []);
 
     const resetForm = () => {
         setFormData({
-            code: "",
             name: "",
-            materialType: "Khác",
-            symbol: ""
+            rate: 0,
+            active: true
         });
         setIsAdding(false);
         setEditingId(null);
         setErrorMsg("");
     };
 
-    const handleEdit = (unit) => {
+    const handleEdit = (taxRate) => {
         setFormData({
-            code: unit.code,
-            name: unit.name,
-            materialType: unit.materialType || "Khác",
-            symbol: unit.symbol || ""
+            name: taxRate.name || "",
+            rate: taxRate.rate || 0,
+            active: taxRate.active !== false
         });
-        setEditingId(unit.id);
+        setEditingId(taxRate.id);
         setIsAdding(false);
         setErrorMsg("");
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Bạn có chắc chắn muốn xoá đơn vị này? Các sản phẩm phụ thuộc có thể bị ảnh hưởng.")) return;
+        if (!window.confirm("Bạn có chắc chắn muốn xoá thuế suất này? Các sản phẩm phụ thuộc có thể bị ảnh hưởng.")) return;
 
         setActionLoading(true);
         try {
-            await api.delete(`/products/units/${id}`);
-            setUnits(prev => prev.filter(u => u.id !== id));
+            await api.delete(`/tax-rates/${id}`);
+            setTaxRates(prev => prev.filter(t => t.id !== id));
             if (onDataChange) onDataChange();
         } catch (err) {
-            console.error("Lỗi xóa đơn vị:", err);
-            alert(err.response?.data?.message || err.response?.data || "Lỗi xóa đơn vị");
+            console.error("Lỗi xóa thuế suất:", err);
+            alert(err.response?.data?.message || err.response?.data || "Lỗi xóa thuế suất");
         } finally {
             setActionLoading(false);
         }
@@ -82,36 +79,35 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
         e.preventDefault();
         setErrorMsg("");
 
-        if (!formData.code || !formData.name) {
-            setErrorMsg("Vui lòng điền mã và tên đơn vị");
+        if (!formData.name) {
+            setErrorMsg("Vui lòng điền tên loại thuế");
             return;
         }
 
         setActionLoading(true);
         try {
             const payload = {
-                code: formData.code,
                 name: formData.name,
-                materialType: formData.materialType,
-                symbol: formData.symbol
+                rate: parseFloat(formData.rate) || 0,
+                active: formData.active
             };
 
             if (editingId) {
                 // Update
-                const res = await api.put(`/products/units/${editingId}`, payload);
-                setUnits(prev => prev.map(u => u.id === editingId ? res.data : u));
+                const res = await api.put(`/tax-rates/${editingId}`, payload);
+                setTaxRates(prev => prev.map(t => t.id === editingId ? res.data : t));
             } else {
                 // Create
-                const res = await api.post(`/products/units`, payload);
-                setUnits(prev => [...prev, res.data]);
+                const res = await api.post(`/tax-rates`, payload);
+                setTaxRates(prev => [...prev, res.data]);
             }
 
             resetForm();
             if (onDataChange) onDataChange();
         } catch (err) {
-            console.error("Lỗi lưu đơn vị:", err);
-            const msg = err.response?.data?.message || err.response?.data || "Lỗi khi lưu đơn vị!";
-            setErrorMsg(typeof msg === 'string' ? msg : "Lỗi khi lưu đơn vị!");
+            console.error("Lỗi lưu thuế suất:", err);
+            const msg = err.response?.data?.message || err.response?.data || "Lỗi khi lưu thuế suất!";
+            setErrorMsg(typeof msg === 'string' ? msg : "Lỗi khi lưu thuế suất!");
         } finally {
             setActionLoading(false);
         }
@@ -124,8 +120,8 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800">Quản lý Đơn vị tính</h2>
-                        <p className="text-sm text-gray-500 mt-1">Thêm, sửa, hoặc xoá các đơn vị dùng chung trong hệ thống</p>
+                        <h2 className="text-xl font-bold text-gray-800">Quản lý Thuế suất (Tax Rate)</h2>
+                        <p className="text-sm text-gray-500 mt-1">Thêm, sửa, hoặc xoá các loại thuế dùng cho sản phẩm</p>
                     </div>
                     <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
                         <X className="w-5 h-5" />
@@ -136,15 +132,15 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
                 <div className="p-6 pb-2 flex justify-between items-center">
                     <Button
                         onClick={() => { setIsAdding(true); setEditingId(null); setErrorMsg(""); }}
-                        className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-medium"
+                        className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-medium"
                         disabled={isAdding || editingId}
                     >
-                        <Plus className="w-4 h-4" /> Thêm đơn vị mới
+                        <Plus className="w-4 h-4" /> Thêm thuế mới
                     </Button>
                     <Button
                         variant="ghost"
-                        onClick={fetchUnits}
-                        className="h-10 w-10 p-0 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl"
+                        onClick={fetchTaxRates}
+                        className="h-10 w-10 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl"
                         title="Tải lại danh sách"
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -155,10 +151,10 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
 
                     {/* Form Thêm/Sửa */}
                     {(isAdding || editingId) && (
-                        <form onSubmit={handleSubmit} className="mb-6 bg-indigo-50/50 p-5 rounded-xl border border-indigo-100 animate-in fade-in zoom-in-95">
+                        <form onSubmit={handleSubmit} className="mb-6 bg-blue-50/50 p-5 rounded-xl border border-blue-100 animate-in fade-in zoom-in-95">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-indigo-900 border-b-2 border-indigo-200 pb-1">
-                                    {editingId ? 'Chỉnh sửa đơn vị' : 'Tạo đơn vị mới'}
+                                <h3 className="font-bold text-blue-900 border-b-2 border-blue-200 pb-1">
+                                    {editingId ? 'Chỉnh sửa thuế' : 'Tạo thuế mới'}
                                 </h3>
                                 <button type="button" onClick={resetForm} className="text-gray-400 hover:text-red-500 transition-colors">
                                     <X className="w-5 h-5" />
@@ -173,57 +169,45 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
-                                    <Label>Mã đơn vị <span className="text-red-500">*</span></Label>
-                                    <Input
-                                        value={formData.code}
-                                        onChange={e => setFormData({ ...formData, code: e.target.value })}
-                                        placeholder="VD: LON"
-                                        className="mt-1 bg-white"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <Label>Tên đơn vị <span className="text-red-500">*</span></Label>
+                                    <Label>Tên thuế suất <span className="text-red-500">*</span></Label>
                                     <Input
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="VD: Lon"
+                                        placeholder="VD: VAT 10%, Thuế nhập khẩu..."
                                         className="mt-1 bg-white"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <Label>Ký hiệu</Label>
+                                    <Label>Mức tỷ lệ (%) <span className="text-red-500">*</span></Label>
                                     <Input
-                                        value={formData.symbol}
-                                        onChange={e => setFormData({ ...formData, symbol: e.target.value })}
-                                        placeholder="VD: ln"
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.rate}
+                                        onChange={e => setFormData({ ...formData, rate: e.target.value })}
+                                        placeholder="VD: 10, 8, 5..."
                                         className="mt-1 bg-white"
+                                        required
                                     />
                                 </div>
-                                <div>
-                                    <Label>Loại vật liệu</Label>
-                                    <select
-                                        value={formData.materialType}
-                                        onChange={e => setFormData({ ...formData, materialType: e.target.value })}
-                                        className="w-full mt-1 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="Nhựa">Nhựa</option>
-                                        <option value="Giấy">Giấy</option>
-                                        <option value="Kim loại">Kim loại</option>
-                                        <option value="Loại khác">Loại khác</option>
-                                        <option value="Khác">Khác</option>
-                                    </select>
+                                <div className="flex items-center gap-2 mt-7">
+                                    <input
+                                        type="checkbox"
+                                        id="activeStatus"
+                                        checked={formData.active}
+                                        onChange={e => setFormData({ ...formData, active: e.target.checked })}
+                                        className="rounded text-blue-600 w-4 h-4"
+                                    />
+                                    <Label htmlFor="activeStatus" className="m-0 cursor-pointer">Hoạt động (Kích hoạt)</Label>
                                 </div>
-
                             </div>
 
                             <div className="mt-5 flex justify-end gap-3">
                                 <Button type="button" variant="outline" onClick={resetForm} className="h-10 border-gray-300">
                                     Hủy bỏ
                                 </Button>
-                                <Button type="submit" disabled={actionLoading} className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
-                                    <Save className="w-4 h-4" /> {actionLoading ? 'Đang lưu...' : 'Lưu đơn vị'}
+                                <Button type="submit" disabled={actionLoading} className="h-10 bg-blue-600 hover:bg-blue-700 text-white gap-2">
+                                    <Save className="w-4 h-4" /> {actionLoading ? 'Đang lưu...' : 'Lưu thuế'}
                                 </Button>
                             </div>
                         </form>
@@ -234,41 +218,45 @@ export default function UnitsManagerModal({ onClose, onDataChange }) {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Mã</th>
-                                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Tên</th>
-                                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Ký hiệu</th>
-                                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Vật liệu</th>
+                                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Tên thuế</th>
+                                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Mức tỷ lệ (%)</th>
+                                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Trạng thái</th>
                                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase text-right">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {loading && units.length === 0 ? (
+                                {loading && taxRates.length === 0 ? (
                                     <tr>
-                                        <td colSpan="5" className="px-4 py-8 text-center text-gray-500">Đang tải dữ liệu...</td>
+                                        <td colSpan="4" className="px-4 py-8 text-center text-gray-500">Đang tải dữ liệu...</td>
                                     </tr>
-                                ) : units.length === 0 ? (
+                                ) : taxRates.length === 0 ? (
                                     <tr>
-                                        <td colSpan="5" className="px-4 py-8 text-center text-gray-500">Chưa có đơn vị tính nào.</td>
+                                        <td colSpan="4" className="px-4 py-8 text-center text-gray-500">Chưa có loại thuế nào.</td>
                                     </tr>
                                 ) : (
-                                    units.map(unit => (
-                                        <tr key={unit.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                                            <td className="px-4 py-3 text-sm font-medium text-indigo-700">{unit.code}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-800 font-semibold">{unit.name}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-500">{unit.symbol || '-'}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-500">{unit.materialType}</td>
+                                    taxRates.map(tax => (
+                                        <tr key={tax.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                                            <td className="px-4 py-3 text-sm text-gray-800 font-semibold">{tax.name}</td>
+                                            <td className="px-4 py-3 text-sm font-medium text-blue-700">{tax.rate}%</td>
+                                            <td className="px-4 py-3 text-sm">
+                                                {tax.active ? (
+                                                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Đang hoạt động</span>
+                                                ) : (
+                                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">Đã tắt</span>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-3 text-sm text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <Button
                                                         variant="ghost" size="sm"
-                                                        onClick={() => handleEdit(unit)}
+                                                        onClick={() => handleEdit(tax)}
                                                         className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
                                                     >
                                                         <Edit className="w-4 h-4" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost" size="sm"
-                                                        onClick={() => handleDelete(unit.id)}
+                                                        onClick={() => handleDelete(tax.id)}
                                                         className="h-8 w-8 p-0 text-red-500 hover:bg-red-50"
                                                         disabled={actionLoading}
                                                     >

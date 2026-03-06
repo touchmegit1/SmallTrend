@@ -1,46 +1,48 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import MainLayout from "./components/layout/MainLayout";
-import Dashboard from "./pages/Dashboard/Dashboard";
-import POS from "./pages/Pos/pos";
-import Login from "./pages/Auth/Login";
+import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
-import UserManagement from "./pages/HR/UserManagement";
-import EmployeeList from "./pages/HR/EmployeeList";
-import ShiftManagement from "./pages/HR/ShiftManagement";
-import AttendanceManagement from "./pages/HR/AttendanceManagement";
-import PayrollManagement from "./pages/HR/PayrollManagement";
-import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
-import ImportInventory from "./pages/Inventory/ImportInventory";
-import CreateImport from "./pages/Inventory/CreateImport";
-import InventoryCountList from "./pages/Inventory/InventoryCountList";
-import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
-import LocationManagement from "./pages/Inventory/LocationManagement";
-import DisposalList from "./pages/Inventory/DisposalList";
-import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import MainLayout from "./components/layout/MainLayout";
+import { useAuth } from "./context/AuthContext";
+import AiChatPage from "./pages/Admin/AiChatPage";
+import AuditLogPage from "./pages/Admin/AuditLogPage";
+import TicketCenter from "./pages/Admin/TicketCenter";
+import Login from "./pages/Auth/Login";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
-import ProductList from "./pages/Products/ProductManager/ProductList";
+import CRMreport from "./pages/CRM/report";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import AttendanceManagement from "./pages/HR/AttendanceManagement";
+import EmployeeList from "./pages/HR/EmployeeList";
+import PayrollManagement from "./pages/HR/PayrollManagement";
+import ShiftManagement from "./pages/HR/ShiftManagement";
+import UserManagement from "./pages/HR/UserManagement";
+import CreateImport from "./pages/Inventory/CreateImport";
+import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import DisposalList from "./pages/Inventory/DisposalList";
+import ImportInventory from "./pages/Inventory/ImportInventory";
+import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
+import InventoryCountList from "./pages/Inventory/InventoryCountList";
+import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
+import LocationManagement from "./pages/Inventory/LocationManagement";
+import POS from "./pages/Pos/pos";
+import ReportforCashier from "./pages/Pos/ReportforCashier";
+import ShiftHandover from "./pages/Pos/ShiftHandover";
+import TransactionHistory from "./pages/Pos/TransactionHistory";
 import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
-import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
-import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
 import AddNewProductVariant from "./pages/Products/ProductManager/AddNewProductVariant";
+import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
+import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
-import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
 import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
-import { useAuth } from "./context/AuthContext";
-import TransactionHistory from "./pages/Pos/TransactionHistory";
-import ShiftHandover from "./pages/Pos/ShiftHandover";
-import ReportforCashier from "./pages/Pos/ReportforCashier";
-import TicketCenter from "./pages/Admin/TicketCenter";
-import AuditLogPage from "./pages/Admin/AuditLogPage";
-import AiChatPage from "./pages/Admin/AiChatPage";
-import CRMreport from "./pages/CRM/report";
+import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
+import ProductList from "./pages/Products/ProductManager/ProductList";
 import Suppliers from "./pages/Products/ProductManager/Suppliers";
+import PurchaseOrder from "./pages/Products/ProductManager/PurchaseOrder";
+
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -145,6 +147,11 @@ function App() {
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
 
         {/* Module 3: Products (Sản phẩm) */}
+        <Route
+          path="products/purchaseorder"
+          element={<PurchaseOrder />}
+        />
+
         <Route
           path="products"
           element={<ProductList />}

@@ -43,6 +43,7 @@ public class BrandServiceImpl implements BrandService {
         existing.setName(brand.getName());
         existing.setCountry(brand.getCountry());
         existing.setDescription(brand.getDescription());
+        existing.setCategory(brand.getCategory());
         return brandRepository.save(existing);
     }
 

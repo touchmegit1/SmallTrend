@@ -3,7 +3,7 @@ import api from "../../../config/axiosConfig";
 import { Search, Save, X, Edit2, AlertCircle, Percent, DollarSign, RefreshCw } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
-
+import TaxRateManagerModal from "./TaxRateManagerModal";
 /**
  * Màn hình Thiết lập Giá (Price Setting)
  * Cho phép xem Giá nhập, Thuế, Lợi Nhuận và chỉnh sửa Giá bán.
@@ -23,6 +23,7 @@ const PriceSetting = () => {
     const [editPriceAfterTax, setEditPriceAfterTax] = useState("");
 
     const [savingId, setSavingId] = useState(null);
+    const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
 
     useEffect(() => {
         fetchVariants();
@@ -175,6 +176,14 @@ const PriceSetting = () => {
                         </p>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsTaxModalOpen(true)}
+                            className="h-11 px-4 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 rounded-xl whitespace-nowrap"
+                        >
+                            <Percent className="w-4 h-4 mr-2" />
+                            Thiết lập thuế
+                        </Button>
                         <div className="relative flex-1 md:w-80">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <Input
@@ -390,6 +399,13 @@ const PriceSetting = () => {
                     </div>
                 </div>
             </div>
+
+            {isTaxModalOpen && (
+                <TaxRateManagerModal
+                    onClose={() => setIsTaxModalOpen(false)}
+                    onDataChange={fetchVariants}
+                />
+            )}
         </div>
     );
 };

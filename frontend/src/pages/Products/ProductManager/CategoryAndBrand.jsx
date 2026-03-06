@@ -32,7 +32,8 @@ const Category_Brand = () => {
     code: '',
     name: '',
     description: '',
-    country: ''
+    country: '',
+    category: null
   });
 
   // Gọi Hook Fetch Data từ server
@@ -56,6 +57,19 @@ const Category_Brand = () => {
     return map;
   }, [products, activeTab]);
 
+  // Đếm số lượng Brand trong mỗi Category
+  const brandCountMap = useMemo(() => {
+    const map = {};
+    if (activeTab === "categories") {
+      brands?.forEach(b => {
+        if (b.category && b.category.id) {
+          map[b.category.id] = (map[b.category.id] || 0) + 1;
+        }
+      });
+    }
+    return map;
+  }, [brands, activeTab]);
+
   // Hàm mở Modal cho mục đích Tạo mới Item
   const handleAdd = () => {
     setModalMode('add');
@@ -63,7 +77,8 @@ const Category_Brand = () => {
       code: '',
       name: '',
       description: '',
-      country: ''
+      country: '',
+      category: null
     });
 
     setSelectedItem(null);
@@ -78,7 +93,8 @@ const Category_Brand = () => {
       code: item.code || '',
       name: item.name,
       description: item.description || '',
-      country: item.country || ''
+      country: item.country || '',
+      category: item.category ? { id: item.category.id } : null
     });
 
     setShowModal(true);
@@ -296,9 +312,15 @@ const Category_Brand = () => {
                 )}
                 <TableHead className="font-bold text-gray-700">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</TableHead>
                 {activeTab === "brands" && (
+                  <TableHead className="font-bold text-gray-700">Thuộc danh mục</TableHead>
+                )}
+                {activeTab === "brands" && (
                   <TableHead className="font-bold text-gray-700">Quốc gia</TableHead>
                 )}
                 <TableHead className="font-bold text-gray-700">Số sản phẩm</TableHead>
+                {activeTab === "categories" && (
+                  <TableHead className="font-bold text-gray-700">Số thương hiệu</TableHead>
+                )}
                 <TableHead className="font-bold text-gray-700">Thời gian tạo</TableHead>
                 <TableHead className="font-bold text-gray-700">Cập nhật lần cuối</TableHead>
                 <TableHead className="text-center font-bold text-gray-700">Thao tác</TableHead>
@@ -346,6 +368,13 @@ const Category_Brand = () => {
                     </TableCell>
                     {activeTab === "brands" && (
                       <TableCell>
+                        <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {item.category?.name || 'Không thuộc danh mục'}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {activeTab === "brands" && (
+                      <TableCell>
                         <span className="text-gray-600">{item.country}</span>
                       </TableCell>
                     )}
@@ -353,6 +382,11 @@ const Category_Brand = () => {
                     <TableCell>
                       <Badge className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold px-3 py-1">{productCountMap[item.id] || 0} sản phẩm</Badge>
                     </TableCell>
+                    {activeTab === "categories" && (
+                      <TableCell>
+                        <Badge className="bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 font-semibold px-3 py-1">{brandCountMap[item.id] || 0} brand</Badge>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <span className="text-gray-600 text-sm">
                         {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
@@ -430,6 +464,31 @@ const Category_Brand = () => {
                   placeholder={`Nhập tên ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}`}
                 />
               </div>
+
+              {/* Box chọn danh mục cho Thương Hiệu */}
+              {activeTab === 'brands' && (
+                <div>
+                  <Label className="text-sm font-semibold text-gray-700">Thuộc danh mục</Label>
+                  <select
+                    className="w-full mt-2 h-11 px-4 text-base bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                    value={formData.category?.id || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        category: e.target.value ? { id: parseInt(e.target.value) } : null
+                      })
+                    }
+                  >
+                    <option value="">-- Chọn danh mục (Không bắt buộc) --</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                  {categories && categories.length === 0 && (
+                    <p className="text-xs text-red-500 mt-1">Chưa có danh mục nào. Vui lòng tạo danh mục trước!</p>
+                  )}
+                </div>
+              )}
 
               {/* Box xuất xứ Quốc gia đối với Thương Hiệu */}
               {activeTab === 'brands' && (
