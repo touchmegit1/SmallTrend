@@ -1,19 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
-import UserManagement from "./pages/HR/UserManagement";
-import EmployeeList from "./pages/HR/EmployeeList";
 import ShiftManagement from "./pages/HR/ShiftManagement";
-import AttendanceManagement from "./pages/HR/AttendanceManagement";
-import PayrollManagement from "./pages/HR/PayrollManagement";
-import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
 import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
-import InventoryCountList from "./pages/Inventory/InventoryCountList";
-import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
-import LocationManagement from "./pages/Inventory/LocationManagement";
-import DisposalList from "./pages/Inventory/DisposalList";
-import DisposalDetail from "./pages/Inventory/DisposalDetail";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -24,12 +14,9 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import EmployeeList from "./pages/HR/EmployeeList";
 import PayrollManagement from "./pages/HR/PayrollManagement";
-import ShiftManagement from "./pages/HR/ShiftManagement";
 import UserManagement from "./pages/HR/UserManagement";
-import CreateImport from "./pages/Inventory/CreateImport";
 import DisposalDetail from "./pages/Inventory/DisposalDetail";
 import DisposalList from "./pages/Inventory/DisposalList";
-import ImportInventory from "./pages/Inventory/ImportInventory";
 import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import InventoryCountList from "./pages/Inventory/InventoryCountList";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
@@ -48,6 +35,12 @@ import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import ProductList from "./pages/Products/ProductManager/ProductList";
 import Suppliers from "./pages/Products/ProductManager/Suppliers";
+import Login from "./pages/Auth/Login";
+import MainLayout from "./components/layout/MainLayout";
+import { useAuth } from "./context/AuthContext";
+import TicketCenter from "./pages/Admin/TicketCenter";
+import AuditLogPage from "./pages/Admin/AuditLogPage";
+import AiChatPage from "./pages/Admin/AiChatPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -161,20 +154,23 @@ function App() {
         />
         <Route
           path="products/categories"
-          element={<div className="p-4">{<CategoryAndBrand />}</div>}
+          element={<div className="p-4"><CategoryAndBrand /></div>}
         />
-        <Route path="products/price" element={<div className="p-4">{}</div>} />
         <Route
           path="products/combo"
-          element={<div className="p-4">{<ComboManage />}</div>}
+          element={<div className="p-4"><ComboManage /></div>}
         />
         <Route
           path="products/create_combo"
-          element={<div className="p-4">{<CreateCombo />}</div>}
+          element={<div className="p-4"><CreateCombo /></div>}
         />
         <Route
           path="products/combo_detail"
-          element={<div className="p-4">{<ComboDetail />}</div>}
+          element={<div className="p-4"><ComboDetail /></div>}
+        />
+        <Route
+          path="products/price"
+          element={<div className="p-4"><PriceSetting /></div>}
         />
         {/* Module 4: CRM (Khách hàng) */}
         <Route

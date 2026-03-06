@@ -64,10 +64,13 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- 1. BRANDS & CATEGORIES
 INSERT IGNORE INTO brands (name) VALUES
-('Vinamilk'), ('Nestle'), ('Coca-Cola'), ('Unilever'), ('P&G'), ('Kinh Do'), ('Oishi');
+('Vinamilk'), ('Nestle'), ('Coca-Cola'), ('Unilever'), ('P&G'), ('Kinh Do'), ('Oishi'),
+('Cholimex'), ('CP'), ('Vissan'), ('Orion'), ('Chupa Chups'), ('Vifon'), ('Acecook'),
+('Masan'), ('TH True Milk'), ('Pepsico'), ('Knorr'), ('Maggi');
 
 INSERT IGNORE INTO categories (name) VALUES
-('Beverages'), ('Dairy Products'), ('Personal Care'), ('Household Items'), ('Snacks'), ('Health Care');
+('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
+('Đồ hộp'), ('Bánh ngọt'), ('Thịt & Hải sản'), ('Gia vị & Nước chấm'), ('Mì ăn liền');
 
 -- 2. SUPPLIERS
 INSERT INTO suppliers (name, tax_code, address, email, phone, contact_person, contract_files, contract_signed_date, contract_expiry, active, notes) VALUES
@@ -166,15 +169,30 @@ INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_
 ('Dove Soap 90g', 'Dove Beauty Bar', 4, 3, 1, TRUE, NOW(6), NOW(6)),
 ('Nescafe 3in1', 'Instant Coffee 20g x 10', 2, 1, 1, TRUE, NOW(6), NOW(6)),
 ('Coca Cola 330ml', 'Coca Cola Classic', 3, 1, 1, TRUE, NOW(6), NOW(6)),
-('Oishi Snack', 'Potato Chips 50g', 7, 5, 1, TRUE, NOW(6), NOW(6));
+('Oishi Snack', 'Potato Chips 50g', 7, 5, 1, TRUE, NOW(6), NOW(6)),
+('Tương ớt Cholimex', 'Tương ớt chua cay 250g', 8, 10, 1, TRUE, NOW(6), NOW(6)),
+('Xúc xích CP', 'Xúc xích Vườn Hồng 500g', 9, 9, 1, TRUE, NOW(6), NOW(6)),
+('Đồ hộp Vissan', 'Thịt heo hầm 150g', 10, 7, 1, TRUE, NOW(6), NOW(6)),
+('Bánh Chocopie', 'Bánh chocopie Orion hộp 12 cái', 11, 8, 1, TRUE, NOW(6), NOW(6)),
+('Kẹo mút Chupa Chups', 'Kẹo mút hương trái cây', 12, 5, 1, TRUE, NOW(6), NOW(6)),
+('Phở sắn Vifon', 'Phở hương vị bò 80g', 13, 11, 1, TRUE, NOW(6), NOW(6)),
+('Mì Hảo Hảo', 'Mì tôm chua cay 75g', 14, 11, 1, TRUE, NOW(6), NOW(6)),
+('Mì Omachi', 'Mì khoai tây sườn hầm 80g', 15, 11, 1, TRUE, NOW(6), NOW(6)),
+('Nước tương Chin-su', 'Nước tương tỏi ớt 250ml', 15, 10, 1, TRUE, NOW(6), NOW(6)),
+('Sữa chua TH True Milk', 'Sữa chua nha đam 100g', 16, 2, 2, TRUE, NOW(6), NOW(6)),
+('Sữa tươi TH True Milk', 'Sữa tươi ít đường 1L', 16, 2, 2, TRUE, NOW(6), NOW(6)),
+('Snack Lays', 'Snack khoai tây tự nhiên 50g', 17, 5, 1, TRUE, NOW(6), NOW(6)),
+('Trà Ô Long TEA+ Plus', 'Trà Ô Long giảm béo 455ml', 17, 1, 1, TRUE, NOW(6), NOW(6)),
+('Hạt nêm Knorr', 'Hạt nêm thịt thăn xương ống 400g', 18, 10, 1, TRUE, NOW(6), NOW(6)),
+('Dầu hào Maggi', 'Dầu hào tự nhiên nấm hương 350g', 19, 10, 1, TRUE, NOW(6), NOW(6));
 
 -- 8.1 UNITS
 INSERT IGNORE INTO units (code, name, material_type, symbol) VALUES
-('L', 'Lít', 'LIQUID', 'L'),
-('ML', 'Mililit', 'LIQUID', 'ml'),
-('G', 'Gram', 'SOLID', 'g'),
-('KG', 'Kilogram', 'SOLID', 'kg'),
-('EA', 'Cái', 'SOLID', 'ea');
+('HOP', 'Hộp', 'SOLID', 'hộp'),
+('LOC', 'Lốc', 'SOLID', 'lốc'),
+('THUNG', 'Thùng', 'SOLID', 'thùng'),
+('GOI', 'Gói', 'SOLID', 'gói'),
+('CAI', 'Cái', 'SOLID', 'cái');
 
 -- 9. PRODUCT VARIANTS
 INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active, created_at, updated_at) VALUES
@@ -182,7 +200,22 @@ INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_pri
 (2, 'DOVE-90G', '8901234567891', 3, 15000.00, TRUE, NOW(6), NOW(6)),
 (3, 'NESCAFE-200G', '8901234567892', 3, 45000.00, TRUE, NOW(6), NOW(6)),
 (4, 'COCA-330ML', '8901234567893', 2, 12000.00, TRUE, NOW(6), NOW(6)),
-(5, 'OISHI-50G', '8901234567894', 3, 8000.00, TRUE, NOW(6), NOW(6));
+(5, 'OISHI-50G', '8901234567894', 3, 8000.00, TRUE, NOW(6), NOW(6)),
+(6, 'CHOLI-250G', '8901234567895', 5, 13000.00, TRUE, NOW(6), NOW(6)),
+(7, 'CP-XX-500G', '8901234567896', 4, 55000.00, TRUE, NOW(6), NOW(6)),
+(8, 'VISSAN-HH-150G', '8901234567897', 1, 22000.00, TRUE, NOW(6), NOW(6)),
+(9, 'ORION-CHOCO-12', '8901234567898', 1, 40000.00, TRUE, NOW(6), NOW(6)),
+(10, 'CHUPA-FRUIT', '8901234567899', 5, 2000.00, TRUE, NOW(6), NOW(6)),
+(11, 'VIFON-PHO-80G', '8901234567900', 4, 8000.00, TRUE, NOW(6), NOW(6)),
+(12, 'HAOHAO-CC-75G', '8901234567901', 4, 4500.00, TRUE, NOW(6), NOW(6)),
+(13, 'OMACHI-SUON-80G', '8901234567902', 4, 9000.00, TRUE, NOW(6), NOW(6)),
+(14, 'CHINSU-TI-250ML', '8901234567903', 5, 15000.00, TRUE, NOW(6), NOW(6)),
+(15, 'TH-YOGURT-ND', '8901234567904', 1, 6000.00, TRUE, NOW(6), NOW(6)),
+(16, 'TH-MILK-1L', '8901234567905', 1, 32000.00, TRUE, NOW(6), NOW(6)),
+(17, 'LAYS-NATURAL-50', '8901234567906', 4, 11000.00, TRUE, NOW(6), NOW(6)),
+(18, 'TEAPLUS-455ML', '8901234567907', 5, 10000.00, TRUE, NOW(6), NOW(6)),
+(19, 'KNORR-THIT-400G', '8901234567908', 4, 30000.00, TRUE, NOW(6), NOW(6)),
+(20, 'MAGGI-DH-350G', '8901234567909', 5, 25000.00, TRUE, NOW(6), NOW(6));
 
 -- 10. LOCATIONS
 INSERT IGNORE INTO locations (name, type, zone, grid_row, grid_col, grid_level) VALUES
@@ -198,7 +231,22 @@ INSERT IGNORE INTO product_batches (variant_id, batch_number, cost_price, mfg_da
 (2, 'DV2026001', 12000.00, '2026-02-01', '2027-02-01'),
 (3, 'NC2026001', 35000.00, '2026-01-20', '2027-01-20'),
 (4, 'CC2026001', 8000.00, '2026-02-10', '2026-08-10'),
-(5, 'OI2026001', 6000.00, '2026-02-01', '2026-06-01');
+(5, 'OI2026001', 6000.00, '2026-02-01', '2026-06-01'),
+(6, 'CH2026001', 10000.00, '2026-01-15', '2026-10-15'),
+(7, 'CP2026001', 45000.00, '2026-02-01', '2026-04-01'),
+(8, 'VS2026001', 18000.00, '2026-01-20', '2027-01-20'),
+(9, 'OR2026001', 32000.00, '2026-02-10', '2026-12-10'),
+(10, 'CU2026001', 1000.00, '2026-02-01', '2027-06-01'),
+(11, 'VF2026001', 6000.00, '2026-01-15', '2026-07-15'),
+(12, 'HH2026001', 3000.00, '2026-02-01', '2026-08-01'),
+(13, 'OM2026001', 7000.00, '2026-01-20', '2026-07-20'),
+(14, 'CS2026001', 11000.00, '2026-02-10', '2027-02-10'),
+(15, 'THY2026001', 4000.00, '2026-03-01', '2026-04-01'),
+(16, 'THM2026001', 25000.00, '2026-03-01', '2026-09-01'),
+(17, 'LA2026001', 8000.00, '2026-02-10', '2026-11-10'),
+(18, 'TP2026001', 7000.00, '2026-02-15', '2026-10-15'),
+(19, 'KN2026001', 24000.00, '2026-01-20', '2027-01-20'),
+(20, 'MG2026001', 20000.00, '2026-02-10', '2027-02-10');
 
 -- 11.1 INVENTORY STOCK
 INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity) VALUES
@@ -206,7 +254,22 @@ INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity)
 (2, 2, 2, 180),
 (3, 3, 3, 260),
 (4, 4, 4, 510),
-(5, 5, 5, 390);
+(5, 5, 5, 390),
+(6, 1, 6, 120),
+(7, 2, 7, 85),
+(8, 3, 8, 150),
+(9, 4, 9, 200),
+(10, 5, 10, 1000),
+(11, 1, 11, 300),
+(12, 2, 12, 500),
+(13, 3, 13, 400),
+(14, 4, 14, 250),
+(15, 5, 15, 180),
+(16, 1, 16, 210),
+(17, 2, 17, 320),
+(18, 3, 18, 280),
+(19, 4, 19, 140),
+(20, 5, 20, 190);
 
 -- Legacy stock snapshot (migrated from old seed block with explicit IDs)
 UPDATE inventory_stock SET quantity = 250 WHERE variant_id = 1 AND location_id = 1 AND batch_id = 1;
@@ -289,6 +352,32 @@ INSERT IGNORE INTO product_combo_items (combo_id, product_variant_id, quantity, 
 INSERT IGNORE INTO cash_registers (register_code, register_name, store_name, location, register_type, status, device_id, current_cash, opening_balance, current_operator_id, session_start_time, total_transactions_today, created_at, updated_at) VALUES
 ('POS-001', 'Quầy 1', 'SmallTrend Store', 'Front Counter', 'MAIN', 'ACTIVE', 'DEV-POS-001', 5000000.00, 2000000.00, 3, NOW(), 0, NOW(), NOW()),
 ('POS-002', 'Quầy 2', 'SmallTrend Store', 'Express Counter', 'EXPRESS', 'ACTIVE', 'DEV-POS-002', 3000000.00, 1000000.00, NULL, NULL, 0, NOW(), NOW());
+
+-- 16. PRODUCT COMBOS
+INSERT IGNORE INTO product_combos (
+  combo_code, combo_name, description, image_url, original_price, combo_price, 
+  saved_amount, discount_percent, valid_from, valid_to, is_active, 
+  max_quantity_per_order, total_sold, stock_limit, combo_type, is_featured, 
+  display_order, tags, status, created_by, created_at, updated_at
+) VALUES 
+('CB-SNACK-1', 'Combo Siêu Ăn Vặt', 'Gói snack tổng hợp cho cuối tuần', NULL, 31000.00, 25000.00, 
+ 6000.00, 19.35, '2026-02-01', '2026-12-31', TRUE, 
+ 5, 0, 100, 'DISCOUNT', TRUE, 1, 'snack,combo,hot', 'ACTIVE', 1, NOW(), NOW()),
+('CB-DRINK-1', 'Combo Nước Giải Khát', '2 lon Coca và 1 bịch Oishi', NULL, 32000.00, 28000.00,
+ 4000.00, 12.50, '2026-02-01', '2026-12-31', TRUE,
+ 10, 0, 200, 'BUNDLE', FALSE, 2, 'drink,summer', 'ACTIVE', 1, NOW(), NOW());
+
+-- 17. PRODUCT COMBO ITEMS
+INSERT IGNORE INTO product_combo_items (
+  combo_id, product_variant_id, quantity, display_order, is_optional
+) VALUES
+-- Combo Siêu Ăn Vặt (Combo 1): Oishi (5) x 2, Lays (17) x 1, Chupa Chups (10) x 4
+(1, 5, 2, 1, FALSE),
+(1, 17, 1, 2, FALSE),
+(1, 10, 4, 3, FALSE),
+-- Combo Nước Giải Khát (Combo 2): Coca (4) x 2, Oishi (5) x 1
+(2, 4, 2, 1, FALSE),
+(2, 5, 1, 2, FALSE);
 
 -- 18. SALE ORDERS (2026)
 INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES

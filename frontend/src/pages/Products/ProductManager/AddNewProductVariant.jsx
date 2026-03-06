@@ -21,7 +21,6 @@ const AddNewProductVariant = () => {
     sku: "",
     barcode: "",
     unit_id: "",
-    unit_value: "",
     sell_price: "",
     is_active: product?.is_active === false ? false : true,
   });
@@ -184,7 +183,6 @@ const AddNewProductVariant = () => {
         sku: formData.sku,
         barcode: formData.barcode || null,
         unitId: parseInt(formData.unit_id),
-        unitValue: formData.unit_value ? parseFloat(formData.unit_value) : null,
         sellPrice: parseFloat(formData.sell_price),
         imageUrl: imageUrl,
         isActive: formData.is_active,
@@ -347,20 +345,7 @@ const AddNewProductVariant = () => {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700">
-                        Giá trị đơn vị
-                      </Label>
-                      <Input
-                        type="number"
-                        step="any"
-                        className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="VD: 500"
-                        name="unit_value"
-                        value={formData.unit_value}
-                        onChange={handleChange}
-                      />
-                    </div>
+
                   </div>
 
                   <div>
@@ -602,11 +587,10 @@ const AddNewProductVariant = () => {
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-                        isDragging
+                      className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
                           ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
                           : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
-                      }`}
+                        }`}
                       style={{ minHeight: "300px" }}
                     >
                       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">

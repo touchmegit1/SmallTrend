@@ -17,7 +17,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     sku: "",
     barcode: "",
     unit_id: "",
-    unit_value: "",
     sell_price: "",
     is_active: true,
   });
@@ -37,8 +36,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sku: variant.sku || "",
         barcode: variant.barcode || "",
         unit_id: variant.unit_id ? String(variant.unit_id) : "",
-        unit_value:
-          variant.unit_value != null ? String(variant.unit_value) : "",
         sell_price:
           variant.sell_price != null ? String(variant.sell_price) : "",
         is_active:
@@ -182,7 +179,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sku: formData.sku,
         barcode: formData.barcode || null,
         unitId: parseInt(formData.unit_id),
-        unitValue: formData.unit_value ? parseFloat(formData.unit_value) : null,
         sellPrice: parseFloat(formData.sell_price),
         imageUrl: imageUrl,
         isActive: formData.is_active,
@@ -194,9 +190,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sku: formData.sku,
         barcode: formData.barcode,
         unit_id: parseInt(formData.unit_id),
-        unit_value: formData.unit_value
-          ? parseFloat(formData.unit_value)
-          : null,
         sell_price: parseFloat(formData.sell_price),
         image_url: imageUrl,
         is_active: formData.is_active,
@@ -295,21 +288,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                     ))}
                   </select>
                 </div>
-                <div>
-                  <Label>Giá trị đơn vị</Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    className="text-md bg-gray-200 border border-gray-200 rounded-lg"
-                    placeholder="VD: 500"
-                    name="unit_value"
-                    value={formData.unit_value}
-                    onChange={handleChange}
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    VD: 500 (ml), 1 (kg), 250 (g)
-                  </p>
-                </div>
+
               </div>
 
               <div>
@@ -458,11 +437,10 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-                    isDragging
+                  className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
                       ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
                       : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
-                  }`}
+                    }`}
                   style={{ height: "300px" }}
                 >
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">

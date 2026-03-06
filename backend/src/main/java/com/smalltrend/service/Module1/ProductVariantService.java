@@ -66,17 +66,11 @@ public class ProductVariantService {
         String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
         StringBuilder nameBuilder = new StringBuilder(productName);
 
-        java.math.BigDecimal unitValue = variant.getUnitValue();
         String unitNameStr = variant.getUnit() != null ? variant.getUnit().getName() : "";
 
-        if (unitValue != null || (unitNameStr != null && !unitNameStr.trim().isEmpty())) {
-            nameBuilder.append(" - ");
-            if (unitValue != null) {
-                nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
-            }
-            if (unitNameStr != null && !unitNameStr.trim().isEmpty()) {
-                nameBuilder.append(unitNameStr.trim());
-            }
+        if (unitNameStr != null && !unitNameStr.trim().isEmpty()) {
+            nameBuilder.append(" ");
+            nameBuilder.append(unitNameStr.trim());
         }
 
         java.util.Map<String, String> attributes = variant.getAttributes();

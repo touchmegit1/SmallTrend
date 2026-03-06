@@ -120,7 +120,6 @@ const PriceSetting = () => {
                 sku: variant.sku,
                 barcode: variant.barcode,
                 unitId: variant.unitId || 1, // Fallback to a default unit if null (Unit 1 usually exists)
-                unitValue: variant.unitValue || 1,
                 sellPrice: parsedPrice,
                 imageUrl: variant.imageUrl || null,
                 isActive: variant.isActive !== false // Fallback to true if undefined

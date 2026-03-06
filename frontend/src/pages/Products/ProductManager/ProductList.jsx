@@ -108,7 +108,6 @@ export function ProductListScreen() {
             is_active: v.isActive,
             created_at: v.createdAt,
             unit_name: v.unitName,
-            unit_value: v.unitValue,
             attributes: v.attributes,
           }));
           setVariantsData(mapped);
@@ -648,7 +647,7 @@ export function ProductListScreen() {
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Đơn vị</p>
-                    <p className="font-medium text-gray-700">{variant.unit_name || 'N/A'} {variant.unit_value ? `(${variant.unit_value})` : ''}</p>
+                    <p className="font-medium text-gray-700">{variant.unit_name || 'N/A'}</p>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Trạng thái</p>
