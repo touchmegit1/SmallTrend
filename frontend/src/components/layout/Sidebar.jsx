@@ -1,4 +1,4 @@
-import { BarChart3, ChevronRight, Clock, LogOut, Package, Shield, ShoppingCart, Store, Users, Warehouse } from 'lucide-react';
+import { ShoppingCart, Package, LogOut, Store, Warehouse, Users, Clock, BarChart3, ChevronRight, Shield } from 'lucide-react';
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -53,13 +53,12 @@ const Sidebar = () => {
             label: 'Sản phẩm',
             path: '/products',
             children: [
-                { label: 'Nhập hàng', path: '/products/purchaseorder' },
                 { label: 'Danh mục & Brand', path: '/products/categories' },
                 { label: 'Danh sách sản phẩm', path: '/products' },
-                { label: 'Thêm sản phẩm', path: '/products/addproduct' },               
+                { label: 'Thêm sản phẩm', path: '/products/addproduct' },
                 { label: 'Thiết lập giá', path: '/products/price' },
                 { label: 'Combo sản phẩm', path: '/products/combo' },
-                
+
             ]
         },
         {

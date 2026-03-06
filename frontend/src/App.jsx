@@ -41,8 +41,6 @@ import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import ProductList from "./pages/Products/ProductManager/ProductList";
 import Suppliers from "./pages/Products/ProductManager/Suppliers";
-import PurchaseOrder from "./pages/Products/ProductManager/PurchaseOrder";
-
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -147,11 +145,6 @@ function App() {
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
 
         {/* Module 3: Products (Sản phẩm) */}
-        <Route
-          path="products/purchaseorder"
-          element={<PurchaseOrder />}
-        />
-
         <Route
           path="products"
           element={<ProductList />}
