@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
 /**
- * Xếp hạng khách hàng dựa trên điểm tích lũy
+ * Xếp hạng khách hàng dựa trên tổng chi tiêu (spent_amount)
  */
 @Entity
 @Table(name = "customer_tiers")
@@ -26,20 +26,14 @@ public class CustomerTier {
     @Column(nullable = false, length = 100)
     private String tierName; // Đồng, Bạc, Vàng, Bạch kim, Kim cương
 
-    @Column(nullable = false)
-    private Integer minPoints; // Điểm tối thiểu để đạt hạng
-
-    @Column
-    private Integer maxPoints; // Điểm tối đa của hạng này
-
-    @Column(precision = 15, scale = 2)
-    private BigDecimal minSpending; // Tổng chi tiêu tối thiểu để đạt hạng
+    @Column(precision = 15, scale = 2, nullable = false)
+    private BigDecimal minSpending; // Tổng chi tiêu tối thiểu (VNĐ) để đạt hạng
 
     @Column(precision = 5, scale = 2, nullable = false)
     private BigDecimal pointsMultiplier; // Hệ số nhân điểm (1.0, 1.5, 2.0)
 
     @Column(precision = 5, scale = 2)
-    private BigDecimal discountRate; // % chiết khấu cho hạng này
+    private BigDecimal discountRate; // % chiết khấu cố định cho hạng này
 
     @Column(precision = 10, scale = 2)
     private BigDecimal bonusPoints; // Điểm thưởng khi lên hạng
@@ -73,10 +67,10 @@ public class CustomerTier {
     private String benefits; // JSON: ["free_gift", "exclusive_deals"]
 
     @Column
-    private Integer priority; // Thứ tự ưu tiên (1 = cao nhất)
+    private Integer priority; // Thứ tự ưu tiên (1 = thấp nhất → cao nhất)
 
     @Column
-    private Boolean isActive;
+    private Boolean isActive; // Trạng thái kích hoạt của hạng
 
     @Column(length = 1000)
     private String description;

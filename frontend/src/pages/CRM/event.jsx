@@ -4,6 +4,7 @@ import { useToast, ToastContainer } from '../../hooks/useToast.jsx';
 import eventService from '../../services/eventService';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useVouchers } from '../../hooks/useVouchers';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 // ─── ICONS ────────────────────────────────────────────────────────────────────
 const IconEdit = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
@@ -70,6 +71,9 @@ const EventManagement = () => {
   const [voucherForm, setVoucherForm] = useState(initialVoucherForm);
   const [savingVoucher, setSavingVoucher] = useState(false);
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, type: null, id: null, label: '' });
+
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   // ── Campaign handlers ─────────────────────────────────────────────────────────
@@ -116,15 +120,8 @@ const EventManagement = () => {
     }
   };
 
-  const handleDeleteCampaign = async (id) => {
-    if (!window.confirm('Xóa sự kiện này?')) return;
-    try {
-      await eventService.deleteCampaign(id);
-      showToast('Xóa sự kiện thành công');
-      await refetchCampaigns();
-    } catch (err) {
-      showToast('Lỗi khi xóa: ' + (err?.response?.data?.message || err.message), 'error');
-    }
+  const handleDeleteCampaign = (id) => {
+    setConfirmDialog({ open: true, type: 'campaign', id, label: 'sự kiện' });
   };
 
   // ── Voucher handlers ───────────────────────────────────────────────────────────
@@ -185,12 +182,23 @@ const EventManagement = () => {
     }
   };
 
-  const handleDeleteVoucher = async (id) => {
-    if (!window.confirm('Xóa voucher này?')) return;
+  const handleDeleteVoucher = (id) => {
+    setConfirmDialog({ open: true, type: 'voucher', id, label: 'voucher' });
+  };
+
+  const executeDelete = async () => {
+    const { type, id } = confirmDialog;
+    setConfirmDialog({ open: false, type: null, id: null, label: '' });
     try {
-      await eventService.deleteVoucher(id);
-      showToast('Xóa voucher thành công');
-      await refetchVouchers();
+      if (type === 'campaign') {
+        await eventService.deleteCampaign(id);
+        showToast('Xóa sự kiện thành công');
+        await refetchCampaigns();
+      } else {
+        await eventService.deleteVoucher(id);
+        showToast('Xóa voucher thành công');
+        await refetchVouchers();
+      }
     } catch (err) {
       showToast('Lỗi khi xóa: ' + (err?.response?.data?.message || err.message), 'error');
     }
@@ -207,6 +215,16 @@ const EventManagement = () => {
   return (
     <div className="space-y-6">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={`Xóa ${confirmDialog.label}`}
+        message={`Bạn chắc chắn muốn xóa ${confirmDialog.label} này? Thao tác này không thể hoàn tác.`}
+        confirmText="Xóa"
+        cancelText="Hủy"
+        variant="danger"
+        onConfirm={executeDelete}
+        onCancel={() => setConfirmDialog({ open: false, type: null, id: null, label: '' })}
+      />
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>

@@ -5,6 +5,7 @@ import ticketService from '../../services/ticketService';
 import { useFetchCustomers } from '../../hooks/Customers';
 import { useToast, ToastContainer } from '../../hooks/useToast.jsx';
 import { useGifts } from '../../hooks/useGifts';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 // ─── STAT CARD ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, color }) => (
@@ -38,6 +39,9 @@ const GiftRewardManagement = () => {
   const [formData, setFormData] = useState({ name: '', requiredPoints: '', stock: '' });
   const [savingGift, setSavingGift] = useState(false);
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, type: null, payload: null });
+
   const handleSearchCustomer = async (e) => {
     if (e) e.preventDefault();
     if (!searchPhone) return;
@@ -65,15 +69,17 @@ const GiftRewardManagement = () => {
       showToast(`Không đủ điểm! Cần ${gift.requiredPoints} điểm.`, 'warning'); return;
     }
     if (gift.stock <= 0) { showToast('Quà đã hết hàng!', 'warning'); return; }
-    if (window.confirm(`Xác nhận đổi [${gift.name}] cho ${currentCustomer.name}? Trừ ${gift.requiredPoints} điểm.`)) {
-      try {
-        await loyaltyService.redeemGift(currentCustomer.id, gift.id);
-        showToast('Đổi quà thành công!');
-        await refetchGifts();
-        await handleSearchCustomer();
-      } catch (err) {
-        showToast('Lỗi: ' + (err?.response?.data?.message || err.message), 'error');
-      }
+    setConfirmDialog({ open: true, type: 'redeem', payload: gift });
+  };
+
+  const executeRedeem = async (gift) => {
+    try {
+      await loyaltyService.redeemGift(currentCustomer.id, gift.id);
+      showToast('Đổi quà thành công!');
+      await refetchGifts();
+      await handleSearchCustomer();
+    } catch (err) {
+      showToast('Lỗi: ' + (err?.response?.data?.message || err.message), 'error');
     }
   };
 
@@ -119,7 +125,10 @@ const GiftRewardManagement = () => {
   };
 
   const handleDeleteGift = async (id) => {
-    if (!window.confirm('Xóa quà tặng này?')) return;
+    setConfirmDialog({ open: true, type: 'delete', payload: id });
+  };
+
+  const executeDeleteGift = async (id) => {
     try {
       await loyaltyService.deleteGift(id);
       await refetchGifts();
@@ -128,12 +137,41 @@ const GiftRewardManagement = () => {
     }
   };
 
+  const handleConfirm = () => {
+    const { type, payload } = confirmDialog;
+    setConfirmDialog({ open: false, type: null, payload: null });
+    if (type === 'redeem') executeRedeem(payload);
+    if (type === 'delete') executeDeleteGift(payload);
+  };
+
+  const handleCancelConfirm = () => {
+    setConfirmDialog({ open: false, type: null, payload: null });
+  };
+
   const totalPoints = gifts.reduce((s, g) => s + (g.requiredPoints || 0), 0);
   const totalStock = gifts.reduce((s, g) => s + (g.stock || 0), 0);
 
   return (
     <div className="space-y-6">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={
+          confirmDialog.type === 'redeem'
+            ? 'Đổi quà tặng'
+            : 'Xóa quà tặng'
+        }
+        message={
+          confirmDialog.type === 'redeem' && confirmDialog.payload
+            ? `Xác nhận đổi [${confirmDialog.payload.name}] cho ${currentCustomer?.name}? Sẽ trừ ${confirmDialog.payload.requiredPoints} điểm từ tài khoản.`
+            : 'Bạn chắc chắn muốn xóa quà tặng này khỏi kho?'
+        }
+        confirmText={confirmDialog.type === 'redeem' ? 'Đổi ngay' : 'Xóa'}
+        cancelText="Hủy"
+        variant={confirmDialog.type === 'redeem' ? 'info' : 'danger'}
+        onConfirm={handleConfirm}
+        onCancel={handleCancelConfirm}
+      />
       {/* ── HEADER ── */}
       <div className="flex justify-between items-end">
         <div>
@@ -151,7 +189,7 @@ const GiftRewardManagement = () => {
       {/* ── STAT CARDS ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard icon={Gift} label="Loại quà trong kho" value={gifts.length} color="bg-indigo-500" />
-        <StatCard icon={Package} label="Tổng tồn kho" value={totalStock} color="bg-emerald-500" />
+        <StatCard icon={Package} label="Số lượng quà tặng" value={totalStock} color="bg-emerald-500" />
         <StatCard icon={Star} label="Điểm TB yêu cầu" value={gifts.length ? Math.round(totalPoints / gifts.length) : 0} color="bg-amber-500" />
       </div>
 
@@ -291,7 +329,7 @@ const GiftRewardManagement = () => {
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Ảnh</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Tên quà tặng</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Điểm yêu cầu</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Tồn kho</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600">Còn lại</th>
                     <th className="px-5 py-3 text-center text-xs font-semibold text-slate-600">Thao tác</th>
                   </tr>
                 </thead>
