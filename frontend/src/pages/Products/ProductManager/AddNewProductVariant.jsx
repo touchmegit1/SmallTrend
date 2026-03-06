@@ -26,6 +26,7 @@ const AddNewProductVariant = () => {
     is_active: product?.is_active === false ? false : true,
   });
   const [attributes, setAttributes] = useState([]); // [{ name: "", value: "" }]
+  const [conversions, setConversions] = useState([]); // [{ toUnitId: "", conversionFactor: "", sellPrice: "", isActive: true }]
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -130,6 +131,20 @@ const AddNewProductVariant = () => {
     setAttributes(newAttrs);
   };
 
+  const handleAddConversion = () => {
+    setConversions([...conversions, { toUnitId: "", conversionFactor: "", sellPrice: "", isActive: true }]);
+  };
+
+  const handleRemoveConversion = (index) => {
+    setConversions(conversions.filter((_, i) => i !== index));
+  };
+
+  const handleChangeConversion = (index, field, value) => {
+    const newConvs = [...conversions];
+    newConvs[index][field] = value;
+    setConversions(newConvs);
+  };
+
   // Hàm Submit: Tiến hành Upload image (nếu có) trước rồi lấy URL đính vào payload Variant để Post tạo mới
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -165,7 +180,7 @@ const AddNewProductVariant = () => {
         }
       });
 
-      await api.post(`/products/${product.id}/variants`, {
+      const response = await api.post(`/products/${product.id}/variants`, {
         sku: formData.sku,
         barcode: formData.barcode || null,
         unitId: parseInt(formData.unit_id),
@@ -175,6 +190,25 @@ const AddNewProductVariant = () => {
         isActive: formData.is_active,
         attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
       });
+
+      const variantId = response.data?.id || response.data?.data?.id; // Fallback for diff API responses
+
+      if (variantId && conversions.length > 0) {
+        const validConversions = conversions.filter((c) => c.toUnitId && c.conversionFactor && c.sellPrice);
+        if (validConversions.length > 0) {
+          await Promise.all(
+            validConversions.map((c) =>
+              api.post(`/products/variants/${variantId}/conversions`, {
+                toUnitId: parseInt(c.toUnitId),
+                conversionFactor: parseFloat(c.conversionFactor),
+                sellPrice: parseFloat(c.sellPrice),
+                isActive: c.isActive,
+                description: "Quy đổi đơn vị"
+              })
+            )
+          );
+        }
+      }
 
       navigate(`/products/detail/${product.id}`, {
         state: {
@@ -404,6 +438,92 @@ const AddNewProductVariant = () => {
                             >
                               <Trash className="w-4 h-4" />
                             </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* DYNAMIC CONVERSIONS */}
+                  <div className="pt-4 border-t border-gray-100 mt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <Label className="text-sm font-semibold text-gray-700">Quy đổi đơn vị</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleAddConversion}
+                        className="h-8 text-xs bg-green-50 text-green-700 hover:bg-green-100 rounded-lg px-2 flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Thêm quy đổi
+                      </Button>
+                    </div>
+                    {conversions.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">Có thể thêm các đơn vị quy đổi (VD: Hộp, Thùng...)</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {conversions.map((conv, index) => (
+                          <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex gap-3 items-start">
+                              <div className="flex-1">
+                                <Label className="text-xs text-gray-500 mb-1 block">Đơn vị đích</Label>
+                                <select
+                                  className="w-full h-10 px-3 text-sm border border-gray-200 rounded-xl bg-white"
+                                  value={conv.toUnitId}
+                                  onChange={(e) => handleChangeConversion(index, "toUnitId", e.target.value)}
+                                >
+                                  <option value="">Chọn đơn vị</option>
+                                  {units
+                                    .filter(u => u.id !== parseInt(formData.unit_id)) // Lọc bỏ đơn vị chính
+                                    .map((unit) => (
+                                      <option key={unit.id} value={unit.id}>{unit.name} ({unit.code})</option>
+                                    ))}
+                                </select>
+                              </div>
+                              <div className="flex-1">
+                                <Label className="text-xs text-gray-500 mb-1 block">Tỷ lệ quy đổi</Label>
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  placeholder="VD: 10"
+                                  className="h-10 text-sm border-gray-200 rounded-xl"
+                                  title="1 Đơn vị đích bằng bao nhiêu Đơn vị cơ bản"
+                                  value={conv.conversionFactor}
+                                  onChange={(e) => handleChangeConversion(index, "conversionFactor", e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-3 items-end">
+                              <div className="flex-1">
+                                <Label className="text-xs text-gray-500 mb-1 block">Giá bán</Label>
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  placeholder="Giá bán quy đổi"
+                                  className="h-10 text-sm border-gray-200 rounded-xl"
+                                  value={conv.sellPrice}
+                                  onChange={(e) => handleChangeConversion(index, "sellPrice", e.target.value)}
+                                />
+                              </div>
+                              <div className="flex-1 mb-2">
+                                <label className="flex items-center gap-2 cursor-pointer mt-2 text-sm text-gray-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={conv.isActive}
+                                    onChange={(e) => handleChangeConversion(index, "isActive", e.target.checked)}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                                  />
+                                  <span>Kích hoạt</span>
+                                </label>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => handleRemoveConversion(index)}
+                                className="h-10 w-10 p-0 text-red-500 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
