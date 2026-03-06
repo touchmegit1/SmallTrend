@@ -3,6 +3,7 @@ import { Plus, Search, ClipboardCheck, PackagePlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePurchaseOrderList } from "../../hooks/usePurchaseOrderList";
 import PurchaseOrderRecordsTable from "../../components/inventory/PurchaseOrderRecordsTable";
+import CustomSelect from "../../components/common/CustomSelect";
 
 function PurchaseOrderList() {
   const navigate = useNavigate();
@@ -110,83 +111,30 @@ function PurchaseOrderList() {
           </div>
 
           {/* STATUS FILTERS DỰA TRÊN TAB LỚN */}
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => setStatusFilter("ALL")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                statusFilter === "ALL"
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              Tất cả
-            </button>
-            {activeTab === "ALL" && (
-              <>
-                <button
-                  onClick={() => setStatusFilter("DRAFT")}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                    statusFilter === "DRAFT"
-                      ? "bg-slate-600 text-white shadow-sm"
-                      : "text-slate-500 hover:bg-slate-100"
-                  }`}
-                >
-                  Phiếu tạm
-                </button>
-                <button
-                  onClick={() => setStatusFilter("PENDING")}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                    statusFilter === "PENDING"
-                      ? "bg-amber-600 text-white shadow-sm"
-                      : "text-slate-500 hover:bg-slate-100"
-                  }`}
-                >
-                  Chờ duyệt
-                </button>
-                <button
-                  onClick={() => setStatusFilter("REJECTED")}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                    statusFilter === "REJECTED"
-                      ? "bg-red-600 text-white shadow-sm"
-                      : "text-slate-500 hover:bg-slate-100"
-                  }`}
-                >
-                  Từ chối
-                </button>
-              </>
-            )}
-
-            {/* Trạng thái chung cho cả Quản lý và Kho */}
-            <button
-              onClick={() => setStatusFilter("CONFIRMED")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                statusFilter === "CONFIRMED"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              {activeTab === "AUDIT" ? "Chờ kiểm" : "Đã duyệt"}
-            </button>
-            <button
-              onClick={() => setStatusFilter("CHECKING")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                statusFilter === "CHECKING"
-                  ? "bg-purple-600 text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              Đang kiểm kê
-            </button>
-            <button
-              onClick={() => setStatusFilter("RECEIVED")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                statusFilter === "RECEIVED"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              Đã nhập kho
-            </button>
+          <div className="w-48 ml-auto text-left">
+            <CustomSelect
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={
+                activeTab === "ALL"
+                  ? [
+                      { value: "ALL", label: "Tất cả" },
+                      { value: "DRAFT", label: "Phiếu tạm" },
+                      { value: "PENDING", label: "Chờ duyệt" },
+                      { value: "REJECTED", label: "Từ chối" },
+                      { value: "CONFIRMED", label: "Đã duyệt" },
+                      { value: "CHECKING", label: "Đang kiểm kê" },
+                      { value: "RECEIVED", label: "Đã nhập kho" },
+                    ]
+                  : [
+                      { value: "ALL", label: "Tất cả" },
+                      { value: "CONFIRMED", label: "Chờ kiểm" },
+                      { value: "CHECKING", label: "Đang kiểm kê" },
+                      { value: "RECEIVED", label: "Đã nhập kho" },
+                    ]
+              }
+              variant="status"
+            />
           </div>
         </div>
       </div>

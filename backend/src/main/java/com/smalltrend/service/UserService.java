@@ -57,6 +57,7 @@ public class UserService implements UserDetailsService {
                 .map(UserCredential::getUser)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username)));
         String roleName = user.getRole() != null ? user.getRole().getName() : "ROLE_USER";
+        roleName = roleName.toUpperCase();
 
         // Ensure role has ROLE_ prefix for Spring Security
         if (!roleName.startsWith("ROLE_")) {
@@ -153,7 +154,7 @@ public class UserService implements UserDetailsService {
                 .username(user.getUsername())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
-                .role(user.getRole() != null ? user.getRole().getName() : "ROLE_USER")
+                .role(user.getRole() != null ? user.getRole().getName().toUpperCase() : "ROLE_USER")
                 .build();
     }
 

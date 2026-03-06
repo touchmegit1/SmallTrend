@@ -40,7 +40,7 @@ export const PO_STATUS_CONFIG = {
     dot: "bg-red-500",
   },
   [PO_STATUS.CONFIRMED]: {
-    label: "Đã duyệt",
+    label: "Chờ kiểm",
     bg: "bg-blue-50",
     text: "text-blue-700",
     border: "border-blue-200",

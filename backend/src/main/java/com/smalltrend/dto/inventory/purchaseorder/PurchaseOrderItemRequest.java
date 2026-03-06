@@ -21,4 +21,5 @@ public class PurchaseOrderItemRequest {
     private BigDecimal totalCost;
     private Integer receivedQuantity;
     private String notes;
+    private java.time.LocalDate expiryDate;
 }

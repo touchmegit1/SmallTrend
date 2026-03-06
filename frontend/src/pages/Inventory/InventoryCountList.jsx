@@ -19,6 +19,7 @@ import {
   IC_STATUS_CONFIG,
   formatVNDCount,
 } from "../../utils/inventoryCount";
+import CustomSelect from "../../components/common/CustomSelect";
 
 function InventoryCountList() {
   const navigate = useNavigate();
@@ -135,23 +136,19 @@ function InventoryCountList() {
       <div className="bg-white border-b border-slate-200 px-6 py-3 shrink-0">
         <div className="flex items-center justify-between gap-4">
           {/* Status Tabs */}
-          <div className="flex gap-1">
-            {statusTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  setStatusFilter(tab.key);
-                  setPage(1);
-                }}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                  statusFilter === tab.key
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-500 hover:bg-slate-100"
-                }`}
-              >
-                {tab.label} ({statusCounts[tab.key] || 0})
-              </button>
-            ))}
+          <div className="w-56 text-left">
+            <CustomSelect
+              value={statusFilter}
+              onChange={(val) => {
+                setStatusFilter(val);
+                setPage(1);
+              }}
+              options={statusTabs.map((tab) => ({
+                value: tab.key,
+                label: `${tab.label} (${statusCounts[tab.key] || 0})`,
+              }))}
+              variant="status"
+            />
           </div>
 
           {/* Search */}

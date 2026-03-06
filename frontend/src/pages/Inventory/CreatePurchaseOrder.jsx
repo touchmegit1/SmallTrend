@@ -159,7 +159,7 @@ function CreatePurchaseOrder() {
           onConfirm={() => confirmOrder(navigate)}
           onReject={handleRejectClick}
           onDelete={() => deleteOrder(navigate)}
-          onStartChecking={() => startChecking(navigate)}
+          onStartChecking={() => startChecking()}
           onReceiveGoods={() => receiveGoods(navigate)}
         />
       </div>

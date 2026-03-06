@@ -40,4 +40,7 @@ public class PurchaseOrderItem {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @Column(name = "expiry_date")
+    private java.time.LocalDate expiryDate;
 }

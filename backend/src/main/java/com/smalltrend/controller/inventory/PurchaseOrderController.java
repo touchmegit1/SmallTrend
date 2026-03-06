@@ -4,6 +4,7 @@ import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.service.inventory.PurchaseOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,11 +43,13 @@ public class PurchaseOrderController {
     }
 
     @PostMapping("/purchase-orders/confirm")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<PurchaseOrderResponse> confirmOrder(@RequestBody PurchaseOrderRequest request) {
         return ResponseEntity.ok(purchaseOrderService.confirmOrder(request));
     }
 
     @PutMapping("/purchase-orders/{id}/confirm")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<PurchaseOrderResponse> confirmExistingOrder(@PathVariable Integer id) {
         return ResponseEntity.ok(purchaseOrderService.confirmExistingOrder(id));
     }
@@ -57,11 +60,13 @@ public class PurchaseOrderController {
     }
 
     @PutMapping("/purchase-orders/{id}/reject")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<PurchaseOrderResponse> rejectOrder(@PathVariable Integer id, @RequestBody Map<String, String> payload) {
         return ResponseEntity.ok(purchaseOrderService.rejectOrder(id, payload.get("rejectionReason")));
     }
 
     @PutMapping("/purchase-orders/{id}/approve")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<PurchaseOrderResponse> approveOrder(@PathVariable Integer id) {
         return ResponseEntity.ok(purchaseOrderService.approveOrder(id));
     }
@@ -69,11 +74,13 @@ public class PurchaseOrderController {
     // ─── New: NV kho kiểm kê ─────────────────────────────────
 
     @PutMapping("/purchase-orders/{id}/start-checking")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'INVENTORY_STAFF', 'ROLE_INVENTORY_STAFF')")
     public ResponseEntity<PurchaseOrderResponse> startChecking(@PathVariable Integer id) {
         return ResponseEntity.ok(purchaseOrderService.startChecking(id));
     }
 
     @PutMapping("/purchase-orders/{id}/receive")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'INVENTORY_STAFF', 'ROLE_INVENTORY_STAFF')")
     public ResponseEntity<PurchaseOrderResponse> receiveGoods(@PathVariable Integer id, @RequestBody GoodsReceiptRequest request) {
         return ResponseEntity.ok(purchaseOrderService.receiveGoods(id, request));
     }

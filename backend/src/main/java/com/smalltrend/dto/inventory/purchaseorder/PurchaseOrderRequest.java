@@ -18,14 +18,18 @@ public class PurchaseOrderRequest {
     private Integer supplierId;
     private Long contractId;
     private Integer createdBy;
+    private Integer locationId;
     private LocalDate expectedDeliveryDate;
     private String status;
 
     // Financials
     private BigDecimal discountAmount;
     private BigDecimal taxAmount;
+    private BigDecimal taxPercent;
     private BigDecimal subtotal;
     private BigDecimal totalAmount;
+    private BigDecimal shippingFee;
+    private BigDecimal paidAmount;
 
     private String notes;
     private String rejectionReason;

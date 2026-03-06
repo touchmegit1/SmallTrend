@@ -23,13 +23,17 @@ export default function ActionButtons({
   onReceiveGoods,
 }) {
   const { user } = useAuth();
-  const userRole = user?.role || "";
+  const userRole = (user?.role || "").toUpperCase();
   const isManagerOrAdmin = [
     "MANAGER",
     "ROLE_MANAGER",
     "ADMIN",
     "ROLE_ADMIN",
   ].includes(userRole);
+  const isInventoryStaff = ["INVENTORY_STAFF", "ROLE_INVENTORY_STAFF"].includes(
+    userRole,
+  );
+  const canCheckAndReceive = isManagerOrAdmin || isInventoryStaff;
 
   const isDraft = status === PO_STATUS.DRAFT || status === PO_STATUS.REJECTED;
   const isPending = status === PO_STATUS.PENDING;
@@ -110,8 +114,8 @@ export default function ActionButtons({
           </>
         )}
 
-        {/* Warehouse Staff: Start Checking (CONFIRMED → CHECKING) */}
-        {isConfirmed && (
+        {/* Manager Actions for Receipt: Start Checking & Confirm Receipt */}
+        {isConfirmed && canCheckAndReceive && (
           <button
             onClick={onStartChecking}
             disabled={saving}
@@ -127,7 +131,7 @@ export default function ActionButtons({
         )}
 
         {/* Warehouse Staff: Confirm Receipt (CHECKING → RECEIVED) */}
-        {isChecking && (
+        {isChecking && canCheckAndReceive && (
           <button
             onClick={onReceiveGoods}
             disabled={saving}

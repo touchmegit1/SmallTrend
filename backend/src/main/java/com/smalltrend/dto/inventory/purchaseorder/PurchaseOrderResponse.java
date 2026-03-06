@@ -19,6 +19,7 @@ public class PurchaseOrderResponse {
     private String orderNumber;
 
     // Supplier info
+    private Integer locationId;
     private Integer supplierId;
     private String supplierName;
 
@@ -42,8 +43,11 @@ public class PurchaseOrderResponse {
     // Financials
     private BigDecimal discountAmount;
     private BigDecimal taxAmount;
+    private BigDecimal taxPercent;
     private BigDecimal subtotal;
     private BigDecimal totalAmount;
+    private BigDecimal shippingFee;
+    private BigDecimal paidAmount;
 
     private String notes;
     private String rejectionReason;

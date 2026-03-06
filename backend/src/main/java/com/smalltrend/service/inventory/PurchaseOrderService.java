@@ -280,8 +280,12 @@ public class PurchaseOrderService {
         }
 
         order.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+        order.setLocationId(request.getLocationId());
         order.setDiscountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO);
         order.setTaxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO);
+        order.setTaxPercent(request.getTaxPercent() != null ? request.getTaxPercent() : BigDecimal.ZERO);
+        order.setShippingFee(request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO);
+        order.setPaidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO);
         order.setNotes(request.getNotes());
         order.setRejectionReason(null); // Clear rejection reason upon update
 
@@ -434,8 +438,12 @@ public class PurchaseOrderService {
                 .discountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO)
                 .subtotal(request.getSubtotal() != null ? request.getSubtotal() : BigDecimal.ZERO)
                 .taxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO)
+                .taxPercent(request.getTaxPercent() != null ? request.getTaxPercent() : BigDecimal.ZERO)
                 .totalAmount(request.getTotalAmount() != null ? request.getTotalAmount() : BigDecimal.ZERO)
+                .shippingFee(request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO)
+                .paidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO)
                 .expectedDeliveryDate(request.getExpectedDeliveryDate())
+                .locationId(request.getLocationId())
                 .notes(request.getNotes())
                 .build();
 
@@ -478,7 +486,9 @@ public class PurchaseOrderService {
         BigDecimal taxAmount = order.getTaxAmount() != null ? order.getTaxAmount() : BigDecimal.ZERO;
         order.setTaxAmount(taxAmount);
 
-        BigDecimal total = afterDiscount.add(taxAmount);
+        BigDecimal shippingFee = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
+
+        BigDecimal total = afterDiscount.add(taxAmount).add(shippingFee);
         order.setTotalAmount(total);
     }
 
@@ -494,6 +504,8 @@ public class PurchaseOrderService {
                     .quantity(qty)
                     .unitCost(unitCost)
                     .totalCost(totalCost)
+                    .expiryDate(itemReq.getExpiryDate())
+                    .notes(itemReq.getNotes())
                     .build();
 
             // Resolve product variant
@@ -633,7 +645,11 @@ public class PurchaseOrderService {
                 .subtotal(order.getSubtotal())
                 .discountAmount(order.getDiscountAmount())
                 .taxAmount(order.getTaxAmount())
+                .taxPercent(order.getTaxPercent())
                 .totalAmount(order.getTotalAmount())
+                .shippingFee(order.getShippingFee())
+                .paidAmount(order.getPaidAmount())
+                .locationId(order.getLocationId())
                 .notes(order.getNotes())
                 .rejectionReason(order.getRejectionReason());
 
@@ -665,6 +681,7 @@ public class PurchaseOrderService {
                     .unitCost(item.getUnitCost())
                     .totalCost(item.getTotalCost() != null ? item.getTotalCost() : (item.getUnitCost() != null ? item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO))
                     .receivedQuantity(item.getReceivedQuantity())
+                    .expiryDate(item.getExpiryDate())
                     .notes(item.getNotes())
                     .build())
                     .collect(Collectors.toList());

@@ -39,6 +39,9 @@ public class PurchaseOrder {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @Column(name = "location_id")
+    private Integer locationId;
+
     @Column(name = "order_date")
     private LocalDate orderDate;
 
@@ -61,9 +64,21 @@ public class PurchaseOrder {
     @Builder.Default
     private BigDecimal taxAmount = BigDecimal.ZERO;
 
+    @Column(name = "tax_percent", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal taxPercent = BigDecimal.ZERO;
+
     @Column(name = "discount_amount", precision = 15, scale = 2)
     @Builder.Default
     private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "shipping_fee", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal shippingFee = BigDecimal.ZERO;
+
+    @Column(name = "paid_amount", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal paidAmount = BigDecimal.ZERO;
 
     @Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
     @Builder.Default

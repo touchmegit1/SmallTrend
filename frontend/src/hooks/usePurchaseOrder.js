@@ -13,6 +13,8 @@ import {
   getContractsBySupplier,
   startCheckingOrder,
   receiveGoodsOrder,
+  approvePurchaseOrder,
+  rejectPurchaseOrder,
 } from "../services/inventoryService";
 import {
   PO_STATUS,
@@ -72,7 +74,22 @@ export function usePurchaseOrder(initialId = null) {
 
         if (initialId) {
           existingOrder = results[3];
-          setOrder(existingOrder);
+          // Map backend camelCase → frontend snake_case field names
+          const mappedOrder = {
+            ...existingOrder,
+            po_number: existingOrder.orderNumber || existingOrder.po_number,
+            supplier_id: existingOrder.supplierId || existingOrder.supplier_id,
+            supplier_name: existingOrder.supplierName || existingOrder.supplier_name,
+            contract_id: existingOrder.contractId || existingOrder.contract_id,
+            contract_number: existingOrder.contractNumber || existingOrder.contract_number,
+            contract_title: existingOrder.contractTitle || existingOrder.contract_title,
+            discount: Number(existingOrder.discountAmount || existingOrder.discount || 0),
+            tax_percent: Number(existingOrder.taxPercent || existingOrder.tax_percent || 0),
+            shipping_fee: Number(existingOrder.shippingFee || existingOrder.shipping_fee || 0),
+            paid_amount: Number(existingOrder.paidAmount || existingOrder.paid_amount || 0),
+            location_id: existingOrder.locationId || existingOrder.location_id || null,
+          };
+          setOrder(mappedOrder);
           
           if (existingOrder.items) {
              const mappedItems = existingOrder.items.map(item => ({
@@ -83,6 +100,7 @@ export function usePurchaseOrder(initialId = null) {
                 total: item.totalCost || item.total_cost,
                 quantity: item.quantity,
                 received_quantity: item.receivedQuantity ?? item.received_quantity ?? 0,
+                expiry_date: item.expiryDate || item.expiry_date || "",
                 name: item.name || results[0].find(p => p.id === (item.productId || item.product_id))?.name || "Sản phẩm",
              }));
              setItems(mappedItems);
@@ -365,10 +383,7 @@ export function usePurchaseOrder(initialId = null) {
 
       setSaving(true);
       try {
-        await fetch(`http://localhost:8081/api/inventory/purchase-orders/${initialId}/approve`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-        });
+        await approvePurchaseOrder(initialId);
 
         alert("Đã duyệt phiếu nhập! Chuyển sang bước kiểm kê.");
         if (navigate) navigate("/inventory/purchase-orders");
@@ -386,7 +401,7 @@ export function usePurchaseOrder(initialId = null) {
 
   // NV kho bắt đầu kiểm kê (CONFIRMED → CHECKING)
   const startChecking = useCallback(
-    async (navigate) => {
+    async () => {
       if (!initialId) return false;
 
       if (!window.confirm("Bắt đầu kiểm kê hàng hóa?")) {
@@ -395,10 +410,10 @@ export function usePurchaseOrder(initialId = null) {
 
       setSaving(true);
       try {
-        await startCheckingOrder(initialId);
+        const updatedOrder = await startCheckingOrder(initialId);
+        // Cập nhật trạng thái trực tiếp → UI chuyển sang màn hình CHECKING
+        setOrder((prev) => ({ ...prev, status: PO_STATUS.CHECKING }));
         alert("Đã bắt đầu kiểm kê. Vui lòng nhập số lượng thực nhận cho từng sản phẩm.");
-        if (navigate) navigate(`/inventory/purchase-orders/${initialId}`);
-        else window.location.reload();
         return true;
       } catch (err) {
         console.error("Start checking error:", err);
@@ -464,13 +479,7 @@ export function usePurchaseOrder(initialId = null) {
 
       setSaving(true);
       try {
-        const response = await fetch(`http://localhost:8081/api/inventory/purchase-orders/${initialId}/reject`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rejectionReason }),
-        });
-        
-        if (!response.ok) throw new Error('Lỗi từ chối phiếu');
+        await rejectPurchaseOrder(initialId, rejectionReason);
         
         alert("Đã từ chối phiếu nhập.");
         if (navigate) navigate("/inventory/purchase-orders");

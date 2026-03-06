@@ -156,11 +156,15 @@ function mapOrderToBackend(orderData) {
       orderData.poNumber,
     supplierId: orderData.supplier_id || orderData.supplierId,
     contractId: orderData.contract_id || orderData.contractId || null,
+    locationId: orderData.location_id || orderData.locationId || null,
     status: orderData.status,
     discountAmount: orderData.discount || orderData.discountAmount || 0,
     taxAmount: orderData.tax_amount || orderData.taxAmount || 0,
+    taxPercent: orderData.tax_percent || orderData.taxPercent || 0,
     subtotal: orderData.subtotal || 0,
     totalAmount: orderData.total_amount || orderData.totalAmount || 0,
+    shippingFee: orderData.shipping_fee || orderData.shippingFee || 0,
+    paidAmount: orderData.paid_amount || orderData.paidAmount || 0,
     expectedDeliveryDate:
       orderData.expected_delivery_date ||
       orderData.expectedDeliveryDate ||
@@ -176,6 +180,7 @@ function mapOrderToBackend(orderData) {
       unitCost: item.unit_price || item.unitPrice || item.unitCost || 0,
       totalCost: item.total || item.totalCost || 0,
       receivedQuantity: item.received_quantity || item.receivedQuantity || 0,
+      expiryDate: item.expiry_date || item.expiryDate || null,
       notes: item.notes || "",
     })),
   };
@@ -196,7 +201,10 @@ export const startCheckingOrder = async (id) => {
     method: "PUT",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to start checking");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi bắt đầu kiểm kê");
+  }
   return response.json();
 };
 
@@ -206,7 +214,35 @@ export const receiveGoodsOrder = async (id, receiptData) => {
     headers: getAuthHeaders(),
     body: JSON.stringify(receiptData),
   });
-  if (!response.ok) throw new Error("Failed to receive goods");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi xác nhận nhập kho");
+  }
+  return response.json();
+};
+
+export const approvePurchaseOrder = async (id) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/approve`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi duyệt phiếu nhập");
+  }
+  return response.json();
+};
+
+export const rejectPurchaseOrder = async (id, rejectionReason) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/reject`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ rejectionReason }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi từ chối phiếu nhập");
+  }
   return response.json();
 };
 
