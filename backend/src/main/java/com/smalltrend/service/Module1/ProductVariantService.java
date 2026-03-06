@@ -61,6 +61,7 @@ public class ProductVariantService {
         ProductVariantRespone r = new ProductVariantRespone();
         r.setId(variant.getId());
         r.setSku(variant.getSku());
+        r.setBarcode(variant.getBarcode());
 
         String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
         StringBuilder nameBuilder = new StringBuilder(productName);
