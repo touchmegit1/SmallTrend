@@ -8,7 +8,7 @@ import UnitConversionSection from "./UnitConversionSection";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
-// Modal Component hiển thị thông tin và cho phép Chỉnh sửa một Variant (Biến thể)
+// Modal Component hiển thị thông tin và cho phép Chỉnh sửa một Variant (Loại sản phẩm)
 // Cho phép update giá bán, hình ảnh...
 export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSave }) {
   const { units, loading: unitsLoading } = useFetchUnits();
@@ -17,7 +17,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     sku: "",
     barcode: "",
     unit_id: "",
-    unit_value: "",
     sell_price: "",
     is_active: true,
   });
@@ -37,12 +36,21 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sku: variant.sku || "",
         barcode: variant.barcode || "",
         unit_id: variant.unit_id ? String(variant.unit_id) : "",
-        unit_value: variant.unit_value != null ? String(variant.unit_value) : "",
-        sell_price: variant.sell_price != null ? String(variant.sell_price) : "",
-        is_active: parentProduct?.is_active === false ? false : (variant.is_active ?? true),
+        sell_price:
+          variant.sell_price != null ? String(variant.sell_price) : "",
+        is_active:
+          parentProduct?.is_active === false
+            ? false
+            : (variant.is_active ?? true),
       });
       setImageFile(null);
-      setImagePreview(variant.image_url ? (variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`) : null);
+      setImagePreview(
+        variant.image_url
+          ? variant.image_url.startsWith("http")
+            ? variant.image_url
+            : `http://localhost:8081${variant.image_url.startsWith("/") ? "" : "/"}${variant.image_url}`
+          : null,
+      );
       setErrorMsg("");
 
       const attrsObj = variant.attributes || {};
@@ -171,7 +179,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sku: formData.sku,
         barcode: formData.barcode || null,
         unitId: parseInt(formData.unit_id),
-        unitValue: formData.unit_value ? parseFloat(formData.unit_value) : null,
         sellPrice: parseFloat(formData.sell_price),
         imageUrl: imageUrl,
         isActive: formData.is_active,
@@ -183,7 +190,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         sku: formData.sku,
         barcode: formData.barcode,
         unit_id: parseInt(formData.unit_id),
-        unit_value: formData.unit_value ? parseFloat(formData.unit_value) : null,
         sell_price: parseFloat(formData.sell_price),
         image_url: imageUrl,
         is_active: formData.is_active,
@@ -194,8 +200,8 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       const msg =
         err.response?.data?.message ||
         err.response?.data ||
-        "Lỗi khi cập nhật biến thể!";
-      setErrorMsg(typeof msg === "string" ? msg : "Lỗi khi cập nhật biến thể!");
+        "Lỗi khi cập nhật loại sản phẩm!";
+      setErrorMsg(typeof msg === "string" ? msg : "Lỗi khi cập nhật loại sản phẩm!");
     } finally {
       setSaving(false);
     }
@@ -209,9 +215,9 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold">Chỉnh sửa biến thể</h2>
+            <h2 className="text-2xl font-bold">Chỉnh sửa loại sản phẩm</h2>
             <p className="text-gray-500 text-sm mt-1">
-              Cập nhật thông tin biến thể sản phẩm
+              Cập nhật thông tin loại sản phẩm sản phẩm
             </p>
           </div>
           <button
@@ -232,7 +238,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
           <Card className="border border-gray-300 rounded-lg bg-white">
             <CardHeader>
               <CardTitle className="text-xl font-bold">
-                Thông tin biến thể
+                Thông tin loại sản phẩm
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -282,21 +288,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                     ))}
                   </select>
                 </div>
-                <div>
-                  <Label>Giá trị đơn vị</Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    className="text-md bg-gray-200 border border-gray-200 rounded-lg"
-                    placeholder="VD: 500"
-                    name="unit_value"
-                    value={formData.unit_value}
-                    onChange={handleChange}
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    VD: 500 (ml), 1 (kg), 250 (g)
-                  </p>
-                </div>
+
               </div>
 
               <div>
@@ -334,7 +326,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                 </select>
                 {parentProduct?.is_active === false && (
                   <p className="text-xs text-red-500 mt-1">
-                    Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt biến thể.
+                    Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt loại sản phẩm.
                   </p>
                 )}
               </div>
@@ -393,7 +385,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
           {/* Image Upload */}
           <Card className="border border-gray-300 rounded-lg bg-white mt-4">
             <CardHeader>
-              <CardTitle className="text-xl font-bold">Hình ảnh biến thể</CardTitle>
+              <CardTitle className="text-xl font-bold">Hình ảnh loại sản phẩm</CardTitle>
             </CardHeader>
             <CardContent>
               <input
@@ -405,7 +397,10 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
               />
 
               {imagePreview ? (
-                <div className="relative rounded-2xl overflow-hidden group border border-gray-200" style={{ height: '300px' }}>
+                <div
+                  className="relative rounded-2xl overflow-hidden group border border-gray-200"
+                  style={{ height: "300px" }}
+                >
                   <img
                     src={imagePreview}
                     alt="Preview"
@@ -434,7 +429,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   tabIndex={0}
                   onClick={() => fileInputRef.current?.click()}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       fileInputRef.current?.click();
                     }
@@ -443,10 +438,10 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
-                    ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]'
-                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
+                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
+                      : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
                     }`}
-                  style={{ height: '300px' }}
+                  style={{ height: "300px" }}
                 >
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
                     <ImageIcon className="w-10 h-10 text-blue-600" />

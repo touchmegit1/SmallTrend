@@ -148,7 +148,7 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
             )}
 
             {conversions.length === 0 && !isAdding && !editingId && (
-                <p className="text-xs text-gray-400 italic text-center py-2">Biến thể này chưa có phép quy đổi đơn vị nào.</p>
+                <p className="text-xs text-gray-400 italic text-center py-2">Loại sản phẩm này chưa có phép quy đổi đơn vị nào.</p>
             )}
 
             {/* Form Thêm/Sửa quy đổi */}

@@ -73,6 +73,11 @@ function RootRedirect() {
   ) : (
     <Navigate to="/crm/homepage" replace />
   );
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/crm/homepage" replace />
+  );
 }
 
 function App() {
@@ -297,3 +302,4 @@ function App() {
 }
 
 export default App;
+

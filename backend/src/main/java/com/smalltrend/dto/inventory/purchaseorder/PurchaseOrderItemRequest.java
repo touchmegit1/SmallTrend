@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Data
 @Builder
@@ -18,9 +17,9 @@ public class PurchaseOrderItemRequest {
     private String sku;
     private String name;
     private Integer quantity;
-    private BigDecimal unitPrice;
-    private BigDecimal discount;
-    private BigDecimal total;
-    private String expiryDate;
-    private List<BatchRequest> batches;
+    private BigDecimal unitCost;
+    private BigDecimal totalCost;
+    private Integer receivedQuantity;
+    private String notes;
+    private java.time.LocalDate expiryDate;
 }

@@ -20,7 +20,7 @@ import api from "../../../config/axiosConfig";
 /**
  * Màn hình Chi tiết Sản phẩm (ProductDetail)
  * Cho phép xem tổng quan thông tin metadata (Thuế, Tên, Hình ảnh, Brand) 
- * Màn hình chịu trách nhiệm kết xuất và cho phép tao tác In tem dòng "Variants" (Biến thể sku thực giá)
+ * Màn hình chịu trách nhiệm kết xuất và cho phép tao tác In tem dòng "Variants" (Loại sản phẩm sku thực giá)
  */
 function ProductDetail() {
   const { id: productId } = useParams(); // Lấy mã ID sản phẩm trên path URL
@@ -66,7 +66,7 @@ function ProductDetail() {
   const confirmToggleStatus = async () => {
     try {
       await api.put(`/products/variants/${selectedVariant.id}/toggle-status`);
-      setToastMessage(`Đã ${selectedVariant.is_active ? 'ngừng' : 'kích hoạt'} bán biến thể!`);
+      setToastMessage(`Đã ${selectedVariant.is_active ? 'ngừng' : 'kích hoạt'} bán loại sản phẩm!`);
       fetchVariants();
       setTimeout(() => setToastMessage(""), 3000);
     } catch (err) {
@@ -100,7 +100,7 @@ function ProductDetail() {
    * Cập nhật danh sách sau khi Sửa lại Record Của 1 Variant thành công
    */
   const handleSaveVariant = (updatedVariant) => {
-    setToastMessage("Lưu thiết lập biến thể thành công!");
+    setToastMessage("Lưu thiết lập loại sản phẩm thành công!");
     setIsEditVariantModalOpen(false);
     fetchVariants(); // Tải lại list
     setTimeout(() => setToastMessage(""), 3000);
@@ -117,12 +117,12 @@ function ProductDetail() {
   const confirmDeleteVariant = async () => {
     try {
       await api.delete(`/products/variants/${deleteVariant.id}`);
-      setToastMessage("Đã xoá biến thể thành công!");
+      setToastMessage("Đã xoá loại sản phẩm thành công!");
       fetchVariants();
       setTimeout(() => setToastMessage(""), 3000);
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data || "Lỗi khi xoá biến thể!";
-      setToastMessage(typeof msg === "string" ? msg : "Lỗi khi xoá biến thể!");
+      const msg = err.response?.data?.message || err.response?.data || "Lỗi khi xoá loại sản phẩm!";
+      setToastMessage(typeof msg === "string" ? msg : "Lỗi khi xoá loại sản phẩm!");
       setTimeout(() => setToastMessage(""), 4000);
     } finally {
       setShowDeleteConfirm(false);
@@ -286,7 +286,7 @@ function ProductDetail() {
   }
 
   // Fallback Loading của API Variants
-  if (loading) return <p className="p-6 text-blue-600 font-medium animate-pulse">Đang đồng bộ biến thể (Loading variants...)</p>;
+  if (loading) return <p className="p-6 text-blue-600 font-medium animate-pulse">Đang đồng bộ loại sản phẩm (Loading variants...)</p>;
   if (error) return <p className="p-6 text-red-500 font-medium bg-red-50">{error}</p>;
 
   // Tool Date Format Text Convert
@@ -323,7 +323,7 @@ function ProductDetail() {
             <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-2">Thay đổi phân luồng sản phẩm</h3>
               <p className="text-gray-600 text-sm">
-                Xác nhận {selectedVariant?.is_active ? "Cấm bán/Chặn kho (Disable)" : "Kích hoạt đưa ra quầy (Enable)"} biến thể hiện tại?
+                Xác nhận {selectedVariant?.is_active ? "Cấm bán/Chặn kho (Disable)" : "Kích hoạt đưa ra quầy (Enable)"} loại sản phẩm hiện tại?
               </p>
             </div>
             <div className="p-5 bg-gray-50 flex gap-3 border-t">
@@ -343,9 +343,9 @@ function ProductDetail() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
             <div className="p-6 bg-gradient-to-r from-red-50 to-orange-50 rounded-t-2xl border-b border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Xác nhận xoá biến thể</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Xác nhận xoá loại sản phẩm</h3>
               <p className="text-gray-600 text-sm">
-                Bạn có chắc chắn muốn xoá biến thể <strong>{deleteVariant?.name || deleteVariant?.sku}</strong>? Hành động này không thể hoàn tác.
+                Bạn có chắc chắn muốn xoá loại sản phẩm <strong>{deleteVariant?.name || deleteVariant?.sku}</strong>? Hành động này không thể hoàn tác.
               </p>
             </div>
             <div className="p-5 bg-gray-50 flex gap-3 border-t">
@@ -353,7 +353,7 @@ function ProductDetail() {
                 Hủy
               </Button>
               <Button className="flex-1 h-10 rounded-xl font-semibold bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md border-0" onClick={confirmDeleteVariant}>
-                Xoá biến thể
+                Xoá loại sản phẩm
               </Button>
             </div>
           </div>
@@ -389,7 +389,7 @@ function ProductDetail() {
               <Box className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-500">Quy cách định danh (Biến thể)</p>
+              <p className="text-sm font-semibold text-gray-500">Quy cách định danh (Loại sản phẩm)</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{product.variant_count || variants.length}</p>
             </div>
           </div>
@@ -481,7 +481,7 @@ function ProductDetail() {
         </Card>
       </div>
 
-      {/* --- PHẦN 4: KHỐI TABLE QUẢN LÝ BIẾN THỂ (Variant Container) --- */}
+      {/* --- PHẦN 4: KHỐI TABLE QUẢN LÝ LOẠI SẢN PHẨM (Variant Container) --- */}
       <Card className="border border-gray-200 rounded-2xl bg-white shadow-md overflow-hidden">
 
         {/* Header Table Variant */}
@@ -491,7 +491,7 @@ function ProductDetail() {
               <Package className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Chi tiết phân loại biến thể</h2>
+              <h2 className="text-xl font-bold text-gray-900">Chi tiết phân loại loại sản phẩm</h2>
               <p className="text-xs text-gray-500 font-medium">Bảng kê mẫu mã thực thụ xuất nhập kho</p>
             </div>
           </div>
@@ -505,7 +505,7 @@ function ProductDetail() {
             <Button
               onClick={() => navigate("/products/addproduct_variant", { state: { product } })}
               className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md border border-transparent font-semibold shadow-indigo-500/20 px-5">
-              + Thêm biến thể
+              + Thêm loại sản phẩm
             </Button>
           </div>
         </div>
@@ -518,7 +518,7 @@ function ProductDetail() {
                 <Box className="w-8 h-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-1">Mặt hàng này đang là form trống rỗng</h3>
-              <p className="text-sm text-gray-500 mb-4 max-w-sm mx-auto">Vui lòng tạo tối thiểu 1 biến thể SKU (Màu/Size/Hương) để hệ thống có thể tạo Barcode tính tiền.</p>
+              <p className="text-sm text-gray-500 mb-4 max-w-sm mx-auto">Vui lòng tạo tối thiểu 1 loại sản phẩm SKU (Màu/Size/Hương) để hệ thống có thể tạo Barcode tính tiền.</p>
               <Button onClick={() => navigate("/products/addproduct_variant", { state: { product } })} variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl">Tạo ngay Variant</Button>
             </div>
           ) : (
@@ -527,7 +527,7 @@ function ProductDetail() {
                 <TableRow className="bg-gray-50 border-b border-gray-200">
                   <TableHead className="w-12 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">STT</TableHead>
                   <TableHead className="w-16 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Ảnh</TableHead>
-                  <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên biến thể</TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên loại sản phẩm</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mã SKU</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Barcode</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Thuộc tính</TableHead>
@@ -654,7 +654,7 @@ function ProductDetail() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              title="Xoá biến thể (trong 2 phút)"
+                              title="Xoá loại sản phẩm (trong 2 phút)"
                               onClick={() => handleDeleteVariant(variant)}
                               className="h-10 w-10 p-0 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-all hover:bg-red-50 text-red-500 focus:ring-0"
                             >
@@ -714,7 +714,7 @@ function ProductDetail() {
         />
       )}
 
-      {/* Modal Xem Barcode Biến thể */}
+      {/* Modal Xem Barcode Loại sản phẩm */}
       {showBarcodeModal && selectedBarcodeVariant && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200" onClick={() => setShowBarcodeModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full transform transition-all overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>

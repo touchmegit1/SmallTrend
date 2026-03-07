@@ -120,7 +120,6 @@ const PriceSetting = () => {
                 sku: variant.sku,
                 barcode: variant.barcode,
                 unitId: variant.unitId || 1, // Fallback to a default unit if null (Unit 1 usually exists)
-                unitValue: variant.unitValue || 1,
                 sellPrice: parsedPrice,
                 imageUrl: variant.imageUrl || null,
                 isActive: variant.isActive !== false // Fallback to true if undefined
@@ -172,7 +171,7 @@ const PriceSetting = () => {
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Thiết lập giá sản phẩm</h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            Quản lý giá nhập, giá bán và theo dõi lợi nhuận sau thuế của các biến thể.
+                            Quản lý giá nhập, giá bán và theo dõi lợi nhuận sau thuế của các loại sản phẩm.
                         </p>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">

@@ -2,11 +2,27 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useDisposalList } from "../../hooks/useDisposalList";
 import { formatCurrency } from "../../utils/inventory";
+import CustomSelect from "../../components/common/CustomSelect";
 
 const STATUS_CONFIG = {
-  DRAFT: { label: "Nháp", bg: "bg-yellow-50", text: "text-yellow-700", dot: "bg-yellow-500" },
-  CONFIRMED: { label: "Đã xác nhận", bg: "bg-green-50", text: "text-green-700", dot: "bg-green-500" },
-  CANCELLED: { label: "Đã hủy", bg: "bg-gray-50", text: "text-gray-600", dot: "bg-gray-400" },
+  DRAFT: {
+    label: "Nháp",
+    bg: "bg-yellow-50",
+    text: "text-yellow-700",
+    dot: "bg-yellow-500",
+  },
+  CONFIRMED: {
+    label: "Đã xác nhận",
+    bg: "bg-green-50",
+    text: "text-green-700",
+    dot: "bg-green-500",
+  },
+  CANCELLED: {
+    label: "Đã hủy",
+    bg: "bg-gray-50",
+    text: "text-gray-600",
+    dot: "bg-gray-400",
+  },
 };
 
 const REASON_CONFIG = {
@@ -76,7 +92,11 @@ export default function DisposalList() {
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     const date = new Date(dateStr);
-    return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
   return (
@@ -98,32 +118,19 @@ export default function DisposalList() {
       </div>
 
       {/* Status tabs */}
-      <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => {
-              setStatusFilter(tab.key);
-              setPage(1);
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === tab.key
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {tab.label}
-            <span
-              className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                statusFilter === tab.key
-                  ? "bg-red-100 text-red-700"
-                  : "bg-gray-200 text-gray-500"
-              }`}
-            >
-              {statusCounts[tab.key] || 0}
-            </span>
-          </button>
-        ))}
+      <div className="w-56 text-left">
+        <CustomSelect
+          value={statusFilter}
+          onChange={(val) => {
+            setStatusFilter(val);
+            setPage(1);
+          }}
+          options={statusTabs.map((tab) => ({
+            value: tab.key,
+            label: `${tab.label} (${statusCounts[tab.key] || 0})`,
+          }))}
+          variant="status"
+        />
       </div>
 
       {/* Search */}
@@ -186,7 +193,9 @@ export default function DisposalList() {
                 <tr>
                   <td colSpan="9" className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <p className="text-gray-500 text-sm font-medium">Chưa có phiếu xử lý nào</p>
+                      <p className="text-gray-500 text-sm font-medium">
+                        Chưa có phiếu xử lý nào
+                      </p>
                       <button
                         onClick={() => navigate("/inventory/disposal/create")}
                         className="mt-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
@@ -198,8 +207,10 @@ export default function DisposalList() {
                 </tr>
               ) : (
                 vouchers.map((v) => {
-                  const statusCfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
-                  const reasonCfg = REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
+                  const statusCfg =
+                    STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
+                  const reasonCfg =
+                    REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
 
                   return (
                     <tr
@@ -212,9 +223,7 @@ export default function DisposalList() {
                           {v.code}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        {reasonCfg.label}
-                      </td>
+                      <td className="px-4 py-3 text-sm">{reasonCfg.label}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {v.locationName || "—"}
                       </td>
@@ -234,7 +243,9 @@ export default function DisposalList() {
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.text}`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`}
+                          />
                           {statusCfg.label}
                         </span>
                       </td>
@@ -243,7 +254,11 @@ export default function DisposalList() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (window.confirm("Bạn có chắc muốn hủy phiếu này?")) {
+                              if (
+                                window.confirm(
+                                  "Bạn có chắc muốn hủy phiếu này?",
+                                )
+                              ) {
                                 cancelVoucher(v.id);
                               }
                             }}

@@ -44,9 +44,6 @@ public class ProductVariant {
     private String imageUrl;
     private BigDecimal sellPrice;
 
-    @Column(name = "unit_value")
-    private BigDecimal unitValue;
-
     @Builder.Default
     @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
     private boolean isActive = true;

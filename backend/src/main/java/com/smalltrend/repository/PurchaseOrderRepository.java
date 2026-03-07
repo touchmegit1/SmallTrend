@@ -12,11 +12,11 @@ import java.util.Optional;
 @Repository
 public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Integer> {
     
-    Optional<PurchaseOrder> findByPoNumber(String poNumber);
+    Optional<PurchaseOrder> findByOrderNumber(String orderNumber);
     
     List<PurchaseOrder> findBySupplierId(Integer supplierId);
     
-    List<PurchaseOrder> findByStatus(String status);
+    List<PurchaseOrder> findByStatus(com.smalltrend.entity.enums.PurchaseOrderStatus status);
     
     List<PurchaseOrder> findAllByOrderByCreatedAtDesc();
     

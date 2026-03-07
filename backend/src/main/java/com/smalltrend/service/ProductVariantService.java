@@ -91,7 +91,6 @@ public class ProductVariantService {
                 .sku(request.getSku())
                 .barcode(request.getBarcode())
                 .unit(unit)
-                .unitValue(request.getUnitValue())
                 .sellPrice(request.getSellPrice())
                 .imageUrl(request.getImageUrl())
                 .isActive(isVariantActive)
@@ -123,7 +122,7 @@ public class ProductVariantService {
         variant.setSku(request.getSku());
         variant.setBarcode(request.getBarcode());
         variant.setUnit(unit);
-        variant.setUnitValue(request.getUnitValue());
+
         variant.setSellPrice(request.getSellPrice());
         if (request.getImageUrl() != null) {
             variant.setImageUrl(request.getImageUrl());
@@ -181,17 +180,11 @@ public class ProductVariantService {
         String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
         StringBuilder nameBuilder = new StringBuilder(productName);
 
-        java.math.BigDecimal unitValue = variant.getUnitValue();
         String unitNameStr = variant.getUnit() != null ? variant.getUnit().getName() : "";
 
-        if (unitValue != null || (unitNameStr != null && !unitNameStr.trim().isEmpty())) {
-            nameBuilder.append(" - ");
-            if (unitValue != null) {
-                nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
-            }
-            if (unitNameStr != null && !unitNameStr.trim().isEmpty()) {
-                nameBuilder.append(unitNameStr.trim());
-            }
+        if (unitNameStr != null && !unitNameStr.trim().isEmpty()) {
+            nameBuilder.append(" ");
+            nameBuilder.append(unitNameStr.trim());
         }
 
         java.util.Map<String, String> attributes = variant.getAttributes();
@@ -209,7 +202,7 @@ public class ProductVariantService {
         if (variant.getUnit() != null) {
             response.setUnitId(variant.getUnit().getId());
         }
-        response.setUnitValue(variant.getUnitValue());
+
         response.setImageUrl(variant.getImageUrl());
         response.setSellPrice(variant.getSellPrice());
         response.setIsActive(variant.isActive());

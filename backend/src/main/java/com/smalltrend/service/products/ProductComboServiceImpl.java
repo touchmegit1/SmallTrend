@@ -231,24 +231,10 @@ public class ProductComboServiceImpl implements ProductComboService {
             String productName = item.getProductVariant().getProduct().getName();
             String unitName = item.getProductVariant().getUnit() != null ? item.getProductVariant().getUnit().getName()
                     : null;
-            java.math.BigDecimal unitValue = item.getProductVariant().getUnitValue();
 
             StringBuilder nameBuilder = new StringBuilder(productName != null ? productName : "");
-            if (unitValue != null || (unitName != null && !unitName.isEmpty())) {
-                nameBuilder.append(" - ");
-                if (unitValue != null) {
-                    if (unitValue.stripTrailingZeros().scale() <= 0) {
-                        nameBuilder.append(unitValue.toBigInteger().toString());
-                    } else {
-                        nameBuilder.append(unitValue.stripTrailingZeros().toPlainString());
-                    }
-                    if (unitName != null && !unitName.isEmpty()) {
-                        // Let's not add space to match ProductVariantService `20g` instead of `20 g`
-                    }
-                }
-                if (unitName != null && !unitName.isEmpty()) {
-                    nameBuilder.append(unitName.trim());
-                }
+            if (unitName != null && !unitName.isEmpty()) {
+                nameBuilder.append(" - ").append(unitName.trim());
             }
 
             java.util.Map<String, String> attributes = item.getProductVariant().getAttributes();

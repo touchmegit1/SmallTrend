@@ -108,7 +108,6 @@ export function ProductListScreen() {
             is_active: v.isActive,
             created_at: v.createdAt,
             unit_name: v.unitName,
-            unit_value: v.unitValue,
             attributes: v.attributes,
           }));
           setVariantsData(mapped);
@@ -301,7 +300,7 @@ export function ProductListScreen() {
   ], [filterBrand, productsForBrand]);
 
   const variantOptions = useMemo(() => [
-    { value: null, label: !filterProduct ? '-- Chọn sản phẩm trước --' : (variantsLoading ? 'Đang tải...' : 'Tất cả biến thể') },
+    { value: null, label: !filterProduct ? '-- Chọn sản phẩm trước --' : (variantsLoading ? 'Đang tải...' : 'Tất cả loại sản phẩm') },
     ...(variantsData || []).map((v) => ({ value: String(v.id), label: v.name })),
   ], [filterProduct, variantsLoading, variantsData]);
 
@@ -438,7 +437,7 @@ export function ProductListScreen() {
                 { step: 1, label: "Danh mục" },
                 { step: 2, label: "Thương hiệu" },
                 { step: 3, label: "Sản phẩm" },
-                { step: 4, label: "Biến thể" },
+                { step: 4, label: "Loại sản phẩm" },
               ].map((s, i) => {
                 const completed = activeStep >= s.step;
                 const isCurrent = activeStep === s.step - 1;
@@ -549,7 +548,7 @@ export function ProductListScreen() {
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                   <Puzzle className="w-3.5 h-3.5 text-amber-500" />
-                  Biến thể
+                  Loại sản phẩm
                 </label>
                 <select
                   value={filterVariant || ''}
@@ -557,7 +556,7 @@ export function ProductListScreen() {
                   disabled={!filterProduct || variantsLoading}
                   className="w-full px-4 py-2.5 text-sm font-medium rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">{!filterProduct ? '-- Chọn sản phẩm trước --' : (variantsLoading ? 'Đang tải...' : 'Tất cả biến thể')}</option>
+                  <option value="">{!filterProduct ? '-- Chọn sản phẩm trước --' : (variantsLoading ? 'Đang tải...' : 'Tất cả loại sản phẩm')}</option>
                   {variantsData.map((v) => (
                     <option key={v.id} value={String(v.id)}>
                       {v.name}
@@ -623,13 +622,13 @@ export function ProductListScreen() {
               <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 p-4">
                 <CardTitle className="text-lg font-bold text-amber-800 flex items-center gap-2">
                   <Puzzle className="w-5 h-5" />
-                  Chi tiết biến thể
+                  Chi tiết loại sản phẩm
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Tên biến thể</p>
+                    <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Tên loại sản phẩm</p>
                     <p className="font-bold text-gray-900">{variant.name}</p>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
@@ -648,7 +647,7 @@ export function ProductListScreen() {
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Đơn vị</p>
-                    <p className="font-medium text-gray-700">{variant.unit_name || 'N/A'} {variant.unit_value ? `(${variant.unit_value})` : ''}</p>
+                    <p className="font-medium text-gray-700">{variant.unit_name || 'N/A'}</p>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Trạng thái</p>
@@ -684,14 +683,14 @@ export function ProductListScreen() {
             <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-200 p-4">
               <CardTitle className="text-lg font-bold text-emerald-800 flex items-center gap-2">
                 <Puzzle className="w-5 h-5" />
-                Các biến thể của sản phẩm ({variantsData.length} biến thể)
+                Các loại sản phẩm của sản phẩm ({variantsData.length} loại sản phẩm)
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-gray-50 to-slate-50 border-b-2 border-gray-200">
-                    <TableHead className="font-semibold">Biến thể</TableHead>
+                    <TableHead className="font-semibold">Loại sản phẩm</TableHead>
                     <TableHead className="font-semibold">SKU</TableHead>
                     <TableHead className="font-semibold">Giá bán</TableHead>
                     <TableHead className="font-semibold">Đơn vị</TableHead>
@@ -751,7 +750,7 @@ export function ProductListScreen() {
         {filterProduct && variantsLoading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 text-emerald-500 animate-spin mr-2" />
-            <span className="text-gray-500 text-sm">Đang tải biến thể...</span>
+            <span className="text-gray-500 text-sm">Đang tải loại sản phẩm...</span>
           </div>
         )}
 
@@ -777,7 +776,7 @@ export function ProductListScreen() {
                   </TableHead>
                   <TableHead className="font-semibold">Danh mục</TableHead>
                   <TableHead className="font-semibold">Thuế</TableHead>
-                  <TableHead className="font-semibold">Biến thể</TableHead>
+                  <TableHead className="font-semibold">Loại sản phẩm</TableHead>
                   <TableHead className="font-semibold">Trạng thái</TableHead>
                   <TableHead
                     className="cursor-pointer hover:bg-blue-50 select-none transition-colors font-semibold"
@@ -840,10 +839,10 @@ export function ProductListScreen() {
                         </Badge>
                       </TableCell>
 
-                      {/* Cột 4: Biến thể */}
+                      {/* Cột 4: Loại sản phẩm */}
                       <TableCell>
                         <Badge className="bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 border border-purple-200 font-medium" variant="ghost">
-                          {product.variant_count} biến thể
+                          {product.variant_count} loại sản phẩm
                         </Badge>
                       </TableCell>
 

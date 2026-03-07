@@ -28,11 +28,11 @@
   --radius-sm: calc(var(--radius) - 4px);
 
   /* Font family */
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: "Inter", sans-serif;
 
   /* Animations */
-  --animate-cursor: cursor .6s linear infinite alternate;
-  --animate-type: type 1.8s ease-in .8s 1 normal both;
+  --animate-cursor: cursor 0.6s linear infinite alternate;
+  --animate-type: type 1.8s ease-in 0.8s 1 normal both;
   --animate-fade-in: fade-in 0.5s ease-out;
   --animate-pulse-slow: pulse-slow 2s infinite;
   --animate-slide-in: slide-in 0.3s ease-out;
@@ -119,6 +119,17 @@
     -moz-osx-font-smoothing: grayscale;
     color: hsl(var(--foreground));
     background-color: rgb(248 250 252);
+  }
+
+  /* Ẩn nút tăng giảm trên input number */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
   }
 }
 

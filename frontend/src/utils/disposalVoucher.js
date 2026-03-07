@@ -37,12 +37,16 @@ export const REASON_TYPE = {
   EXPIRED: "EXPIRED",
   DAMAGED: "DAMAGED",
   LOST: "LOST",
+  OBSOLETE: "OBSOLETE",
+  OTHER: "OTHER",
 };
 
 export const REASON_CONFIG = {
   [REASON_TYPE.EXPIRED]: { label: "Hết hạn sử dụng" },
   [REASON_TYPE.DAMAGED]: { label: "Hư hỏng" },
   [REASON_TYPE.LOST]: { label: "Thất thoát" },
+  [REASON_TYPE.OBSOLETE]: { label: "Lỗi thời" },
+  [REASON_TYPE.OTHER]: { label: "Khác" },
 };
 
 // ─── Allowed Transitions ─────────────────────────────────────

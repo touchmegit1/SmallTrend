@@ -8,7 +8,7 @@ public class CreateVariantRequest {
     private String sku;
     private String barcode;
     private Integer unitId;
-    private BigDecimal unitValue;
+
     private BigDecimal sellPrice;
     private String imageUrl;
     private Boolean isActive;

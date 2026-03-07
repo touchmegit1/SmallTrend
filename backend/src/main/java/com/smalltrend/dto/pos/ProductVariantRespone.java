@@ -19,7 +19,7 @@ public class ProductVariantRespone {
     private String brandName;
     private Integer unitId;
     private String unitName;
-    private java.math.BigDecimal unitValue;
+
     private String imageUrl;
     private Map<String, String> attributes;
     private Boolean isActive;
