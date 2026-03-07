@@ -224,30 +224,42 @@ public class ProductVariantService {
     }
 
     /**
-     * Generate internal barcode for store-created products.
-     * Format: 20 + ProductID(4 digits) + VariantSeq(4 digits) + Random(3 digits)
-     * Total: 13 digits (EAN-13 compatible)
+     * Generate internal barcode for store-created products using EAN-13 standard.
+     * Format: 893 (Country) + 00001 (Company) + XXXX (Product) + C (Check Digit)
+     * Total: 13 digits
      */
     public String generateInternalBarcode(Integer productId) {
-        String productIdStr = String.format("%04d", productId % 10000);
-
-        // Count existing variants for sequence
-        List<ProductVariant> existingVariants = productVariantRepository.findByProductId(productId);
-        int seq = existingVariants.size() + 1;
-        String seqStr = String.format("%04d", seq % 10000);
+        String countryCode = "893"; // Việt Nam
+        String companyCode = "00001"; // Mã công ty (giả định cửa hàng dùng mã 00001)
 
         Random random = new Random();
-        String randomStr = String.format("%03d", random.nextInt(1000));
+        // Cấu trúc: 893 + XXXXX (company) + XXXX (product)
+        // Dùng random 4 số cho mã sản phẩm để đảm bảo ngẫu nhiên cho các biến thể
+        String productCode = String.format("%04d", random.nextInt(10000));
 
-        String barcode = "20" + productIdStr + seqStr + randomStr;
+        String withoutCheckDigit = countryCode + companyCode + productCode;
+        String barcode = withoutCheckDigit + calculateEan13CheckDigit(withoutCheckDigit);
 
         // Ensure uniqueness
         while (productVariantRepository.existsByBarcode(barcode)) {
-            randomStr = String.format("%03d", random.nextInt(1000));
-            barcode = "20" + productIdStr + seqStr + randomStr;
+            productCode = String.format("%04d", random.nextInt(10000));
+            withoutCheckDigit = countryCode + companyCode + productCode;
+            barcode = withoutCheckDigit + calculateEan13CheckDigit(withoutCheckDigit);
         }
 
         return barcode;
+    }
+
+    private int calculateEan13CheckDigit(String barcode12) {
+        int sum = 0;
+        for (int i = 0; i < 12; i++) {
+            int digit = Character.getNumericValue(barcode12.charAt(i));
+            // EAN-13 quy tắc: Vị trí chẵn (index lẻ 1,3,5...) nhân 3, vị trí lẻ (index chẵn
+            // 0,2,4...) nhân 1
+            sum += (i % 2 == 0) ? digit : digit * 3;
+        }
+        int checkDigit = 10 - (sum % 10);
+        return (checkDigit == 10) ? 0 : checkDigit;
     }
 
     public void toggleVariantStatus(Integer variantId) {
