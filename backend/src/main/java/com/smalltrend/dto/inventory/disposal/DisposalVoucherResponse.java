@@ -23,6 +23,7 @@ public class DisposalVoucherResponse {
     private Long createdBy;
     private String createdByName;
     private LocalDateTime createdAt;
+    private String rejectionReason;
     private Long confirmedBy;
     private String confirmedByName;
     private LocalDateTime confirmedAt;

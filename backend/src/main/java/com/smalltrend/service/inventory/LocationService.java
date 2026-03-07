@@ -30,6 +30,14 @@ public class LocationService {
                 .collect(Collectors.toList());
     }
 
+    // ─── GET ACTIVE LOCATIONS ONLY (for dropdowns) ──────────
+    public List<FullLocationResponse> getActiveLocations() {
+        return locationRepository.findAll().stream()
+                .filter(loc -> loc.getStatus() == null || "ACTIVE".equals(loc.getStatus()))
+                .map(loc -> toResponseWithStock(loc))
+                .collect(Collectors.toList());
+    }
+
     // ─── GET BY ID (with stock details) ─────────────────────
     public FullLocationResponse getLocationById(Integer id) {
         Location loc = locationRepository.findById(id)
@@ -90,6 +98,35 @@ public class LocationService {
             throw new RuntimeException("Location not found: " + id);
         }
         locationRepository.deleteById(id);
+    }
+
+    // ─── TOGGLE STATUS (ACTIVE ↔ INACTIVE) ──────────────
+    @Transactional
+    public FullLocationResponse toggleLocationStatus(Integer id) {
+        Location loc = locationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Location not found: " + id));
+
+        if ("ACTIVE".equals(loc.getStatus())) {
+            // Check if inventory is 0 before deactivating
+            List<InventoryStock> stocks;
+            try {
+                stocks = inventoryStockRepository.findByLocationIdWithProduct(id);
+            } catch (Exception e) {
+                stocks = new ArrayList<>();
+            }
+            int totalQty = stocks.stream()
+                    .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0)
+                    .sum();
+            if (totalQty > 0) {
+                throw new RuntimeException("Vui lòng chuyển hết hàng hóa sang vị trí khác trước khi đóng vị trí này");
+            }
+            loc.setStatus("INACTIVE");
+        } else {
+            loc.setStatus("ACTIVE");
+        }
+
+        Location saved = locationRepository.save(loc);
+        return toResponseWithStock(saved);
     }
 
     // ─── Mapper: Location → Response WITH stock info ────────

@@ -9,7 +9,7 @@ import PurchaseItemTable from "../../components/inventory/purchase/PurchaseItemT
 import BatchEditorModal from "../../components/inventory/purchase/BatchEditorModal";
 import SummaryPanel from "../../components/inventory/purchase/SummaryPanel";
 import ActionButtons from "../../components/inventory/purchase/ActionButtons";
-import RejectionModal from "../../components/inventory/purchase/RejectionModal";
+import RejectionModal from "../../components/ui/RejectionModal";
 import GoodsReceiptTable from "../../components/inventory/purchase/GoodsReceiptTable";
 
 function CreatePurchaseOrder() {
@@ -21,7 +21,6 @@ function CreatePurchaseOrder() {
     products,
     suppliers,
     locations,
-    contracts,
     filteredSuppliers,
     loading,
     saving,
@@ -33,8 +32,6 @@ function CreatePurchaseOrder() {
     setSupplierQuery,
     selectSupplier,
     clearSupplier,
-    selectContract,
-    clearContract,
     updateOrder,
     addProduct,
     importProducts,
@@ -144,13 +141,10 @@ function CreatePurchaseOrder() {
           suppliers={suppliers}
           filteredSuppliers={filteredSuppliers}
           locations={locations}
-          contracts={contracts}
           supplierQuery={supplierQuery}
           setSupplierQuery={setSupplierQuery}
           selectSupplier={selectSupplier}
           clearSupplier={clearSupplier}
-          selectContract={selectContract}
-          clearContract={clearContract}
           updateOrder={updateOrder}
           isEditable={isEditable}
         />

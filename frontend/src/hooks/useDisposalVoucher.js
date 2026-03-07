@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useToast } from "../components/ui/Toast";
 import {
   DV_STATUS,
   REASON_TYPE,
@@ -6,16 +7,18 @@ import {
   validateForConfirm,
   DEFAULT_VOUCHER,
 } from "../utils/disposalVoucher";
-import { getProductBatches, getDashboardProducts, getLocations } from "../services/inventoryService";
+import { getProductBatches, getDashboardProducts, getActiveLocations } from "../services/inventoryService";
 import { 
   getDisposalVoucherById, 
   getNextDisposalCode,
   saveDisposalDraft,
-  confirmDisposalVoucher as apiConfirmDisposalVoucher,
-  cancelDisposalVoucher as apiCancelDisposalVoucher
+  submitDisposalVoucher,
+  approveDisposalVoucher,
+  rejectDisposalVoucher
 } from "../services/disposalService";
 
 export function useDisposalVoucher(voucherId = null) {
+  const toast = useToast();
   const [voucher, setVoucher] = useState({ ...DEFAULT_VOUCHER });
   const [items, setItems] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -33,14 +36,14 @@ export function useDisposalVoucher(voucherId = null) {
         const [batchesData, productsData, locsData] = await Promise.all([
           getProductBatches(),
           getDashboardProducts(),
-          getLocations(),
+          getActiveLocations(),
         ]);
 
         if (cancelled) return;
 
         setBatches(batchesData);
         setProducts(productsData);
-        setLocations(locsData.filter((l) => l.status === "ACTIVE"));
+        setLocations(locsData);
 
         if (voucherId) {
           const voucherData = await getDisposalVoucherById(voucherId);
@@ -83,7 +86,8 @@ export function useDisposalVoucher(voucherId = null) {
     });
   }, [batches, products]);
 
-  const isEditable = voucher.status === DV_STATUS.DRAFT;
+  const isEditable =
+    voucher.status === DV_STATUS.DRAFT || voucher.status === DV_STATUS.REJECTED;
 
   // ─── Update voucher fields ─────────────────────────────
   const updateVoucher = useCallback((field, value) => {
@@ -163,16 +167,39 @@ export function useDisposalVoucher(voucherId = null) {
     }
   }, [voucher, items]);
 
-  // ─── Confirm (stock deduction) ─────────────────────────
-  const confirmVoucherAction = useCallback(async () => {
+  // ─── Submit for approval ───────────────────────────────
+  const submitVoucherAction = useCallback(async () => {
     // Validate
     const validationErrors = validateForConfirm(voucher, items, batches);
     if (validationErrors.length > 0) {
-      alert("Không thể xác nhận:\n" + validationErrors.join("\n"));
+      toast.warning(validationErrors.join(", "), { title: "Không thể gửi duyệt", duration: 5000 });
       return false;
     }
 
-    if (!window.confirm("Xác nhận xử lý? Tồn kho sẽ bị trừ ngay lập tức.")) {
+    if (!window.confirm("Gửi phiếu này cho quản lý để chờ duyệt?")) return false;
+
+    setSaving(true);
+    try {
+      let currentVoucherId = voucherId || voucher.id;
+      if (!currentVoucherId) {
+        const saved = await saveDraft();
+        currentVoucherId = saved.id;
+      }
+      const submittedVoucher = await submitDisposalVoucher(currentVoucherId);
+      setVoucher(submittedVoucher);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      toast.error("Lỗi khi gửi duyệt: " + err.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [voucher, items, batches, voucherId, saveDraft]);
+
+  // ─── Approve (stock deduction) ─────────────────────────
+  const approveVoucherAction = useCallback(async () => {
+    if (!window.confirm("Xác nhận duyệt phiếu xử lý? Tồn kho sẽ bị trừ ngay lập tức.")) {
       return false;
     }
 
@@ -181,41 +208,38 @@ export function useDisposalVoucher(voucherId = null) {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const userId = user.id || 1;
 
-      // 1. Save the voucher first (as draft, to persist items)
-      let currentVoucherId = voucherId || voucher.id;
-      if (!currentVoucherId) {
-        const saved = await saveDraft();
-        currentVoucherId = saved.id;
-      }
+      const currentVoucherId = voucherId || voucher.id;
+      const approvedVoucher = await approveDisposalVoucher(currentVoucherId, userId);
 
-      // 2. Request backend to confirm to perform stock subtraction automatically
-      const confirmedVoucher = await apiConfirmDisposalVoucher(currentVoucherId, userId);
-
-      setVoucher(confirmedVoucher);
+      setVoucher(approvedVoucher);
       return true;
     } catch (err) {
       setError(err.message);
-      alert("Lỗi khi xác nhận: " + err.message);
+      toast.error("Lỗi khi duyệt: " + err.message);
       return false;
     } finally {
       setSaving(false);
     }
-  }, [voucher, items, batches, voucherId, saveDraft]);
+  }, [voucherId, voucher.id]);
 
-  // ─── Cancel ────────────────────────────────────────────
-  const cancelVoucherAction = useCallback(async () => {
-    if (!window.confirm("Bạn có chắc muốn hủy phiếu xử lý này?")) return false;
+  // ─── Reject ────────────────────────────────────────────
+  const rejectVoucherAction = useCallback(async (reason) => {
+    if (!reason || reason.trim() === "") {
+      toast.warning("Vui lòng nhập lý do từ chối");
+      return false;
+    }
+
+    if (!window.confirm("Xác nhận từ chối phiếu xử lý này?")) return false;
 
     setSaving(true);
     try {
-      const id = voucherId || voucher.id;
-      if (id) {
-        await apiCancelDisposalVoucher(id);
-      }
-      setVoucher((prev) => ({ ...prev, status: DV_STATUS.CANCELLED }));
+      const currentVoucherId = voucherId || voucher.id;
+      const rejectedVoucher = await rejectDisposalVoucher(currentVoucherId, reason);
+
+      setVoucher(rejectedVoucher);
       return true;
     } catch (err) {
-      alert("Lỗi khi hủy phiếu: " + err.message);
+      // alert("Lỗi khi từ chối: " + err.message);
       return false;
     } finally {
       setSaving(false);
@@ -239,8 +263,8 @@ export function useDisposalVoucher(voucherId = null) {
     addItem,
     removeItem,
     updateItemQty,
-    saveDraft,
-    confirmVoucher: confirmVoucherAction,
-    cancelVoucher: cancelVoucherAction,
+    submitVoucher: submitVoucherAction,
+    approveVoucher: approveVoucherAction,
+    rejectVoucher: rejectVoucherAction,
   };
 }

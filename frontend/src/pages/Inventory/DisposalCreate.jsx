@@ -6,7 +6,7 @@ import {
   saveDisposalDraft,
   confirmDisposalVoucher,
 } from "../../services/disposalService";
-import { getLocations } from "../../services/inventoryService";
+import { getActiveLocations } from "../../services/inventoryService";
 import { formatCurrency } from "../../utils/inventory";
 
 const REASON_OPTIONS = [
@@ -43,12 +43,12 @@ export default function DisposalCreate() {
       try {
         const [code, locs] = await Promise.all([
           getNextDisposalCode(),
-          getLocations(),
+          getActiveLocations(),
         ]);
         setVoucherCode(code);
-        setLocations(locs.filter((l) => l.status === "ACTIVE"));
+        setLocations(locs);
       } catch (err) {
-        alert("Lỗi tải dữ liệu: " + err.message);
+        toast.error("Lỗi tải dữ liệu: " + err.message);
       } finally {
         setLoading(false);
       }
@@ -68,7 +68,7 @@ export default function DisposalCreate() {
         const batches = await getExpiredBatches(locationId);
         setExpiredBatches(batches);
       } catch (err) {
-        alert("Lỗi tải lô hết hạn: " + err.message);
+        toast.error("Lỗi tải lô hết hạn: " + err.message);
       }
     };
     loadBatches();
@@ -77,7 +77,7 @@ export default function DisposalCreate() {
   // Add batch to disposal items
   const addItem = (batch) => {
     if (selectedItems.some((item) => item.batchId === batch.batchId)) {
-      alert("Lô hàng đã được thêm");
+      toast.warning("Lô hàng đã được thêm");
       return;
     }
 
@@ -158,10 +158,10 @@ export default function DisposalCreate() {
         userId,
       );
 
-      alert("Lưu nháp thành công");
+      toast.success("Lưu nháp thành công");
       navigate("/inventory/disposal");
     } catch (err) {
-      alert("Lỗi lưu nháp: " + err.message);
+      toast.error("Lỗi lưu nháp: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -196,10 +196,10 @@ export default function DisposalCreate() {
       // Then confirm
       await confirmDisposalVoucher(draft.id, userId);
 
-      alert("Xác nhận thành công! Tồn kho đã được trừ.");
+      toast.success("Xác nhận thành công! Tồn kho đã được trừ.");
       navigate("/inventory/disposal");
     } catch (err) {
-      alert("Lỗi xác nhận: " + err.message);
+      toast.error("Lỗi xác nhận: " + err.message);
     } finally {
       setSaving(false);
       setShowConfirmModal(false);

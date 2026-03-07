@@ -1,11 +1,15 @@
 import React from "react";
 import { Save, CheckCircle } from "lucide-react";
+import { useToast } from "../ui/Toast";
 
 function AuditSidebar({ totalActualStock, uncheckedCount }) {
+  const toast = useToast();
   return (
     <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
       <div className="p-6 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Mã kiểm kho</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Mã kiểm kho
+        </h2>
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Trạng thái</span>
@@ -13,13 +17,17 @@ function AuditSidebar({ totalActualStock, uncheckedCount }) {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Tổng SL thực tế</span>
-            <span className="text-gray-900 font-semibold">{totalActualStock}</span>
+            <span className="text-gray-900 font-semibold">
+              {totalActualStock}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="p-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Ghi chú
+        </label>
         <textarea
           rows={4}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -36,9 +44,9 @@ function AuditSidebar({ totalActualStock, uncheckedCount }) {
           <button
             onClick={() => {
               if (uncheckedCount > 0) {
-                alert(`Còn ${uncheckedCount} sản phẩm chưa kiểm!`);
+                toast.warning(`Còn ${uncheckedCount} sản phẩm chưa kiểm!`);
               } else {
-                alert("Hoàn thành kiểm kho!");
+                toast.success("Hoàn thành kiểm kho!");
               }
             }}
             className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"

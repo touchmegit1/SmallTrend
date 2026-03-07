@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDisposalVoucher } from "../../hooks/useDisposalVoucher";
+import { useToast } from "../../components/ui/Toast";
 import {
   DV_STATUS,
   DV_STATUS_CONFIG,
@@ -19,6 +20,7 @@ import {
 export default function DisposalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const {
     voucher,
     items,
@@ -34,8 +36,9 @@ export default function DisposalDetail() {
     removeItem,
     updateItemQty,
     saveDraft,
-    confirmVoucher,
-    cancelVoucher,
+    submitVoucher,
+    approveVoucher,
+    rejectVoucher,
   } = useDisposalVoucher(id || null);
 
   const [batchSearch, setBatchSearch] = useState("");
@@ -58,23 +61,36 @@ export default function DisposalDetail() {
   const handleSaveDraft = async () => {
     try {
       const saved = await saveDraft();
-      alert("Đã lưu nháp thành công!");
+      toast.success("Đã lưu nháp thành công!");
       if (!id) navigate(`/inventory/disposal/${saved.id}`, { replace: true });
     } catch {
-      alert("Lỗi khi lưu nháp!");
+      toast.error("Lỗi khi lưu nháp!");
     }
   };
 
-  const handleConfirm = async () => {
-    const success = await confirmVoucher();
+  const handleSubmit = async () => {
+    const success = await submitVoucher();
     if (success) {
-      alert("Đã xác nhận phiếu xử lý! Tồn kho đã được trừ.");
+      toast.success("Đã gửi phiếu đi chờ duyệt!");
+      if (!id) navigate(`/inventory/disposal/${voucher.id}`, { replace: true });
     }
   };
 
-  const handleCancel = async () => {
-    const success = await cancelVoucher();
-    if (success) navigate("/inventory/disposal");
+  const handleApprove = async () => {
+    const success = await approveVoucher();
+    if (success) {
+      toast.success("Đã duyệt phiếu xử lý! Tồn kho đã được trừ.");
+    }
+  };
+
+  const handleReject = async () => {
+    const reason = window.prompt("Nhập lý do từ chối:");
+    if (reason !== null) {
+      const success = await rejectVoucher(reason);
+      if (success) {
+        toast.success("Đã từ chối phiếu xử lý!");
+      }
+    }
   };
 
   if (loading) {
@@ -481,18 +497,30 @@ export default function DisposalDetail() {
                 {saving ? "Đang lưu..." : "Lưu nháp"}
               </button>
               <button
-                onClick={handleConfirm}
+                onClick={handleSubmit}
                 disabled={saving || items.length === 0}
-                className="w-full px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? "Đang xử lý..." : "Xác nhận & Trừ kho"}
+                {saving ? "Đang gửi..." : "Gửi duyệt quản lý"}
+              </button>
+            </div>
+          )}
+
+          {voucher.status === DV_STATUS.PENDING && (
+            <div className="space-y-3">
+              <button
+                onClick={handleApprove}
+                disabled={saving}
+                className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50"
+              >
+                {saving ? "Đang xử lý..." : "Duyệt & Trừ kho"}
               </button>
               <button
-                onClick={handleCancel}
+                onClick={handleReject}
                 disabled={saving}
-                className="w-full px-4 py-2.5 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm disabled:opacity-50"
+                className="w-full px-4 py-2.5 text-red-600 border border-red-200 bg-white rounded-lg hover:bg-red-50 transition-colors font-medium text-sm disabled:opacity-50"
               >
-                Hủy phiếu
+                {saving ? "Đang xử lý..." : "Từ chối phiếu"}
               </button>
             </div>
           )}
@@ -500,16 +528,26 @@ export default function DisposalDetail() {
           {voucher.status === DV_STATUS.CONFIRMED && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
               <p className="text-sm text-emerald-800 font-medium">
-                Phiếu đã được xác nhận. Tồn kho đã trừ.
+                Phiếu đã được xác nhận. Tồn kho đã bị trừ.
               </p>
             </div>
           )}
 
-          {voucher.status === DV_STATUS.CANCELLED && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-              <p className="text-sm text-gray-600 font-medium">
-                Phiếu đã bị hủy.
+          {voucher.status === DV_STATUS.REJECTED && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
+              <p className="text-sm text-red-600 font-medium">
+                Phiếu đã bị từ chối.
               </p>
+              {voucher.rejection_reason && (
+                <div className="bg-white/60 p-3 rounded-lg border border-red-100">
+                  <span className="block text-xs font-semibold text-red-800 mb-1">
+                    Lý do:
+                  </span>
+                  <p className="text-sm text-red-700">
+                    {voucher.rejection_reason}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

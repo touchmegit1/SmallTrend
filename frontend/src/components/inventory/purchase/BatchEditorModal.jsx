@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Trash2, Calendar, Package } from "lucide-react";
+import { useToast } from "../../ui/Toast";
 
 export default function BatchEditorModal({ item, onSave, onClose }) {
   const [batches, setBatches] = useState([]);
+  const toast = useToast();
 
   // Initialize from item's existing batches
   useEffect(() => {
@@ -47,13 +49,13 @@ export default function BatchEditorModal({ item, onSave, onClose }) {
     // Validate batch_codes
     const hasEmptyCodes = batches.some((b) => !b.batch_code.trim());
     if (hasEmptyCodes) {
-      alert("Mỗi lô hàng phải có mã lô.");
+      toast.warning("Mỗi lô hàng phải có mã lô.");
       return;
     }
 
     const hasZeroQty = batches.some((b) => (parseInt(b.quantity) || 0) <= 0);
     if (hasZeroQty) {
-      alert("Số lượng mỗi lô phải > 0.");
+      toast.warning("Số lượng mỗi lô phải > 0.");
       return;
     }
 
