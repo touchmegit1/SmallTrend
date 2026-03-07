@@ -21,6 +21,7 @@ export const useFetchVariants = (productId) => {
         unit_value: v.unitValue,
         sku: v.sku,
         barcode: v.barcode,
+        plu_code: v.pluCode,
         sell_price: v.sellPrice,
         cost_price: v.costPrice,
         stock_quantity: v.stockQuantity,

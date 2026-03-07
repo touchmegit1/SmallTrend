@@ -36,6 +36,9 @@ public class ProductVariant {
     @Column(unique = true)
     private String barcode;
 
+    @Column(name = "plu_code", length = 5)
+    private String pluCode;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "unit_id", nullable = false)
     private Unit unit;

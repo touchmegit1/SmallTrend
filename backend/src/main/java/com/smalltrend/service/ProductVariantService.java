@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 @Service
@@ -75,21 +76,34 @@ public class ProductVariantService {
             throw new RuntimeException("Không thể tạo biến thể đang bán vì sản phẩm gốc đang ngừng bán!");
         }
 
-        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
-            if (productVariantRepository.existsBySku(request.getSku())) {
-                throw new RuntimeException("Mã SKU đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
-            }
+        // SKU is required
+        if (request.getSku() == null || request.getSku().trim().isEmpty()) {
+            throw new RuntimeException("SKU là bắt buộc. Vui lòng nhập mã SKU.");
         }
+
+        // SKU uniqueness check
+        if (productVariantRepository.existsBySku(request.getSku())) {
+            throw new RuntimeException("Mã SKU đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+        }
+
+        // Barcode validation (optional, but must be 12-13 digits if provided)
         if (request.getBarcode() != null && !request.getBarcode().trim().isEmpty()) {
+            validateBarcode(request.getBarcode().trim());
             if (productVariantRepository.existsByBarcode(request.getBarcode())) {
                 throw new RuntimeException("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
             }
         }
 
+        // PLU validation (optional, must be 4-5 digits if provided)
+        if (request.getPluCode() != null && !request.getPluCode().trim().isEmpty()) {
+            validatePluCode(request.getPluCode().trim());
+        }
+
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
-                .sku(request.getSku())
+                .sku(request.getSku().toUpperCase().replaceAll("\\s+", ""))
                 .barcode(request.getBarcode())
+                .pluCode(request.getPluCode())
                 .unit(unit)
                 .sellPrice(request.getSellPrice())
                 .imageUrl(request.getImageUrl())
@@ -108,19 +122,32 @@ public class ProductVariantService {
         Unit unit = unitRepository.findById(request.getUnitId())
                 .orElseThrow(() -> new RuntimeException("Unit not found with id: " + request.getUnitId()));
 
-        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
-            if (productVariantRepository.existsBySkuAndIdNot(request.getSku(), variantId)) {
-                throw new RuntimeException("Mã SKU đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
-            }
+        // SKU is required
+        if (request.getSku() == null || request.getSku().trim().isEmpty()) {
+            throw new RuntimeException("SKU là bắt buộc. Vui lòng nhập mã SKU.");
         }
+
+        // SKU uniqueness check (exclude current variant)
+        if (productVariantRepository.existsBySkuAndIdNot(request.getSku(), variantId)) {
+            throw new RuntimeException("Mã SKU đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+        }
+
+        // Barcode validation
         if (request.getBarcode() != null && !request.getBarcode().trim().isEmpty()) {
+            validateBarcode(request.getBarcode().trim());
             if (productVariantRepository.existsByBarcodeAndIdNot(request.getBarcode(), variantId)) {
                 throw new RuntimeException("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
             }
         }
 
-        variant.setSku(request.getSku());
+        // PLU validation
+        if (request.getPluCode() != null && !request.getPluCode().trim().isEmpty()) {
+            validatePluCode(request.getPluCode().trim());
+        }
+
+        variant.setSku(request.getSku().toUpperCase().replaceAll("\\s+", ""));
         variant.setBarcode(request.getBarcode());
+        variant.setPluCode(request.getPluCode());
         variant.setUnit(unit);
 
         variant.setSellPrice(request.getSellPrice());
@@ -140,6 +167,87 @@ public class ProductVariantService {
 
         ProductVariant saved = productVariantRepository.save(variant);
         return mapToResponse(saved);
+    }
+
+    /**
+     * Generate SKU based on product data.
+     * Format: {CATEGORY_CODE}-{BRAND_SHORT}-{PRODUCT_SHORT}-{UNIT_CODE}
+     */
+    public String generateSku(Integer productId, Integer unitId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+
+        // Category code (use category code, or first 4 chars of name)
+        String categoryPart = "GEN";
+        if (product.getCategory() != null) {
+            if (product.getCategory().getCode() != null && !product.getCategory().getCode().isEmpty()) {
+                categoryPart = product.getCategory().getCode().toUpperCase();
+            } else if (product.getCategory().getName() != null) {
+                categoryPart = abbreviate(product.getCategory().getName(), 4);
+            }
+        }
+
+        // Brand abbreviation (first 4 chars)
+        String brandPart = "NOBR";
+        if (product.getBrand() != null && product.getBrand().getName() != null) {
+            brandPart = abbreviate(product.getBrand().getName(), 4);
+        }
+
+        // Product abbreviation (first 4 chars)
+        String productPart = "PROD";
+        if (product.getName() != null) {
+            productPart = abbreviate(product.getName(), 6);
+        }
+
+        // Unit code
+        String unitPart = "UN";
+        if (unitId != null) {
+            Unit unit = unitRepository.findById(unitId).orElse(null);
+            if (unit != null && unit.getCode() != null) {
+                unitPart = unit.getCode().toUpperCase();
+            } else if (unit != null && unit.getName() != null) {
+                unitPart = abbreviate(unit.getName(), 4);
+            }
+        }
+
+        String baseSku = categoryPart + "-" + brandPart + "-" + productPart + "-" + unitPart;
+
+        // Ensure uniqueness by adding a numeric suffix if needed
+        String sku = baseSku;
+        int suffix = 1;
+        while (productVariantRepository.existsBySku(sku)) {
+            sku = baseSku + "-" + suffix;
+            suffix++;
+        }
+
+        return sku;
+    }
+
+    /**
+     * Generate internal barcode for store-created products.
+     * Format: 20 + ProductID(4 digits) + VariantSeq(4 digits) + Random(3 digits)
+     * Total: 13 digits (EAN-13 compatible)
+     */
+    public String generateInternalBarcode(Integer productId) {
+        String productIdStr = String.format("%04d", productId % 10000);
+
+        // Count existing variants for sequence
+        List<ProductVariant> existingVariants = productVariantRepository.findByProductId(productId);
+        int seq = existingVariants.size() + 1;
+        String seqStr = String.format("%04d", seq % 10000);
+
+        Random random = new Random();
+        String randomStr = String.format("%03d", random.nextInt(1000));
+
+        String barcode = "20" + productIdStr + seqStr + randomStr;
+
+        // Ensure uniqueness
+        while (productVariantRepository.existsByBarcode(barcode)) {
+            randomStr = String.format("%03d", random.nextInt(1000));
+            barcode = "20" + productIdStr + seqStr + randomStr;
+        }
+
+        return barcode;
     }
 
     public void toggleVariantStatus(Integer variantId) {
@@ -170,13 +278,44 @@ public class ProductVariantService {
         productVariantRepository.deleteById(variantId);
     }
 
-    // Method removed: getAllUnits is now handled by UnitService
+    // ─── Validation Helpers ──────────────────────────────────────────────────
+
+    private void validateBarcode(String barcode) {
+        if (!barcode.matches("^\\d{12,13}$")) {
+            throw new RuntimeException("Barcode phải gồm 12-13 chữ số.");
+        }
+    }
+
+    private void validatePluCode(String pluCode) {
+        if (!pluCode.matches("^\\d{4,5}$")) {
+            throw new RuntimeException("Mã PLU phải gồm 4-5 chữ số.");
+        }
+    }
+
+    /**
+     * Create an abbreviation from a string: take first N consonants/chars,
+     * uppercase, no spaces.
+     */
+    private String abbreviate(String input, int maxLen) {
+        if (input == null || input.isEmpty())
+            return "";
+        // Remove Vietnamese diacritics for cleaner codes
+        String normalized = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[đĐ]", "D");
+        // Remove non-alphanumeric, uppercase
+        String clean = normalized.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        return clean.length() <= maxLen ? clean : clean.substring(0, maxLen);
+    }
+
+    // ─── Mapper ──────────────────────────────────────────────────────────────
 
     private ProductVariantRespone mapToResponse(ProductVariant variant) {
         ProductVariantRespone response = new ProductVariantRespone();
         response.setId(variant.getId());
         response.setSku(variant.getSku());
         response.setBarcode(variant.getBarcode());
+        response.setPluCode(variant.getPluCode());
         String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
         StringBuilder nameBuilder = new StringBuilder(productName);
 

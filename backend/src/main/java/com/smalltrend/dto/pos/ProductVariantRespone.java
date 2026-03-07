@@ -12,6 +12,7 @@ public class ProductVariantRespone {
     private String name;
     private String sku;
     private String barcode;
+    private String pluCode;
     private BigDecimal sellPrice;
     private BigDecimal costPrice;
     private Integer stockQuantity;
