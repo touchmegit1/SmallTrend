@@ -27,6 +27,9 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
     // Tìm stock của variant tại một location cụ thể (dùng cho DisposalVoucherService)
     Optional<InventoryStock> findByVariantAndLocation(ProductVariant variant, Location location);
 
+    @Query("SELECT i FROM InventoryStock i WHERE i.location.id = :locationId")
+    List<InventoryStock> findByLocationIdWithProduct(@Param("locationId") Integer locationId);
+
     @Query(value = """
         SELECT p.name, pv.sku, SUM(i.quantity)
         FROM inventory_stock i

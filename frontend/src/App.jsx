@@ -16,7 +16,7 @@ import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import LocationManagement from "./pages/Inventory/LocationManagement";
 import DisposalList from "./pages/Inventory/DisposalList";
 import DisposalDetail from "./pages/Inventory/DisposalDetail";
-import CRMcomplain from "./pages/CRM/complain";
+import PosComplain from "./pages/Pos/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
@@ -31,7 +31,6 @@ import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
 import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
 import { useAuth } from "./context/AuthContext";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
-import ShiftHandover from "./pages/Pos/ShiftHandover";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import ReportCenterPage from "./pages/Admin/ReportCenterPage";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
@@ -114,7 +113,8 @@ function App() {
         <Route path="pos" element={<POS />} />
         <Route path="pos/history" element={<TransactionHistory />} />
         <Route path="pos/suspended" element={<ReportforCashier />} />
-        <Route path="pos/shift-handover" element={<ShiftHandover />} />
+        <Route path="pos/complain" element={<PosComplain />} />
+        <Route path="pos/complaints" element={<PosComplain />} />
 
         <Route path="inventory" element={<InventoryDashboard />} />
         <Route path="inventory/export" element={<DisposalList />} />
@@ -152,8 +152,6 @@ function App() {
         <Route path="crm/report" element={<CRMreport />} />
         <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
         <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
-        <Route path="crm/complain" element={<CRMcomplain />} />
-        <Route path="crm/complaints" element={<CRMcomplain />} />
 
         <Route path="hr" element={<Navigate to="/hr/schedule" replace />} />
         <Route

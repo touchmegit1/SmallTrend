@@ -38,10 +38,10 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
           if (matched) {
             setStatus("success");
             clearInterval(pollingRef.current);
-            // Auto-complete after showing success for 30s
+            // Auto-complete after showing success for 10s
             setTimeout(() => {
               onSuccess();
-            }, 30000);
+            }, 10000);
           }
         }
 
@@ -103,19 +103,19 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
       }}>
         {status === "success" ? (
           <>
-            <div style={{ fontSize: "60px", marginBottom: "10px" }}>✅</div>
-            <h2 style={{ marginTop: 0, marginBottom: "10px", fontSize: "22px", color: "#28a745" }}>
-              Thanh toán thành công!
+            <div style={{ fontSize: "60px", marginBottom: "10px", color: "#007bff" }}>✓</div>
+            <h2 style={{ marginTop: 0, marginBottom: "10px", fontSize: "22px", color: "#007bff" }}>
+              Chuyển khoản thành công
             </h2>
-            <h3 style={{ marginTop: 0, marginBottom: "15px", fontSize: "18px", color: "#007bff" }}>
-              Cảm ơn quý khách!
+            <h3 style={{ marginTop: 0, marginBottom: "15px", whiteSpace: "pre-line", fontSize: "16px", color: "#007bff" }}>
+              {"Cảm ơn quý khách và hẹn gặp lại !"}
             </h3>
-            <p style={{ color: "#666", fontSize: "14px", marginBottom: "20px" }}>Đang xử lý hóa đơn...</p>
+            <p style={{ color: "#666", fontSize: "14px", marginBottom: "20px" }}>Tự động in hóa đơn sau 10 giây...</p>
             <button
               onClick={onSuccess}
               style={{
                 padding: "10px 20px",
-                background: "#28a745",
+                background: "#007bff",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
@@ -123,8 +123,8 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
                 cursor: "pointer",
                 transition: "background 0.2s"
               }}
-              onMouseOver={(e) => e.target.style.background = "#218838"}
-              onMouseOut={(e) => e.target.style.background = "#28a745"}
+              onMouseOver={(e) => e.target.style.background = "#0056b3"}
+              onMouseOut={(e) => e.target.style.background = "#007bff"}
             >
               Hoàn tất ngay (Enter)
             </button>
@@ -320,7 +320,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
         }
       }
       // Enter key actions
-      else if (e.key === 'Enter' || e.key === 'F9' || e.key === 'F10') {
+      else if (e.key === 'Enter') {
         if (focusedField === "voucher") {
           e.preventDefault();
           voucherButtonRef.current?.click();
@@ -340,10 +340,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
           setFocusedField("paymentButton");
           paymentButtonRef.current?.focus();
           setSuggestedIndex(-1);
-        } else if (focusedField === "paymentButton" || (shortcuts && (e.key === shortcuts.payment1 || e.key === shortcuts.payment2))) {
+        } else if (focusedField === "paymentButton") {
           e.preventDefault();
           paymentButtonRef.current?.click();
         }
+      }
+      // F10 shortcuts actions
+      else if (shortcuts && e.key === shortcuts.payment1) {
+        e.preventDefault();
+        paymentButtonRef.current?.click();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -596,7 +601,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 }}
               >
                 <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-                  {selectedCustomer.name} - {selectedCustomer.phone}
+                  {selectedCustomer.name} - {selectedCustomer.phone} {selectedCustomer.tier && <span style={{ color: "#d9534f", marginLeft: "5px" }}>(Hạng: {selectedCustomer.tier})</span>}
                 </div>
                 <div>Điểm hiện tại: {currentLoyaltyPoints}</div>
                 {currentLoyaltyPoints > 0 && (
@@ -963,8 +968,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 padding: "18px",
                 background:
                   !paymentMethod ||
-                  (paymentMethod === "cash" &&
-                    (!cashAmount || parseFloat(cashAmount) < finalTotal))
+                    (paymentMethod === "cash" &&
+                      (!cashAmount || parseFloat(cashAmount) < finalTotal))
                     ? "#6c757d"
                     : "#007bff",
                 color: "white",
@@ -974,8 +979,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 fontWeight: "bold",
                 cursor:
                   !paymentMethod ||
-                  (paymentMethod === "cash" &&
-                    (!cashAmount || parseFloat(cashAmount) < finalTotal))
+                    (paymentMethod === "cash" &&
+                      (!cashAmount || parseFloat(cashAmount) < finalTotal))
                     ? "not-allowed"
                     : "pointer",
                 boxShadow: "0 4px 12px rgba(0,123,255,0.3)",

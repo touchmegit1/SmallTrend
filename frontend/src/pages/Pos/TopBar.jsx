@@ -332,27 +332,6 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
               >
                 Phím tắt
               </button>
-              <button
-                onClick={() => {
-                  setShowSettings(false);
-                  navigate('/login');
-                }}
-                style={{
-                  width: "100%",
-                  padding: "10px 15px",
-                  textAlign: "left",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#dc3545",
-                  fontSize: "13px",
-                  fontWeight: "500"
-                }}
-                onMouseEnter={(e) => e.target.style.background = "#fff5f5"}
-                onMouseLeave={(e) => e.target.style.background = "none"}
-              >
-                Đăng xuất
-              </button>
             </div>
           )}
         </div>

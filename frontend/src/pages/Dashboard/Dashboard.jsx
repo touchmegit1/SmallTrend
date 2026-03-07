@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Users, DollarSign, ShoppingBag, History, Bot, Clock3, Warehouse } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, ShoppingBag, History, Bot, Clock3, Warehouse, MessageSquare } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import api from '../../config/axiosConfig';
 import * as XLSX from 'xlsx';
@@ -100,7 +100,7 @@ const Dashboard = () => {
     const quickWidgets = [
         { label: 'Lịch sử đơn hàng', path: '/pos/history', icon: History, tone: 'bg-blue-50 text-blue-700 border-blue-100' },
         { label: 'AI dự báo', path: '/reports/ai', icon: Bot, tone: 'bg-purple-50 text-purple-700 border-purple-100' },
-        { label: 'Ca làm việc', path: '/hr/shifts', icon: Clock3, tone: 'bg-amber-50 text-amber-700 border-amber-100' },
+        { label: 'Khiếu nại', path: '/pos/complain', icon: MessageSquare, tone: 'bg-amber-50 text-amber-700 border-amber-100' },
         { label: 'Kho hàng', path: '/inventory', icon: Warehouse, tone: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
     ];
 

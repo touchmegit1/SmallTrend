@@ -41,7 +41,7 @@ const Sidebar = () => {
         { label: "Giao diện bán hàng", path: "/pos" },
         { label: "Lịch sử đơn hàng", path: "/pos/history" },
         { label: "Đơn hàng treo", path: "/pos/suspended" },
-        { label: "Giao ca", path: "/pos/shift-handover" },
+        { label: "Khiếu nại", path: "/pos/complain" },
       ],
     },
     {
@@ -77,7 +77,6 @@ const Sidebar = () => {
         { label: "Danh sách khách hàng", path: "/crm/customer" },
         { label: "Khuyến Mãi", path: "/crm/event" },
         { label: "Kho quà tặng", path: "/crm/loyalty" },
-        { label: "Khiếu nại", path: "/crm/complain" },
         { label: "Báo Cáo Thống Kê", path: "/crm/report" },
       ],
     },
@@ -136,10 +135,10 @@ const Sidebar = () => {
           <div className="mb-2">
             <div
               className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === "/dashboard" ||
-                  location.pathname.startsWith("/hr/users") ||
-                  openMenus["admin"]
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                location.pathname.startsWith("/hr/users") ||
+                openMenus["admin"]
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               onClick={() => toggleMenu("admin")}
             >
@@ -216,8 +215,8 @@ const Sidebar = () => {
           <div key={item.label}>
             <div
               className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               onClick={() => toggleMenu(item.label)}
             >
