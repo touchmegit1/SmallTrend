@@ -64,20 +64,18 @@ export default function BatchManagementPanel({
             <button
               key={tab.id}
               onClick={() => setBatchTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                batchTab === tab.id
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${batchTab === tab.id
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
-              }`}
+                }`}
             >
               <tab.icon size={14} className={tab.accent} />
               {tab.label}
               <span
-                className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                  batchTab === tab.id
+                className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${batchTab === tab.id
                     ? "bg-indigo-100 text-indigo-700"
                     : "bg-slate-200 text-slate-500"
-                }`}
+                  }`}
               >
                 {tab.count}
               </span>
@@ -123,16 +121,15 @@ export default function BatchManagementPanel({
               </tr>
             ) : (
               displayBatches.map((batch) => {
-                const cfg = BATCH_STATUS_CONFIG[batch.status];
+                const cfg = BATCH_STATUS_CONFIG[batch.status] || {};
                 const days = batch.daysRemaining;
                 return (
                   <tr
                     key={batch.id}
-                    className={`hover:bg-slate-50/80 transition-colors ${
-                      batch.status === BATCH_STATUS.EXPIRED
+                    className={`hover:bg-slate-50/80 transition-colors ${batch.status === BATCH_STATUS.EXPIRED
                         ? "bg-red-50/30"
                         : ""
-                    }`}
+                      }`}
                   >
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded">

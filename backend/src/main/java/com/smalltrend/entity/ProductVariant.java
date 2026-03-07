@@ -48,6 +48,10 @@ public class ProductVariant {
     private BigDecimal sellPrice;
 
     @Builder.Default
+    @Column(name = "is_base_unit", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean isBaseUnit = false;
+
+    @Builder.Default
     @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
     private boolean isActive = true;
 

@@ -19,6 +19,7 @@ import com.smalltrend.repository.OrderRepository;
 import com.smalltrend.repository.OrderStatusHistoryRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.UserRepository;
+import com.smalltrend.service.inventory.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,7 @@ public class SaleOrderService {
     private final UserRepository userRepository;
     private final ProductVariantRepository productVariantRepository;
     private final CashRegisterRepository cashRegisterRepository;
+    private final InventoryStockService inventoryStockService;
 
     public List<OrderResponse> listOrders(String status, Integer cashierId, LocalDate fromDate, LocalDate toDate) {
         List<Order> orders = orderRepository.findAll().stream()
@@ -171,6 +173,18 @@ public class SaleOrderService {
         }
 
         Order saved = orderRepository.save(order);
+
+        // --- INVENTORY INTEGRATION ---
+        // Deduct stock when order is successfully completed
+        if ("COMPLETED".equals(toStatus) && !"COMPLETED".equals(fromStatus)) {
+            for (OrderItem item : saved.getItems()) {
+                inventoryStockService.deductStock(
+                        item.getProductVariant(),
+                        item.getQuantity(),
+                        Long.valueOf(saved.getId()),
+                        "Bán hàng đơn " + saved.getOrderCode());
+            }
+        }
 
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .order(saved)
