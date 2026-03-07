@@ -3,8 +3,7 @@ import { RefreshCw, Download, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInventoryDashboard } from "../../hooks/useInventoryData";
 import StatsCards from "../../components/inventory/StatsCards";
-import BatchManagementPanel from "../../components/inventory/BatchManagementPanel";
-import RecentActivities from "../../components/inventory/RecentActivities";
+import StockByProductChart from "../../components/inventory/StockByProductChart";
 
 function InventoryDashboard() {
   const navigate = useNavigate();
@@ -100,19 +99,8 @@ function InventoryDashboard() {
       {/* ─── Stats Cards ─────────────────────────────────────── */}
       <StatsCards stats={stats} />
 
-      {/* ─── Batch Management & Recent Activities ────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
-          <BatchManagementPanel
-            batches={batchTab === "all" ? allBatches : batches}
-            batchTab={batchTab}
-            setBatchTab={setBatchTab}
-          />
-        </div>
-        <div>
-          <RecentActivities stockMovements={stockMovements} />
-        </div>
-      </div>
+      {/* ─── Stock By Product Chart ────────────────────────────── */}
+      <StockByProductChart products={allProducts} />
     </div>
   );
 }
