@@ -438,8 +438,8 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
-                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
-                      : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
+                    ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
+                    : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
                     }`}
                   style={{ height: "300px" }}
                 >

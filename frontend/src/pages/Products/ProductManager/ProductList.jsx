@@ -75,10 +75,29 @@ export function ProductListScreen() {
   // --- DEPENDENT FILTER LOGIC ---
 
   // Brands lọc theo Category đã chọn
+  // Mở rộng logic: lấy trực tiếp thuộc tính category(Id) của brand VÀ cả những brand đang được gán cho các sản phẩm trong danh mục này.
   const brandsForCategory = useMemo(() => {
     if (!filterCategory) return [];
-    return brands.filter((b) => b.category && String(b.category.id) === String(filterCategory));
-  }, [filterCategory, brands]);
+
+    // Lấy Set chứa các brand_id từ danh sách products thuộc category hiện tại
+    const activeBrandIds = new Set(
+      (products || [])
+        .filter((p) => String(p.category_id) === String(filterCategory) && p.brand_id)
+        .map((p) => String(p.brand_id))
+    );
+
+    return brands.filter((b) => {
+      // 1. Brand có thông tin object category
+      const matchObj = b.category && String(b.category.id) === String(filterCategory);
+      // 2. Brand trả về theo field category_id hoặc categoryId trực tiếp
+      const matchField = (b.category_id && String(b.category_id) === String(filterCategory)) ||
+        (b.categoryId && String(b.categoryId) === String(filterCategory));
+      // 3. Brand đang được dùng bởi ít nhất 1 product trong category này
+      const matchProduct = activeBrandIds.has(String(b.id));
+
+      return matchObj || matchField || matchProduct;
+    });
+  }, [filterCategory, brands, products]);
 
   // Products lọc theo Brand đã chọn (trong category đã chọn)
   const productsForBrand = useMemo(() => {
