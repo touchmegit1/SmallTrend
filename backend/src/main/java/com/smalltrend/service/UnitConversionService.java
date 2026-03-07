@@ -2,6 +2,7 @@ package com.smalltrend.service;
 
 import com.smalltrend.dto.products.UnitConversionRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
+import com.smalltrend.entity.Product;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Unit;
 import com.smalltrend.entity.UnitConversion;
@@ -22,6 +23,7 @@ public class UnitConversionService {
     private final UnitConversionRepository unitConversionRepository;
     private final ProductVariantRepository productVariantRepository;
     private final UnitRepository unitRepository;
+    private final ProductVariantService productVariantService;
 
     public List<UnitConversionResponse> getConversionsByVariantId(Integer variantId) {
         return unitConversionRepository.findByVariantId(variantId)
@@ -30,8 +32,21 @@ public class UnitConversionService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Thêm quy đổi đơn vị MỚI cho một variant.
+     *
+     * Khi tạo quy đổi (VD: 6 Lon = 1 Lốc), hệ thống sẽ TỰ ĐỘNG:
+     * 1. Tạo một product variant mới với đơn vị đích (Lốc)
+     * 2. Sinh mã SKU tự động (VD: BEV-COCA-COLA-LOC6)
+     * 3. Sinh mã barcode nội bộ (20 + ProductID + VariantID + Random)
+     * 4. Lưu quy đổi và liên kết với variant gốc
+     *
+     * Đây là hành vi chuẩn của hệ thống POS siêu thị:
+     * packaging units tự động trở thành variants riêng biệt.
+     */
+    @Transactional
     public UnitConversionResponse addConversion(Integer variantId, UnitConversionRequest request) {
-        ProductVariant variant = productVariantRepository.findById(variantId)
+        ProductVariant baseVariant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể với ID: " + variantId));
 
         Unit toUnit = unitRepository.findById(request.getToUnitId())
@@ -41,8 +56,11 @@ public class UnitConversionService {
             throw new RuntimeException("Quy đổi sang đơn vị '" + toUnit.getName() + "' đã tồn tại cho biến thể này!");
         }
 
+        Product product = baseVariant.getProduct();
+
+        // ─── 1. Tạo quy đổi đơn vị ────────────────────────────────────────────
         UnitConversion conversion = UnitConversion.builder()
-                .variant(variant)
+                .variant(baseVariant)
                 .toUnit(toUnit)
                 .conversionFactor(request.getConversionFactor())
                 .sellPrice(request.getSellPrice())
@@ -50,8 +68,40 @@ public class UnitConversionService {
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .build();
 
-        UnitConversion saved = unitConversionRepository.save(conversion);
-        return mapToResponse(saved);
+        UnitConversion savedConversion = unitConversionRepository.save(conversion);
+
+        // ─── 2. Tự động tạo Product Variant mới cho đơn vị đóng gói ───────────
+        // Sinh SKU: VD BEV-COCA-COLA-LOC6
+        String autoSku = productVariantService.generateSkuForConversion(
+                baseVariant, toUnit, request.getConversionFactor());
+
+        // Tạo variant mới với đơn vị đích
+        ProductVariant packagingVariant = ProductVariant.builder()
+                .product(product)
+                .sku(autoSku)
+                .unit(toUnit)
+                .sellPrice(request.getSellPrice())
+                .isActive(baseVariant.isActive())
+                .imageUrl(baseVariant.getImageUrl()) // Kế thừa ảnh từ variant gốc
+                .attributes(baseVariant.getAttributes() != null ? new java.util.HashMap<>(baseVariant.getAttributes())
+                        : null) // Kế thừa thuộc tính
+                .build();
+
+        ProductVariant savedVariant = productVariantRepository.save(packagingVariant);
+
+        // ─── 3. Sinh barcode nội bộ (20 + ProductID + VariantID + Random) ──────
+        String autoBarcode = productVariantService.generateInternalBarcodeForPackaging(
+                product.getId(), savedVariant.getId());
+        savedVariant.setBarcode(autoBarcode);
+        productVariantRepository.save(savedVariant);
+
+        // ─── 4. Trả về response kèm thông tin variant tự động tạo ─────────────
+        UnitConversionResponse response = mapToResponse(savedConversion);
+        response.setAutoCreatedVariantId(savedVariant.getId());
+        response.setAutoCreatedSku(savedVariant.getSku());
+        response.setAutoCreatedBarcode(savedVariant.getBarcode());
+
+        return response;
     }
 
     public UnitConversionResponse updateConversion(Integer conversionId, UnitConversionRequest request) {

@@ -13,6 +13,7 @@ import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
+import com.smalltrend.entity.UnitConversion;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -30,7 +31,6 @@ public class ProductVariantService {
     private final InventoryStockRepository inventoryStockRepository;
     private final ProductBatchRepository productBatchRepository;
     private final UnitConversionRepository unitConversionRepository;
-    private final UnitConversionService unitConversionService;
 
     public List<ProductVariantRespone> getAllProductVariants(String search, String barcode) {
         List<ProductVariant> variants;
@@ -227,14 +227,13 @@ public class ProductVariantService {
      * Generate internal barcode for store-created products using EAN-13 standard.
      * Format: 893 (Country) + 00001 (Company) + XXXX (Product) + C (Check Digit)
      * Total: 13 digits
+     * Used by the manual "Generate Barcode" button.
      */
     public String generateInternalBarcode(Integer productId) {
         String countryCode = "893"; // Việt Nam
         String companyCode = "00001"; // Mã công ty (giả định cửa hàng dùng mã 00001)
 
         Random random = new Random();
-        // Cấu trúc: 893 + XXXXX (company) + XXXX (product)
-        // Dùng random 4 số cho mã sản phẩm để đảm bảo ngẫu nhiên cho các biến thể
         String productCode = String.format("%04d", random.nextInt(10000));
 
         String withoutCheckDigit = countryCode + companyCode + productCode;
@@ -250,12 +249,69 @@ public class ProductVariantService {
         return barcode;
     }
 
+    /**
+     * Generate internal barcode for packaging units (unit conversions).
+     * Format: 20 + ProductID(4 digits) + VariantID(4 digits) + Random(3 digits)
+     * Total: 13 digits
+     * Prefix 20 = store-created product (EAN-13 internal use range 20-29).
+     */
+    public String generateInternalBarcodeForPackaging(Integer productId, Integer variantId) {
+        String prefix = "20";
+        String prodPart = String.format("%04d", productId % 10000);
+        String varPart = String.format("%04d", variantId % 10000);
+
+        Random random = new Random();
+        String randomPart = String.format("%03d", random.nextInt(1000));
+
+        String barcode = prefix + prodPart + varPart + randomPart;
+
+        // Ensure uniqueness
+        while (productVariantRepository.existsByBarcode(barcode)) {
+            randomPart = String.format("%03d", random.nextInt(1000));
+            barcode = prefix + prodPart + varPart + randomPart;
+        }
+
+        return barcode;
+    }
+
+    /**
+     * Generate SKU for a packaging variant created via unit conversion.
+     * Appends the unit abbreviation + conversion factor to the base variant's SKU.
+     * Example: BEV-COCA-COLA-LON → BEV-COCA-COLA-LOC6
+     */
+    public String generateSkuForConversion(ProductVariant baseVariant, Unit toUnit,
+            java.math.BigDecimal conversionFactor) {
+        String unitAbbr = abbreviate(toUnit.getName(), 5);
+        int factor = conversionFactor.intValue();
+
+        // Build base: take the base variant's SKU and replace the last segment (unit
+        // part)
+        String baseSku = baseVariant.getSku();
+        String skuPrefix;
+        int lastDash = baseSku.lastIndexOf('-');
+        if (lastDash > 0) {
+            skuPrefix = baseSku.substring(0, lastDash);
+        } else {
+            skuPrefix = baseSku;
+        }
+
+        String newSku = skuPrefix + "-" + unitAbbr + factor;
+
+        // Ensure uniqueness
+        String finalSku = newSku;
+        int suffix = 1;
+        while (productVariantRepository.existsBySku(finalSku)) {
+            finalSku = newSku + "-" + suffix;
+            suffix++;
+        }
+
+        return finalSku;
+    }
+
     private int calculateEan13CheckDigit(String barcode12) {
         int sum = 0;
         for (int i = 0; i < 12; i++) {
             int digit = Character.getNumericValue(barcode12.charAt(i));
-            // EAN-13 quy tắc: Vị trí chẵn (index lẻ 1,3,5...) nhân 3, vị trí lẻ (index chẵn
-            // 0,2,4...) nhân 1
             sum += (i % 2 == 0) ? digit : digit * 3;
         }
         int checkDigit = 10 - (sum % 10);
@@ -389,13 +445,27 @@ public class ProductVariantService {
             response.setBrandName(variant.getProduct().getBrand().getName());
         }
 
-        // Unit Conversions
+        // Unit Conversions (inline mapping to avoid circular dependency)
         List<UnitConversionResponse> conversions = unitConversionRepository.findByVariantId(variant.getId())
                 .stream()
-                .map(unitConversionService::mapToResponse)
+                .map(this::mapConversionToResponse)
                 .collect(Collectors.toList());
         response.setUnitConversions(conversions);
 
+        return response;
+    }
+
+    private UnitConversionResponse mapConversionToResponse(UnitConversion entity) {
+        UnitConversionResponse response = new UnitConversionResponse();
+        response.setId(entity.getId());
+        response.setVariantId(entity.getVariant().getId());
+        response.setToUnitId(entity.getToUnit().getId());
+        response.setToUnitName(entity.getToUnit().getName());
+        response.setToUnitCode(entity.getToUnit().getCode());
+        response.setConversionFactor(entity.getConversionFactor());
+        response.setSellPrice(entity.getSellPrice());
+        response.setDescription(entity.getDescription());
+        response.setIsActive(entity.isActive());
         return response;
     }
 }

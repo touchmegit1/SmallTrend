@@ -14,4 +14,9 @@ public class UnitConversionResponse {
     private BigDecimal sellPrice;
     private String description;
     private Boolean isActive;
+
+    // Info about the auto-created packaging variant
+    private Integer autoCreatedVariantId;
+    private String autoCreatedSku;
+    private String autoCreatedBarcode;
 }

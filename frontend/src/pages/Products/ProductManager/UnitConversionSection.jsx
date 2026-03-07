@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, X, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Save, CheckCircle, Barcode, Tag } from 'lucide-react';
 import Button from '../ProductComponents/button';
 import { Input } from '../ProductComponents/input';
 import { Label } from '../ProductComponents/label';
@@ -21,6 +21,9 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
 
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+
+    // Thông tin variant tự động tạo sau khi thêm quy đổi
+    const [autoCreatedInfo, setAutoCreatedInfo] = useState(null);
 
     const resetForm = () => {
         setFormData({
@@ -46,6 +49,7 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
         setEditingId(conv.id);
         setIsAdding(false);
         setErrorMsg("");
+        setAutoCreatedInfo(null);
     };
 
     const handleDelete = async (id) => {
@@ -57,13 +61,13 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
             if (onSuccess) onSuccess();
         } catch (err) {
             console.error("Lỗi xóa quy đổi:", err);
-            // alert(err.response?.data?.message || "Lỗi xóa quy đổi");
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMsg("");
+        setAutoCreatedInfo(null);
 
         if (!formData.toUnitId || !formData.conversionFactor || !formData.sellPrice) {
             setErrorMsg("Vui lòng điền đầy đủ đơn vị đích, hệ số và giá bán");
@@ -85,9 +89,19 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
                 const res = await api.put(`/products/conversions/${editingId}`, payload);
                 setConversions(prev => prev.map(c => c.id === editingId ? res.data : c));
             } else {
-                // Create
+                // Create — hệ thống tự động tạo variant mới cho đơn vị đóng gói
                 const res = await api.post(`/products/variants/${variant.id}/conversions`, payload);
                 setConversions(prev => [...prev, res.data]);
+
+                // Hiển thị thông tin variant tự động tạo
+                if (res.data.autoCreatedVariantId) {
+                    setAutoCreatedInfo({
+                        variantId: res.data.autoCreatedVariantId,
+                        sku: res.data.autoCreatedSku,
+                        barcode: res.data.autoCreatedBarcode,
+                        unitName: res.data.toUnitName,
+                    });
+                }
             }
 
             resetForm();
@@ -101,6 +115,12 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
         }
     };
 
+    // Lấy tên đơn vị đích từ ID
+    const getUnitName = (unitId) => {
+        const u = units.find(u => u.id === unitId);
+        return u ? u.name : '';
+    };
+
     return (
         <div className="bg-gray-50/50 rounded-xl border border-gray-100 p-4 mt-3">
             <div className="flex justify-between items-center mb-3">
@@ -109,13 +129,47 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
                     <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => setIsAdding(true)}
+                        onClick={() => { setIsAdding(true); setAutoCreatedInfo(null); }}
                         className="h-8 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg px-2 flex items-center gap-1"
                     >
                         <Plus className="w-3 h-3" /> Thêm quy đổi
                     </Button>
                 )}
             </div>
+
+            {/* ═══ Thông báo variant tự động tạo ═══ */}
+            {autoCreatedInfo && (
+                <div className="mb-3 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="w-4 h-4 text-emerald-600" />
+                        <span className="text-sm font-bold text-emerald-800">
+                            Đã tự động tạo biến thể đóng gói: {autoCreatedInfo.unitName}
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-2 bg-white/70 rounded-lg px-3 py-1.5">
+                            <Tag className="w-3.5 h-3.5 text-blue-500" />
+                            <div>
+                                <p className="text-[10px] text-gray-400">SKU</p>
+                                <p className="text-xs font-mono font-bold text-blue-700">{autoCreatedInfo.sku}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 bg-white/70 rounded-lg px-3 py-1.5">
+                            <Barcode className="w-3.5 h-3.5 text-purple-500" />
+                            <div>
+                                <p className="text-[10px] text-gray-400">Barcode nội bộ</p>
+                                <p className="text-xs font-mono font-bold text-purple-700">{autoCreatedInfo.barcode}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setAutoCreatedInfo(null)}
+                        className="mt-2 text-xs text-emerald-600 hover:text-emerald-800 underline"
+                    >
+                        Đóng thông báo
+                    </button>
+                </div>
+            )}
 
             {/* Danh sách quy đổi hiện có */}
             {conversions.length > 0 && !isAdding && !editingId && (
@@ -161,6 +215,14 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
                         </button>
                     </div>
 
+                    {!editingId && (
+                        <div className="mb-3 p-2 bg-blue-50 border border-blue-100 rounded-lg">
+                            <p className="text-xs text-blue-700">
+                                💡 Khi thêm quy đổi, hệ thống sẽ <strong>tự động tạo biến thể mới</strong> cho đơn vị đóng gói (bao gồm SKU và Barcode nội bộ).
+                            </p>
+                        </div>
+                    )}
+
                     {errorMsg && (
                         <p className="text-xs text-red-600 bg-red-50 p-2 rounded-lg mb-3 border border-red-100">{errorMsg}</p>
                     )}
@@ -191,6 +253,15 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
                             />
                         </div>
                     </div>
+
+                    {/* Preview: hiển thị phép quy đổi sẽ được tạo */}
+                    {formData.toUnitId && formData.conversionFactor && (
+                        <div className="mb-3 p-2 bg-indigo-50 border border-indigo-100 rounded-lg">
+                            <p className="text-xs font-semibold text-indigo-800">
+                                📦 {formData.conversionFactor} {variant.unit_name || 'Gốc'} = 1 {getUnitName(parseInt(formData.toUnitId))}
+                            </p>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <div>
