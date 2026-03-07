@@ -532,6 +532,7 @@ function ProductDetail() {
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Barcode</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500 uppercase tracking-wider">Thuộc tính</TableHead>
                   <TableHead className="text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Giá Bán</TableHead>
+                  <TableHead className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Tồn kho</TableHead>
                   <TableHead className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Trạng thái</TableHead>
                   <TableHead className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Thao tác</TableHead>
                 </TableRow>
@@ -604,6 +605,10 @@ function ProductDetail() {
                       </TableCell>
 
                       <TableCell className="text-center">
+                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{variant.stockQuantity || 0}</span>
+                      </TableCell>
+
+                      <TableCell className="text-center">
                         {variant.is_active ? (
                           <div className="w-2.5 h-2.5 rounded-full bg-green-500 mx-auto ring-2 ring-green-100 shadow-sm" title="Hoạt động bình thường" />
                         ) : (
@@ -667,7 +672,7 @@ function ProductDetail() {
                     {/* Dòng hiển thị quy đổi đơn vị khi expand */}
                     {expandedVariantId === variant.id && (
                       <TableRow className="bg-gray-50/30">
-                        <TableCell colSpan={9} className="p-0">
+                        <TableCell colSpan={10} className="p-0">
                           <div className="px-6 py-4 animate-in slide-in-from-top-2 duration-200 border-b border-gray-100">
                             <UnitConversionSection
                               variant={variant}

@@ -669,6 +669,10 @@ export function ProductListScreen() {
                     <p className="font-medium text-gray-700">{variant.unit_name || 'N/A'}</p>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Tồn kho</p>
+                    <p className="font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg w-fit border border-indigo-100">{variant.stockQuantity || 0}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Trạng thái</p>
                     {variant.is_active ? (
                       <Badge className="bg-green-50 text-green-700 border border-green-200 font-medium" variant="success">Đang bán</Badge>
@@ -712,6 +716,7 @@ export function ProductListScreen() {
                     <TableHead className="font-semibold">Loại sản phẩm</TableHead>
                     <TableHead className="font-semibold">SKU</TableHead>
                     <TableHead className="font-semibold">Giá bán</TableHead>
+                    <TableHead className="font-semibold">Tồn kho</TableHead>
                     <TableHead className="font-semibold">Đơn vị</TableHead>
                     <TableHead className="font-semibold">Trạng thái</TableHead>
                     <TableHead className="font-semibold">Thuộc tính</TableHead>
@@ -739,6 +744,9 @@ export function ProductListScreen() {
                       <TableCell className="text-sm font-mono text-gray-600">{v.sku || 'N/A'}</TableCell>
                       <TableCell className="text-sm font-bold text-emerald-600">
                         {v.sell_price ? Number(v.sell_price).toLocaleString('vi-VN') + ' ₫' : 'N/A'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{v.stockQuantity || 0}</span>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">{v.unit_name || 'N/A'}</TableCell>
                       <TableCell>
