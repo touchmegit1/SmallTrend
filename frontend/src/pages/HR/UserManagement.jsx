@@ -480,7 +480,8 @@ const UserManagement = () => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-2">
-                                                Xác nhận mật khẩu <span className="text-red-500">*</span>
+                                         {" "}
+                              Xác nhận mật khẩu <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="password"
@@ -581,7 +582,9 @@ const UserManagement = () => {
                                         </label>
                                         <CustomSelect
                                             value={formData.status}
-                                            onChange={(val) => setFormData({ ...formData, status: val })}
+                                        
+                           onChange={(val) => setFormData({ ...fo
+                      rmData, status: val })}
                                             variant="status"
                                             options={[
                                                 { value: 'active', label: 'Hoạt động' },

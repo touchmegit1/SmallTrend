@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { getDisposalVouchers, cancelDisposalVoucher } from "../services/disposalService";
+import { getDisposalVouchers, submitDisposalVoucher, approveDisposalVoucher, rejectDisposalVoucher } from "../services/disposalService";
 import { getLocations } from "../services/inventoryService";
 
 export function useDisposalList() {
@@ -96,26 +96,14 @@ export function useDisposalList() {
   // ─── Stats by status ────────────────────────────
   const statusCounts = useMemo(() => {
     const counts = { ALL: vouchers.length };
-    const statuses = ["DRAFT", "CONFIRMED", "CANCELLED"];
+    const statuses = ["DRAFT", "PENDING", "CONFIRMED", "REJECTED"];
     for (const s of statuses) {
       counts[s] = vouchers.filter((v) => v.status === s).length;
     }
     return counts;
   }, [vouchers]);
 
-  // ─── Cancel voucher ──────────────────────────────
-  const cancelVoucher = useCallback(async (id) => {
-    try {
-      await cancelDisposalVoucher(id);
-      setVouchers((prev) =>
-        prev.map((v) =>
-          v.id === id ? { ...v, status: "CANCELLED" } : v
-        )
-      );
-    } catch (err) {
-      alert("Lỗi khi hủy phiếu: " + err.message);
-    }
-  }, []);
+
 
   // ─── Toggle sort ─────────────────────────────────
   const toggleSort = useCallback(
@@ -152,6 +140,5 @@ export function useDisposalList() {
     totalPages,
     perPage,
 
-    cancelVoucher,
   };
 }

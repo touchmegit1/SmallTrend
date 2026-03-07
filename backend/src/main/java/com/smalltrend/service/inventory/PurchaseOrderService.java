@@ -218,6 +218,7 @@ public class PurchaseOrderService {
                 .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : item.getQuantity())
                 .unitCost(item.getUnitCost())
                 .totalCost(item.getTotalCost())
+                .expiryDate(item.getExpiryDate())
                 .build())
                 .collect(Collectors.toList());
 
@@ -531,10 +532,16 @@ public class PurchaseOrderService {
 
     // ─── Update Stock (on RECEIVE) ───────────────────────────
     private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests) {
-        // Get a default location
-        Location defaultLocation = locationRepository.findAll().stream()
-                .findFirst()
-                .orElse(null);
+        // Use the order's location, fallback to first available
+        Location targetLocation = null;
+        if (order.getLocationId() != null) {
+            targetLocation = locationRepository.findById(order.getLocationId()).orElse(null);
+        }
+        if (targetLocation == null) {
+            targetLocation = locationRepository.findAll().stream()
+                    .findFirst()
+                    .orElse(null);
+        }
 
         for (PurchaseOrderItemRequest itemReq : itemRequests) {
             // 1. Resolve variant
@@ -550,7 +557,7 @@ public class PurchaseOrderService {
 
             BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
 
-            LocalDate expiryDate = LocalDate.now().plusYears(1);
+            LocalDate expiryDate = itemReq.getExpiryDate() != null ? itemReq.getExpiryDate() : LocalDate.now().plusYears(1);
 
             // 3. Create ProductBatch
             String batchNumber = generateBatchNumber(variant);
@@ -567,7 +574,7 @@ public class PurchaseOrderService {
             InventoryStock stock = InventoryStock.builder()
                     .variant(variant)
                     .batch(batch)
-                    .location(defaultLocation)
+                    .location(targetLocation)
                     .quantity(qty)
                     .build();
             inventoryStockRepository.save(stock);
@@ -576,7 +583,7 @@ public class PurchaseOrderService {
             StockMovement movement = StockMovement.builder()
                     .variant(variant)
                     .batch(batch)
-                    .location(defaultLocation)
+                    .location(targetLocation)
                     .type("IN")
                     .quantity(qty)
                     .referenceType("purchase_order")

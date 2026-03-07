@@ -17,11 +17,17 @@ const STATUS_CONFIG = {
     text: "text-green-700",
     dot: "bg-green-500",
   },
-  CANCELLED: {
-    label: "Đã hủy",
-    bg: "bg-gray-50",
-    text: "text-gray-600",
-    dot: "bg-gray-400",
+  PENDING: {
+    label: "Chờ duyệt",
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    dot: "bg-indigo-500",
+  },
+  REJECTED: {
+    label: "Từ chối",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    dot: "bg-red-500",
   },
 };
 
@@ -50,7 +56,6 @@ export default function DisposalList() {
     page,
     setPage,
     totalPages,
-    cancelVoucher,
   } = useDisposalList();
 
   if (loading) {
@@ -79,8 +84,9 @@ export default function DisposalList() {
   const statusTabs = [
     { key: "ALL", label: "Tất cả" },
     { key: "DRAFT", label: "Nháp" },
+    { key: "PENDING", label: "Chờ duyệt" },
     { key: "CONFIRMED", label: "Đã xác nhận" },
-    { key: "CANCELLED", label: "Đã hủy" },
+    { key: "REJECTED", label: "Từ chối" },
   ];
 
   const SortIcon = ({ field }) => (
@@ -183,15 +189,12 @@ export default function DisposalList() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Trạng thái
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                  Thao tác
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {vouchers.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-16 text-center">
+                  <td colSpan="8" className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <p className="text-gray-500 text-sm font-medium">
                         Chưa có phiếu xử lý nào
@@ -248,25 +251,6 @@ export default function DisposalList() {
                           />
                           {statusCfg.label}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {v.status === "DRAFT" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (
-                                window.confirm(
-                                  "Bạn có chắc muốn hủy phiếu này?",
-                                )
-                              ) {
-                                cancelVoucher(v.id);
-                              }
-                            }}
-                            className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                          >
-                            Hủy
-                          </button>
-                        )}
                       </td>
                     </tr>
                   );

@@ -26,8 +26,11 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
     @Query("SELECT i FROM InventoryStock i WHERE i.variant.id = :variantId")
     List<InventoryStock> findByVariantId(@Param("variantId") Integer variantId);
 
-    // Tìm stock của variant tại một location cụ thể (dùng cho DisposalVoucherService)
+    // Tìm stock của variant tại một location cụ thể
     Optional<InventoryStock> findByVariantAndLocation(ProductVariant variant, Location location);
+
+    // Tìm stock của lô cụ thể tại location
+    Optional<InventoryStock> findByBatchAndLocation(com.smalltrend.entity.ProductBatch batch, Location location);
 
     // Tìm tất cả stock records tại một location
     @Query("SELECT i FROM InventoryStock i JOIN FETCH i.variant v JOIN FETCH v.product WHERE i.location.id = :locationId AND i.quantity > 0")

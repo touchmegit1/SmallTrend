@@ -63,6 +63,9 @@ public class DisposalVoucher {
     @Column(name = "confirmed_at")
     private LocalDateTime confirmedAt;
 
+    @Column(columnDefinition = "TEXT", name = "rejection_reason")
+    private String rejectionReason;
+
     @Version
     private Long version; // Optimistic locking
 

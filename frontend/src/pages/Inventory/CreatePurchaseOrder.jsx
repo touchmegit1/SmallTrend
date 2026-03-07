@@ -21,7 +21,6 @@ function CreatePurchaseOrder() {
     products,
     suppliers,
     locations,
-    contracts,
     filteredSuppliers,
     loading,
     saving,
@@ -33,8 +32,6 @@ function CreatePurchaseOrder() {
     setSupplierQuery,
     selectSupplier,
     clearSupplier,
-    selectContract,
-    clearContract,
     updateOrder,
     addProduct,
     importProducts,
@@ -144,13 +141,10 @@ function CreatePurchaseOrder() {
           suppliers={suppliers}
           filteredSuppliers={filteredSuppliers}
           locations={locations}
-          contracts={contracts}
           supplierQuery={supplierQuery}
           setSupplierQuery={setSupplierQuery}
           selectSupplier={selectSupplier}
           clearSupplier={clearSupplier}
-          selectContract={selectContract}
-          clearContract={clearContract}
           updateOrder={updateOrder}
           isEditable={isEditable}
         />
