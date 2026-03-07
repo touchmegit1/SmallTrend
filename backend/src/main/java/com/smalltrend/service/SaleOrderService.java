@@ -46,7 +46,8 @@ public class SaleOrderService {
 
     public List<OrderResponse> listOrders(String status, Integer cashierId, LocalDate fromDate, LocalDate toDate) {
         List<Order> orders = orderRepository.findAll().stream()
-                .sorted(Comparator.comparing(Order::getOrderDate, Comparator.nullsLast(LocalDateTime::compareTo)).reversed())
+                .sorted(Comparator.comparing(Order::getOrderDate, Comparator.nullsLast(LocalDateTime::compareTo))
+                        .reversed())
                 .collect(Collectors.toList());
 
         return orders.stream()
@@ -264,7 +265,8 @@ public class SaleOrderService {
             }
 
             ProductVariant variant = productVariantRepository.findById(itemRequest.getProductVariantId())
-                    .orElseThrow(() -> new RuntimeException("Product variant not found: " + itemRequest.getProductVariantId()));
+                    .orElseThrow(() -> new RuntimeException(
+                            "Product variant not found: " + itemRequest.getProductVariantId()));
 
             BigDecimal unitPrice = itemRequest.getUnitPrice() != null
                     ? itemRequest.getUnitPrice()
@@ -304,7 +306,8 @@ public class SaleOrderService {
         for (OrderItem item : items) {
             BigDecimal lineBase = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             subtotal = subtotal.add(lineBase);
-            discount = discount.add(item.getLineDiscountAmount() != null ? item.getLineDiscountAmount() : BigDecimal.ZERO);
+            discount = discount
+                    .add(item.getLineDiscountAmount() != null ? item.getLineDiscountAmount() : BigDecimal.ZERO);
             tax = tax.add(item.getLineTaxAmount() != null ? item.getLineTaxAmount() : BigDecimal.ZERO);
         }
 

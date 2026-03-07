@@ -20,134 +20,141 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UnitConversionService {
 
-    private final UnitConversionRepository unitConversionRepository;
-    private final ProductVariantRepository productVariantRepository;
-    private final UnitRepository unitRepository;
-    private final ProductVariantService productVariantService;
+        private final UnitConversionRepository unitConversionRepository;
+        private final ProductVariantRepository productVariantRepository;
+        private final UnitRepository unitRepository;
+        private final ProductVariantService productVariantService;
 
-    public List<UnitConversionResponse> getConversionsByVariantId(Integer variantId) {
-        return unitConversionRepository.findByVariantId(variantId)
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Thêm quy đổi đơn vị MỚI cho một variant.
-     *
-     * Khi tạo quy đổi (VD: 6 Lon = 1 Lốc), hệ thống sẽ TỰ ĐỘNG:
-     * 1. Tạo một product variant mới với đơn vị đích (Lốc)
-     * 2. Sinh mã SKU tự động (VD: BEV-COCA-COLA-LOC6)
-     * 3. Sinh mã barcode nội bộ (20 + ProductID + VariantID + Random)
-     * 4. Lưu quy đổi và liên kết với variant gốc
-     *
-     * Đây là hành vi chuẩn của hệ thống POS siêu thị:
-     * packaging units tự động trở thành variants riêng biệt.
-     */
-    @Transactional
-    public UnitConversionResponse addConversion(Integer variantId, UnitConversionRequest request) {
-        ProductVariant baseVariant = productVariantRepository.findById(variantId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể với ID: " + variantId));
-
-        Unit toUnit = unitRepository.findById(request.getToUnitId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn vị với ID: " + request.getToUnitId()));
-
-        if (unitConversionRepository.existsByVariantIdAndToUnitId(variantId, request.getToUnitId())) {
-            throw new RuntimeException("Quy đổi sang đơn vị '" + toUnit.getName() + "' đã tồn tại cho biến thể này!");
+        public List<UnitConversionResponse> getConversionsByVariantId(Integer variantId) {
+                return unitConversionRepository.findByVariantId(variantId)
+                                .stream()
+                                .map(this::mapToResponse)
+                                .collect(Collectors.toList());
         }
 
-        Product product = baseVariant.getProduct();
+        /**
+         * Thêm quy đổi đơn vị MỚI cho một variant.
+         *
+         * Khi tạo quy đổi (VD: 6 Lon = 1 Lốc), hệ thống sẽ TỰ ĐỘNG:
+         * 1. Tạo một product variant mới với đơn vị đích (Lốc)
+         * 2. Sinh mã SKU tự động (VD: BEV-COCA-COLA-LOC6)
+         * 3. Sinh mã barcode nội bộ (20 + ProductID + VariantID + Random)
+         * 4. Lưu quy đổi và liên kết với variant gốc
+         *
+         * Đây là hành vi chuẩn của hệ thống POS siêu thị:
+         * packaging units tự động trở thành variants riêng biệt.
+         */
+        @Transactional
+        public UnitConversionResponse addConversion(Integer variantId, UnitConversionRequest request) {
+                ProductVariant baseVariant = productVariantRepository.findById(variantId)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Không tìm thấy biến thể với ID: " + variantId));
 
-        // ─── 1. Tạo quy đổi đơn vị ────────────────────────────────────────────
-        UnitConversion conversion = UnitConversion.builder()
-                .variant(baseVariant)
-                .toUnit(toUnit)
-                .conversionFactor(request.getConversionFactor())
-                .sellPrice(request.getSellPrice())
-                .description(request.getDescription())
-                .isActive(request.getIsActive() != null ? request.getIsActive() : true)
-                .build();
+                Unit toUnit = unitRepository.findById(request.getToUnitId())
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Không tìm thấy đơn vị với ID: " + request.getToUnitId()));
 
-        UnitConversion savedConversion = unitConversionRepository.save(conversion);
+                if (unitConversionRepository.existsByVariantIdAndToUnitId(variantId, request.getToUnitId())) {
+                        throw new RuntimeException(
+                                        "Quy đổi sang đơn vị '" + toUnit.getName() + "' đã tồn tại cho biến thể này!");
+                }
 
-        // ─── 2. Tự động tạo Product Variant mới cho đơn vị đóng gói ───────────
-        // Sinh SKU: VD BEV-COCA-COLA-LOC6
-        String autoSku = productVariantService.generateSkuForConversion(
-                baseVariant, toUnit, request.getConversionFactor());
+                Product product = baseVariant.getProduct();
 
-        // Tạo variant mới với đơn vị đích
-        ProductVariant packagingVariant = ProductVariant.builder()
-                .product(product)
-                .sku(autoSku)
-                .unit(toUnit)
-                .sellPrice(request.getSellPrice())
-                .isActive(baseVariant.isActive())
-                .imageUrl(baseVariant.getImageUrl()) // Kế thừa ảnh từ variant gốc
-                .attributes(baseVariant.getAttributes() != null ? new java.util.HashMap<>(baseVariant.getAttributes())
-                        : null) // Kế thừa thuộc tính
-                .build();
+                // ─── 1. Tạo quy đổi đơn vị ────────────────────────────────────────────
+                UnitConversion conversion = UnitConversion.builder()
+                                .variant(baseVariant)
+                                .toUnit(toUnit)
+                                .conversionFactor(request.getConversionFactor())
+                                .sellPrice(request.getSellPrice())
+                                .description(request.getDescription())
+                                .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+                                .build();
 
-        ProductVariant savedVariant = productVariantRepository.save(packagingVariant);
+                UnitConversion savedConversion = unitConversionRepository.save(conversion);
 
-        // ─── 3. Sinh barcode nội bộ (20 + ProductID + VariantID + Random) ──────
-        String autoBarcode = productVariantService.generateInternalBarcodeForPackaging(
-                product.getId(), savedVariant.getId());
-        savedVariant.setBarcode(autoBarcode);
-        productVariantRepository.save(savedVariant);
+                // ─── 2. Tự động tạo Product Variant mới cho đơn vị đóng gói ───────────
+                // Sinh SKU: VD BEV-COCA-COLA-LOC6
+                String autoSku = productVariantService.generateSkuForConversion(
+                                baseVariant, toUnit, request.getConversionFactor());
 
-        // ─── 4. Trả về response kèm thông tin variant tự động tạo ─────────────
-        UnitConversionResponse response = mapToResponse(savedConversion);
-        response.setAutoCreatedVariantId(savedVariant.getId());
-        response.setAutoCreatedSku(savedVariant.getSku());
-        response.setAutoCreatedBarcode(savedVariant.getBarcode());
+                // Tạo variant mới với đơn vị đích
+                ProductVariant packagingVariant = ProductVariant.builder()
+                                .product(product)
+                                .sku(autoSku)
+                                .unit(toUnit)
+                                .sellPrice(request.getSellPrice())
+                                .isActive(baseVariant.isActive())
+                                .imageUrl(baseVariant.getImageUrl()) // Kế thừa ảnh từ variant gốc
+                                .attributes(baseVariant.getAttributes() != null
+                                                ? new java.util.HashMap<>(baseVariant.getAttributes())
+                                                : null) // Kế thừa thuộc tính
+                                .build();
 
-        return response;
-    }
+                ProductVariant savedVariant = productVariantRepository.save(packagingVariant);
 
-    public UnitConversionResponse updateConversion(Integer conversionId, UnitConversionRequest request) {
-        UnitConversion conversion = unitConversionRepository.findById(conversionId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy quy đổi với ID: " + conversionId));
+                // ─── 3. Sinh barcode nội bộ (20 + ProductID + VariantID + Random) ──────
+                String autoBarcode = productVariantService.generateInternalBarcodeForPackaging(
+                                product.getId(), savedVariant.getId());
+                savedVariant.setBarcode(autoBarcode);
+                productVariantRepository.save(savedVariant);
 
-        Unit toUnit = unitRepository.findById(request.getToUnitId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn vị với ID: " + request.getToUnitId()));
+                // ─── 4. Trả về response kèm thông tin variant tự động tạo ─────────────
+                UnitConversionResponse response = mapToResponse(savedConversion);
+                response.setAutoCreatedVariantId(savedVariant.getId());
+                response.setAutoCreatedSku(savedVariant.getSku());
+                response.setAutoCreatedBarcode(savedVariant.getBarcode());
 
-        // Check duplicate (excluding current record)
-        if (unitConversionRepository.existsByVariantIdAndToUnitIdAndIdNot(
-                conversion.getVariant().getId(), request.getToUnitId(), conversionId)) {
-            throw new RuntimeException("Quy đổi sang đơn vị '" + toUnit.getName() + "' đã tồn tại cho biến thể này!");
+                return response;
         }
 
-        conversion.setToUnit(toUnit);
-        conversion.setConversionFactor(request.getConversionFactor());
-        conversion.setSellPrice(request.getSellPrice());
-        conversion.setDescription(request.getDescription());
-        if (request.getIsActive() != null) {
-            conversion.setActive(request.getIsActive());
+        public UnitConversionResponse updateConversion(Integer conversionId, UnitConversionRequest request) {
+                UnitConversion conversion = unitConversionRepository.findById(conversionId)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Không tìm thấy quy đổi với ID: " + conversionId));
+
+                Unit toUnit = unitRepository.findById(request.getToUnitId())
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Không tìm thấy đơn vị với ID: " + request.getToUnitId()));
+
+                // Check duplicate (excluding current record)
+                if (unitConversionRepository.existsByVariantIdAndToUnitIdAndIdNot(
+                                conversion.getVariant().getId(), request.getToUnitId(), conversionId)) {
+                        throw new RuntimeException(
+                                        "Quy đổi sang đơn vị '" + toUnit.getName() + "' đã tồn tại cho biến thể này!");
+                }
+
+                conversion.setToUnit(toUnit);
+                conversion.setConversionFactor(request.getConversionFactor());
+                conversion.setSellPrice(request.getSellPrice());
+                conversion.setDescription(request.getDescription());
+                if (request.getIsActive() != null) {
+                        conversion.setActive(request.getIsActive());
+                }
+
+                UnitConversion saved = unitConversionRepository.save(conversion);
+                return mapToResponse(saved);
         }
 
-        UnitConversion saved = unitConversionRepository.save(conversion);
-        return mapToResponse(saved);
-    }
-
-    @Transactional
-    public void deleteConversion(Integer conversionId) {
-        if (!unitConversionRepository.existsById(conversionId)) {
-            throw new RuntimeException("Không tìm thấy quy đổi với ID: " + conversionId);
+        @Transactional
+        public void deleteConversion(Integer conversionId) {
+                if (!unitConversionRepository.existsById(conversionId)) {
+                        throw new RuntimeException("Không tìm thấy quy đổi với ID: " + conversionId);
+                }
+                unitConversionRepository.deleteById(conversionId);
         }
-        unitConversionRepository.deleteById(conversionId);
-    }
 
-    public UnitConversionResponse mapToResponse(UnitConversion entity) {
-        UnitConversionResponse response = new UnitConversionResponse();
-        response.setId(entity.getId());
-        response.setVariantId(entity.getVariant().getId());
-        response.setToUnitId(entity.getToUnit().getId());
-        response.setToUnitName(entity.getToUnit().getName());
-        response.setToUnitCode(entity.getToUnit().getCode());
-        response.setConversionFactor(entity.getConversionFactor());
-        response.setSellPrice(entity.getSellPrice());
-        response.setDescription(entity.getDescription());
-        response.setIsActive(entity.isActive());
-        return response;
-    }
+        public UnitConversionResponse mapToResponse(UnitConversion entity) {
+                UnitConversionResponse response = new UnitConversionResponse();
+                response.setId(entity.getId());
+                response.setVariantId(entity.getVariant().getId());
+                response.setToUnitId(entity.getToUnit().getId());
+                response.setToUnitName(entity.getToUnit().getName());
+                response.setToUnitCode(entity.getToUnit().getCode());
+                response.setConversionFactor(entity.getConversionFactor());
+                response.setSellPrice(entity.getSellPrice());
+                response.setDescription(entity.getDescription());
+                response.setIsActive(entity.isActive());
+                return response;
+        }
 }
