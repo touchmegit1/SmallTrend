@@ -85,7 +85,7 @@ export default function ActionButtons({
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             <Trash2 size={16} />
-            Xóa hợp đồng nháp
+            Xóa phiếu nháp
           </button>
         )}
 
@@ -102,14 +102,14 @@ export default function ActionButtons({
               ) : (
                 <CheckCircle size={18} />
               )}
-              Duyệt hợp đồng
+              Duyệt phiếu nhập
             </button>
             <button
               onClick={onReject}
               disabled={saving}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
-              Từ chối hợp đồng
+              Từ chối phiếu nhập
             </button>
           </>
         )}

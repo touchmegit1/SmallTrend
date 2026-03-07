@@ -159,20 +159,6 @@ export default function CountActionButtons({
           Gửi duyệt cho Manager
         </button>
 
-        {/* Confirm directly (optional, for admin/manager) */}
-        <button
-          onClick={onConfirm}
-          disabled={saving}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-        >
-          {saving ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <CheckCircle size={16} />
-          )}
-          Xác nhận & Cập nhật tồn kho
-        </button>
-
         {/* Save Draft */}
         <button
           onClick={onSaveDraft}
@@ -185,16 +171,6 @@ export default function CountActionButtons({
             <Save size={16} />
           )}
           Lưu phiếu tạm
-        </button>
-
-        {/* Cancel */}
-        <button
-          onClick={onCancel}
-          disabled={saving}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-        >
-          <XCircle size={14} />
-          Hủy phiên kiểm kho
         </button>
       </div>
     </div>

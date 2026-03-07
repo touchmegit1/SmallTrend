@@ -4,7 +4,6 @@ import {
   Search,
   MapPin,
   Edit2,
-  Trash2,
   ChevronDown,
   ChevronRight,
   Store,
@@ -14,15 +13,20 @@ import {
   X,
   Box,
   Eye,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import {
   getLocations,
   createLocation,
   updateLocation,
-  deleteLocation,
+  toggleLocationStatus,
 } from "../../services/inventoryService";
+import ConfirmModal from "../../components/ui/ConfirmModal";
+import { useToast } from "../../components/ui/Toast";
 
 function LocationManagement() {
+  const toast = useToast();
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,6 +35,12 @@ function LocationManagement() {
   const [expandedLocationId, setExpandedLocationId] = useState(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockModalData, setStockModalData] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    location: null,
+  });
+  const [toggling, setToggling] = useState(false);
   const [formData, setFormData] = useState({
     location_name: "",
     location_code: "",
@@ -93,26 +103,48 @@ function LocationManagement() {
     try {
       if (editingLocation) {
         await updateLocation(editingLocation.id, formData);
+        toast.success(`Đã cập nhật vị trí thành công!`);
       } else {
         await createLocation(formData);
+        toast.success(`Đã tạo vị trí mới thành công!`);
       }
       fetchLocations();
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error saving location:", error);
-      alert("Có lỗi xảy ra khi lưu vị trí!");
+      toast.error("Có lỗi xảy ra khi lưu vị trí!");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa vị trí này?")) {
-      try {
-        await deleteLocation(id);
-        fetchLocations();
-      } catch (error) {
-        console.error("Error deleting location:", error);
-        alert("Không thể xóa vị trí này!");
-      }
+  // Open confirm modal instead of window.confirm
+  const handleToggleStatus = (loc) => {
+    setConfirmModal({ isOpen: true, location: loc });
+  };
+
+  // Actually perform the toggle after user confirms
+  const confirmToggle = async () => {
+    const loc = confirmModal.location;
+    if (!loc) return;
+    const isActive = loc.status === "ACTIVE";
+    setToggling(true);
+    try {
+      await toggleLocationStatus(loc.id);
+      fetchLocations();
+      setConfirmModal({ isOpen: false, location: null });
+      toast.success(
+        isActive
+          ? `Vị trí "${loc.location_name}" đã được chuyển sang Ngừng hoạt động.`
+          : `Vị trí "${loc.location_name}" đã được kích hoạt lại.`,
+      );
+    } catch (error) {
+      console.error("Error toggling location status:", error);
+      setConfirmModal({ isOpen: false, location: null });
+      toast.error(error.message, {
+        title: "Không thể chuyển trạng thái",
+        duration: 5000,
+      });
+    } finally {
+      setToggling(false);
     }
   };
 
@@ -125,15 +157,17 @@ function LocationManagement() {
     setIsStockModalOpen(true);
   };
 
-  const filteredLocations = locations.filter(
-    (loc) =>
+  const filteredLocations = locations.filter((loc) => {
+    const matchesSearch =
       (loc.location_name || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
       (loc.location_code || "")
         .toLowerCase()
-        .includes(searchQuery.toLowerCase()),
-  );
+        .includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter ? loc.status === statusFilter : true;
+    return matchesSearch && matchesStatus;
+  });
 
   const getIcon = (type) => {
     const found = locationTypes.find((t) => t.value === type);
@@ -196,6 +230,15 @@ function LocationManagement() {
                   {type.label}
                 </option>
               ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="ACTIVE">Đang hoạt động</option>
+              <option value="INACTIVE">Ngừng hoạt động</option>
             </select>
           </div>
         </div>
@@ -299,19 +342,19 @@ function LocationManagement() {
                       </td>
                       <td className="px-4 py-4">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                             loc.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                              : "bg-slate-100 text-slate-600 border border-slate-200"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-red-50 text-red-600 border border-red-200"
                           }`}
                         >
                           {loc.status === "ACTIVE"
                             ? "Đang hoạt động"
-                            : "Tạm ngưng"}
+                            : "Ngừng hoạt động"}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -328,19 +371,31 @@ function LocationManagement() {
                               handleOpenModal(loc);
                             }}
                             className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                            title="Chỉnh sửa"
+                            title="Sửa"
                           >
                             <Edit2 size={18} />
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(loc.id);
+                              handleToggleStatus(loc);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            title="Xóa"
+                            className={`p-1.5 rounded-lg transition-all ${
+                              loc.status === "ACTIVE"
+                                ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                                : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                            }`}
+                            title={
+                              loc.status === "ACTIVE"
+                                ? "Chuyển sang Ngừng hoạt động"
+                                : "Kích hoạt lại"
+                            }
                           >
-                            <Trash2 size={18} />
+                            {loc.status === "ACTIVE" ? (
+                              <ToggleRight size={18} />
+                            ) : (
+                              <ToggleLeft size={18} />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -739,6 +794,32 @@ function LocationManagement() {
           </div>
         </div>
       )}
+
+      {/* Confirm Toggle Status Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onConfirm={confirmToggle}
+        onCancel={() => setConfirmModal({ isOpen: false, location: null })}
+        title={
+          confirmModal.location?.status === "ACTIVE"
+            ? "Ngừng hoạt động vị trí"
+            : "Kích hoạt lại vị trí"
+        }
+        message={
+          confirmModal.location?.status === "ACTIVE"
+            ? `Bạn có chắc chắn muốn ngừng hoạt động vị trí "${confirmModal.location?.location_name}"? Vị trí sẽ bị ẩn khỏi các danh sách chọn.`
+            : `Bạn có chắc chắn muốn kích hoạt lại vị trí "${confirmModal.location?.location_name}"?`
+        }
+        confirmText={
+          confirmModal.location?.status === "ACTIVE"
+            ? "Ngừng hoạt động"
+            : "Kích hoạt lại"
+        }
+        variant={
+          confirmModal.location?.status === "ACTIVE" ? "danger" : "success"
+        }
+        loading={toggling}
+      />
     </div>
   );
 }

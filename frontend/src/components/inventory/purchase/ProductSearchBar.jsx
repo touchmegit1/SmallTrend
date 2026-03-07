@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Search, X, FileUp } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useToast } from "../../ui/Toast";
 
 export default function ProductSearchBar({
   products,
@@ -8,6 +9,7 @@ export default function ProductSearchBar({
   onImportProducts,
 }) {
   const [query, setQuery] = useState("");
+  const toast = useToast();
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const inputRef = useRef(null);
@@ -135,25 +137,21 @@ export default function ProductSearchBar({
           if (onImportProducts) {
             onImportProducts(importedList);
           }
-          alert(
-            `Đã import thành công ${importedList.length} sản phẩm.${
-              notFound.length > 0
-                ? `\nKhông tìm thấy các mã SKU: ${notFound.join(", ")}`
-                : ""
-            }`,
+          toast.success(
+            `Đã import thành công ${importedList.length} sản phẩm.${notFound.length > 0 ? ` Không tìm thấy: ${notFound.join(", ")}` : ""}`,
           );
         } else if (notFound.length > 0) {
-          alert(
-            `Không có mã SKU nào trong file khớp với hệ thống.\nCác mã không tìm thấy: ${notFound.join(", ")}`,
+          toast.error(
+            `Không có mã SKU nào trong file khớp với hệ thống. Các mã không tìm thấy: ${notFound.join(", ")}`,
           );
         } else {
-          alert(
+          toast.warning(
             "Danh sách trống hoặc sai định dạng cột (Cần có cột SKU, Quantity...).",
           );
         }
       } catch (error) {
         console.error("Import error:", error);
-        alert("Lỗi khi đọc file. Vui lòng kiểm tra lại định dạng.");
+        toast.error("Lỗi khi đọc file. Vui lòng kiểm tra lại định dạng.");
       }
     };
     reader.readAsBinaryString(file);

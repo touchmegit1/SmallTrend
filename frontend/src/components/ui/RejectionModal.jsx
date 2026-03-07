@@ -1,12 +1,19 @@
 import React, { useState } from "react";
 import { X, AlertCircle } from "lucide-react";
+import { useToast } from "../ui/Toast";
 
-export default function RejectionModal({ isOpen, onClose, onSubmit, isLoading }) {
+export default function RejectionModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  isLoading,
+}) {
   const [reason, setReason] = useState("");
+  const toast = useToast();
 
   const handleSubmit = () => {
     if (!reason.trim()) {
-      alert("Vui lòng nhập lý do từ chối");
+      toast.warning("Vui lòng nhập lý do từ chối");
       return;
     }
     onSubmit(reason);
@@ -21,7 +28,9 @@ export default function RejectionModal({ isOpen, onClose, onSubmit, isLoading })
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Từ chối phiếu nhập</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Từ chối phiếu nhập
+            </h2>
           </div>
           <button
             onClick={onClose}

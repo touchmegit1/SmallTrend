@@ -45,15 +45,22 @@ public class DisposalVoucherController {
         return ResponseEntity.ok(disposalVoucherService.saveDraft(request, userId));
     }
 
-    @PutMapping("/{id}/confirm")
-    public ResponseEntity<DisposalVoucherResponse> confirmVoucher(
-            @PathVariable Long id,
-            @RequestParam Long userId) {
-        return ResponseEntity.ok(disposalVoucherService.confirmVoucher(id, userId));
+    @PutMapping("/{id}/submit")
+    public ResponseEntity<DisposalVoucherResponse> submitForApproval(@PathVariable Long id) {
+        return ResponseEntity.ok(disposalVoucherService.submitForApproval(id));
     }
 
-    @PutMapping("/{id}/cancel")
-    public ResponseEntity<DisposalVoucherResponse> cancelVoucher(@PathVariable Long id) {
-        return ResponseEntity.ok(disposalVoucherService.cancelVoucher(id));
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<DisposalVoucherResponse> approveVoucher(
+            @PathVariable Long id,
+            @RequestParam Long userId) {
+        return ResponseEntity.ok(disposalVoucherService.approveVoucher(id, userId));
+    }
+
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<DisposalVoucherResponse> rejectVoucher(
+            @PathVariable Long id,
+            @RequestParam String reason) {
+        return ResponseEntity.ok(disposalVoucherService.rejectVoucher(id, reason));
     }
 }

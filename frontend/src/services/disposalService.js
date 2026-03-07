@@ -96,22 +96,32 @@ export const saveDisposalDraft = async (voucherData, userId) => {
   return mapToFrontend(data);
 };
 
-export const confirmDisposalVoucher = async (id, userId) => {
-  const response = await fetch(`${SPRING_API}/${id}/confirm?userId=${userId || 1}`, {
+export const submitDisposalVoucher = async (id) => {
+  const response = await fetch(`${SPRING_API}/${id}/submit`, {
     method: "PUT",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to confirm disposal voucher");
+  if (!response.ok) throw new Error("Failed to submit disposal voucher");
   const data = await response.json();
   return mapToFrontend(data);
 };
 
-export const cancelDisposalVoucher = async (id) => {
-  const response = await fetch(`${SPRING_API}/${id}/cancel`, {
+export const approveDisposalVoucher = async (id, userId) => {
+  const response = await fetch(`${SPRING_API}/${id}/approve?userId=${userId || 1}`, {
     method: "PUT",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to cancel disposal voucher");
+  if (!response.ok) throw new Error("Failed to approve disposal voucher");
+  const data = await response.json();
+  return mapToFrontend(data);
+};
+
+export const rejectDisposalVoucher = async (id, reason) => {
+  const response = await fetch(`${SPRING_API}/${id}/reject?reason=${encodeURIComponent(reason)}`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to reject disposal voucher");
   const data = await response.json();
   return mapToFrontend(data);
 };

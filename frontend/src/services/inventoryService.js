@@ -499,6 +499,58 @@ export const deleteLocation = async (id) => {
   return true;
 };
 
+export const toggleLocationStatus = async (id) => {
+  const response = await fetch(`${SPRING_API}/locations/${id}/toggle-status`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi chuyển trạng thái vị trí");
+  }
+  const data = await response.json();
+  return {
+    ...data,
+    location_name: data.locationName || data.location_name,
+    location_code: data.locationCode || data.location_code,
+    location_type: data.locationType || data.location_type,
+    created_at: data.createdAt || data.created_at,
+    total_products: data.totalProducts || data.total_products || 0,
+    stock_items: (data.stockItems || data.stock_items || []).map((item) => ({
+      ...item,
+      variant_id: item.variantId || item.variant_id,
+      product_name: item.productName || item.product_name,
+      variant_unit: item.variantUnit || item.variant_unit,
+      batch_code: item.batchCode || item.batch_code,
+      batch_id: item.batchId || item.batch_id,
+    })),
+  };
+};
+
+export const getActiveLocations = async () => {
+  const response = await fetch(`${SPRING_API}/locations/active`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to fetch active locations");
+  const data = await response.json();
+  return data.map((loc) => ({
+    ...loc,
+    location_name: loc.locationName || loc.location_name,
+    location_code: loc.locationCode || loc.location_code,
+    location_type: loc.locationType || loc.location_type,
+    created_at: loc.createdAt || loc.created_at,
+    total_products: loc.totalProducts || loc.total_products || 0,
+    stock_items: (loc.stockItems || loc.stock_items || []).map((item) => ({
+      ...item,
+      variant_id: item.variantId || item.variant_id,
+      product_name: item.productName || item.product_name,
+      variant_unit: item.variantUnit || item.variant_unit,
+      batch_code: item.batchCode || item.batch_code,
+      batch_id: item.batchId || item.batch_id,
+    })),
+  }));
+};
+
 // ═══════════════════════════════════════════════════════════
 //  Inventory Count (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════

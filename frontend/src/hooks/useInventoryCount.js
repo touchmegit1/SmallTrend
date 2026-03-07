@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useToast } from "../components/ui/Toast";
 import {
   getProducts,
-  getLocations,
+  getActiveLocations,
   getInventoryCounts,
   getInventoryCountById,
   getInventoryCountNextCode,
@@ -33,6 +34,7 @@ import {
  *                                       If "create" or undefined, creates a new one.
  */
 export function useInventoryCount(voucherId) {
+  const toast = useToast();
   const isCreateMode = !voucherId || voucherId === "create";
 
   // ─── Reference Data ──────────────────────────────
@@ -58,7 +60,7 @@ export function useInventoryCount(voucherId) {
       try {
         const [productsData, locationsData] = await Promise.all([
           getProducts(),
-          getLocations(),
+          getActiveLocations(),
         ]);
 
         if (cancelled) return;
@@ -335,7 +337,7 @@ export function useInventoryCount(voucherId) {
     async (navigate) => {
       const result = validateDraftCount(session, items);
       if (!result.valid) {
-        alert("Lỗi:\n" + result.errors.join("\n"));
+        toast.warning(result.errors.join(", "), { title: "Lỗi dữ liệu", duration: 5000 });
         return;
       }
 
@@ -355,10 +357,10 @@ export function useInventoryCount(voucherId) {
           await updateInventoryCount(voucherId, request);
         }
 
-        alert("Đã lưu phiếu kiểm kho nháp thành công!");
+        toast.success("Đã lưu phiếu kiểm kho nháp thành công!");
         if (navigate) navigate("/inventory-counts");
       } catch (err) {
-        alert("Lỗi khi lưu: " + err.message);
+        toast.error("Lỗi khi lưu: " + err.message);
       } finally {
         setSaving(false);
       }
@@ -371,7 +373,7 @@ export function useInventoryCount(voucherId) {
     async (navigate) => {
       const result = validateConfirmCount(session, items);
       if (!result.valid) {
-        alert("Không thể xác nhận:\n" + result.errors.join("\n"));
+        toast.warning(result.errors.join(", "), { title: "Không thể xác nhận", duration: 5000 });
         return;
       }
 
@@ -399,10 +401,10 @@ export function useInventoryCount(voucherId) {
           await confirmInventoryCount(voucherId, request);
         }
 
-        alert("Đã xác nhận kiểm kho và cập nhật tồn kho!");
+        toast.success("Đã xác nhận kiểm kho và cập nhật tồn kho!");
         if (navigate) navigate("/inventory-counts");
       } catch (err) {
-        alert("Lỗi khi xác nhận: " + err.message);
+        toast.error("Lỗi khi xác nhận: " + err.message);
       } finally {
         setSaving(false);
       }
@@ -415,7 +417,7 @@ export function useInventoryCount(voucherId) {
     async (navigate) => {
       const result = validateConfirmCount(session, items);
       if (!result.valid) {
-        alert("Không thể gửi duyệt:\n" + result.errors.join("\n"));
+        toast.warning(result.errors.join(", "), { title: "Không thể gửi duyệt", duration: 5000 });
         return;
       }
 
@@ -436,10 +438,10 @@ export function useInventoryCount(voucherId) {
           await submitInventoryCount(voucherId, request);
         }
 
-        alert("Đã gửi phiếu kiểm kho cho Manager duyệt!");
+        toast.success("Đã gửi phiếu kiểm kho cho Manager duyệt!");
         if (navigate) navigate("/inventory-counts");
       } catch (err) {
-        alert("Lỗi khi gửi duyệt: " + err.message);
+        toast.error("Lỗi khi gửi duyệt: " + err.message);
       } finally {
         setSaving(false);
       }
@@ -455,10 +457,10 @@ export function useInventoryCount(voucherId) {
       setSaving(true);
       try {
         await approveInventoryCount(voucherId);
-        alert("Đã duyệt phiếu kiểm kho và cập nhật tồn kho!");
+        toast.success("Đã duyệt phiếu kiểm kho và cập nhật tồn kho!");
         if (navigate) navigate("/inventory-counts");
       } catch (err) {
-        alert("Lỗi khi duyệt: " + err.message);
+        toast.error("Lỗi khi duyệt: " + err.message);
       } finally {
         setSaving(false);
       }
@@ -470,7 +472,7 @@ export function useInventoryCount(voucherId) {
   const rejectCount = useCallback(
     async (rejectionReason, navigate) => {
       if (!rejectionReason || !rejectionReason.trim()) {
-        alert("Vui lòng nhập lý do từ chối.");
+        toast.warning("Vui lòng nhập lý do từ chối.");
         return;
       }
 
@@ -479,10 +481,10 @@ export function useInventoryCount(voucherId) {
       setSaving(true);
       try {
         await rejectInventoryCount(voucherId, rejectionReason);
-        alert("Đã từ chối phiếu kiểm kho!");
+        toast.success("Đã từ chối phiếu kiểm kho!");
         if (navigate) navigate("/inventory-counts");
       } catch (err) {
-        alert("Lỗi khi từ chối: " + err.message);
+        toast.error("Lỗi khi từ chối: " + err.message);
       } finally {
         setSaving(false);
       }
@@ -503,7 +505,7 @@ export function useInventoryCount(voucherId) {
         try {
           await cancelInventoryCount(voucherId);
         } catch (err) {
-          alert("Lỗi khi hủy: " + err.message);
+          toast.error("Lỗi khi hủy: " + err.message);
           return;
         }
       }
