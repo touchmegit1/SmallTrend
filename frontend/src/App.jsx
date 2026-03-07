@@ -11,8 +11,6 @@ import ShiftManagement from "./pages/HR/ShiftManagement";
 import MyPayrollSummary from "./pages/HR/MyPayrollSummary";
 import ShiftTicketCenter from "./pages/HR/ShiftTicketCenter";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
-import ImportInventory from "./pages/Inventory/ImportInventory";
-import CreateImport from "./pages/Inventory/CreateImport";
 import InventoryCountList from "./pages/Inventory/InventoryCountList";
 import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import LocationManagement from "./pages/Inventory/LocationManagement";
@@ -42,7 +40,6 @@ import CRMreport from "./pages/CRM/report";
 import NotFoundPage from "./pages/Common/NotFoundPage";
 import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
 import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
-
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
 const CASHIER_ROLES = ["CASHIER", "ROLE_CASHIER"];
@@ -120,8 +117,6 @@ function App() {
         <Route path="pos/shift-handover" element={<ShiftHandover />} />
 
         <Route path="inventory" element={<InventoryDashboard />} />
-        <Route path="inventory/import" element={<ImportInventory />} />
-        <Route path="inventory/import/create" element={<CreateImport />} />
         <Route path="inventory/export" element={<DisposalList />} />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
         <Route
