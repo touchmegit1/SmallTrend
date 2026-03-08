@@ -46,8 +46,10 @@ TRUNCATE TABLE product_variants;
 TRUNCATE TABLE gift_redemption_history;
 TRUNCATE TABLE loyalty_gifts;
 TRUNCATE TABLE purchase_history;
-ALTER TABLE purchase_history MODIFY COLUMN customer_id BIGINT NULL;
-ALTER TABLE purchase_history MODIFY COLUMN customer_name VARCHAR(255) NULL;
+TRUNCATE TABLE gift_redemption_history;
+TRUNCATE TABLE loyalty_gifts;
+TRUNCATE TABLE purchase_history;
+TRUNCATE TABLE unit_conversions;
 TRUNCATE TABLE units;
 TRUNCATE TABLE products;
 TRUNCATE TABLE customers;
@@ -195,6 +197,31 @@ INSERT IGNORE INTO units (code, name, material_type, symbol) VALUES
 ('THUNG', 'Thùng', 'SOLID', 'thùng'),
 ('GOI', 'Gói', 'SOLID', 'gói'),
 ('CAI', 'Cái', 'SOLID', 'cái');
+
+-- 8.2 UNIT CONVERSIONS (Conversion between units for variants)
+-- Example: 1 carton (THUNG) = 12 boxes (HOP), 1 pack (LOC) = 4 boxes
+INSERT IGNORE INTO unit_conversions (variant_id, to_unit_id, conversion_factor, sell_price, description, is_active) VALUES
+-- Fresh Milk 1L (variant 1, base unit: HOP=1): 1 LOC = 4 HOP, 1 THUNG = 12 HOP
+(1, (SELECT id FROM units WHERE code = 'LOC'), 4.0000, 100000.00, '1 lốc = 4 hộp sữa tươi 1L', TRUE),
+(1, (SELECT id FROM units WHERE code = 'THUNG'), 12.0000, 300000.00, '1 thùng = 12 hộp sữa tươi 1L', TRUE),
+
+-- Dove Soap (variant 2, base unit: GOI=3): 1 THUNG = 48 GOI
+(2, (SELECT id FROM units WHERE code = 'THUNG'), 48.0000, 720000.00, '1 thùng = 48 gói xà phòng Dove 90g', TRUE),
+
+-- Nescafe 3in1 (variant 3, base unit: GOI=3): 1 THUNG = 30 GOI
+(3, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 1350000.00, '1 thùng = 30 gói Nescafe 3in1', TRUE),
+
+-- Coca Cola 330ml (variant 4, base unit: LOC=2): 1 THUNG = 24 LOC
+(4, (SELECT id FROM units WHERE code = 'THUNG'), 24.0000, 288000.00, '1 thùng = 24 lon Coca Cola 330ml', TRUE),
+
+-- Oishi Snack (variant 5, base unit: GOI=3): 1 THUNG = 30 GOI
+(5, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 240000.00, '1 thùng = 30 gói Oishi Snack 50g', TRUE),
+
+-- Mì Hảo Hảo (variant 12, base unit: GOI=4): 1 THUNG = 30 GOI
+(12, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 135000.00, '1 thùng = 30 gói mì Hảo Hảo 75g', TRUE),
+
+-- Mì Omachi (variant 13, base unit: GOI=4): 1 THUNG = 30 GOI
+(13, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 300000.00, '1 thùng = 30 gói mì Omachi 80g', TRUE);
 
 -- 9. PRODUCT VARIANTS
 INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active, is_base_unit, created_at, updated_at) VALUES
@@ -573,6 +600,27 @@ INSERT IGNORE INTO salary_configs (
 (7, 'MONTHLY', 12500000.00, NULL, 1.50, 400000.00, 1.50, TRUE, '2026-01-01 00:00:00', NULL,
  'Nhân viên bán hàng - Lương cố định hàng tháng', NOW(), NOW());
 
+-- Mark one historical assignment as soft-deleted sample
+UPDATE work_shift_assignments
+SET is_deleted = TRUE, updated_at = NOW()
+WHERE work_shift_id = 4 AND user_id = 7 AND shift_date = '2026-02-22';
+
+-- Backfill attendance snapshots from assignments + shifts for payroll history safety
+UPDATE attendance a
+JOIN work_shift_assignments wsa
+    ON wsa.user_id = a.user_id
+ AND wsa.shift_date = a.date
+ AND wsa.is_deleted = FALSE
+JOIN work_shifts ws
+    ON ws.id = wsa.work_shift_id
+SET a.assignment_id_snapshot = wsa.id,
+        a.shift_id_snapshot = ws.id,
+        a.shift_name_snapshot = ws.shift_name,
+        a.shift_start_snapshot = ws.start_time,
+        a.shift_end_snapshot = ws.end_time,
+        a.shift_working_minutes_snapshot = ws.working_minutes
+WHERE a.assignment_id_snapshot IS NULL;
+
 -- 25. PURCHASE ORDERS (Matching JPA PurchaseOrder schema)
 INSERT IGNORE INTO purchase_orders (
    po_number, supplier_id, created_by, order_date, status, subtotal, 
@@ -583,7 +631,6 @@ INSERT IGNORE INTO purchase_orders (
 ('PO-2024-003', 3, 2, '2024-02-01', 'DRAFT', 2400000.00, 0.00, 0.00, 2400000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-
 ('PO-2026-001', 1, 2, '2026-02-10', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
 ('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
 ('PO-2026-003', 3, 1, '2026-02-15', 'DRAFT', 12000000.00, 1200000.00, 200000.00, 13000000.00, 'Đơn nhập snack Nestle', NOW(), NOW()),
@@ -814,6 +861,61 @@ INSERT IGNORE INTO audit_logs (user_id, action, entity_name, entity_id, changes,
 (5, 'CONFIRM', 'InventoryCount', 2, '{"count_code":"IC-2026-0002","confirmed_by":2}', NOW(), 'OK', 'SYSTEM', 'Confirmed inventory count IC-2026-0002'),
 (5, 'SUBMIT', 'InventoryCount', 3, '{"count_code":"IC-2026-0003"}', NOW(), 'OK', 'SYSTEM', 'Submitted IC-2026-0003 for approval'),
 (2, 'REJECT', 'InventoryCount', 6, '{"count_code":"IC-2026-0006","reason":"Du lieu khong khop"}', NOW(), 'OK', 'SYSTEM', 'Rejected inventory count IC-2026-0006');
+
+-- =============================================================================
+-- ADVERTISEMENTS & AD CONTRACTS
+-- =============================================================================
+INSERT INTO advertisements (
+    slot, sponsor_name, title, subtitle, image_url, link_url,
+    cta_text, cta_color, bg_color, is_active,
+    contract_number, contract_value, contract_start, contract_end,
+    payment_terms, contact_person, contact_email, contact_phone, notes,
+    created_at, updated_at
+) VALUES
+(
+    'LEFT',
+    'SmallTrend Brand',
+    'Mega Sale 50% OFF',
+    'Ưu đãi cuối tuần cho mọi sản phẩm',
+    'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80',
+    '',
+    'Mua ngay',
+    '#4f46e5',
+    '#ffffff',
+    TRUE,
+    'AD-2026-LEFT-001',
+    5000000.00,
+    '2026-01-01',
+    '2026-12-31',
+    'Thanh toán hàng quý, net 30 ngày',
+    'Nguyễn Văn Marketing',
+    'marketing@smalltrend.vn',
+    '0901-234-567',
+    'Hợp đồng quảng cáo nội bộ, ưu tiên slot trái toàn năm 2026',
+    NOW(), NOW()
+),
+(
+    'RIGHT',
+    'Express Delivery Partner',
+    'Giao hàng miễn phí',
+    'Đơn từ 200.000đ — giao trong 2h',
+    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80',
+    '',
+    'Đặt ngay',
+    '#059669',
+    '#f0fdf4',
+    TRUE,
+    'AD-2026-RIGHT-001',
+    12000000.00,
+    '2026-01-01',
+    '2026-06-30',
+    'Thanh toán hàng tháng vào ngày 15',
+    'Trần Thị Logistics',
+    'ads@expressdelivery.vn',
+    '0912-345-678',
+    'Đối tác giao hàng nhanh khu vực HCM & Hà Nội. Hợp đồng gia hạn mỗi 6 tháng.',
+    NOW(), NOW()
+);
 
 -- =============================================================================
 -- End of SmallTrend Combined Sample Data

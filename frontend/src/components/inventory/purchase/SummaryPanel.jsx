@@ -79,7 +79,8 @@ export default function SummaryPanel({
         {/* Supplier Selector */}
         <div className="px-5 py-4 border-b border-slate-100">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            <Truck size={13} /> Nhà cung cấp
+            <Truck size={13} /> Nhà cung cấp{" "}
+            <span className="text-red-500">*</span>
           </label>
           <div className="relative" ref={supplierRef}>
             {order.supplier_id ? (
@@ -155,7 +156,8 @@ export default function SummaryPanel({
         {/* Location Selector */}
         <div className="px-5 py-4 border-b border-slate-100">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            <MapPin size={13} /> Vị trí nhập kho
+            <MapPin size={13} /> Vị trí nhập kho{" "}
+            <span className="text-red-500">*</span>
           </label>
           <select
             value={order.location_id || ""}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { FileText, X, ChevronDown } from "lucide-react";
 
 export default function ContractSelector({
@@ -28,13 +28,13 @@ export default function ContractSelector({
   const getStatusColor = (status) => {
     const map = {
       ACTIVE: "bg-emerald-50 text-emerald-700",
-      DRAFT: "bg-gray-50 text-gray-600",
+      DRAFT: "bg-slate-50 text-slate-600",
       PENDING_APPROVAL: "bg-amber-50 text-amber-700",
       EXPIRED: "bg-red-50 text-red-600",
       CANCELLED: "bg-slate-50 text-slate-500",
       COMPLETED: "bg-blue-50 text-blue-700",
     };
-    return map[status] || "bg-gray-50 text-gray-600";
+    return map[status] || "bg-slate-50 text-slate-600";
   };
 
   if (disabled && selectedContract) {
@@ -150,3 +150,4 @@ export default function ContractSelector({
     </div>
   );
 }
+

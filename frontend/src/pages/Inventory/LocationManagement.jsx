@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -16,6 +17,7 @@ import {
   ToggleLeft,
   ToggleRight,
   ArrowRightLeft,
+  ArrowLeft,
 } from "lucide-react";
 import {
   getLocations,
@@ -26,9 +28,11 @@ import {
 } from "../../services/inventoryService";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { useToast } from "../../components/ui/Toast";
+import CustomSelect from "../../components/common/CustomSelect";
 
 function LocationManagement() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,7 +41,8 @@ function LocationManagement() {
   const [expandedLocationId, setExpandedLocationId] = useState(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockModalData, setStockModalData] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     location: null,
@@ -211,8 +216,15 @@ function LocationManagement() {
       (loc.location_code || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter ? loc.status === statusFilter : true;
-    return matchesSearch && matchesStatus;
+    const matchesStatus =
+      statusFilter && statusFilter !== "all"
+        ? loc.status === statusFilter
+        : true;
+    const matchesType =
+      typeFilter && typeFilter !== "all"
+        ? loc.location_type === typeFilter
+        : true;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   const getIcon = (type) => {
@@ -235,14 +247,22 @@ function LocationManagement() {
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Quản lý khu vực & vị trí
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Sắp xếp không gian cửa hàng và vị trí trưng bày sản phẩm
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/inventory")}
+            className="p-1.5 rounded-lg hover:bg-slate-200 transition text-slate-500 shrink-0"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Quản lý khu vực & vị trí
+            </h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Sắp xếp không gian cửa hàng và vị trí trưng bày sản phẩm
+            </p>
+          </div>
         </div>
         <button
           onClick={() => handleOpenModal()}
@@ -269,23 +289,29 @@ function LocationManagement() {
             />
           </div>
           <div className="flex gap-2">
-            <select className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="">Tất cả loại hình</option>
-              {locationTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            <select
+            <CustomSelect
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={[
+                { value: "all", label: "Tất cả loại hình" },
+                ...locationTypes.map((t) => ({
+                  value: t.value,
+                  label: t.label,
+                })),
+              ]}
+              className="min-w-[170px]"
+            />
+            <CustomSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="ACTIVE">Đang hoạt động</option>
-              <option value="INACTIVE">Ngừng hoạt động</option>
-            </select>
+              onChange={setStatusFilter}
+              variant="status"
+              options={[
+                { value: "all", label: "Tất cả trạng thái" },
+                { value: "ACTIVE", label: "Đang hoạt động" },
+                { value: "INACTIVE", label: "Ngừng hoạt động" },
+              ]}
+              className="min-w-[170px]"
+            />
           </div>
         </div>
 
@@ -313,9 +339,8 @@ function LocationManagement() {
                 return (
                   <React.Fragment key={loc.id}>
                     <tr
-                      className={`hover:bg-slate-50 transition-colors group cursor-pointer ${
-                        isExpanded ? "bg-indigo-50/30" : ""
-                      }`}
+                      className={`hover:bg-slate-50 transition-colors group cursor-pointer ${isExpanded ? "bg-indigo-50/30" : ""
+                        }`}
                       onClick={() => toggleExpand(loc.id)}
                     >
                       <td className="px-3 py-4 text-center">
@@ -388,11 +413,10 @@ function LocationManagement() {
                       </td>
                       <td className="px-4 py-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            loc.status === "ACTIVE"
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${loc.status === "ACTIVE"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : "bg-red-50 text-red-600 border border-red-200"
-                          }`}
+                            }`}
                         >
                           {loc.status === "ACTIVE"
                             ? "Đang hoạt động"
@@ -436,11 +460,10 @@ function LocationManagement() {
                               e.stopPropagation();
                               handleToggleStatus(loc);
                             }}
-                            className={`p-1.5 rounded-lg transition-all ${
-                              loc.status === "ACTIVE"
+                            className={`p-1.5 rounded-lg transition-all ${loc.status === "ACTIVE"
                                 ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
                                 : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                            }`}
+                              }`}
                             title={
                               loc.status === "ACTIVE"
                                 ? "Chuyển sang Ngừng hoạt động"
@@ -901,7 +924,7 @@ function LocationManagement() {
                       (item, idx) => {
                         const isSelected =
                           transferData.selectedItem?.variantId ===
-                            item.variant_id &&
+                          item.variant_id &&
                           transferData.selectedItem?.batchId === item.batch_id;
                         return (
                           <button
@@ -921,17 +944,15 @@ function LocationManagement() {
                                 quantity: 1,
                               }))
                             }
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all ${
-                              isSelected
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all ${isSelected
                                 ? "border-violet-500 bg-violet-50 shadow-sm"
                                 : "border-slate-200 hover:border-violet-300 hover:bg-violet-50/50"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-3">
                               <div
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                  isSelected ? "bg-violet-100" : "bg-slate-100"
-                                }`}
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-violet-100" : "bg-slate-100"
+                                  }`}
                               >
                                 <Package
                                   size={15}
@@ -944,11 +965,10 @@ function LocationManagement() {
                               </div>
                               <div>
                                 <p
-                                  className={`text-sm font-semibold ${
-                                    isSelected
+                                  className={`text-sm font-semibold ${isSelected
                                       ? "text-violet-900"
                                       : "text-slate-800"
-                                  }`}
+                                    }`}
                                 >
                                   {item.product_name}
                                 </p>
@@ -961,11 +981,10 @@ function LocationManagement() {
                               </div>
                             </div>
                             <span
-                              className={`text-sm font-bold px-2.5 py-1 rounded-lg ${
-                                isSelected
+                              className={`text-sm font-bold px-2.5 py-1 rounded-lg ${isSelected
                                   ? "bg-violet-100 text-violet-700"
                                   : "bg-slate-100 text-slate-600"
-                              }`}
+                                }`}
                             >
                               {item.quantity} {item.variant_unit || ""}
                             </span>

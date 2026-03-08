@@ -194,10 +194,10 @@ export function usePurchaseOrder(initialId = null) {
 
   const addProduct = useCallback((product) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.product_id === product.id);
+      const existing = prev.find((i) => i.variant_id === product.id);
       if (existing) {
         return prev.map((i) =>
-          i.product_id === product.id
+          i.variant_id === product.id
             ? {
                 ...i,
                 quantity: i.quantity + 1,
@@ -215,7 +215,7 @@ export function usePurchaseOrder(initialId = null) {
       const newItems = [...prev];
       importedList.forEach((importedInfo) => {
         const existingIndex = newItems.findIndex(
-          (i) => i.product_id === importedInfo.product.id,
+          (i) => i.variant_id === importedInfo.product.id,
         );
         if (existingIndex >= 0) {
           const item = newItems[existingIndex];

@@ -6,19 +6,22 @@ export default function PurchaseHeader({ order, onBack }) {
   const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
 
   return (
-    <div className="bg-white border-b border-slate-200 px-6 py-4">
-      <div className="flex items-center gap-4">
+    <div className="bg-white border-b border-slate-200 px-5 py-3.5 flex items-center justify-between shrink-0">
+      {/* Left side */}
+      <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          className="p-1.5 rounded-lg hover:bg-slate-100 transition text-slate-500"
           title="Quay lại"
         >
-          <ArrowLeft size={20} className="text-slate-600" />
+          <ArrowLeft size={18} />
         </button>
 
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-900">Nhập hàng</h1>
+            <h1 className="text-base font-bold text-slate-900 tracking-tight">
+              Nhập hàng
+            </h1>
             <span className="font-mono text-sm font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md">
               {order.po_number || "—"}
             </span>
@@ -31,14 +34,16 @@ export default function PurchaseHeader({ order, onBack }) {
               {statusCfg.label}
             </span>
           </div>
-          <div className="flex items-center gap-4 mt-1 text-xs text-slate-400">
-            <span className="inline-flex items-center gap-1">
-              <Clock size={12} />
-              {new Date(order.created_at).toLocaleString("vi-VN")}
+          <div className="flex items-center gap-4 mt-0.5">
+            <span className="flex items-center gap-1 text-xs text-slate-400">
+              <Clock size={11} />
+              {order.created_at
+                ? new Date(order.created_at).toLocaleDateString("vi-VN")
+                : "---"}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <User size={12} />
-              Người tạo: Admin
+            <span className="flex items-center gap-1 text-xs text-slate-400">
+              <User size={11} />
+              Người tạo: {order.created_by || "Admin"}
             </span>
           </div>
         </div>

@@ -1,23 +1,23 @@
-import React from "react";
+﻿import React from "react";
 import { Save, CheckCircle } from "lucide-react";
 import { useToast } from "../ui/Toast";
 
 function AuditSidebar({ totalActualStock, uncheckedCount }) {
   const toast = useToast();
   return (
-    <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+    <div className="w-96 bg-white border-l border-slate-200 flex flex-col">
+      <div className="p-6 border-b border-slate-200">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
           Mã kiểm kho
         </h2>
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Trạng thái</span>
-            <span className="text-gray-900">Phiếu tạm</span>
+            <span className="text-slate-600">Trạng thái</span>
+            <span className="text-slate-900">Phiếu tạm</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Tổng SL thực tế</span>
-            <span className="text-gray-900 font-semibold">
+            <span className="text-slate-600">Tổng SL thực tế</span>
+            <span className="text-slate-900 font-semibold">
               {totalActualStock}
             </span>
           </div>
@@ -25,17 +25,17 @@ function AuditSidebar({ totalActualStock, uncheckedCount }) {
       </div>
 
       <div className="p-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           Ghi chú
         </label>
         <textarea
           rows={4}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           placeholder="Nhập ghi chú..."
         />
       </div>
 
-      <div className="mt-auto p-6 border-t border-gray-200">
+      <div className="mt-auto p-6 border-t border-slate-200">
         <div className="flex gap-3">
           <button className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2">
             <Save className="w-5 h-5" />
@@ -61,3 +61,4 @@ function AuditSidebar({ totalActualStock, uncheckedCount }) {
 }
 
 export default AuditSidebar;
+
