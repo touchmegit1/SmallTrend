@@ -495,11 +495,6 @@ INSERT IGNORE INTO user_credentials (user_id, username, password_hash) VALUES
 (5, 'inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
 (6, 'sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
 (7, 'sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
-(3, 'cashier1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(4, 'cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(5, 'inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(6, 'sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(7, 'sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
 
 -- 23. ATTENDANCE (Auto-tracked based on employee login/logout)
 -- 23. ATTENDANCE (Auto-tracked based on employee login/logout)
@@ -650,16 +645,6 @@ INSERT IGNORE INTO purchase_orders (
 ('PO-LEG-2024-003', 3, 2, '2024-02-01', 'DRAFT', 2400000.00, 0.00, 0.00, 2400000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-LEG-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-LEG-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-001', 1, 2, '2024-01-10', 'RECEIVED', 5000000.00, 0.00, 0.00, 5000000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-002', 2, 2, '2024-01-15', 'RECEIVED', 3500000.00, 0.00, 0.00, 3500000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-003', 3, 2, '2024-02-01', 'DRAFT', 2400000.00, 0.00, 0.00, 2400000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-
-('PO-2026-001', 1, 2, '2026-02-10', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
-('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
-('PO-2026-003', 3, 1, '2026-02-15', 'DRAFT', 12000000.00, 1200000.00, 200000.00, 13000000.00, 'Đơn nhập snack Nestle', NOW(), NOW()),
-('PO-2026-004', 4, 2, '2026-02-18', 'DRAFT', 24000000.00, 2400000.00, 1000000.00, 25400000.00, 'Đơn nhập nước ngọt Coca-Cola', NOW(), NOW());
 ('PO-2026-001', 1, 2, '2026-02-10', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
 ('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
 ('PO-2026-003', 3, 1, '2026-02-15', 'DRAFT', 12000000.00, 1200000.00, 200000.00, 13000000.00, 'Đơn nhập snack Nestle', NOW(), NOW()),
@@ -672,19 +657,7 @@ INSERT IGNORE INTO purchase_order_items (purchase_order_id, variant_id, quantity
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-003'), 3, 800, 3500.00, 0, 'Migrated from legacy purchase_order_items'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-004'), 4, 200, 9500.00, 200, 'Migrated from legacy purchase_order_items'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-005'), 5, 180, 12000.00, 0, 'Migrated from legacy purchase_order_items'),
--- 26. PURCHASE ORDER ITEMS (Matching JPA PurchaseOrderItem schema)
-INSERT IGNORE INTO purchase_order_items (purchase_order_id, variant_id, quantity, unit_price, received_quantity, notes) VALUES
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-001'), 1, 250, 20000.00, 250, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-002'), 2, 160, 22000.00, 160, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-003'), 3, 800, 3500.00, 0, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-004'), 4, 200, 9500.00, 200, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-005'), 5, 180, 12000.00, 0, 'Migrated from legacy purchase_order_items'),
 
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 1, 2000, 20000.00, 2000, 'Đã nhận đủ 2000 hộp'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 3, 200, 35000.00, 200, 'Đã nhận đủ 200 gói'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-002'), 2, 1500, 12000.00, 0, 'Chưa nhận hàng'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-003'), 5, 2000, 6000.00, 0, 'Đang chờ giao'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-004'), 4, 3000, 8000.00, 0, 'Đơn nháp chưa gửi');
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 1, 2000, 20000.00, 2000, 'Đã nhận đủ 2000 hộp'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 3, 200, 35000.00, 200, 'Đã nhận đủ 200 gói'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-002'), 2, 1500, 12000.00, 0, 'Chưa nhận hàng'),
@@ -873,14 +846,8 @@ INSERT IGNORE INTO reports (type, report_date, data, created_by, status, created
 ('Revenue', CURDATE(), '{"summary":"seed"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Revenue Report', 'PDF', NULL),
 ('Inventory', CURDATE(), '{"summary":"seed inventory"}', 5, 'COMPLETED', NOW(), NOW(), 'Seed Inventory Report', 'PDF', NULL),
 ('Attendance', CURDATE(), '{"summary":"seed attendance"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Attendance Report', 'PDF', NULL);
-('Revenue', CURDATE(), '{"summary":"seed"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Revenue Report', 'PDF', NULL),
-('Inventory', CURDATE(), '{"summary":"seed inventory"}', 5, 'COMPLETED', NOW(), NOW(), 'Seed Inventory Report', 'PDF', NULL),
-('Attendance', CURDATE(), '{"summary":"seed attendance"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Attendance Report', 'PDF', NULL);
 
 INSERT IGNORE INTO audit_logs (user_id, action, entity_name, entity_id, changes, created_at, result, source, details) VALUES
-(1, 'LOGIN', 'User', 1, '{"event":"seed login"}', NOW(), 'OK', 'SYSTEM', 'Initial seed log'),
-(2, 'CREATE', 'Campaign', 1, '{"campaign_code":"CAMP-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created campaign seed'),
-(5, 'CREATE', 'InventoryCount', 1, '{"count_code":"IC-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created inventory count');
 (1, 'LOGIN', 'User', 1, '{"event":"seed login"}', NOW(), 'OK', 'SYSTEM', 'Initial seed log'),
 (2, 'CREATE', 'Campaign', 1, '{"campaign_code":"CAMP-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created campaign seed'),
 (5, 'CREATE', 'InventoryCount', 1, '{"count_code":"IC-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created inventory count');
