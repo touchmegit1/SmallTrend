@@ -159,7 +159,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                 ? "bg-indigo-50 text-indigo-700"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
-              onClick={() => !collapsed && toggleMenu("admin")}
+              onClick={() => collapsed ? navigate("/dashboard") : toggleMenu("admin")}
               title={collapsed ? "Quản trị" : ""}
             >
               <Shield
@@ -242,7 +242,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                 ? "bg-indigo-50 text-indigo-700"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
-              onClick={() => !collapsed && toggleMenu(item.label)}
+              onClick={() => collapsed ? navigate(item.path) : toggleMenu(item.label)}
               title={collapsed ? item.label.split("(")[0] : ""}
             >
               <item.icon
@@ -293,25 +293,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       </nav>
 
       <div className="p-4 border-t border-slate-100 space-y-2">
-        {/* User Menu */}
-        <button
-          onClick={() => navigate("/account/profile")}
-          className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200`}
-          title={collapsed ? "Thông tin cá nhân" : ""}
-        >
-          <User size={20} />
-          {!collapsed && <span className="font-medium">Thông tin cá nhân</span>}
-        </button>
-
-        <button
-          onClick={() => navigate("/account/settings")}
-          className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200`}
-          title={collapsed ? "Cài đặt" : ""}
-        >
-          <Settings size={20} />
-          {!collapsed && <span className="font-medium">Cài đặt</span>}
-        </button>
-
         {/* Logout Button */}
         <button
           onClick={handleLogout}
