@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Settings, UserCircle2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LogOut, Settings, UserCircle2, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../../config/axiosConfig';
@@ -44,10 +44,12 @@ const Header = ({ sidebarCollapsed = false, onToggleSidebar }) => {
             <button
                 type="button"
                 onClick={onToggleSidebar}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                 title={sidebarCollapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
             >
-                {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+                <Menu size={20} />
+                {!sidebarCollapsed && <span>Thu gọn</span>}
+            </button>
                 <span className="hidden md:inline">{sidebarCollapsed ? 'Mở rộng' : 'Thu gọn'}</span>
             </button>
 
