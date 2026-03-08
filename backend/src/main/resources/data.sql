@@ -19,6 +19,7 @@ TRUNCATE TABLE cash_transactions;
 TRUNCATE TABLE shift_handovers;
 TRUNCATE TABLE shift_swap_requests;
 TRUNCATE TABLE stock_movements;
+TRUNCATE TABLE stock_movements;
 TRUNCATE TABLE payroll_calculations;
 TRUNCATE TABLE salary_configs;
 TRUNCATE TABLE attendance;
@@ -35,6 +36,10 @@ TRUNCATE TABLE coupons;
 TRUNCATE TABLE campaigns;
 TRUNCATE TABLE work_shift_assignments;
 TRUNCATE TABLE work_shifts;
+TRUNCATE TABLE inventory_count_items;
+TRUNCATE TABLE inventory_counts;
+TRUNCATE TABLE disposal_voucher_items;
+TRUNCATE TABLE disposal_vouchers;
 TRUNCATE TABLE inventory_count_items;
 TRUNCATE TABLE inventory_counts;
 TRUNCATE TABLE disposal_voucher_items;
@@ -63,20 +68,11 @@ TRUNCATE TABLE supplier_contracts;
 TRUNCATE TABLE suppliers;
 TRUNCATE TABLE categories;
 TRUNCATE TABLE brands;
+TRUNCATE TABLE advertisements;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- 1. BRANDS & CATEGORIES
-INSERT IGNORE INTO brands (name) VALUES
-('Vinamilk'), ('Nestle'), ('Coca-Cola'), ('Unilever'), ('P&G'), ('Kinh Do'), ('Oishi'),
-('Cholimex'), ('CP'), ('Vissan'), ('Orion'), ('Chupa Chups'), ('Vifon'), ('Acecook'),
-('Masan'), ('TH True Milk'), ('Pepsico'), ('Knorr'), ('Maggi');
-
-INSERT IGNORE INTO categories (name) VALUES
-('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
-('Đồ hộp'), ('Bánh ngọt'), ('Thịt & Hải sản'), ('Gia vị & Nước chấm'), ('Mì ăn liền');
-
--- 2. SUPPLIERS
+-- 1. SUPPLIERS
 INSERT INTO suppliers (name, tax_code, address, email, phone, contact_person, contract_files, contract_signed_date, contract_expiry, active, notes) VALUES
 ('Vinamilk Distribution', '0100170098', '10 Tan Trao, Tan Phu Ward, District 7, HCMC', 'sales@vinamilk.com.vn', '1800-1199', 'Nguyen Van A', '["https://res.cloudinary.com/demo/sample_contract1.pdf"]', '2023-01-15', '2025-01-15', TRUE, 'Main dairy supplier with 2-year contract'),
 ('Unilever Vietnam', '0300491828', '15 Le Duan Blvd, District 1, HCMC', 'contact@unilever.com.vn', '1800-5588', 'Tran Thi B', '["https://res.cloudinary.com/demo/sample_contract2.pdf", "https://res.cloudinary.com/demo/sample_contract2_annex.pdf"]', '2023-03-01', '2024-12-31', TRUE, 'Personal care and household items supplier'),
@@ -95,6 +91,17 @@ contract_expiry = new_supplier.contract_expiry,
 active = new_supplier.active,
 notes = new_supplier.notes,
 updated_at = NOW();
+
+-- 2. BRANDS & CATEGORIES
+INSERT IGNORE INTO brands (name) VALUES
+('Vinamilk'), ('Nestle'), ('Coca-Cola'), ('P&G'), ('Kinh Do'), ('Oishi'),
+('Cholimex'), ('CP'), ('Vissan'), ('Orion'), ('Chupa Chups'), ('Vifon'), ('Acecook'),
+('Masan'), ('TH True Milk'), ('Pepsico'), ('Maggi'),
+('Dove'), ('Knorr'), ('Lifebuoy'), ('OMO'), ('Sunsilk');
+
+INSERT IGNORE INTO categories (name) VALUES
+('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
+('Đồ hộp'), ('Bánh ngọt'), ('Thịt & Hải sản'), ('Gia vị & Nước chấm'), ('Mì ăn liền');
 
 -- 2.1 SUPPLIER CONTRACTS
 INSERT IGNORE INTO supplier_contracts (
@@ -134,14 +141,19 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 (3,4),(4,2),(4,3),(5,2),(5,4);
 
 -- 5. USERS (Employee list with diverse roles and work patterns)
-INSERT INTO users (username, password, active, full_name, email, phone, address, status, role_id, created_at, updated_at) VALUES
-('admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, HCMC', 'ACTIVE', 1, NOW(), NOW()),
-('manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, HCMC', 'ACTIVE', 2, NOW(), NOW()),
-('cashier1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Le Van Cashier', 'cashier1@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3, NOW(), NOW()),
-('cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Vo Thi Cashier 2', 'cashier2@smalltrend.com', '0968765432', '321 Ba Trieu, HCMC', 'ACTIVE', 3, NOW(), NOW()),
-('inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4, NOW(), NOW()),
-('sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5, NOW(), NOW()),
-('sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Sales 2', 'sales2@smalltrend.com', '0987654012', '45 Hai Ba Trung, HCMC', 'ACTIVE', 5, NOW(), NOW())
+INSERT INTO users (
+    username, password, active, full_name, email, phone, address, status, role_id,
+    avatar_url,
+    salary_type, base_salary, hourly_rate, min_required_shifts, count_late_as_present, working_hours_per_month,
+    created_at, updated_at
+) VALUES
+('admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, HCMC', 'ACTIVE', 1, 'https://i.pravatar.cc/150?img=12', 'MONTHLY', 30000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
+('manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, HCMC', 'ACTIVE', 2, 'https://i.pravatar.cc/150?img=32', 'MONTHLY', 18000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
+('cashier1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Le Van Cashier', 'cashier1@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3, 'https://i.pravatar.cc/150?img=15', 'HOURLY', 13500000.00, 75000.00, NULL, TRUE, 208.00, NOW(), NOW()),
+('cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Vo Thi Cashier 2', 'cashier2@smalltrend.com', '0968765432', '321 Ba Trieu, HCMC', 'ACTIVE', 3, 'https://i.pravatar.cc/150?img=47', 'HOURLY', 13200000.00, 72000.00, NULL, TRUE, 208.00, NOW(), NOW()),
+('inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4, 'https://i.pravatar.cc/150?img=25', 'MONTHLY', 13000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
+('sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=41', 'HOURLY', 12600000.00, 70000.00, NULL, TRUE, 208.00, NOW(), NOW()),
+('sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Sales 2', 'sales2@smalltrend.com', '0987654012', '45 Hai Ba Trung, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=6', 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 20, TRUE, 208.00, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
 password = VALUES(password),
 active = VALUES(active),
@@ -151,14 +163,21 @@ phone = VALUES(phone),
 address = VALUES(address),
 status = VALUES(status),
 role_id = VALUES(role_id),
+avatar_url = VALUES(avatar_url),
+salary_type = VALUES(salary_type),
+base_salary = VALUES(base_salary),
+hourly_rate = VALUES(hourly_rate),
+min_required_shifts = VALUES(min_required_shifts),
+count_late_as_present = VALUES(count_late_as_present),
+working_hours_per_month = VALUES(working_hours_per_month),
 updated_at = NOW();
 
 -- 6. CUSTOMER TIERS
-INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_points, max_points, min_spending, points_multiplier, discount_rate, color, is_active, priority) VALUES
-('BRONZE', 'Đồng', 0, 499, 0.00, 1.0, 0.00, '#CD7F32', TRUE, 1),
-('SILVER', 'Bạc', 500, 1499, 5000000.00, 1.5, 2.00, '#C0C0C0', TRUE, 2),
-('GOLD', 'Vàng', 1500, 4999, 15000000.00, 2.0, 5.00, '#FFD700', TRUE, 3),
-('PLATINUM', 'Bạch Kim', 5000, NULL, 50000000.00, 3.0, 10.00, '#E5E4E2', TRUE, 4);
+INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_spending, points_multiplier, discount_rate, color, is_active, priority) VALUES
+('BRONZE', 'Đồng', 0.00, 1.0, 0.00, '#CD7F32', TRUE, 1),
+('SILVER', 'Bạc', 5000000.00, 1.5, 2.00, '#C0C0C0', TRUE, 2),
+('GOLD', 'Vàng', 15000000.00, 2.0, 5.00, '#FFD700', TRUE, 3),
+('PLATINUM', 'Bạch Kim', 50000000.00, 3.0, 10.00, '#E5E4E2', TRUE, 4);
 
 -- 7. CUSTOMERS
 INSERT IGNORE INTO customers (name, phone, loyalty_points) VALUES
@@ -315,18 +334,19 @@ UPDATE inventory_stock SET quantity = 502 WHERE variant_id = 4 AND location_id =
 UPDATE inventory_stock SET quantity = 387 WHERE variant_id = 5 AND location_id = 5 AND batch_id = 5;
 
 -- 12. WORK SHIFTS (Matching JPA Schema)
+-- 12. WORK SHIFTS (Matching JPA Schema)
 INSERT IGNORE INTO work_shifts (
    shift_code, shift_name, start_time, end_time, break_start_time, break_end_time,
    shift_type, overtime_multiplier, night_shift_bonus, weekend_bonus, holiday_bonus,
    minimum_staff_required, maximum_staff_allowed, allow_early_clock_in, allow_late_clock_out,
-   early_clock_in_minutes, late_clock_out_minutes, grace_peroid_minutes, status,
+    early_clock_in_minutes, late_clock_out_minutes, grace_peroid_minutes, status, effective_from, effective_to,
    requires_approval, description
 ) VALUES
-('SHIFT-MORNING', 'Ca Sáng', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 2, 5, TRUE, TRUE, 15, 30, 10, 'ACTIVE', FALSE, 'Ca sáng từ 8h đến 17h, nghỉ trưa 1 tiếng'),
-('SHIFT-AFTERNOON', 'Ca Chiều', '13:00:00', '22:00:00', '18:00:00', '18:30:00', 'REGULAR', 1.50, 10.00, 0.00, 0.00, 2, 4, TRUE, TRUE, 15, 30, 10, 'ACTIVE', FALSE, 'Ca chiều từ 13h đến 22h, nghỉ 30 phút'),
-('SHIFT-EVENING', 'Ca Tối', '18:00:00', '23:00:00', NULL, NULL, 'NIGHT', 1.50, 15.00, 0.00, 0.00, 2, 3, TRUE, TRUE, 10, 20, 5, 'ACTIVE', FALSE, 'Ca tối từ 18h đến 23h, phụ cấp ca đêm 15%'),
-('SHIFT-WEEKEND', 'Ca Cuối Tuần', '09:00:00', '18:00:00', '12:30:00', '13:30:00', 'WEEKEND', 2.00, 0.00, 20.00, 0.00, 3, 6, TRUE, TRUE, 15, 30, 10, 'ACTIVE', TRUE, 'Ca cuối tuần từ 9h đến 18h, phụ cấp 20%'),
-('SHIFT-FULLTIME', 'Ca Full-time', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 1, 3, TRUE, TRUE, 15, 30, 10, 'ACTIVE', FALSE, 'Ca full-time chuẩn 8 tiếng');
+('SHIFT-MORNING', 'Ca Sáng', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 2, 5, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca sáng từ 8h đến 17h, nghỉ trưa 1 tiếng'),
+('SHIFT-AFTERNOON', 'Ca Chiều', '13:00:00', '22:00:00', '18:00:00', '18:30:00', 'REGULAR', 1.50, 10.00, 0.00, 0.00, 2, 4, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca chiều từ 13h đến 22h, nghỉ 30 phút'),
+('SHIFT-EVENING', 'Ca Tối', '18:00:00', '23:00:00', NULL, NULL, 'NIGHT', 1.50, 15.00, 0.00, 0.00, 2, 3, TRUE, TRUE, 10, 20, 5, 'ACTIVE', NULL, NULL, FALSE, 'Ca tối từ 18h đến 23h, phụ cấp ca đêm 15%'),
+('SHIFT-WEEKEND', 'Ca Cuối Tuần', '09:00:00', '18:00:00', '12:30:00', '13:30:00', 'WEEKEND', 2.00, 0.00, 20.00, 0.00, 3, 6, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, TRUE, 'Ca cuối tuần từ 9h đến 18h, phụ cấp 20%'),
+('SHIFT-FULLTIME', 'Ca Full-time', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 1, 3, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca full-time chuẩn 8 tiếng');
 
 -- 13. WORK SHIFT ASSIGNMENTS (with expanded employee coverage)
 INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, status, notes, created_at, updated_at) VALUES
@@ -358,7 +378,52 @@ INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, s
 (4, 3, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Thu ngân', NOW(), NOW()),
 (4, 4, '2026-02-23', 'ASSIGNED', 'Ca cuối tuần - Thu ngân', NOW(), NOW()),
 (4, 6, '2026-02-23', 'ASSIGNED', 'Ca cuối tuần - Bán hàng', NOW(), NOW()),
-(4, 7, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Bán hàng', NOW(), NOW());
+(4, 7, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Bán hàng', NOW(), NOW()),
+
+-- Current month assignments để màn hình HR (attendance/payroll) có dữ liệu mặc định
+(1, 1, '2026-03-02', 'ASSIGNED', 'Giám sát đầu tuần', NOW(), NOW()),
+(2, 2, '2026-03-02', 'ASSIGNED', 'Quản lý ca chiều đầu tuần', NOW(), NOW()),
+(1, 3, '2026-03-02', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-02', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-02', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-02', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-02', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+(4, 1, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần quản lý', NOW(), NOW()),
+(4, 3, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần thu ngân', NOW(), NOW()),
+(4, 6, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần bán hàng', NOW(), NOW()),
+
+-- Bổ sung đủ dữ liệu tháng 3 cho toàn bộ nhân sự để test payroll cá nhân
+(1, 1, '2026-03-03', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
+(2, 2, '2026-03-03', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
+(1, 3, '2026-03-03', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-03', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-03', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-03', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-03', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+
+(1, 1, '2026-03-04', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
+(2, 2, '2026-03-04', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
+(1, 3, '2026-03-04', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-04', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-04', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-04', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-04', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+
+(1, 1, '2026-03-05', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
+(2, 2, '2026-03-05', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
+(1, 3, '2026-03-05', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-05', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-05', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-05', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-05', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+
+(1, 1, '2026-03-06', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
+(2, 2, '2026-03-06', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
+(1, 3, '2026-03-06', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
+(2, 4, '2026-03-06', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
+(1, 5, '2026-03-06', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
+(3, 6, '2026-03-06', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
+(1, 7, '2026-03-06', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW());
 
 -- 14. CAMPAIGNS
 INSERT IGNORE INTO campaigns (campaign_code, campaign_name, campaign_type, description, start_date, end_date, status, budget, target_revenue, is_public, created_by, created_at, updated_at) VALUES
@@ -373,7 +438,6 @@ INSERT IGNORE INTO campaigns (campaign_code, campaign_name, campaign_type, descr
 -- 15. COUPONS
 INSERT IGNORE INTO coupons (coupon_code, coupon_name, description, coupon_type, campaign_id, discount_percent, discount_amount, max_discount_amount, min_purchase_amount, start_date, end_date, total_usage_limit, usage_per_customer, status, created_by, created_at, updated_at) VALUES
 ('WELCOME10', 'Giảm 10% Đơn Đầu', 'Mã giảm 10% cho đơn hàng đầu tiên', 'PERCENTAGE', 1, 10.00, NULL, 50000.00, 100000.00, '2026-02-01', '2026-03-31', 1000, 1, 'ACTIVE', 2, NOW(), NOW()),
-('FREESHIP50K', 'Miễn Phí Ship', 'Miễn phí vận chuyển đơn từ 200k', 'FREE_SHIPPING', 1, NULL, 25000.00, NULL, 200000.00, '2026-02-10', '2026-02-28', NULL, 5, 'ACTIVE', 2, NOW(), NOW()),
 ('FLASH50K', 'Giảm 50K Flash Sale', 'Giảm ngay 50k cho đơn từ 300k', 'FIXED_AMOUNT', 2, NULL, 50000.00, NULL, 300000.00, '2026-02-14', '2026-02-15', 500, 2, 'ACTIVE', 2, NOW(), NOW());
 
 -- 16. PRODUCT COMBOS
@@ -441,6 +505,22 @@ INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_regist
 ('SO-PH-008', 1, 3, 1, '2026-02-27 20:00:00', 40000.00, 0.00, 0.00, 40000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
 ('SO-PH-009', 4, 3, 2, '2026-02-28 09:10:00', 95000.00, 0.00, 0.00, 95000.00, 'CARD', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
 ('SO-PH-010', 3, 3, 2, '2026-02-28 16:30:00', 72000.00, 0.00, 0.00, 72000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW());
+
+-- March 2026 orders (past days + today)
+INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES
+-- 2026-03-01
+('SO-20260301-001', 1, 3, 1, '2026-03-01 09:15:00', 62000.00, 6200.00, 0.00, 68200.00, 'CASH', 'COMPLETED', 'Đơn sáng đầu tháng 3', '2026-03-01 09:15:00', '2026-03-01 09:16:00'),
+('SO-20260301-002', 4, 4, 2, '2026-03-01 14:50:00', 105000.00, 10500.00, 0.00, 115500.00, 'CARD', 'COMPLETED', 'Khách mua số lượng lớn', '2026-03-01 14:50:00', '2026-03-01 14:52:00'),
+-- 2026-03-02
+('SO-20260302-001', 2, 3, 1, '2026-03-02 10:30:00', 45000.00, 4500.00, 0.00, 49500.00, 'MOMO', 'COMPLETED', 'Đơn thanh toán ví điện tử', '2026-03-02 10:30:00', '2026-03-02 10:31:00'),
+('SO-20260302-002', 3, 4, 2, '2026-03-02 18:20:00', 88000.00, 8800.00, 0.00, 96800.00, 'CASH', 'COMPLETED', 'Đơn chiều tối', '2026-03-02 18:20:00', '2026-03-02 18:22:00'),
+-- 2026-03-03
+('SO-20260303-001', 1, 3, 1, '2026-03-03 08:45:00', 53000.00, 5300.00, 0.00, 58300.00, 'CASH', 'COMPLETED', 'Đơn sáng sớm', '2026-03-03 08:45:00', '2026-03-03 08:46:00'),
+-- 2026-03-04 today (NOW)
+('SO-20260304-001', 2, 3, 1, NOW(), 37000.00, 3700.00, 0.00, 40700.00, 'CASH', 'COMPLETED', 'Đơn hôm nay - sáng sớm', NOW(), NOW()),
+('SO-20260304-002', 1, 4, 2, NOW(), 93000.00, 9300.00, 5000.00, 97300.00, 'CARD', 'COMPLETED', 'Đơn hôm nay - khách thành viên', NOW(), NOW()),
+('SO-20260304-003', 4, 3, 1, NOW(), 126000.00, 12600.00, 0.00, 138600.00, 'MOMO', 'COMPLETED', 'Đơn hôm nay - mua nhiều mặt hàng', NOW(), NOW()),
+('SO-20260304-004', 3, 4, 2, NOW(), 48000.00, 4800.00, 0.00, 52800.00, 'CASH', 'COMPLETED', 'Đơn hôm nay - buổi chiều', NOW(), NOW());
 
 -- 19. SALE ORDER ITEMS
 INSERT IGNORE INTO sale_order_items (sale_order_id, product_variant_id, product_name, sku, quantity, unit_price, line_discount_amount, line_tax_amount, line_total_amount, notes) VALUES
@@ -536,10 +616,14 @@ INSERT IGNORE INTO user_credentials (user_id, username, password_hash) VALUES
 (7, 'sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
 
 -- 23. ATTENDANCE (Auto-tracked based on employee login/logout)
+-- 23. ATTENDANCE (Auto-tracked based on employee login/logout)
 INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
+-- Daily attendance for employees working various shifts
 -- Daily attendance for employees working various shifts
 (1, '2026-02-24', '08:01:00', '17:03:00', 'PRESENT'),
 (1, '2026-02-25', '08:12:00', '17:00:00', 'LATE'),
+(1, '2026-02-26', '08:00:00', '17:02:00', 'PRESENT'),
+(1, '2026-02-27', '08:05:00', NULL, 'PRESENT'),
 (1, '2026-02-26', '08:00:00', '17:02:00', 'PRESENT'),
 (1, '2026-02-27', '08:05:00', NULL, 'PRESENT'),
 (2, '2026-02-24', '13:00:00', '22:05:00', 'PRESENT'),
@@ -562,43 +646,91 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 (6, '2026-02-26', '09:05:00', '18:02:00', 'PRESENT'),
 (7, '2026-02-24', '09:00:00', '18:00:00', 'PRESENT'),
 (7, '2026-02-25', '09:15:00', '18:01:00', 'LATE'),
-(7, '2026-02-26', '09:00:00', '18:00:00', 'PRESENT');
+(7, '2026-02-26', '09:00:00', '18:00:00', 'PRESENT'),
 
+-- Current month attendance để trang chấm công mặc định ngày hiện tại có dữ liệu
+(1, '2026-03-01', '09:00:00', '18:02:00', 'PRESENT'),
+(3, '2026-03-01', '09:02:00', '17:58:00', 'PRESENT'),
+(6, '2026-03-01', '09:10:00', '18:00:00', 'LATE'),
+(1, '2026-03-02', '08:01:00', '17:05:00', 'PRESENT'),
+(2, '2026-03-02', '13:03:00', '22:01:00', 'PRESENT'),
+(3, '2026-03-02', '08:11:00', '17:00:00', 'LATE'),
+(4, '2026-03-02', '13:00:00', '22:03:00', 'PRESENT'),
+(5, '2026-03-02', '08:05:00', '17:02:00', 'PRESENT'),
+(6, '2026-03-02', '18:02:00', '23:00:00', 'PRESENT'),
+(7, '2026-03-02', NULL, NULL, 'ABSENT'),
+
+(1, '2026-03-03', '08:00:00', '17:04:00', 'PRESENT'),
+(2, '2026-03-03', '13:05:00', '22:00:00', 'PRESENT'),
+(3, '2026-03-03', '08:06:00', '17:00:00', 'PRESENT'),
+(4, '2026-03-03', '13:16:00', '22:00:00', 'LATE'),
+(5, '2026-03-03', '08:00:00', '17:00:00', 'PRESENT'),
+(6, '2026-03-03', '18:00:00', '23:08:00', 'PRESENT'),
+(7, '2026-03-03', '08:10:00', '17:00:00', 'LATE'),
+
+(1, '2026-03-04', '08:03:00', '17:01:00', 'PRESENT'),
+(2, '2026-03-04', '13:22:00', '22:00:00', 'LATE'),
+(3, '2026-03-04', '08:00:00', '17:12:00', 'PRESENT'),
+(4, '2026-03-04', NULL, NULL, 'ABSENT'),
+(5, '2026-03-04', '08:08:00', '17:00:00', 'PRESENT'),
+(6, '2026-03-04', '18:01:00', '23:00:00', 'PRESENT'),
+(7, '2026-03-04', '08:00:00', '17:03:00', 'PRESENT'),
+
+(1, '2026-03-05', '08:02:00', '17:00:00', 'PRESENT'),
+(2, '2026-03-05', '13:00:00', '22:06:00', 'PRESENT'),
+(3, '2026-03-05', '08:12:00', '17:00:00', 'LATE'),
+(4, '2026-03-05', '13:00:00', '22:01:00', 'PRESENT'),
+(5, '2026-03-05', '08:00:00', '17:05:00', 'PRESENT'),
+(6, '2026-03-05', NULL, NULL, 'ABSENT'),
+(7, '2026-03-05', '08:04:00', '17:00:00', 'PRESENT'),
+
+(1, '2026-03-06', '08:01:00', '17:02:00', 'PRESENT'),
+(2, '2026-03-06', '13:09:00', '22:00:00', 'LATE'),
+(3, '2026-03-06', '08:00:00', '17:01:00', 'PRESENT'),
+(4, '2026-03-06', '13:00:00', '22:00:00', 'PRESENT'),
+(5, '2026-03-06', '08:06:00', '17:00:00', 'PRESENT'),
+(6, '2026-03-06', NULL, NULL, 'ABSENT'),
+(7, '2026-03-06', '08:03:00', '17:00:00', 'PRESENT');
+
+-- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
+-- Each employee has individual salary setup - Manager can modify base salary for each person
+-- Supports both HOURLY and MONTHLY salary types
 -- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
 -- Each employee has individual salary setup - Manager can modify base salary for each person
 -- Supports both HOURLY and MONTHLY salary types
 INSERT IGNORE INTO salary_configs (
     user_id, salary_type, base_salary, hourly_rate, overtime_rate_multiplier,
-    allowances, bonus_percentage, is_active, effective_from, effective_until,
+        allowances, bonus_percentage, min_required_shifts, count_late_as_present, working_hours_per_month,
+        is_active, effective_from, effective_until,
     notes, created_at, updated_at
 ) VALUES
 -- Admin: Monthly salary with fixed base
-(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, TRUE, '2026-01-01 00:00:00', NULL, 
+(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL, 
  'Quản lý toàn hệ thống - Lương cố định hàng tháng', NOW(), NOW()),
 
 -- Manager: Monthly salary with fixed base
-(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, TRUE, '2026-01-01 00:00:00', NULL, 
+(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL, 
  'Quản lý cửa hàng - Lương cố định hàng tháng', NOW(), NOW()),
 
 -- Cashier 1: Hourly rate with monthly backup
-(3, 'HOURLY', 13500000.00, 75000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL,
+(3, 'HOURLY', 13500000.00, 75000.00, 1.50, 500000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Thu ngân ca sáng - Lương theo giờ (Giờ thường: 75k/h, OT: 112.5k/h)', NOW(), NOW()),
 
 -- Cashier 2: Hourly rate (different from cashier 1 for flexible configuration)
-(4, 'HOURLY', 13200000.00, 72000.00, 1.50, 500000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL,
+(4, 'HOURLY', 13200000.00, 72000.00, 1.50, 500000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Thu ngân ca chiều - Lương theo giờ (Giờ thường: 72k/h, OT: 108k/h)', NOW(), NOW()),
 
 -- Inventory: Monthly salary
-(5, 'MONTHLY', 13000000.00, NULL, 1.50, 400000.00, 1.00, TRUE, '2026-01-01 00:00:00', NULL,
+(5, 'MONTHLY', 13000000.00, NULL, 1.50, 400000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Quản lý kho hàng - Lương cố định hàng tháng', NOW(), NOW()),
 
 -- Sales 1: Hourly rate for flexible hours
-(6, 'HOURLY', 12600000.00, 70000.00, 1.50, 450000.00, 1.50, TRUE, '2026-01-01 00:00:00', NULL,
+(6, 'HOURLY', 12600000.00, 70000.00, 1.50, 450000.00, 1.50, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
  'Nhân viên bán hàng - Lương theo giờ (Giờ thường: 70k/h, OT: 105k/h)', NOW(), NOW()),
 
--- Sales 2: Monthly salary
-(7, 'MONTHLY', 12500000.00, NULL, 1.50, 400000.00, 1.50, TRUE, '2026-01-01 00:00:00', NULL,
- 'Nhân viên bán hàng - Lương cố định hàng tháng', NOW(), NOW());
+-- Sales 2: Monthly salary with minimum required shifts
+(7, 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 1.50, 400000.00, 1.50, 20, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
+ 'Nhân viên bán hàng - Lương tháng, cần tối thiểu 20 ca công/tháng', NOW(), NOW());
 
 -- Mark one historical assignment as soft-deleted sample
 UPDATE work_shift_assignments
@@ -703,7 +835,16 @@ INSERT IGNORE INTO payroll_calculations (
 (4, '2026-02-01', '2026-02-28', 'MONTHLY', 19, 9120, 300, 10944000.00, 540000.00, 500000.00, 76800.00, 1400000.00, 12060800.00, 10660800.00, 'APPROVED', 2, 2, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Thu ngân ca chiều - Giờ công + OT', NOW(), NOW()),
 (5, '2026-02-01', '2026-02-28', 'MONTHLY', 19, 9120, 0, 13000000.00, 0.00, 400000.00, 130000.00, 1400000.00, 13530000.00, 12130000.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Quản lý kho tháng 2', NOW(), NOW()),
 (6, '2026-02-01', '2026-02-28', 'MONTHLY', 18, 8400, 360, 9800000.00, 630000.00, 450000.00, 147000.00, 1200000.00, 11027000.00, 9827000.00, 'APPROVED', 2, 2, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Nhân viên bán hàng - Giờ công + OT', NOW(), NOW()),
-(7, '2026-02-01', '2026-02-28', 'MONTHLY', 20, 9600, 0, 12500000.00, 0.00, 400000.00, 187500.00, 1300000.00, 13087500.00, 11787500.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Nhân viên bán hàng tháng 2', NOW(), NOW());
+(7, '2026-02-01', '2026-02-28', 'MONTHLY', 20, 9600, 0, 12500000.00, 0.00, 400000.00, 187500.00, 1300000.00, 13087500.00, 11787500.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Nhân viên bán hàng tháng 2', NOW(), NOW()),
+
+-- Current month payroll snapshots
+(1, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 960, 0, 3000000.00, 0.00, 150000.00, 50000.00, 300000.00, 3200000.00, 2900000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(2, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 540, 0, 900000.00, 0.00, 50000.00, 15000.00, 90000.00, 965000.00, 875000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(3, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 1045, 0, 1306250.00, 0.00, 50000.00, 13500.00, 150000.00, 1369750.00, 1219750.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(4, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 543, 0, 651600.00, 0.00, 25000.00, 7000.00, 70000.00, 683600.00, 613600.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(5, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 537, 0, 730000.00, 0.00, 25000.00, 8000.00, 75000.00, 763000.00, 688000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(6, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 829, 0, 966833.00, 0.00, 30000.00, 12000.00, 90000.00, 1008833.00, 918833.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
+(7, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 0, 0, 0.00, 0.00, 0.00, 0.00, 120000.00, 0.00, 0.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Nghỉ không lương ngày 02/03', NOW(), NOW());
 
 -- 29. SHIFT SWAP REQUESTS
 INSERT IGNORE INTO shift_swap_requests (

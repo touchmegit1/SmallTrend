@@ -117,6 +117,7 @@ function App() {
         <Route path="pos/complaints" element={<PosComplain />} />
 
         <Route path="inventory" element={<InventoryDashboard />} />
+
         <Route path="inventory/export" element={<DisposalList />} />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
         <Route
