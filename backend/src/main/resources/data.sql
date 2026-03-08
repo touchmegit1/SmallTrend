@@ -92,11 +92,11 @@ notes = new_supplier.notes,
 updated_at = NOW();
 
 -- 2. BRANDS & CATEGORIES
-INSERT IGNORE INTO brands (name, supplier_id) VALUES
-('Vinamilk', 1), ('Nestle', 3), ('Coca-Cola', 4), ('P&G', 2), ('Kinh Do', 4), ('Oishi', 3),
-('Cholimex', 4), ('CP', 1), ('Vissan', 1), ('Orion', 3), ('Chupa Chups', 3), ('Vifon', 4), ('Acecook', 4),
-('Masan', 4), ('TH True Milk', 1), ('Pepsico', 4), ('Maggi', 3),
-('Dove', 2), ('Knorr', 2), ('Lifebuoy', 2), ('OMO', 2), ('Sunsilk', 2);
+INSERT IGNORE INTO brands (name) VALUES
+('Vinamilk'), ('Nestle'), ('Coca-Cola'), ('P&G'), ('Kinh Do'), ('Oishi'),
+('Cholimex'), ('CP'), ('Vissan'), ('Orion'), ('Chupa Chups'), ('Vifon'), ('Acecook'),
+('Masan'), ('TH True Milk'), ('Pepsico'), ('Maggi'),
+('Dove'), ('Knorr'), ('Lifebuoy'), ('OMO'), ('Sunsilk');
 
 INSERT IGNORE INTO categories (name) VALUES
 ('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
