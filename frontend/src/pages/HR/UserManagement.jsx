@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import CustomSelect from "../../components/common/CustomSelect";
 import { userService } from "../../services/userService";
-import api from "../../config/axiosConfig";
+
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -37,7 +37,7 @@ const UserManagement = () => {
     address: "",
     roleId: 2,
     status: "active",
-    imageUrl: null,
+    avatarUrl: null,
   });
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
@@ -155,10 +155,10 @@ const UserManagement = () => {
       address: user.address || "",
       roleId: user.role?.id || 2,
       status: (user.status || "active").toLowerCase(),
-      imageUrl: user.imageUrl || null,
+      avatarUrl: user.avatarUrl || null,
     });
     setImageFile(null);
-    setImagePreview(user.imageUrl || null);
+    setImagePreview(user.avatarUrl || null);
     setValidationErrors({});
     setError("");
     setShowModal(true);
@@ -177,7 +177,7 @@ const UserManagement = () => {
       address: "",
       roleId: 2,
       status: "active",
-      imageUrl: null,
+      avatarUrl: null,
     });
     setImageFile(null);
     setImagePreview(null);
@@ -221,39 +221,36 @@ const UserManagement = () => {
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
-    setFormData((prev) => ({ ...prev, imageUrl: null }));
+    setFormData((prev) => ({ ...prev, avatarUrl: null }));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  const uploadImage = async () => {
-    if (!imageFile) return formData.imageUrl; // Return existing URL if no new image
+  const uploadImage = async (userId) => {
+    if (!imageFile || !userId) return formData.avatarUrl;
     setUploadingImage(true);
-    setError(""); // Clear any previous errors
+    setError("");
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append("file", imageFile);
-      
-      console.log("Uploading image to Cloudinary...", imageFile.name);
-      const response = await api.post("/upload/image", formDataUpload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      
-      console.log("Upload response:", response.data);
-      
-      if (!response.data?.url) {
-        throw new Error("Không nhận được URL từ server");
+      const uploadedUser = await userService.uploadAvatar(userId, imageFile);
+      const uploadedUrl =
+        uploadedUser?.avatarUrl ||
+        uploadedUser?.data?.avatarUrl ||
+        uploadedUser?.url ||
+        null;
+
+      if (!uploadedUrl) {
+        throw new Error("Upload avatar thành công nhưng không nhận được URL");
       }
-      
-      const uploadedUrl = response.data.url;
-      console.log("Image uploaded successfully:", uploadedUrl);
-      
+
       return uploadedUrl;
     } catch (error) {
-      console.error("Error uploading image:", error);
-      const errorMsg = error.response?.data?.message || error.message || "Lỗi upload ảnh";
-      setError(`Lỗi tải ảnh lên: ${errorMsg}`);
+      const errorMsg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Lỗi upload ảnh đại diện";
+      setError(`Lỗi tải ảnh lên Cloudinary: ${errorMsg}`);
       throw error;
     } finally {
       setUploadingImage(false);
@@ -267,23 +264,12 @@ const UserManagement = () => {
     if (!validateForm()) return;
 
     // Prevent multiple submissions
-    if (uploadingImage) return;
+    if (uploadingImage) {
+      setError("Đang tải ảnh lên Cloudinary, vui lòng chờ...");
+      return;
+    }
 
     try {
-      // Upload image if provided
-      let imageUrl = formData.imageUrl;
-      if (imageFile) {
-        console.log("Starting image upload...");
-        imageUrl = await uploadImage();
-        console.log("Retrieved image URL:", imageUrl);
-        
-        if (!imageUrl) {
-          throw new Error("Ảnh upload thất bại - không có URL");
-        }
-      }
-
-      console.log("Final imageUrl to save:", imageUrl);
-
       if (isCreate) {
         const payload = {
           username: formData.username,
@@ -294,26 +280,37 @@ const UserManagement = () => {
           address: formData.address || undefined,
           roleId: formData.roleId,
           status: (formData.status || "active").toUpperCase(),
-          imageUrl: imageUrl || undefined,
         };
-        console.log("Creating user with payload:", payload);
-        await userService.create(payload);
+        const createdUser = await userService.create(payload);
+        const createdUserId = createdUser?.id || createdUser?.data?.id;
+
+        // Upload avatar after user is created (backend create API does not accept avatarUrl directly)
+        if (imageFile && createdUserId) {
+          await uploadImage(createdUserId);
+        }
       } else {
         const updatePayload = {
-          ...formData,
-          imageUrl: imageUrl || undefined,
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone || undefined,
+          address: formData.address || undefined,
+          roleId: formData.roleId,
           status: (formData.status || "active").toUpperCase(),
         };
-        console.log("Updating user with payload:", updatePayload);
         await userService.update(selectedUser.id, updatePayload);
+
+        // Upload avatar through dedicated avatar API
+        if (imageFile) {
+          await uploadImage(selectedUser.id);
+        }
       }
-      
+
       setShowModal(false);
       setImageFile(null);
       setImagePreview(null);
       fetchUsers();
     } catch (err) {
-      console.error("Submit error:", err);
+      console.error("❌ Submit error:", err);
       const errorMsg = err.response?.data?.message || err.message || "Có lỗi xảy ra";
       setError(errorMsg);
     }
@@ -522,11 +519,19 @@ const UserManagement = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <span className="text-indigo-600 font-medium text-sm">
-                            {user.fullName?.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.fullName || "avatar"}
+                            className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                            <span className="text-indigo-600 font-medium text-sm">
+                              {user.fullName?.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-slate-900">
@@ -617,7 +622,7 @@ const UserManagement = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          {/* Loading overlay during image upload */}
+          {/* Loading overlay during Cloudinary image upload */}
           {uploadingImage && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-40 rounded-2xl">
               <div className="bg-white rounded-2xl p-8 text-center shadow-2xl">
