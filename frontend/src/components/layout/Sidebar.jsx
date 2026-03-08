@@ -116,10 +116,7 @@ const Sidebar = ({ collapsed = false }) => {
         <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>
             <div
                 className={`border-b border-slate-100 flex items-center cursor-pointer hover:bg-slate-50 ${collapsed ? 'p-4 justify-center' : 'p-6 gap-3'}`}
-                onClick={() => {
-                    const isAdminRole = user && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
-                    navigate(isAdminRole ? '/dashboard' : '/pos');
-                }}
+                onClick={() => navigate('/crm/homepage')}
                 title="Về trang chính"
             >
                 <div className="bg-indigo-600 p-2 rounded-lg">
