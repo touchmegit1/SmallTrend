@@ -46,6 +46,8 @@ TRUNCATE TABLE product_variants;
 TRUNCATE TABLE gift_redemption_history;
 TRUNCATE TABLE loyalty_gifts;
 TRUNCATE TABLE purchase_history;
+ALTER TABLE purchase_history MODIFY COLUMN customer_id BIGINT NULL;
+ALTER TABLE purchase_history MODIFY COLUMN customer_name VARCHAR(255) NULL;
 TRUNCATE TABLE units;
 TRUNCATE TABLE products;
 TRUNCATE TABLE customers;

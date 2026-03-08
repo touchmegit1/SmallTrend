@@ -23,9 +23,9 @@ function TransactionHistory() {
       const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       setTransactions(savedTransactions);
 
-      // Lưu tất cả transactions có customer vào database
+      // Lưu tất cả transactions hoàn thành vào database
       for (const transaction of savedTransactions) {
-        if (!transaction.savedToDb && transaction.customer && transaction.status === "Hoàn thành") {
+        if (!transaction.savedToDb && transaction.status === "Hoàn thành") {
           await savePurchaseHistory(transaction);
         }
       }
@@ -35,15 +35,13 @@ function TransactionHistory() {
   }, []);
 
   const savePurchaseHistory = async (transaction) => {
-    if (!transaction.customer) return;
-
     const items = transaction.cart || transaction.items || [];
     if (items.length === 0) return;
 
     try {
       const request = {
-        customerId: transaction.customer.id,
-        customerName: transaction.customer.name,
+        customerId: transaction.customer?.id || null,
+        customerName: transaction.customer?.name || null,
         paymentMethod: transaction.payment,
         items: items.map(item => ({
           productId: item.productId || item.id || 0,

@@ -486,11 +486,11 @@ export default function POS() {
     localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
 
     // Lưu ngay vào database
-    if (transaction.customer && transaction.cart) {
+    if (transaction.cart && transaction.cart.length > 0) {
       try {
         const request = {
-          customerId: transaction.customer.id,
-          customerName: transaction.customer.name,
+          customerId: transaction.customer?.id || null,
+          customerName: transaction.customer?.name || null,
           paymentMethod: transaction.payment,
           items: transaction.cart.map(item => ({
             productId: item.productId || item.id,

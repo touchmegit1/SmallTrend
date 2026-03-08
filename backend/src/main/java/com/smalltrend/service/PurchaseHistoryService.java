@@ -37,8 +37,4 @@ public class PurchaseHistoryService {
 
         purchaseHistoryRepository.saveAll(histories);
     }
-
-    public List<PurchaseHistory> getCustomerHistory(Long customerId) {
-        return purchaseHistoryRepository.findByCustomerId(customerId);
-    }
 }
