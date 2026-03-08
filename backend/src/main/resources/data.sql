@@ -54,6 +54,7 @@ TRUNCATE TABLE purchase_history;
 TRUNCATE TABLE gift_redemption_history;
 TRUNCATE TABLE loyalty_gifts;
 TRUNCATE TABLE purchase_history;
+TRUNCATE TABLE unit_conversions;
 TRUNCATE TABLE units;
 TRUNCATE TABLE products;
 TRUNCATE TABLE customers;
@@ -215,6 +216,31 @@ INSERT IGNORE INTO units (code, name, material_type, symbol) VALUES
 ('THUNG', 'Thùng', 'SOLID', 'thùng'),
 ('GOI', 'Gói', 'SOLID', 'gói'),
 ('CAI', 'Cái', 'SOLID', 'cái');
+
+-- 8.2 UNIT CONVERSIONS (Conversion between units for variants)
+-- Example: 1 carton (THUNG) = 12 boxes (HOP), 1 pack (LOC) = 4 boxes
+INSERT IGNORE INTO unit_conversions (variant_id, to_unit_id, conversion_factor, sell_price, description, is_active) VALUES
+-- Fresh Milk 1L (variant 1, base unit: HOP=1): 1 LOC = 4 HOP, 1 THUNG = 12 HOP
+(1, (SELECT id FROM units WHERE code = 'LOC'), 4.0000, 100000.00, '1 lốc = 4 hộp sữa tươi 1L', TRUE),
+(1, (SELECT id FROM units WHERE code = 'THUNG'), 12.0000, 300000.00, '1 thùng = 12 hộp sữa tươi 1L', TRUE),
+
+-- Dove Soap (variant 2, base unit: GOI=3): 1 THUNG = 48 GOI
+(2, (SELECT id FROM units WHERE code = 'THUNG'), 48.0000, 720000.00, '1 thùng = 48 gói xà phòng Dove 90g', TRUE),
+
+-- Nescafe 3in1 (variant 3, base unit: GOI=3): 1 THUNG = 30 GOI
+(3, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 1350000.00, '1 thùng = 30 gói Nescafe 3in1', TRUE),
+
+-- Coca Cola 330ml (variant 4, base unit: LOC=2): 1 THUNG = 24 LOC
+(4, (SELECT id FROM units WHERE code = 'THUNG'), 24.0000, 288000.00, '1 thùng = 24 lon Coca Cola 330ml', TRUE),
+
+-- Oishi Snack (variant 5, base unit: GOI=3): 1 THUNG = 30 GOI
+(5, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 240000.00, '1 thùng = 30 gói Oishi Snack 50g', TRUE),
+
+-- Mì Hảo Hảo (variant 12, base unit: GOI=4): 1 THUNG = 30 GOI
+(12, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 135000.00, '1 thùng = 30 gói mì Hảo Hảo 75g', TRUE),
+
+-- Mì Omachi (variant 13, base unit: GOI=4): 1 THUNG = 30 GOI
+(13, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 300000.00, '1 thùng = 30 gói mì Omachi 80g', TRUE);
 
 -- 9. PRODUCT VARIANTS
 INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active, is_base_unit, created_at, updated_at) VALUES
