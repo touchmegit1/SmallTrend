@@ -43,14 +43,14 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
             Integer locationId);
 
     @Query(value = """
-        SELECT p.name, pv.sku, SUM(i.quantity)
-        FROM inventory_stock i
-        JOIN product_variants pv ON i.variant_id = pv.id
-        JOIN products p ON pv.product_id = p.id
-        GROUP BY pv.id, p.name, pv.sku
-        HAVING SUM(i.quantity) <= :threshold
-        ORDER BY SUM(i.quantity) ASC
-        LIMIT 10
-        """, nativeQuery = true)
+            SELECT p.name, pv.sku, SUM(i.quantity)
+            FROM inventory_stock i
+            JOIN product_variants pv ON i.variant_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            GROUP BY pv.id, p.name, pv.sku
+            HAVING SUM(i.quantity) <= :threshold
+            ORDER BY SUM(i.quantity) ASC
+            LIMIT 10
+            """, nativeQuery = true)
     List<Object[]> findLowStockSummary(@Param("threshold") int threshold);
 }
