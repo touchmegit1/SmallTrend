@@ -41,6 +41,8 @@ import { useAuth } from "./context/AuthContext";
 import TicketCenter from "./pages/Admin/TicketCenter";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
+import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
+import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -307,6 +309,10 @@ function App() {
           path="reports/logs"
           element={<div className="p-4">Nhật ký hoạt động</div>}
         />
+
+        {/* Account Routes */}
+        <Route path="account/profile" element={<PersonalInfoPage />} />
+        <Route path="account/settings" element={<AccountSettingsPage />} />
 
         <Route path="*" element={<Navigate to="/pos" replace />} />
       </Route>

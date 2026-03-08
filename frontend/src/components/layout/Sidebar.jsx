@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
-const Sidebar = ({ collapsed }) => {
+const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const [openMenus, setOpenMenus] = React.useState({ admin: true });
   const location = useLocation();
   const navigate = useNavigate();
@@ -116,23 +116,36 @@ const Sidebar = ({ collapsed }) => {
 
   return (
     <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>
-      <div
-        className={`${collapsed ? 'p-4 justify-center' : 'p-6'} border-b border-slate-100 flex items-center gap-3 cursor-pointer hover:bg-slate-50`}
-        onClick={() => {
-          const isAdminRole =
-            user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
-          navigate(isAdminRole ? "/dashboard" : "/pos");
-        }}
-        title="Về trang chính"
-      >
-        <div className="bg-indigo-600 p-2 rounded-lg">
-          <Store className="text-white" size={24} />
+      <div className={`${collapsed ? 'p-4' : 'p-6'} border-b border-slate-100 flex flex-col gap-3`}>
+        <div
+          className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
+          onClick={() => {
+            const isAdminRole =
+              user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
+            navigate(isAdminRole ? "/dashboard" : "/pos");
+          }}
+          title="Về trang chính"
+        >
+          <div className="bg-indigo-600 p-2 rounded-lg">
+            <Store className="text-white" size={24} />
+          </div>
+          {!collapsed && (
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">
+              LocalStore
+            </h1>
+          )}
         </div>
-        {!collapsed && (
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">
-            LocalStore
-          </h1>
-        )}
+        
+        {/* Collapse Button */}
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2'} rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors`}
+          title={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
+        >
+          <Menu size={20} />
+          {!collapsed && <span>Thu gọn</span>}
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
@@ -282,7 +295,7 @@ const Sidebar = ({ collapsed }) => {
       <div className="p-4 border-t border-slate-100 space-y-2">
         {/* User Menu */}
         <button
-          onClick={() => navigate("/pos")}
+          onClick={() => navigate("/account/profile")}
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200`}
           title={collapsed ? "Thông tin cá nhân" : ""}
         >
@@ -291,7 +304,7 @@ const Sidebar = ({ collapsed }) => {
         </button>
 
         <button
-          onClick={() => navigate("/pos")}
+          onClick={() => navigate("/account/settings")}
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200`}
           title={collapsed ? "Cài đặt" : ""}
         >
