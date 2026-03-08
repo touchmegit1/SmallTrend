@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useToast } from "../components/ui/Toast";
 import { getInventoryCounts, getLocations, cancelInventoryCount, deleteInventoryCount } from "../services/inventoryService";
 import { IC_STATUS, IC_STATUS_CONFIG, formatVNDCount } from "../utils/inventoryCount";
 
 export function useInventoryCountList() {
+  const toast = useToast();
   const [vouchers, setVouchers] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -116,7 +118,7 @@ export function useInventoryCountList() {
         )
       );
     } catch (err) {
-      alert("Lỗi khi hủy phiếu: " + err.message);
+      toast.error("Lỗi khi hủy phiếu: " + err.message);
     }
   }, []);
 
@@ -128,7 +130,7 @@ export function useInventoryCountList() {
       await deleteInventoryCount(id);
       setVouchers((prev) => prev.filter((v) => v.id !== id));
     } catch (err) {
-      alert("Lỗi khi xóa phiếu: " + err.message);
+      toast.error("Lỗi khi xóa phiếu: " + err.message);
     }
   }, []);
 

@@ -2,13 +2,17 @@ package com.smalltrend.service.inventory;
 
 import com.smalltrend.dto.inventory.location.FullLocationResponse;
 import com.smalltrend.dto.inventory.location.LocationRequest;
+import com.smalltrend.dto.inventory.location.LocationStockItemResponse;
+import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.Location;
+import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.LocationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,19 +21,39 @@ import java.util.stream.Collectors;
 public class LocationService {
 
     private final LocationRepository locationRepository;
+    private final InventoryStockRepository inventoryStockRepository;
 
-    // ─── GET ALL ─────────────────────────────────────────
+    // ─── GET ALL (with stock info) ──────────────────────────
     public List<FullLocationResponse> getAllLocations() {
         return locationRepository.findAll().stream()
-                .map(this::toResponse)
+                .map(loc -> toResponseWithStock(loc))
                 .collect(Collectors.toList());
     }
 
-    // ─── GET BY ID ───────────────────────────────────────
+    // ─── GET ACTIVE LOCATIONS ONLY (for dropdowns) ──────────
+    public List<FullLocationResponse> getActiveLocations() {
+        return locationRepository.findAll().stream()
+                .filter(loc -> loc.getStatus() == null || "ACTIVE".equals(loc.getStatus()))
+                .map(loc -> toResponseWithStock(loc))
+                .collect(Collectors.toList());
+    }
+
+    // ─── GET BY ID (with stock details) ─────────────────────
     public FullLocationResponse getLocationById(Integer id) {
         Location loc = locationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Location not found: " + id));
-        return toResponse(loc);
+        return toResponseWithStock(loc);
+    }
+
+    // ─── GET STOCK ITEMS AT LOCATION ────────────────────────
+    public List<LocationStockItemResponse> getLocationStockItems(Integer locationId) {
+        if (!locationRepository.existsById(locationId)) {
+            throw new RuntimeException("Location not found: " + locationId);
+        }
+        List<InventoryStock> stocks = inventoryStockRepository.findByLocationIdWithProduct(locationId);
+        return stocks.stream()
+                .map(this::toStockItemResponse)
+                .collect(Collectors.toList());
     }
 
     // ─── CREATE ──────────────────────────────────────────
@@ -47,7 +71,7 @@ public class LocationService {
                 .build();
 
         Location saved = locationRepository.save(loc);
-        return toResponse(saved);
+        return toResponseWithStock(saved);
     }
 
     // ─── UPDATE ──────────────────────────────────────────
@@ -64,7 +88,7 @@ public class LocationService {
         if (request.getDescription() != null) loc.setDescription(request.getDescription());
 
         Location saved = locationRepository.save(loc);
-        return toResponse(saved);
+        return toResponseWithStock(saved);
     }
 
     // ─── DELETE ──────────────────────────────────────────
@@ -76,8 +100,52 @@ public class LocationService {
         locationRepository.deleteById(id);
     }
 
-    // ─── Mapper ──────────────────────────────────────────
-    private FullLocationResponse toResponse(Location loc) {
+    // ─── TOGGLE STATUS (ACTIVE ↔ INACTIVE) ──────────────
+    @Transactional
+    public FullLocationResponse toggleLocationStatus(Integer id) {
+        Location loc = locationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Location not found: " + id));
+
+        if ("ACTIVE".equals(loc.getStatus())) {
+            // Check if inventory is 0 before deactivating
+            List<InventoryStock> stocks;
+            try {
+                stocks = inventoryStockRepository.findByLocationIdWithProduct(id);
+            } catch (Exception e) {
+                stocks = new ArrayList<>();
+            }
+            int totalQty = stocks.stream()
+                    .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0)
+                    .sum();
+            if (totalQty > 0) {
+                throw new RuntimeException("Vui lòng chuyển hết hàng hóa sang vị trí khác trước khi đóng vị trí này");
+            }
+            loc.setStatus("INACTIVE");
+        } else {
+            loc.setStatus("ACTIVE");
+        }
+
+        Location saved = locationRepository.save(loc);
+        return toResponseWithStock(saved);
+    }
+
+    // ─── Mapper: Location → Response WITH stock info ────────
+    private FullLocationResponse toResponseWithStock(Location loc) {
+        List<InventoryStock> stocks;
+        try {
+            stocks = inventoryStockRepository.findByLocationIdWithProduct(loc.getId());
+        } catch (Exception e) {
+            stocks = new ArrayList<>();
+        }
+
+        int totalProducts = stocks.stream()
+                .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0)
+                .sum();
+
+        List<LocationStockItemResponse> stockItems = stocks.stream()
+                .map(this::toStockItemResponse)
+                .collect(Collectors.toList());
+
         return FullLocationResponse.builder()
                 .id(loc.getId())
                 .locationName(loc.getName())
@@ -88,7 +156,23 @@ public class LocationService {
                 .description(loc.getDescription() != null ? loc.getDescription() : "")
                 .status(loc.getStatus() != null ? loc.getStatus() : "ACTIVE")
                 .createdAt(loc.getCreatedAt() != null ? loc.getCreatedAt().toString() : null)
+                .totalProducts(totalProducts)
+                .stockItems(stockItems)
+                .build();
+    }
+
+    // ─── Mapper: InventoryStock → StockItemResponse ─────────
+    private LocationStockItemResponse toStockItemResponse(InventoryStock stock) {
+        return LocationStockItemResponse.builder()
+                .variantId(stock.getVariant() != null ? stock.getVariant().getId() : null)
+                .sku(stock.getVariant() != null ? stock.getVariant().getSku() : "")
+                .productName(stock.getVariant() != null && stock.getVariant().getProduct() != null
+                        ? stock.getVariant().getProduct().getName() : "")
+                .variantUnit(stock.getVariant() != null && stock.getVariant().getUnit() != null
+                        ? stock.getVariant().getUnit().getName() : "")
+                .quantity(stock.getQuantity() != null ? stock.getQuantity() : 0)
+                .batchCode(stock.getBatch() != null ? stock.getBatch().getBatchNumber() : "")
+                .batchId(stock.getBatch() != null ? stock.getBatch().getId() : null)
                 .build();
     }
 }
-

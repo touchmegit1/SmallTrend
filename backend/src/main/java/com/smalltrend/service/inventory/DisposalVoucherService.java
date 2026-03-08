@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 public class DisposalVoucherService {
 
     private final DisposalVoucherRepository disposalVoucherRepository;
-    private final DisposalVoucherItemRepository disposalVoucherItemRepository;
     private final ProductBatchRepository productBatchRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final LocationRepository locationRepository;
@@ -125,18 +124,34 @@ public class DisposalVoucherService {
         return toResponse(saved);
     }
 
-    // Confirm voucher (deduct stock)
+    // Submit for approval
     @Transactional
-    public DisposalVoucherResponse confirmVoucher(Long id, Long userId) {
+    public DisposalVoucherResponse submitForApproval(Long id) {
         DisposalVoucher voucher = disposalVoucherRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Disposal voucher not found"));
 
-        if (voucher.getStatus() != DisposalStatus.DRAFT) {
-            throw new RuntimeException("Only DRAFT vouchers can be confirmed");
+        if (voucher.getStatus() != DisposalStatus.DRAFT && voucher.getStatus() != DisposalStatus.REJECTED) {
+            throw new RuntimeException("Only DRAFT or REJECTED vouchers can be submitted for approval");
         }
 
         if (voucher.getItems().isEmpty()) {
-            throw new RuntimeException("Cannot confirm voucher without items");
+            throw new RuntimeException("Cannot submit voucher without items");
+        }
+
+        voucher.setStatus(DisposalStatus.PENDING);
+        voucher.setRejectionReason(null);
+        DisposalVoucher saved = disposalVoucherRepository.save(voucher);
+        return toResponse(saved);
+    }
+
+    // Approve voucher (deduct stock)
+    @Transactional
+    public DisposalVoucherResponse approveVoucher(Long id, Long userId) {
+        DisposalVoucher voucher = disposalVoucherRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Disposal voucher not found"));
+
+        if (voucher.getStatus() != DisposalStatus.PENDING) {
+            throw new RuntimeException("Only PENDING vouchers can be approved");
         }
 
         User user = userRepository.findById(userId.intValue())
@@ -150,22 +165,24 @@ public class DisposalVoucherService {
         voucher.setStatus(DisposalStatus.CONFIRMED);
         voucher.setConfirmedBy(user);
         voucher.setConfirmedAt(LocalDateTime.now());
+        voucher.setRejectionReason(null);
 
         DisposalVoucher saved = disposalVoucherRepository.save(voucher);
         return toResponse(saved);
     }
 
-    // Cancel voucher
+    // Reject voucher
     @Transactional
-    public DisposalVoucherResponse cancelVoucher(Long id) {
+    public DisposalVoucherResponse rejectVoucher(Long id, String reason) {
         DisposalVoucher voucher = disposalVoucherRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Disposal voucher not found"));
 
-        if (voucher.getStatus() == DisposalStatus.CONFIRMED) {
-            throw new RuntimeException("Cannot cancel confirmed voucher");
+        if (voucher.getStatus() != DisposalStatus.PENDING) {
+            throw new RuntimeException("Only PENDING vouchers can be rejected");
         }
 
-        voucher.setStatus(DisposalStatus.CANCELLED);
+        voucher.setStatus(DisposalStatus.REJECTED);
+        voucher.setRejectionReason(reason);
         DisposalVoucher saved = disposalVoucherRepository.save(voucher);
         return toResponse(saved);
     }
@@ -173,7 +190,7 @@ public class DisposalVoucherService {
     // Deduct stock (with validation)
     private void deductStock(ProductBatch batch, Location location, Integer quantity) {
         InventoryStock stock = inventoryStockRepository
-                .findByVariantAndLocation(batch.getVariant(), location)
+                .findByBatchAndLocation(batch, location)
                 .orElseThrow(() -> new RuntimeException("Stock not found for batch at location"));
 
         if (stock.getQuantity() < quantity) {
@@ -200,6 +217,7 @@ public class DisposalVoucherService {
                 .createdBy(voucher.getCreatedBy().getId().longValue())
                 .createdByName(voucher.getCreatedBy().getFullName())
                 .createdAt(voucher.getCreatedAt())
+                .rejectionReason(voucher.getRejectionReason())
                 .confirmedBy(voucher.getConfirmedBy() != null ? voucher.getConfirmedBy().getId().longValue() : null)
                 .confirmedByName(voucher.getConfirmedBy() != null ? voucher.getConfirmedBy().getFullName() : null)
                 .confirmedAt(voucher.getConfirmedAt())

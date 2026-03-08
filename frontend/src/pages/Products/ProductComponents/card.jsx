@@ -1,6 +1,14 @@
+/**
+ * card.jsx
+ * Component UI kiến trúc dạng Khối Hộp (Card).
+ * Cấu trúc bao gồm Container bao bọc, Header (chứa Title), Body content, và Footer (Nút Submit).
+ */
 import React from "react";
 import { cn } from "./utils";
 
+/**
+ * Component Wrapper chứa tổng viền.
+ */
 function Card({ className, ...props }) {
   return (
     <div
@@ -14,6 +22,9 @@ function Card({ className, ...props }) {
   );
 }
 
+/**
+ * Phần đầu khung (Chứa Nút Tool/Tiêu đề).
+ */
 function CardHeader({ className, ...props }) {
   return (
     <div
@@ -27,6 +38,9 @@ function CardHeader({ className, ...props }) {
   );
 }
 
+/**
+ * Chữ tiêu đề nổi bật cấu hình h4 HTML
+ */
 function CardTitle({ className, ...props }) {
   return (
     <h4
@@ -37,6 +51,9 @@ function CardTitle({ className, ...props }) {
   );
 }
 
+/**
+ * Text text-muted font nhỏ, nhằm giải thích mô tả khối block
+ */
 function CardDescription({ className, ...props }) {
   return (
     <p
@@ -47,6 +64,9 @@ function CardDescription({ className, ...props }) {
   );
 }
 
+/**
+ * Chứa Menu tuỳ chọn hoặc Group Button mở góc trên phải (Self-start justify-end)
+ */
 function CardAction({ className, ...props }) {
   return (
     <div
@@ -60,6 +80,9 @@ function CardAction({ className, ...props }) {
   );
 }
 
+/**
+ * Phần lõi Content chính ôm lấy nội dung (Padding trong)
+ */
 function CardContent({ className, ...props }) {
   return (
     <div
@@ -70,6 +93,9 @@ function CardContent({ className, ...props }) {
   );
 }
 
+/**
+ * Đáy Box chân thẻ Card (Padding)
+ */
 function CardFooter({ className, ...props }) {
   return (
     <div

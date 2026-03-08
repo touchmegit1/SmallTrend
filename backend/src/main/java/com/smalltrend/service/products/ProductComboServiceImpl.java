@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,11 +42,42 @@ public class ProductComboServiceImpl implements ProductComboService {
         return mapToResponse(combo);
     }
 
+    /**
+     * Tự sinh mã combo duy nhất theo format: COMBO-yyyyMMdd-XXX
+     */
+    private String generateComboCode() {
+        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefix = "COMBO-" + datePart + "-";
+
+        // Tìm combo code lớn nhất theo prefix hiện tại
+        List<ProductCombo> allCombos = productComboRepository.findAll();
+        int maxSeq = 0;
+        for (ProductCombo c : allCombos) {
+            if (c.getComboCode() != null && c.getComboCode().startsWith(prefix)) {
+                try {
+                    int seq = Integer.parseInt(c.getComboCode().substring(prefix.length()));
+                    if (seq > maxSeq)
+                        maxSeq = seq;
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return prefix + String.format("%03d", maxSeq + 1);
+    }
+
     @Override
     @Transactional
     public ProductComboResponse createCombo(CreateProductComboRequest request) {
-        if (productComboRepository.findByComboCode(request.getComboCode()).isPresent()) {
-            throw new RuntimeException("Combo Code already exists: " + request.getComboCode());
+        // Tự sinh comboCode nếu frontend không gửi
+        String comboCode = request.getComboCode();
+        if (comboCode == null || comboCode.trim().isEmpty()) {
+            comboCode = generateComboCode();
+            request.setComboCode(comboCode);
+        } else {
+            // Chỉ kiểm tra trùng khi user tự nhập comboCode
+            if (productComboRepository.findByComboCode(comboCode).isPresent()) {
+                throw new RuntimeException("Combo Code already exists: " + comboCode);
+            }
         }
 
         ProductCombo combo = new ProductCombo();
@@ -194,9 +227,25 @@ public class ProductComboServiceImpl implements ProductComboService {
             resp.setId(item.getId());
             resp.setComboId(combo.getId());
             resp.setProductVariantId(item.getProductVariant().getId());
-            resp.setProductVariantName(item.getProductVariant().getProduct().getName() +
-                    (item.getProductVariant().getUnit() != null ? " - " + item.getProductVariant().getUnit().getName()
-                            : ""));
+            // Build variant name consistent with ProductVariantService
+            String productName = item.getProductVariant().getProduct().getName();
+            String unitName = item.getProductVariant().getUnit() != null ? item.getProductVariant().getUnit().getName()
+                    : null;
+
+            StringBuilder nameBuilder = new StringBuilder(productName != null ? productName : "");
+            if (unitName != null && !unitName.isEmpty()) {
+                nameBuilder.append(" - ").append(unitName.trim());
+            }
+
+            java.util.Map<String, String> attributes = item.getProductVariant().getAttributes();
+            if (attributes != null && !attributes.isEmpty()) {
+                for (String value : attributes.values()) {
+                    if (value != null && !value.trim().isEmpty()) {
+                        nameBuilder.append(" - ").append(value.trim());
+                    }
+                }
+            }
+            resp.setProductVariantName(nameBuilder.toString());
             resp.setSku(item.getProductVariant().getSku());
             resp.setBarcode(item.getProductVariant().getBarcode());
             resp.setSellPrice(item.getProductVariant().getSellPrice());

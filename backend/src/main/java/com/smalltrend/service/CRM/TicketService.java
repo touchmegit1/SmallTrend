@@ -111,6 +111,9 @@ public class TicketService {
                 .priority(request.getPriority() != null
                         ? TicketPriority.valueOf(request.getPriority())
                         : TicketPriority.NORMAL)
+                .status(request.getStatus() != null
+                        ? TicketStatus.valueOf(request.getStatus())
+                        : TicketStatus.IN_PROGRESS)
                 .relatedEntityType(request.getRelatedEntityType())
                 .relatedEntityId(resolveRelatedEntityId(request, requesterAssignment))
                 .build();
@@ -129,20 +132,8 @@ public class TicketService {
             ticket.setAssignedTo(assignedTo);
         }
 
-        // REFUND tickets: auto-resolve and restock inventory
-        if (ticketType == TicketType.REFUND) {
-            ticket.setStatus(TicketStatus.RESOLVED);
-            ticket.setResolvedAt(LocalDateTime.now());
-            ticket.setResolution("Tự động hoàn tiền và nhập kho sản phẩm");
-
-            // Restock inventory by SKU
-            if (request.getSku() != null && !request.getSku().trim().isEmpty()
-                    && request.getRefundQuantity() != null && request.getRefundQuantity() > 0) {
-                ProductVariant variant = productVariantRepository.findBySku(request.getSku().trim())
-                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + request.getSku()));
-                restockInventory(variant.getId(), request.getRefundQuantity());
-            }
-        }
+        // Auto-resolve functionality for REFUND has been removed.
+        // Refunds must be manually reviewed and resolved.
 
         Ticket saved = ticketRepository.save(ticket);
         return mapToResponse(saved);
@@ -281,10 +272,9 @@ public class TicketService {
      */
     private void restockInventory(Integer variantId, Integer quantity) {
         List<InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
-        if (!stocks.isEmpty()) {
-            // Add to the first stock record found for this variant
+        if (stocks != null && !stocks.isEmpty()) {
             InventoryStock stock = stocks.get(0);
-            stock.setQuantity(stock.getQuantity() + quantity);
+            stock.setQuantity((stock.getQuantity() != null ? stock.getQuantity() : 0) + quantity);
             inventoryStockRepository.save(stock);
         }
     }

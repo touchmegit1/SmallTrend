@@ -3,6 +3,7 @@ package com.smalltrend.service.inventory;
 import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
+import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,10 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,6 +24,7 @@ public class PurchaseOrderService {
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final PurchaseOrderItemRepository purchaseOrderItemRepository;
     private final SupplierRepository supplierRepository;
+    private final SupplierContractRepository supplierContractRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductRepository productRepository;
     private final ProductBatchRepository productBatchRepository;
@@ -64,7 +63,7 @@ public class PurchaseOrderService {
         List<PurchaseOrder> allOrders = purchaseOrderRepository.findAll();
         int maxNum = 0;
         for (PurchaseOrder order : allOrders) {
-            String code = order.getPoNumber();
+            String code = order.getOrderNumber();
             if (code != null && code.startsWith(prefix)) {
                 try {
                     int num = Integer.parseInt(code.substring(prefix.length()));
@@ -84,11 +83,15 @@ public class PurchaseOrderService {
         validateDraft(request);
 
         PurchaseOrder order = buildOrderFromRequest(request);
-        order.setStatus(PurchaseOrderStatus.DRAFT);
+        if (request.getStatus() != null && "PENDING".equalsIgnoreCase(request.getStatus())) {
+            order.setStatus(PurchaseOrderStatus.PENDING);
+        } else {
+            order.setStatus(PurchaseOrderStatus.DRAFT);
+        }
         order.setOrderDate(LocalDate.now());
 
-        if (order.getPoNumber() == null || order.getPoNumber().isBlank()) {
-            order.setPoNumber(generateNextPOCode());
+        if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
+            order.setOrderNumber(generateNextPOCode());
         }
 
         // Recalculate financials server-side
@@ -113,10 +116,9 @@ public class PurchaseOrderService {
         PurchaseOrder order = buildOrderFromRequest(request);
         order.setStatus(PurchaseOrderStatus.CONFIRMED);
         order.setOrderDate(LocalDate.now());
-        order.setConfirmedAt(LocalDateTime.now());
 
-        if (order.getPoNumber() == null || order.getPoNumber().isBlank()) {
-            order.setPoNumber(generateNextPOCode());
+        if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
+            order.setOrderNumber(generateNextPOCode());
         }
 
         List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems()
@@ -127,12 +129,103 @@ public class PurchaseOrderService {
 
         if (!itemRequests.isEmpty()) {
             saveOrderItems(savedOrder, itemRequests);
-            // ── Stock Update ──
-            updateStock(savedOrder, itemRequests);
         }
 
-        log.info("✅ Purchase Order {} CONFIRMED. Stock updated.", savedOrder.getPoNumber());
+        log.info("✅ Purchase Order {} CONFIRMED. Chờ NV kho kiểm kê.", savedOrder.getOrderNumber());
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
+    }
+
+    // ─── Approve Pending Order (Manager approves) ──────────
+    // Quản lý duyệt: PENDING → CONFIRMED (KHÔNG cập nhật stock)
+    @Transactional
+    public PurchaseOrderResponse approveOrder(Integer orderId) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể duyệt phiếu đang chờ duyệt.");
+        }
+
+        order.setStatus(PurchaseOrderStatus.CONFIRMED);
+        order.setRejectionReason(null);
+        purchaseOrderRepository.save(order);
+
+        log.info("✅ Purchase Order {} APPROVED by Manager. Chờ NV kho kiểm kê.", order.getOrderNumber());
+        return toDetailResponse(order);
+    }
+
+    // ─── Start Checking (NV kho bắt đầu kiểm kê) ───────────
+    // CONFIRMED → CHECKING
+    @Transactional
+    public PurchaseOrderResponse startChecking(Integer orderId) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.CONFIRMED) {
+            throw new RuntimeException("Chỉ có thể bắt đầu kiểm kê phiếu đã được duyệt.");
+        }
+
+        order.setStatus(PurchaseOrderStatus.CHECKING);
+        purchaseOrderRepository.save(order);
+
+        log.info("📋 Purchase Order {} CHECKING started.", order.getOrderNumber());
+        return toDetailResponse(order);
+    }
+
+    // ─── Receive Goods (NV kho xác nhận nhập kho) ───────────
+    // CHECKING → RECEIVED (cập nhật stock tại đây)
+    @Transactional
+    public PurchaseOrderResponse receiveGoods(Integer orderId, GoodsReceiptRequest receiptRequest) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.CHECKING) {
+            throw new RuntimeException("Chỉ có thể nhập kho phiếu đang kiểm kê.");
+        }
+
+        // Cập nhật receivedQuantity cho từng item
+        if (receiptRequest.getItems() != null) {
+            for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
+                PurchaseOrderItem orderItem = order.getItems().stream()
+                        .filter(i -> i.getId().equals(receiptItem.getItemId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (orderItem != null) {
+                    orderItem.setReceivedQuantity(receiptItem.getReceivedQuantity() != null
+                            ? receiptItem.getReceivedQuantity() : 0);
+                    if (receiptItem.getNotes() != null) {
+                        orderItem.setNotes(receiptItem.getNotes());
+                    }
+                    purchaseOrderItemRepository.save(orderItem);
+                }
+            }
+        }
+
+        order.setStatus(PurchaseOrderStatus.RECEIVED);
+        order.setActualDeliveryDate(LocalDate.now());
+        if (receiptRequest.getNotes() != null) {
+            order.setNotes(receiptRequest.getNotes());
+        }
+        purchaseOrderRepository.save(order);
+
+        // Cập nhật stock dựa trên receivedQuantity
+        List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
+                .map(item -> PurchaseOrderItemRequest.builder()
+                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                        ? item.getVariant().getProduct().getId().intValue() : null)
+                .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : item.getQuantity())
+                .unitCost(item.getUnitCost())
+                .totalCost(item.getTotalCost())
+                .expiryDate(item.getExpiryDate())
+                .build())
+                .collect(Collectors.toList());
+
+        updateStock(order, itemRequests);
+
+        log.info("📦 Purchase Order {} RECEIVED. Stock updated.", order.getOrderNumber());
+        return toDetailResponse(order);
     }
 
     // ─── Confirm Existing Draft ──────────────────────────────
@@ -141,8 +234,8 @@ public class PurchaseOrderService {
         PurchaseOrder order = purchaseOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
 
-        if (order.getStatus() != PurchaseOrderStatus.DRAFT) {
-            throw new RuntimeException("Chỉ có thể xác nhận phiếu ở trạng thái Phiếu tạm.");
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể xác nhận phiếu ở trạng thái Phiếu tạm hoặc Chờ duyệt.");
         }
 
         if (order.getSupplier() == null) {
@@ -154,23 +247,85 @@ public class PurchaseOrderService {
         }
 
         order.setStatus(PurchaseOrderStatus.CONFIRMED);
-        order.setConfirmedAt(LocalDateTime.now());
         purchaseOrderRepository.save(order);
 
-        // ── Stock Update from existing items ──
-        List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
-                .map(item -> PurchaseOrderItemRequest.builder()
-                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
-                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                        ? item.getVariant().getProduct().getId().intValue() : null)
-                .quantity(item.getQuantity())
-                .unitPrice(item.getUnitPrice())
-                .build())
-                .collect(Collectors.toList());
+        log.info("✅ Existing Draft {} CONFIRMED. Chờ NV kho kiểm kê.", order.getOrderNumber());
+        return toDetailResponse(order);
+    }
 
-        updateStock(order, itemRequests);
+    // ─── Update Order ──────────────────────────────────────────
+    @Transactional
+    public PurchaseOrderResponse updateOrder(Integer id, PurchaseOrderRequest request) {
+        PurchaseOrder order = purchaseOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + id));
 
-        log.info("✅ Existing Draft {} CONFIRMED. Stock updated.", order.getPoNumber());
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.REJECTED) {
+            throw new RuntimeException("Chỉ có thể cập nhật phiếu ở trạng thái Phiếu tạm hoặc Từ chối.");
+        }
+
+        validateDraft(request);
+
+        if (request.getSupplierId() != null) {
+            Supplier supplier = supplierRepository.findById(request.getSupplierId())
+                    .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
+            order.setSupplier(supplier);
+        } else {
+            order.setSupplier(null);
+        }
+
+        // Cập nhật contract nếu có
+        if (request.getContractId() != null) {
+            SupplierContract contract = supplierContractRepository.findById(request.getContractId())
+                    .orElseThrow(() -> new RuntimeException("Hợp đồng không tồn tại."));
+            order.setContract(contract);
+        }
+
+        order.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+        order.setLocationId(request.getLocationId());
+        order.setDiscountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO);
+        order.setTaxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO);
+        order.setTaxPercent(request.getTaxPercent() != null ? request.getTaxPercent() : BigDecimal.ZERO);
+        order.setShippingFee(request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO);
+        order.setPaidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO);
+        order.setNotes(request.getNotes());
+        order.setRejectionReason(null); // Clear rejection reason upon update
+
+        // Update status based on request (DRAFT or PENDING)
+        if (request.getStatus() != null && "PENDING".equalsIgnoreCase(request.getStatus())) {
+            order.setStatus(PurchaseOrderStatus.PENDING);
+        } else {
+            order.setStatus(PurchaseOrderStatus.DRAFT);
+        }
+
+        purchaseOrderItemRepository.deleteAll(order.getItems());
+        order.getItems().clear();
+
+        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems() : new ArrayList<>();
+        recalculate(order, itemRequests);
+
+        PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
+        if (!itemRequests.isEmpty()) {
+            saveOrderItems(savedOrder, itemRequests);
+        }
+
+        return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
+    }
+
+    // ─── Reject Order ────────────────────────────────────────
+    @Transactional
+    public PurchaseOrderResponse rejectOrder(Integer id, String reason) {
+        PurchaseOrder order = purchaseOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + id));
+
+        if (order.getStatus() != PurchaseOrderStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể từ chối phiếu đang chờ duyệt.");
+        }
+
+        order.setStatus(PurchaseOrderStatus.REJECTED);
+        order.setRejectionReason(reason);
+        purchaseOrderRepository.save(order);
+
+        log.info("🚫 Purchase Order {} REJECTED. Reason: {}", order.getOrderNumber(), reason);
         return toDetailResponse(order);
     }
 
@@ -187,8 +342,26 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.CANCELLED);
         purchaseOrderRepository.save(order);
 
-        log.info("❌ Purchase Order {} CANCELLED.", order.getPoNumber());
+        log.info("❌ Purchase Order {} CANCELLED.", order.getOrderNumber());
         return toDetailResponse(order);
+    }
+
+    // ─── Delete Draft Order ──────────────────────────────────
+    @Transactional
+    public void deleteOrder(Integer orderId) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.REJECTED) {
+            throw new RuntimeException("Chỉ có thể xóa phiếu ở trạng thái Phiếu tạm hoặc Từ chối.");
+        }
+
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            purchaseOrderItemRepository.deleteAll(order.getItems());
+        }
+        purchaseOrderRepository.delete(order);
+
+        log.info("🗑️ Purchase Order {} DELETED.", order.getOrderNumber());
     }
 
     // ─── Get All Suppliers ───────────────────────────────────
@@ -202,7 +375,22 @@ public class PurchaseOrderService {
                 .collect(Collectors.toList());
     }
 
-    // ─── Get All Products (with variant info for PO creation) ─
+    // ─── Get Active Contracts By Supplier ─────────────────────
+    public List<ContractResponse> getContractsBySupplier(Integer supplierId) {
+        return supplierContractRepository.findBySupplierId(supplierId).stream()
+                .map(c -> ContractResponse.builder()
+                .id(c.getId())
+                .contractNumber(c.getContractNumber())
+                .title(c.getTitle())
+                .status(c.getStatus() != null ? c.getStatus().name() : "DRAFT")
+                .startDate(c.getStartDate())
+                .endDate(c.getEndDate())
+                .totalValue(c.getTotalValue())
+                .build())
+                .collect(Collectors.toList());
+    }
+
+    // ─── Get All Products (with variant info, stock quantity, unit) ─
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
                 .map(p -> {
@@ -211,13 +399,31 @@ public class PurchaseOrderService {
                             .name(p.getName())
                             .imageUrl(p.getImageUrl());
 
-                    // Get first variant's SKU and price
+                    int totalStock = 0;
+
                     if (p.getVariants() != null && !p.getVariants().isEmpty()) {
-                        ProductVariant v = p.getVariants().get(0);
-                        builder.sku(v.getSku());
-                        builder.purchasePrice(v.getSellPrice());
+                        // Lấy SKU, giá, đơn vị từ variant đầu tiên
+                        ProductVariant firstVariant = p.getVariants().get(0);
+                        builder.sku(firstVariant.getSku());
+                        builder.purchasePrice(firstVariant.getSellPrice());
+
+                        if (firstVariant.getUnit() != null) {
+                            builder.unit(firstVariant.getUnit().getName());
+                        }
+
+                        // Tính tổng tồn kho từ tất cả variants
+                        for (ProductVariant v : p.getVariants()) {
+                            if (v.getInventoryStocks() != null) {
+                                for (InventoryStock stock : v.getInventoryStocks()) {
+                                    if (stock.getQuantity() != null) {
+                                        totalStock += stock.getQuantity();
+                                    }
+                                }
+                            }
+                        }
                     }
 
+                    builder.stockQuantity(totalStock);
                     return builder.build();
                 })
                 .collect(Collectors.toList());
@@ -229,15 +435,16 @@ public class PurchaseOrderService {
     // ─── Build Order from Request ────────────────────────────
     private PurchaseOrder buildOrderFromRequest(PurchaseOrderRequest request) {
         PurchaseOrder order = PurchaseOrder.builder()
-                .poNumber(request.getPoNumber())
-                .discountAmount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
-                .taxPercent(request.getTaxPercent() != null ? request.getTaxPercent() : BigDecimal.ZERO)
-                .shippingFee(request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO)
-                .paidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO)
+                .orderNumber(request.getOrderNumber())
+                .discountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO)
                 .subtotal(request.getSubtotal() != null ? request.getSubtotal() : BigDecimal.ZERO)
                 .taxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO)
+                .taxPercent(request.getTaxPercent() != null ? request.getTaxPercent() : BigDecimal.ZERO)
                 .totalAmount(request.getTotalAmount() != null ? request.getTotalAmount() : BigDecimal.ZERO)
-                .remainingAmount(request.getRemainingAmount() != null ? request.getRemainingAmount() : BigDecimal.ZERO)
+                .shippingFee(request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO)
+                .paidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO)
+                .expectedDeliveryDate(request.getExpectedDeliveryDate())
+                .locationId(request.getLocationId())
                 .notes(request.getNotes())
                 .build();
 
@@ -247,6 +454,13 @@ public class PurchaseOrderService {
             order.setSupplier(supplier);
         }
 
+        // Liên kết contract nếu có
+        if (request.getContractId() != null) {
+            SupplierContract contract = supplierContractRepository.findById(request.getContractId())
+                    .orElseThrow(() -> new RuntimeException("Hợp đồng không tồn tại."));
+            order.setContract(contract);
+        }
+
         return order;
     }
 
@@ -254,10 +468,9 @@ public class PurchaseOrderService {
     private void recalculate(PurchaseOrder order, List<PurchaseOrderItemRequest> items) {
         BigDecimal subtotal = BigDecimal.ZERO;
         for (PurchaseOrderItemRequest item : items) {
-            BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
             int qty = item.getQuantity() != null ? item.getQuantity() : 0;
-            BigDecimal itemDiscount = item.getDiscount() != null ? item.getDiscount() : BigDecimal.ZERO;
-            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(qty)).subtract(itemDiscount);
+            BigDecimal lineTotal = unitCost.multiply(BigDecimal.valueOf(qty));
             if (lineTotal.compareTo(BigDecimal.ZERO) < 0) {
                 lineTotal = BigDecimal.ZERO;
             }
@@ -271,34 +484,29 @@ public class PurchaseOrderService {
             afterDiscount = BigDecimal.ZERO;
         }
 
-        BigDecimal taxPercent = order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO;
-        BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100), 0,
-                RoundingMode.HALF_UP);
+        BigDecimal taxAmount = order.getTaxAmount() != null ? order.getTaxAmount() : BigDecimal.ZERO;
         order.setTaxAmount(taxAmount);
 
         BigDecimal shippingFee = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
+
         BigDecimal total = afterDiscount.add(taxAmount).add(shippingFee);
         order.setTotalAmount(total);
-
-        BigDecimal paidAmount = order.getPaidAmount() != null ? order.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal remaining = total.subtract(paidAmount);
-        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
-            remaining = BigDecimal.ZERO;
-        }
-        order.setRemainingAmount(remaining);
     }
 
     // ─── Save Order Items ────────────────────────────────────
     private void saveOrderItems(PurchaseOrder savedOrder, List<PurchaseOrderItemRequest> itemRequests) {
         for (PurchaseOrderItemRequest itemReq : itemRequests) {
-            BigDecimal unitPrice = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal unitCost = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
             int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 0;
-            BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(qty));
+            BigDecimal totalCost = unitCost.multiply(BigDecimal.valueOf(qty));
 
             PurchaseOrderItem item = PurchaseOrderItem.builder()
                     .purchaseOrder(savedOrder)
                     .quantity(qty)
-                    .unitPrice(unitPrice)
+                    .unitCost(unitCost)
+                    .totalCost(totalCost)
+                    .expiryDate(itemReq.getExpiryDate())
+                    .notes(itemReq.getNotes())
                     .build();
 
             // Resolve product variant
@@ -322,12 +530,18 @@ public class PurchaseOrderService {
         }
     }
 
-    // ─── Update Stock (on CONFIRM) ───────────────────────────
+    // ─── Update Stock (on RECEIVE) ───────────────────────────
     private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests) {
-        // Get a default location
-        Location defaultLocation = locationRepository.findAll().stream()
-                .findFirst()
-                .orElse(null);
+        // Use the order's location, fallback to first available
+        Location targetLocation = null;
+        if (order.getLocationId() != null) {
+            targetLocation = locationRepository.findById(order.getLocationId()).orElse(null);
+        }
+        if (targetLocation == null) {
+            targetLocation = locationRepository.findAll().stream()
+                    .findFirst()
+                    .orElse(null);
+        }
 
         for (PurchaseOrderItemRequest itemReq : itemRequests) {
             // 1. Resolve variant
@@ -341,24 +555,9 @@ public class PurchaseOrderService {
                 continue;
             }
 
-            BigDecimal costPrice = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
 
-            // 2. Parse expiry date (if provided)
-            LocalDate expiryDate = null;
-            if (itemReq.getExpiryDate() != null && !itemReq.getExpiryDate().isBlank()) {
-                try {
-                    expiryDate = LocalDate.parse(itemReq.getExpiryDate());
-                } catch (Exception e) {
-                    try {
-                        expiryDate = LocalDate.parse(itemReq.getExpiryDate(), DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-            // Default expiry: 1 year from now
-            if (expiryDate == null) {
-                expiryDate = LocalDate.now().plusYears(1);
-            }
+            LocalDate expiryDate = itemReq.getExpiryDate() != null ? itemReq.getExpiryDate() : LocalDate.now().plusYears(1);
 
             // 3. Create ProductBatch
             String batchNumber = generateBatchNumber(variant);
@@ -375,7 +574,7 @@ public class PurchaseOrderService {
             InventoryStock stock = InventoryStock.builder()
                     .variant(variant)
                     .batch(batch)
-                    .location(defaultLocation)
+                    .location(targetLocation)
                     .quantity(qty)
                     .build();
             inventoryStockRepository.save(stock);
@@ -384,12 +583,12 @@ public class PurchaseOrderService {
             StockMovement movement = StockMovement.builder()
                     .variant(variant)
                     .batch(batch)
-                    .location(defaultLocation)
+                    .location(targetLocation)
                     .type("IN")
                     .quantity(qty)
                     .referenceType("purchase_order")
                     .referenceId(order.getId() != null ? order.getId().longValue() : null)
-                    .notes("Nhập hàng từ PO " + order.getPoNumber())
+                    .notes("Nhập hàng từ PO " + order.getOrderNumber())
                     .build();
             stockMovementRepository.save(movement);
 
@@ -442,25 +641,33 @@ public class PurchaseOrderService {
 
     // ─── Mappers ─────────────────────────────────────────────
     private PurchaseOrderResponse toListResponse(PurchaseOrder order) {
-        return PurchaseOrderResponse.builder()
+        PurchaseOrderResponse.PurchaseOrderResponseBuilder builder = PurchaseOrderResponse.builder()
                 .id(order.getId() != null ? order.getId().intValue() : null)
-                .poNumber(order.getPoNumber())
+                .orderNumber(order.getOrderNumber())
                 .supplierId(order.getSupplier() != null ? order.getSupplier().getId() : null)
                 .supplierName(order.getSupplier() != null ? order.getSupplier().getName() : "")
                 .status(order.getStatus() != null ? order.getStatus().name() : "DRAFT")
                 .orderDate(order.getOrderDate())
                 .createdAt(order.getCreatedAt())
-                .confirmedAt(order.getConfirmedAt())
                 .subtotal(order.getSubtotal())
-                .discount(order.getDiscountAmount())
-                .taxPercent(order.getTaxPercent())
+                .discountAmount(order.getDiscountAmount())
                 .taxAmount(order.getTaxAmount())
+                .taxPercent(order.getTaxPercent())
+                .totalAmount(order.getTotalAmount())
                 .shippingFee(order.getShippingFee())
                 .paidAmount(order.getPaidAmount())
-                .totalAmount(order.getTotalAmount())
-                .remainingAmount(order.getRemainingAmount())
+                .locationId(order.getLocationId())
                 .notes(order.getNotes())
-                .build();
+                .rejectionReason(order.getRejectionReason());
+
+        // Contract info
+        if (order.getContract() != null) {
+            builder.contractId(order.getContract().getId())
+                    .contractNumber(order.getContract().getContractNumber())
+                    .contractTitle(order.getContract().getTitle());
+        }
+
+        return builder.build();
     }
 
     private PurchaseOrderResponse toDetailResponse(PurchaseOrder order) {
@@ -478,9 +685,11 @@ public class PurchaseOrderService {
                             ? item.getVariant().getProduct().getName() : "")
                     .imageUrl(item.getVariant() != null ? item.getVariant().getImageUrl() : null)
                     .quantity(item.getQuantity())
-                    .unitPrice(item.getUnitPrice())
-                    .discount(BigDecimal.ZERO)
-                    .total(item.getUnitPrice() != null ? item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO)
+                    .unitCost(item.getUnitCost())
+                    .totalCost(item.getTotalCost() != null ? item.getTotalCost() : (item.getUnitCost() != null ? item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO))
+                    .receivedQuantity(item.getReceivedQuantity())
+                    .expiryDate(item.getExpiryDate())
+                    .notes(item.getNotes())
                     .build())
                     .collect(Collectors.toList());
             response.setItems(itemResponses);

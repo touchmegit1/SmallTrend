@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,4 +21,6 @@ public class FullLocationResponse {
     private String description;
     private String status;
     private String createdAt;
+    private Integer totalProducts;
+    private List<LocationStockItemResponse> stockItems;
 }

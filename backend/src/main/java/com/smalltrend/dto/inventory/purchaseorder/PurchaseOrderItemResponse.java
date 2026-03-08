@@ -19,7 +19,9 @@ public class PurchaseOrderItemResponse {
     private String name;
     private String imageUrl;
     private Integer quantity;
-    private BigDecimal unitPrice;
-    private BigDecimal discount;
-    private BigDecimal total;
+    private BigDecimal unitCost;
+    private BigDecimal totalCost;
+    private Integer receivedQuantity;
+    private String notes;
+    private java.time.LocalDate expiryDate;
 }

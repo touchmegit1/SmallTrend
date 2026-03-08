@@ -9,6 +9,7 @@ public class CreateTicketRequest {
     private String title;
     private String description;
     private String priority;
+    private String status;
     private String relatedEntityType;
     private Long relatedEntityId;
     private Integer assignedToUserId;

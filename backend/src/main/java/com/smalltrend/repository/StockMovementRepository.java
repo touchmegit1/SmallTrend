@@ -10,4 +10,6 @@ import java.util.List;
 public interface StockMovementRepository extends JpaRepository<StockMovement, Long> {
 
     List<StockMovement> findByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
+
+    List<StockMovement> findByVariantId(Integer variantId);
 }

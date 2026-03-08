@@ -11,7 +11,9 @@
 export const IC_STATUS = {
   DRAFT: "DRAFT",
   COUNTING: "COUNTING",
+  PENDING: "PENDING",
   CONFIRMED: "CONFIRMED",
+  REJECTED: "REJECTED",
   CANCELLED: "CANCELLED",
 };
 
@@ -30,12 +32,26 @@ export const IC_STATUS_CONFIG = {
     border: "border-amber-200",
     dot: "bg-amber-500",
   },
+  [IC_STATUS.PENDING]: {
+    label: "Chờ duyệt",
+    bg: "bg-yellow-50",
+    text: "text-yellow-700",
+    border: "border-yellow-200",
+    dot: "bg-yellow-500",
+  },
   [IC_STATUS.CONFIRMED]: {
     label: "Đã xác nhận",
     bg: "bg-emerald-50",
     text: "text-emerald-700",
     border: "border-emerald-200",
     dot: "bg-emerald-500",
+  },
+  [IC_STATUS.REJECTED]: {
+    label: "Từ chối",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    border: "border-red-200",
+    dot: "bg-red-500",
   },
   [IC_STATUS.CANCELLED]: {
     label: "Đã hủy",
@@ -47,9 +63,11 @@ export const IC_STATUS_CONFIG = {
 };
 
 export const ALLOWED_IC_TRANSITIONS = {
-  [IC_STATUS.DRAFT]: [IC_STATUS.COUNTING, IC_STATUS.CANCELLED],
-  [IC_STATUS.COUNTING]: [IC_STATUS.CONFIRMED, IC_STATUS.CANCELLED],
+  [IC_STATUS.DRAFT]: [IC_STATUS.COUNTING, IC_STATUS.PENDING, IC_STATUS.CANCELLED],
+  [IC_STATUS.COUNTING]: [IC_STATUS.PENDING, IC_STATUS.CONFIRMED, IC_STATUS.CANCELLED],
+  [IC_STATUS.PENDING]: [IC_STATUS.CONFIRMED, IC_STATUS.REJECTED],
   [IC_STATUS.CONFIRMED]: [],
+  [IC_STATUS.REJECTED]: [IC_STATUS.DRAFT],
   [IC_STATUS.CANCELLED]: [],
 };
 

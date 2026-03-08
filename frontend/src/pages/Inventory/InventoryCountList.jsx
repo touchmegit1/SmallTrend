@@ -4,10 +4,6 @@ import {
   Plus,
   Search,
   ClipboardList,
-  Eye,
-  Pencil,
-  XCircle,
-  Trash2,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
@@ -19,6 +15,7 @@ import {
   IC_STATUS_CONFIG,
   formatVNDCount,
 } from "../../utils/inventoryCount";
+import CustomSelect from "../../components/common/CustomSelect";
 
 function InventoryCountList() {
   const navigate = useNavigate();
@@ -39,8 +36,6 @@ function InventoryCountList() {
     page,
     setPage,
     totalPages,
-    cancelVoucher,
-    deleteVoucher,
   } = useInventoryCountList();
 
   // ─── Loading ─────────────────────────────────────
@@ -81,9 +76,9 @@ function InventoryCountList() {
   const statusTabs = [
     { key: "ALL", label: "Tất cả" },
     { key: IC_STATUS.DRAFT, label: "Phiếu tạm" },
-    { key: IC_STATUS.COUNTING, label: "Đang kiểm" },
+    { key: IC_STATUS.PENDING, label: "Chờ duyệt" },
     { key: IC_STATUS.CONFIRMED, label: "Đã xác nhận" },
-    { key: IC_STATUS.CANCELLED, label: "Đã hủy" },
+    { key: IC_STATUS.REJECTED, label: "Từ chối" },
   ];
 
   const SortIcon = ({ field }) => (
@@ -135,23 +130,19 @@ function InventoryCountList() {
       <div className="bg-white border-b border-slate-200 px-6 py-3 shrink-0">
         <div className="flex items-center justify-between gap-4">
           {/* Status Tabs */}
-          <div className="flex gap-1">
-            {statusTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  setStatusFilter(tab.key);
-                  setPage(1);
-                }}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                  statusFilter === tab.key
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-500 hover:bg-slate-100"
-                }`}
-              >
-                {tab.label} ({statusCounts[tab.key] || 0})
-              </button>
-            ))}
+          <div className="w-56 text-left">
+            <CustomSelect
+              value={statusFilter}
+              onChange={(val) => {
+                setStatusFilter(val);
+                setPage(1);
+              }}
+              options={statusTabs.map((tab) => ({
+                value: tab.key,
+                label: `${tab.label} (${statusCounts[tab.key] || 0})`,
+              }))}
+              variant="status"
+            />
           </div>
 
           {/* Search */}
@@ -215,12 +206,9 @@ function InventoryCountList() {
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                     Người tạo
                   </th>
-                  <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider pr-6">
                     Giá trị lệch
                     <SortIcon field="total_difference_value" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider w-32">
-                    Thao tác
                   </th>
                 </tr>
               </thead>
@@ -231,6 +219,7 @@ function InventoryCountList() {
                   const isDraft =
                     v.status === IC_STATUS.DRAFT ||
                     v.status === IC_STATUS.COUNTING;
+                  const isPending = v.status === IC_STATUS.PENDING;
                   const diffVal = v.total_difference_value || 0;
 
                   return (
@@ -286,7 +275,7 @@ function InventoryCountList() {
                       </td>
 
                       {/* Difference Value */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right pr-6">
                         <span
                           className={`text-sm font-bold font-mono ${
                             diffVal < 0
@@ -298,61 +287,6 @@ function InventoryCountList() {
                         >
                           {diffVal !== 0 ? formatVNDCount(diffVal) : "0 ₫"}
                         </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-4 py-3 text-center">
-                        <div
-                          className="flex items-center justify-center gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {isDraft ? (
-                            <>
-                              <button
-                                onClick={() =>
-                                  navigate(`/inventory-counts/${v.id}`)
-                                }
-                                title="Tiếp tục kiểm"
-                                className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 transition"
-                              >
-                                <Pencil size={14} />
-                              </button>
-                              <button
-                                onClick={() => cancelVoucher(v.id)}
-                                title="Hủy phiếu"
-                                className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition"
-                              >
-                                <XCircle size={14} />
-                              </button>
-                              <button
-                                onClick={() => deleteVoucher(v.id)}
-                                title="Xóa phiếu"
-                                className="p-1.5 rounded-lg hover:bg-red-100 text-red-600 transition"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() =>
-                                  navigate(`/inventory-counts/${v.id}`)
-                                }
-                                title="Xem chi tiết"
-                                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition"
-                              >
-                                <Eye size={14} />
-                              </button>
-                              <button
-                                onClick={() => deleteVoucher(v.id)}
-                                title="Xóa phiếu"
-                                className="p-1.5 rounded-lg hover:bg-red-100 text-red-600 transition"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </>
-                          )}
-                        </div>
                       </td>
                     </tr>
                   );

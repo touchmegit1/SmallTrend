@@ -9,30 +9,42 @@ import { Label } from "../ProductComponents/label";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchProducts } from "../../../hooks/products";
+import { useFetchSuppliers } from "../../../hooks/useSuppliers";
 
 const Category_Brand = () => {
-  const [activeTab, setActiveTab] = useState('categories');
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
-  const [sortOrder, setSortOrder] = useState('desc');
+  // Trạng thái quản lý điều hướng và modal
+  const [activeTab, setActiveTab] = useState('categories'); // Quyết định xem đang ở tab "Danh mục" hay "Thương hiệu"
+  const [showModal, setShowModal] = useState(false); // Biến kiểm soát việc đóng/mở form thêm/sửa
+  const [modalMode, setModalMode] = useState('add'); // Chế độ của form: 'add' (Tạo mới) hoặc 'edit' (Cập nhật)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Biến kiểm soát việc bật popup cảnh báo khi muốn xoá dữ liệu
+  const [selectedItem, setSelectedItem] = useState(null); // Lưu thông tin hạng mục người dùng đang chọn để sửa hoặc xoá
+
+  // Trạng thái quản lý thanh tìm kiếm và bộ lọc bảng
+  const [searchQuery, setSearchQuery] = useState(""); // Lưu trữ từ khoá đang tìm kiếm trong bảng
+  const [countryFilter, setCountryFilter] = useState(""); // Lọc theo quốc gia (Chỉ dành cho tab thương hiệu)
+  const [sortOrder, setSortOrder] = useState('desc'); // Thứ tự sắp xếp thời gian tạo: 'desc' (Mới nhất) hoặc 'asc' (Cũ nhất)
+
+  // Trạng thái hiển thị cảnh báo (Toast Alert) & mở rộng xem chi tiết (Accordion)
   const [toastMessage, setToastMessage] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
+
+  // Lưu trữ các trường dữ liệu đang được nhập trên form
   const [formData, setFormData] = useState({
     code: '',
     name: '',
     description: '',
-    country: ''
+    country: '',
+    category: null,
+    supplier: null
   });
 
-
-  const { categories, loading: catLoading, error: catError, createCategory, updateCategory, deleteCategory } = useFetchCategories();
-  const { brands, loading: brandLoading, error: brandError, createBrand, updateBrand, deleteBrand } = useFetchBrands();
+  // Gọi Hook Fetch Data từ server
+  const { categories, loading: catLoading, error: catError, createCategory, updateCategory, deleteCategory, fetchCategories } = useFetchCategories();
+  const { brands, loading: brandLoading, error: brandError, createBrand, updateBrand, deleteBrand, fetchBrands } = useFetchBrands();
   const { products } = useFetchProducts();
+  const { suppliers } = useFetchSuppliers();
 
+  // Đếm nhanh số lượng sản phẩm được quy chiếu trong cùng 1 danh mục/thương hiệu 
   const productCountMap = useMemo(() => {
     const map = {};
 
@@ -48,20 +60,36 @@ const Category_Brand = () => {
     return map;
   }, [products, activeTab]);
 
+  // Đếm số lượng Brand trong mỗi Category
+  const brandCountMap = useMemo(() => {
+    const map = {};
+    if (activeTab === "categories") {
+      brands?.forEach(b => {
+        if (b.category && b.category.id) {
+          map[b.category.id] = (map[b.category.id] || 0) + 1;
+        }
+      });
+    }
+    return map;
+  }, [brands, activeTab]);
 
+  // Hàm mở Modal cho mục đích Tạo mới Item
   const handleAdd = () => {
     setModalMode('add');
     setFormData({
       code: '',
       name: '',
       description: '',
-      country: ''
+      country: '',
+      category: null,
+      supplier: null
     });
 
     setSelectedItem(null);
     setShowModal(true);
   };
 
+  // Hàm mở Modal cho mục đích Chỉnh sửa Item có sẵn trên bảng
   const handleEdit = (item) => {
     setModalMode('edit');
     setSelectedItem(item);
@@ -69,17 +97,21 @@ const Category_Brand = () => {
       code: item.code || '',
       name: item.name,
       description: item.description || '',
-      country: item.country || ''
+      country: item.country || '',
+      category: item.category ? { id: item.category.id } : null,
+      supplier: item.supplier ? { id: item.supplier.id } : null
     });
 
     setShowModal(true);
   };
 
+  // Gọi xác nhận quyền xoá an toàn
   const handleDelete = (item) => {
     setSelectedItem(item);
     setShowDeleteConfirm(true);
   };
 
+  // Logic kết nối API xoá item khỏi Database & hiển thị toast phản hồi
   const confirmDelete = async () => {
     try {
       await (activeTab === 'categories' ? deleteCategory : deleteBrand)(selectedItem.id);
@@ -94,14 +126,16 @@ const Category_Brand = () => {
     }
   };
 
+  // Logic kết nối API lưu bản phân bổ mới hoặc cập nhật Item
   const handleSave = async () => {
-    // Validation
+    // Validate kiểm tra tên bắt buộc
     if (!formData.name?.trim()) {
       setToastMessage('Vui lòng nhập tên!');
       setTimeout(() => setToastMessage(""), 3000);
       return;
     }
 
+    // Validate mã danh mục bắt buộc cho tab Categories
     if (activeTab === 'categories' && !formData.code?.trim()) {
       setToastMessage('Vui lòng nhập mã danh mục!');
       setTimeout(() => setToastMessage(""), 3000);
@@ -109,6 +143,7 @@ const Category_Brand = () => {
     }
 
     try {
+      // Tuỳ biến hành động gọi theo trường hợp tab điều hướng 
       if (activeTab === 'categories') {
         if (modalMode === 'add') {
           await createCategory(formData);
@@ -131,17 +166,20 @@ const Category_Brand = () => {
     }
   };
 
+  // Nguồn dữ liệu tuỳ chỉnh tuỳ theo Tab (Tránh lỗi Undefined Array)
   const data = activeTab === 'categories' ? (categories || []) : (brands || []);
 
+  // Set-up dữ liệu tuỳ chọn list Quốc Gia tự động từ danh sách Các Thương Hiệu để cấp hiển thị Filter
   const uniqueCountries = useMemo(() => {
     if (activeTab !== 'brands') return [];
     const countries = brands?.map(b => b.country).filter(Boolean) || [];
     return [...new Set(countries)].sort();
   }, [brands, activeTab]);
 
+  // Bộ tổng hợp Filter: Chỉ hiện các từ khoá trùng, quốc gia khớp và sắp xếp theo ngày sinh
   const filteredData = useMemo(() => {
     let filtered = data.filter(item =>
-      item.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      item.name?.toLowerCase()?.includes(searchQuery.toLowerCase())
     );
 
     if (activeTab === 'brands' && countryFilter) {
@@ -149,23 +187,31 @@ const Category_Brand = () => {
     }
 
     return filtered.sort((a, b) => {
-      const dateA = new Date(a.created_at || 0);
-      const dateB = new Date(b.created_at || 0);
+      const dateA = new Date(a.createdAt || a.created_at || a.created_date || 0);
+      const dateB = new Date(b.createdAt || b.created_at || b.created_date || 0);
       return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
   }, [data, searchQuery, countryFilter, sortOrder, activeTab]);
 
-  if (catLoading || brandLoading) return <p>Đang tải...</p>;
-  if (catError || brandError) return <p className="text-red-500">{catError || brandError}</p>;
+  // Chỉ block loading khi cả hai đang tải lần đầu, không block vĩnh viễn khi lỗi
+  const isLoading = catLoading && brandLoading;
+
+  // Full page loading spinner only on very first load
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-24 text-gray-400">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mr-4" />
+      <span>Đang tải dữ liệu...</span>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Toast Alert */}
+      {/* KHỐI HIỂN THỊ: Thông báo Toast UI phản hồi thành công và lỗi */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right">
           <div className={`flex items-center gap-3 text-white rounded-xl px-6 py-4 shadow-2xl transition-all duration-300 ${toastMessage.startsWith("Lỗi") || toastMessage.startsWith("Vui lòng")
-              ? "bg-gradient-to-r from-red-500 to-rose-500 ring-4 ring-red-500/20"
-              : "bg-gradient-to-r from-green-500 to-emerald-500 ring-4 ring-green-500/20"
+            ? "bg-gradient-to-r from-red-500 to-rose-500 ring-4 ring-red-500/20"
+            : "bg-gradient-to-r from-green-500 to-emerald-500 ring-4 ring-green-500/20"
             }`}>
             {toastMessage.startsWith("Lỗi") || toastMessage.startsWith("Vui lòng") ? (
               <XCircle className="w-6 h-6" />
@@ -177,23 +223,57 @@ const Category_Brand = () => {
         </div>
       )}
 
-      {/* Header */}
+      {/* Banner lỗi inline cho từng tab */}
+      {activeTab === 'categories' && catError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span>⚠️ Lỗi tải danh mục: {catError}</span>
+          <button onClick={fetchCategories} className="ml-4 underline hover:text-red-900">Thử lại</button>
+        </div>
+      )}
+      {activeTab === 'brands' && brandError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span>⚠️ Lỗi tải thương hiệu: {brandError}</span>
+          <button onClick={fetchBrands} className="ml-4 underline hover:text-red-900">Thử lại</button>
+        </div>
+      )}
+      {activeTab === 'brands' && brandLoading && (
+        <div className="flex items-center gap-2 text-sm text-gray-400">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500" />
+          Đang tải thương hiệu...
+        </div>
+      )}
+
+      {/* KHỐI HIỂN THỊ: Header trang */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Quản lý Danh mục & Thương hiệu</h1>
           <p className="text-gray-600 mt-2 flex items-center gap-2">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
-              {filteredData.length} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
+              {filteredData.length} / {data.length} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
             </span>
           </p>
         </div>
-        <Button onClick={handleAdd} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md">
-          <Plus className="w-4 h-4 mr-2" />
-          Thêm mới
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              fetchCategories();
+              fetchBrands();
+              setSearchQuery("");
+              setCountryFilter("");
+            }}
+            className="border-blue-200 text-blue-600 hover:bg-blue-50"
+          >
+            Làm mới
+          </Button>
+          <Button onClick={handleAdd} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md">
+            <Plus className="w-4 h-4 mr-2" />
+            Thêm mới
+          </Button>
+        </div>
       </div>
 
-      {/* Tabs */}
+      {/* KHỐI HIỂN THỊ: Vùng Tabs điều hướng và bộ Search/Filters */}
       <Card className="border-0 shadow-md rounded-xl bg-white overflow-hidden">
         <div className="border-b border-gray-100">
           <div className="flex p-1 bg-gray-50">
@@ -220,7 +300,7 @@ const Category_Brand = () => {
           </div>
         </div>
 
-        {/* Search & Filters */}
+        {/* Cụm input tìm kiếm và sắp xếp */}
         <CardContent className="p-6">
           <div className="flex gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[250px]">
@@ -233,6 +313,7 @@ const Category_Brand = () => {
               />
             </div>
 
+            {/* Chỉ hiện dropdown chọn mã quốc gia nếu đang chọn Quẩn lý Thương Hiệu */}
             {activeTab === 'brands' && (
               <div className="relative min-w-[200px]">
                 <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -261,7 +342,7 @@ const Category_Brand = () => {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {/* KHỐI HIỂN THỊ: Cấu trúc Table Data Render mảng filteredData */}
       <Card className="border-0 shadow-md rounded-xl bg-white overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
           <CardTitle className="text-xl font-bold text-gray-800">
@@ -277,17 +358,26 @@ const Category_Brand = () => {
                 )}
                 <TableHead className="font-bold text-gray-700">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</TableHead>
                 {activeTab === "brands" && (
+                  <TableHead className="font-bold text-gray-700">Thuộc danh mục</TableHead>
+                )}
+                {activeTab === "brands" && (
                   <TableHead className="font-bold text-gray-700">Quốc gia</TableHead>
                 )}
+                {activeTab === "brands" && (
+                  <TableHead className="font-bold text-gray-700">Nhà cung cấp</TableHead>
+                )}
                 <TableHead className="font-bold text-gray-700">Số sản phẩm</TableHead>
+                {activeTab === "categories" && (
+                  <TableHead className="font-bold text-gray-700">Số thương hiệu</TableHead>
+                )}
                 <TableHead className="font-bold text-gray-700">Thời gian tạo</TableHead>
                 <TableHead className="font-bold text-gray-700">Cập nhật lần cuối</TableHead>
                 <TableHead className="text-center font-bold text-gray-700">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <>
+              {filteredData.length > 0 ? (
+                filteredData.map((item) => (
                   <TableRow key={item.id} className="hover:bg-blue-50 transition-colors border-b border-gray-100">
                     {activeTab === "categories" && (
                       <TableCell>
@@ -316,6 +406,7 @@ const Category_Brand = () => {
                               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedRow === item.id ? 'rotate-180' : ''}`} />
                             )}
                           </button>
+                          {/* Sổ thông tin mô tả chi tiết thông qua nút Expand */}
                           {expandedRow === item.id && item.description && (
                             <div className="mt-2 text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg animate-in slide-in-from-top-2 duration-200">
                               {item.description}
@@ -326,13 +417,32 @@ const Category_Brand = () => {
                     </TableCell>
                     {activeTab === "brands" && (
                       <TableCell>
-                        <span className="text-gray-600">{item.country}</span>
+                        <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {item.category?.name || 'Không thuộc danh mục'}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {activeTab === "brands" && (
+                      <TableCell>
+                        <span className="text-gray-600">{item.country || '—'}</span>
+                      </TableCell>
+                    )}
+                    {activeTab === "brands" && (
+                      <TableCell>
+                        <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50/50">
+                          {item.supplier?.name || 'Chưa gán'}
+                        </Badge>
                       </TableCell>
                     )}
 
                     <TableCell>
                       <Badge className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold px-3 py-1">{productCountMap[item.id] || 0} sản phẩm</Badge>
                     </TableCell>
+                    {activeTab === "categories" && (
+                      <TableCell>
+                        <Badge className="bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 font-semibold px-3 py-1">{brandCountMap[item.id] || 0} brand</Badge>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <span className="text-gray-600 text-sm">
                         {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
@@ -366,14 +476,24 @@ const Category_Brand = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                </>
-              ))}
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={activeTab === "categories" ? 7 : 8} className="text-center py-12">
+                    <div className="flex flex-col items-center justify-center text-gray-400">
+                      <Tag className="w-12 h-12 mb-2 opacity-20" />
+                      <p className="text-lg font-medium">Không tìm thấy dữ liệu nào</p>
+                      <p className="text-sm">Vui lòng kiểm tra lại bộ lọc hoặc thêm mới {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Add/Edit Modal */}
+      {/* KHỐI HIỂN THỊ: Form Popup dùng để chèn thông tin Tạo Bản Ghi Mới hoặc Sửa thông tin */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
@@ -386,6 +506,7 @@ const Category_Brand = () => {
               </button>
             </div>
             <div className="p-6 space-y-5">
+              {/* Box nhập mã code cho Category */}
               {activeTab === 'categories' && (
                 <div>
                   <Label className="text-sm font-semibold text-gray-700">Mã danh mục <span className="text-red-500">*</span></Label>
@@ -399,6 +520,7 @@ const Category_Brand = () => {
                 </div>
               )}
 
+              {/* Box Tên bắt buộc */}
               <div>
                 <Label className="text-sm font-semibold text-gray-700">Tên {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} <span className="text-red-500">*</span></Label>
                 <Input
@@ -409,6 +531,32 @@ const Category_Brand = () => {
                 />
               </div>
 
+              {/* Box chọn danh mục cho Thương Hiệu */}
+              {activeTab === 'brands' && (
+                <div>
+                  <Label className="text-sm font-semibold text-gray-700">Thuộc danh mục</Label>
+                  <select
+                    className="w-full mt-2 h-11 px-4 text-base bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                    value={formData.category?.id || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        category: e.target.value ? { id: parseInt(e.target.value) } : null
+                      })
+                    }
+                  >
+                    <option value="">-- Chọn danh mục (Không bắt buộc) --</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                  {categories && categories.length === 0 && (
+                    <p className="text-xs text-red-500 mt-1">Chưa có danh mục nào. Vui lòng tạo danh mục trước!</p>
+                  )}
+                </div>
+              )}
+
+              {/* Box xuất xứ Quốc gia đối với Thương Hiệu */}
               {activeTab === 'brands' && (
                 <div>
                   <Label className="text-sm font-semibold text-gray-700">Quốc gia</Label>
@@ -423,6 +571,29 @@ const Category_Brand = () => {
                 </div>
               )}
 
+              {/* Box chọn nhà cung cấp cho Thương Hiệu */}
+              {activeTab === 'brands' && (
+                <div>
+                  <Label className="text-sm font-semibold text-gray-700">Nhà cung cấp</Label>
+                  <select
+                    className="w-full mt-2 h-11 px-4 text-base bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                    value={formData.supplier?.id || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        supplier: e.target.value ? { id: parseInt(e.target.value) } : null
+                      })
+                    }
+                  >
+                    <option value="">-- Chọn nhà cung cấp (Không bắt buộc) --</option>
+                    {suppliers?.map((sup) => (
+                      <option key={sup.id} value={sup.id}>{sup.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Box mô tả bổ trợ */}
               <div>
                 <Label className="text-sm font-semibold text-gray-700">Mô tả</Label>
                 <textarea
@@ -449,7 +620,7 @@ const Category_Brand = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* KHỐI HIỂN THỊ: Popup Confirm Xóa dữ liệu */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
@@ -463,13 +634,17 @@ const Category_Brand = () => {
               <p className="text-center text-gray-600 mb-3">
                 Bạn có chắc muốn xóa <span className="font-bold text-gray-900">{selectedItem?.name}</span>?
               </p>
+
+              {/* Validation cảnh báo trước khi cho phép huỷ (Báo trước có số lượng sản phẩm chứa tham chiếu khoá ngoại) */}
               <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
                 <p className="text-sm text-red-700 font-medium">
-                  ⚠️ {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
+                  {activeTab === 'categories' ? 'Danh mục' : 'Thương hiệu'} này đang có{' '}
                   <span className="font-bold">{productCountMap[selectedItem?.id] || 0} sản phẩm</span>
                 </p>
               </div>
             </div>
+
+            {/* Phím Action Call của Delete Confirm Form */}
             <div className="p-6 bg-gray-50 rounded-b-2xl flex gap-3">
               <Button variant="outline" className="flex-1 h-11 rounded-xl font-semibold" onClick={() => setShowDeleteConfirm(false)}>
                 Hủy

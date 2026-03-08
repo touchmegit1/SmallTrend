@@ -1,9 +1,12 @@
 import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice }) {
+export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice, onKeyDown, selectedProductIndex, setShowShortcuts }) {
   const scrollContainerRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const navigate = useNavigate();
 
   const checkScroll = () => {
     if (scrollContainerRef.current) {
@@ -28,15 +31,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && searchTerm) {
-      const product = filteredProducts[0];
-      if (product) {
-        addToCart(product);
-        setSearchTerm("");
-      }
-    }
-  };
+
 
   return (
     <div style={{
@@ -52,13 +47,14 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
       marginBottom: "15px"
     }}>
       <div style={{ fontSize: "18px", fontWeight: "bold", minWidth: "150px" }}>SmallTrend POS</div>
-      
+
       <div style={{ position: "relative", flex: 1, maxWidth: "350px" }}>
         <input
+          ref={searchInputRef}
           placeholder="Tìm kiếm sản phẩm theo tên hoặc mã..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={onKeyDown}
           style={{
             padding: "8px 12px",
             width: "100%",
@@ -68,7 +64,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
             outline: "none"
           }}
         />
-        
+
         {/* Product dropdown */}
         {searchTerm && filteredProducts.length > 0 && (
           <div style={{
@@ -85,7 +81,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
             overflowY: "auto",
             marginTop: "5px"
           }}>
-            {filteredProducts.map(product => (
+            {filteredProducts.map((product, index) => (
               <div
                 key={product.id}
                 onClick={() => {
@@ -99,10 +95,11 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
                   color: "#333",
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center"
+                  alignItems: "center",
+                  background: selectedProductIndex === index ? "#e3f2fd" : "white"
                 }}
-                onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
-                onMouseLeave={(e) => e.target.style.background = "white"}
+                onMouseEnter={(e) => e.currentTarget.style.background = selectedProductIndex === index ? "#e3f2fd" : "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = selectedProductIndex === index ? "#e3f2fd" : "white"}
               >
                 <div>
                   <div style={{ fontWeight: "600", marginBottom: "2px", fontSize: "13px" }}>
@@ -120,7 +117,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
           </div>
         )}
       </div>
-      
+
       {/* Order Tabs */}
       <div style={{ position: "relative", flex: 1, maxWidth: "400px", display: "flex", alignItems: "center" }}>
         {showLeftArrow && (
@@ -148,13 +145,13 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
             ‹
           </button>
         )}
-        <div 
+        <div
           ref={scrollContainerRef}
           onScroll={checkScroll}
-          style={{ 
-            display: "flex", 
-            gap: "8px", 
-            alignItems: "center", 
+          style={{
+            display: "flex",
+            gap: "8px",
+            alignItems: "center",
             overflowX: "auto",
             scrollbarWidth: "none",
             msOverflowStyle: "none",
@@ -256,9 +253,9 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
           </button>
         )}
       </div>
-      
+
       <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <button 
+        <button
           onClick={() => setShowQRScanner(true)}
           style={{
             padding: "6px 12px",
@@ -272,7 +269,7 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
         >
           Quét QR
         </button>
-        <button 
+        <button
           onClick={onPrintInvoice}
           style={{
             padding: "6px 12px",
@@ -284,19 +281,81 @@ export default function TopBar({ searchTerm, setSearchTerm, filteredProducts, ad
             fontSize: "12px"
           }}
         >
-        In hóa đơn
+          In hóa đơn
         </button>
-        <button style={{
-          padding: "6px 12px",
-          background: "rgba(255,255,255,0.2)",
-          color: "white",
-          border: "none",
-          borderRadius: "15px",
-          cursor: "pointer",
-          fontSize: "12px"
-        }}>
-          Cài đặt
-        </button>
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            style={{
+              padding: "6px 12px",
+              background: showSettings ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.2)",
+              color: "white",
+              border: "none",
+              borderRadius: "15px",
+              cursor: "pointer",
+              fontSize: "12px"
+            }}
+          >
+            Cài đặt
+          </button>
+          {showSettings && (
+            <div style={{
+              position: "absolute",
+              top: "100%",
+              right: 0,
+              marginTop: "8px",
+              background: "white",
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              overflow: "hidden",
+              zIndex: 1000,
+              minWidth: "150px"
+            }}>
+              <button
+                onClick={() => {
+                  setShowSettings(false);
+                  if (setShowShortcuts) setShowShortcuts(true);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px 15px",
+                  textAlign: "left",
+                  background: "none",
+                  border: "none",
+                  borderBottom: "1px solid #eee",
+                  cursor: "pointer",
+                  color: "#333",
+                  fontSize: "13px"
+                }}
+                onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.target.style.background = "none"}
+              >
+                Phím tắt
+              </button>
+              <button
+                onClick={() => {
+                  setShowSettings(false);
+                  navigate('/login');
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px 15px",
+                  textAlign: "left",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#dc3545",
+                  fontSize: "13px",
+                  fontWeight: "500"
+                }}
+                onMouseEnter={(e) => e.target.style.background = "#fff5f5"}
+                onMouseLeave={(e) => e.target.style.background = "none"}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

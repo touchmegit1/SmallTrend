@@ -2,11 +2,33 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useDisposalList } from "../../hooks/useDisposalList";
 import { formatCurrency } from "../../utils/inventory";
+import CustomSelect from "../../components/common/CustomSelect";
 
 const STATUS_CONFIG = {
-  DRAFT: { label: "Nháp", bg: "bg-yellow-50", text: "text-yellow-700", dot: "bg-yellow-500" },
-  CONFIRMED: { label: "Đã xác nhận", bg: "bg-green-50", text: "text-green-700", dot: "bg-green-500" },
-  CANCELLED: { label: "Đã hủy", bg: "bg-gray-50", text: "text-gray-600", dot: "bg-gray-400" },
+  DRAFT: {
+    label: "Nháp",
+    bg: "bg-yellow-50",
+    text: "text-yellow-700",
+    dot: "bg-yellow-500",
+  },
+  CONFIRMED: {
+    label: "Đã xác nhận",
+    bg: "bg-green-50",
+    text: "text-green-700",
+    dot: "bg-green-500",
+  },
+  PENDING: {
+    label: "Chờ duyệt",
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    dot: "bg-indigo-500",
+  },
+  REJECTED: {
+    label: "Từ chối",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    dot: "bg-red-500",
+  },
 };
 
 const REASON_CONFIG = {
@@ -34,7 +56,6 @@ export default function DisposalList() {
     page,
     setPage,
     totalPages,
-    cancelVoucher,
   } = useDisposalList();
 
   if (loading) {
@@ -63,8 +84,9 @@ export default function DisposalList() {
   const statusTabs = [
     { key: "ALL", label: "Tất cả" },
     { key: "DRAFT", label: "Nháp" },
+    { key: "PENDING", label: "Chờ duyệt" },
     { key: "CONFIRMED", label: "Đã xác nhận" },
-    { key: "CANCELLED", label: "Đã hủy" },
+    { key: "REJECTED", label: "Từ chối" },
   ];
 
   const SortIcon = ({ field }) => (
@@ -76,7 +98,11 @@ export default function DisposalList() {
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     const date = new Date(dateStr);
-    return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
   return (
@@ -98,32 +124,19 @@ export default function DisposalList() {
       </div>
 
       {/* Status tabs */}
-      <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => {
-              setStatusFilter(tab.key);
-              setPage(1);
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === tab.key
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {tab.label}
-            <span
-              className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                statusFilter === tab.key
-                  ? "bg-red-100 text-red-700"
-                  : "bg-gray-200 text-gray-500"
-              }`}
-            >
-              {statusCounts[tab.key] || 0}
-            </span>
-          </button>
-        ))}
+      <div className="w-56 text-left">
+        <CustomSelect
+          value={statusFilter}
+          onChange={(val) => {
+            setStatusFilter(val);
+            setPage(1);
+          }}
+          options={statusTabs.map((tab) => ({
+            value: tab.key,
+            label: `${tab.label} (${statusCounts[tab.key] || 0})`,
+          }))}
+          variant="status"
+        />
       </div>
 
       {/* Search */}
@@ -176,17 +189,16 @@ export default function DisposalList() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Trạng thái
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                  Thao tác
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {vouchers.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-16 text-center">
+                  <td colSpan="8" className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <p className="text-gray-500 text-sm font-medium">Chưa có phiếu xử lý nào</p>
+                      <p className="text-gray-500 text-sm font-medium">
+                        Chưa có phiếu xử lý nào
+                      </p>
                       <button
                         onClick={() => navigate("/inventory/disposal/create")}
                         className="mt-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
@@ -198,8 +210,10 @@ export default function DisposalList() {
                 </tr>
               ) : (
                 vouchers.map((v) => {
-                  const statusCfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
-                  const reasonCfg = REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
+                  const statusCfg =
+                    STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
+                  const reasonCfg =
+                    REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
 
                   return (
                     <tr
@@ -212,9 +226,7 @@ export default function DisposalList() {
                           {v.code}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        {reasonCfg.label}
-                      </td>
+                      <td className="px-4 py-3 text-sm">{reasonCfg.label}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {v.locationName || "—"}
                       </td>
@@ -234,24 +246,11 @@ export default function DisposalList() {
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.text}`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`}
+                          />
                           {statusCfg.label}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {v.status === "DRAFT" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm("Bạn có chắc muốn hủy phiếu này?")) {
-                                cancelVoucher(v.id);
-                              }
-                            }}
-                            className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                          >
-                            Hủy
-                          </button>
-                        )}
                       </td>
                     </tr>
                   );
