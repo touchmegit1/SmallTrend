@@ -5,8 +5,10 @@ import com.smalltrend.dto.inventory.location.LocationRequest;
 import com.smalltrend.dto.inventory.location.LocationStockItemResponse;
 import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.Location;
+import com.smalltrend.entity.StockMovement;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.LocationRepository;
+import com.smalltrend.repository.StockMovementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +25,7 @@ public class LocationService {
 
     private final LocationRepository locationRepository;
     private final InventoryStockRepository inventoryStockRepository;
+    private final StockMovementRepository stockMovementRepository;
 
     // ─── GET ALL (with stock info) ──────────────────────────
     public List<FullLocationResponse> getAllLocations() {
@@ -100,13 +104,94 @@ public class LocationService {
         locationRepository.deleteById(id);
     }
 
+    // ─── TRANSFER STOCK ────────────────────────────────────
+    @Transactional
+    public void transferStock(Integer fromLocationId, Integer toLocationId,
+                              Integer variantId, Integer batchId, int qty) {
+        if (fromLocationId.equals(toLocationId)) {
+            throw new RuntimeException("Vị trí nguồn và đích không được trùng nhau.");
+        }
+        if (qty <= 0) {
+            throw new RuntimeException("Số lượng chuyển phải lớn hơn 0.");
+        }
+
+        Location fromLoc = locationRepository.findById(fromLocationId)
+                .orElseThrow(() -> new RuntimeException("Vị trí nguồn không tồn tại."));
+        Location toLoc = locationRepository.findById(toLocationId)
+                .orElseThrow(() -> new RuntimeException("Vị trí đích không tồn tại."));
+
+        // Tìm stock nguồn
+        Optional<InventoryStock> fromStockOpt = inventoryStockRepository
+                .findByVariantIdAndBatchIdAndLocationId(variantId, batchId, fromLocationId);
+        if (fromStockOpt.isEmpty()) {
+            throw new RuntimeException("Không tìm thấy hàng hóa tại vị trí nguồn.");
+        }
+        InventoryStock fromStock = fromStockOpt.get();
+        int available = fromStock.getQuantity() != null ? fromStock.getQuantity() : 0;
+        if (qty > available) {
+            throw new RuntimeException(
+                    "Số lượng chuyển (" + qty + ") vượt quá tồn kho hiện có (" + available + ").");
+        }
+
+        // Trừ tồn kho nguồn
+        int remaining = available - qty;
+        if (remaining == 0) {
+            inventoryStockRepository.delete(fromStock);
+        } else {
+            fromStock.setQuantity(remaining);
+            inventoryStockRepository.save(fromStock);
+        }
+
+        // Cộng tồn kho đích (merge nếu đã có record)
+        Optional<InventoryStock> toStockOpt = inventoryStockRepository
+                .findByVariantIdAndBatchIdAndLocationId(variantId, batchId, toLocationId);
+        if (toStockOpt.isPresent()) {
+            InventoryStock toStock = toStockOpt.get();
+            toStock.setQuantity((toStock.getQuantity() != null ? toStock.getQuantity() : 0) + qty);
+            inventoryStockRepository.save(toStock);
+        } else {
+            InventoryStock newStock = InventoryStock.builder()
+                    .variant(fromStock.getVariant())
+                    .batch(fromStock.getBatch())
+                    .location(toLoc)
+                    .quantity(qty)
+                    .build();
+            inventoryStockRepository.save(newStock);
+        }
+
+        // Ghi StockMovement OUT (từ nguồn)
+        stockMovementRepository.save(StockMovement.builder()
+                .variant(fromStock.getVariant())
+                .batch(fromStock.getBatch())
+                .location(fromLoc)
+                .type("OUT")
+                .quantity(qty)
+                .referenceType("TRANSFER")
+                .notes("Chuyển " + qty + " sang " + toLoc.getName())
+                .build());
+
+        // Ghi StockMovement IN (tới đích)
+        stockMovementRepository.save(StockMovement.builder()
+                .variant(fromStock.getVariant())
+                .batch(fromStock.getBatch())
+                .location(toLoc)
+                .type("IN")
+                .quantity(qty)
+                .referenceType("TRANSFER")
+                .notes("Nhận " + qty + " từ " + fromLoc.getName())
+                .build());
+    }
+
     // ─── TOGGLE STATUS (ACTIVE ↔ INACTIVE) ──────────────
     @Transactional
     public FullLocationResponse toggleLocationStatus(Integer id) {
         Location loc = locationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Location not found: " + id));
 
-        if ("ACTIVE".equals(loc.getStatus())) {
+        // null status coi như ACTIVE
+        boolean isActive = loc.getStatus() == null || "ACTIVE".equals(loc.getStatus());
+
+        if (isActive) {
             // Check if inventory is 0 before deactivating
             List<InventoryStock> stocks;
             try {

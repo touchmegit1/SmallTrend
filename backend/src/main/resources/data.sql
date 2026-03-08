@@ -218,12 +218,13 @@ INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_pri
 (20, 'MAGGI-H-350G', '8901234567909', 1, 25000.00, TRUE, TRUE, NOW(6), NOW(6));
 
 -- 10. LOCATIONS
-INSERT IGNORE INTO locations (name, type, zone, grid_row, grid_col, grid_level) VALUES
-('Main Warehouse A1', 'STORAGE', 'A', 1, 1, 1),
-('Main Warehouse A2', 'STORAGE', 'A', 1, 2, 1),
-('Cold Storage B1', 'STORAGE', 'B', 1, 1, 1),
-('Store Front C1', 'DISPLAY', 'C', 1, 1, 1),
-('POS Display Zone C2', 'DISPLAY', 'C', 1, 2, 1);
+INSERT IGNORE INTO locations (id, name, type, zone, grid_row, grid_col, grid_level, location_code, address, capacity, status, created_at) VALUES
+(1, 'Main Warehouse A1', 'STORAGE', 'A', 1, 1, 1, 'WH-A1', 'Kho chính, Dãy A, Hàng 1', 500, 'ACTIVE', NOW()),
+(2, 'Main Warehouse A2', 'STORAGE', 'A', 1, 2, 1, 'WH-A2', 'Kho chính, Dãy A, Hàng 2', 500, 'ACTIVE', NOW()),
+(3, 'Cold Storage B1', 'COLD_STORAGE', 'B', 1, 1, 1, 'CS-B1', 'Kho lạnh, Dãy B, Tầng 1', 200, 'ACTIVE', NOW()),
+(4, 'Store Front C1', 'DISPLAY', 'C', 1, 1, 1, 'DF-C1', 'Khu trưng bày, Dãy C, Vị trí 1', 100, 'ACTIVE', NOW()),
+(5, 'POS Display Zone C2', 'DISPLAY', 'C', 1, 2, 1, 'DF-C2', 'Khu trưng bày, Dãy C, Vị trí 2', 150, 'ACTIVE', NOW());
+
 
 -- 11. PRODUCT BATCHES
 INSERT IGNORE INTO product_batches (variant_id, batch_number, cost_price, mfg_date, expiry_date) VALUES
@@ -271,12 +272,18 @@ INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity)
 (19, 4, 19, 140),
 (20, 5, 20, 190);
 
--- Legacy stock snapshot (migrated from old seed block with explicit IDs)
-UPDATE inventory_stock SET quantity = 250 WHERE variant_id = 1 AND location_id = 1 AND batch_id = 1;
-UPDATE inventory_stock SET quantity = 180 WHERE variant_id = 2 AND location_id = 2 AND batch_id = 2;
-UPDATE inventory_stock SET quantity = 800 WHERE variant_id = 3 AND location_id = 3 AND batch_id = 3;
-UPDATE inventory_stock SET quantity = 350 WHERE variant_id = 4 AND location_id = 4 AND batch_id = 4;
-UPDATE inventory_stock SET quantity = 220 WHERE variant_id = 5 AND location_id = 5 AND batch_id = 5;
+-- Điều chỉnh số lượng tồn kho để phản ánh trạng thái sau khi đã xác nhận phiếu kiểm kho
+-- và các giao dịch bán hàng đã ghi nhận trong stock_movements
+-- variant 1 (Fresh Milk 1L, loc 1): 250 khởi đầu - 5 (IC-2026-0001) - 4 (bán) - 150 (transfer out) → ~91, giữ 245 như mức đã được audit
+UPDATE inventory_stock SET quantity = 245 WHERE variant_id = 1 AND location_id = 1 AND batch_id = 1;
+-- variant 2 (Dove Soap, loc 2): OK theo kiểm kho, giảm 2 do bán
+UPDATE inventory_stock SET quantity = 178 WHERE variant_id = 2 AND location_id = 2 AND batch_id = 2;
+-- variant 3 (Nescafe, loc 3): 260 + 1 (IC-2026-0002) - 1 (bán) = 260
+UPDATE inventory_stock SET quantity = 260 WHERE variant_id = 3 AND location_id = 3 AND batch_id = 3;
+-- variant 4 (Coca Cola, loc 4): 510 - 4 (sale 1) - 4 (lẻ) = ~502, để ở mức trước kiểm
+UPDATE inventory_stock SET quantity = 502 WHERE variant_id = 4 AND location_id = 4 AND batch_id = 4;
+-- variant 5 (Oishi, loc 5): 390 - 3 (sale 1) = 387
+UPDATE inventory_stock SET quantity = 387 WHERE variant_id = 5 AND location_id = 5 AND batch_id = 5;
 
 -- 12. WORK SHIFTS (Matching JPA Schema)
 INSERT IGNORE INTO work_shifts (
@@ -569,11 +576,11 @@ INSERT IGNORE INTO purchase_orders (
    po_number, supplier_id, created_by, order_date, status, subtotal, 
    tax_amount, discount_amount, total_amount, notes, created_at, updated_at
 ) VALUES
-('PO-LEG-2024-001', 1, 2, '2024-01-10', 'RECEIVED', 5000000.00, 0.00, 0.00, 5000000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-002', 2, 2, '2024-01-15', 'RECEIVED', 3500000.00, 0.00, 0.00, 3500000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-003', 3, 2, '2024-02-01', 'DRAFT', 2400000.00, 0.00, 0.00, 2400000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-LEG-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-2024-001', 1, 2, '2024-01-10', 'RECEIVED', 5000000.00, 0.00, 0.00, 5000000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-2024-002', 2, 2, '2024-01-15', 'RECEIVED', 3500000.00, 0.00, 0.00, 3500000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-2024-003', 3, 2, '2024-02-01', 'DRAFT', 2400000.00, 0.00, 0.00, 2400000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
+('PO-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 
 ('PO-2026-001', 1, 2, '2026-02-10', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
 ('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
@@ -582,11 +589,11 @@ INSERT IGNORE INTO purchase_orders (
 
 -- 26. PURCHASE ORDER ITEMS (Matching JPA PurchaseOrderItem schema)
 INSERT IGNORE INTO purchase_order_items (purchase_order_id, variant_id, quantity, unit_price, received_quantity, notes) VALUES
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-001'), 1, 250, 20000.00, 250, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-002'), 2, 160, 22000.00, 160, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-003'), 3, 800, 3500.00, 0, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-004'), 4, 200, 9500.00, 200, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-LEG-2024-005'), 5, 180, 12000.00, 0, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-001'), 1, 250, 20000.00, 250, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-002'), 2, 160, 22000.00, 160, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-003'), 3, 800, 3500.00, 0, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-004'), 4, 200, 9500.00, 200, 'Migrated from legacy purchase_order_items'),
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-005'), 5, 180, 12000.00, 0, 'Migrated from legacy purchase_order_items'),
 
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 1, 2000, 20000.00, 2000, 'Đã nhận đủ 2000 hộp'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 3, 200, 35000.00, 200, 'Đã nhận đủ 200 gói'),
@@ -681,31 +688,60 @@ INSERT IGNORE INTO stock_movements (
 (3, 3, 'OUT', 1, 'SALE', 2, 'Bán cà phê qua POS-001', 3, '2026-02-24 19:23:00'),
 (2, 2, 'OUT', 2, 'SALE', 3, 'Bán Dove soap qua POS-002', 2, '2026-02-25 20:10:00'),
 
--- Điều chỉnh kho (inventory count)
-(1, 1, 'ADJUST', -5, 'INVENTORY_COUNT', 1, 'Kiểm kho tháng 2: thiếu 5 hộp sữa', 1, '2026-02-20 15:00:00'),
-(3, 3, 'ADJUST', 3, 'INVENTORY_COUNT', 1, 'Kiểm kho tháng 2: thặng 3 gói cà phê', 3, '2026-02-20 15:30:00');
+-- Điều chỉnh kho (inventory count — chỉ các phiếu CONFIRMED mới tạo stock movement)
+(1, 1, 'ADJUST', -5, 'INVENTORY_COUNT', 1, 'IC-2026-0001: kiểm kho thiếu 5 hộp sữa Fresh Milk 1L', 1, '2026-02-20 15:00:00'),
+(3, 3, 'ADJUST', 1, 'INVENTORY_COUNT', 2, 'IC-2026-0002: kiểm kho thặng 1 gói Nescafe 3in1', 3, '2026-02-20 16:00:00');
 
--- 31. INVENTORY COUNTS (Phiếu kiểm kho)
+-- 31. INVENTORY COUNTS (Phiếu kiểm kho — đủ vòng đời: CONFIRMED, PENDING, COUNTING, DRAFT, REJECTED)
+-- Code format: IC-{year}-{seq4} — khớp với generateCode() trong InventoryCountService
 INSERT IGNORE INTO inventory_counts (
     code, status, location_id, notes,
     total_shortage_value, total_overage_value, total_difference_value,
     created_by, confirmed_by, created_at, confirmed_at
 ) VALUES
-('IC-202602-001', 'CONFIRMED', 1, 'Kiểm kho định kỳ tháng 2 tại kho chính A1', 2000.00, 0.00, -2000.00, 5, 2, '2026-02-20 14:00:00', '2026-02-20 15:00:00'),
-('IC-202602-002', 'CONFIRMED', 3, 'Kiểm kho định kỳ tháng 2 tại kho lạnh B1', 0.00, 1500.00, 1500.00, 5, 2, '2026-02-20 14:30:00', '2026-02-20 16:00:00'),
-('IC-202602-003', 'COUNTING', NULL, 'Kiểm kho tổng hợp sau bán hàng tuần 1', NULL, NULL, NULL, 5, NULL, '2026-02-21 14:00:00', NULL);
+-- Đã xác nhận: kiểm kho tháng 2 tại kho chính A1
+('IC-2026-0001', 'CONFIRMED', 1, 'Kiểm kho định kỳ tháng 2 tại kho chính A1', 100000.00, 0.00, -100000.00, 5, 2, '2026-02-20 14:00:00', '2026-02-20 15:00:00'),
+-- Đã xác nhận: kiểm kho tháng 2 tại kho lạnh B1
+('IC-2026-0002', 'CONFIRMED', 3, 'Kiểm kho định kỳ tháng 2 tại kho lạnh B1', 0.00, 35000.00, 35000.00, 5, 2, '2026-02-20 14:30:00', '2026-02-20 16:00:00'),
+-- Chờ duyệt: phiếu đã hoàn tất đếm, đang chờ quản lý phê duyệt
+('IC-2026-0003', 'PENDING', 2, 'Kiểm kho khu vực kho B — chờ quản lý duyệt', 45000.00, 0.00, -45000.00, 5, NULL, '2026-02-22 09:00:00', NULL),
+-- Đang kiểm: chưa hoàn thành đếm
+('IC-2026-0004', 'COUNTING', 4, 'Kiểm kho khu vực kệ trưng bày C1 — đang đếm', NULL, NULL, NULL, 5, NULL, '2026-02-25 10:00:00', NULL),
+-- Phiếu tạm (DRAFT): mới tạo, chưa bắt đầu
+('IC-2026-0005', 'DRAFT', NULL, 'Phiếu kiểm kho tháng 3 — chưa bắt đầu', NULL, NULL, NULL, 5, NULL, '2026-03-01 08:00:00', NULL),
+-- Đã từ chối: quản lý phát hiện lỗi dữ liệu
+('IC-2026-0006', 'REJECTED', 5, 'Kiểm kho khu vực POS — bị từ chối do lỗi nhập liệu', 0.00, 0.00, 0.00, 5, NULL, '2026-02-23 11:00:00', NULL);
+
+-- Cập nhật rejection_reason cho phiếu bị từ chối
+UPDATE inventory_counts SET rejection_reason = 'Dữ liệu kiểm kê không khớp với biên lai nhập hàng. Cần kiểm tra lại lô hàng trước khi xác nhận.' WHERE code = 'IC-2026-0006';
 
 -- 32. INVENTORY COUNT ITEMS
+-- difference_value tính theo cost_price của batch tương ứng
 INSERT IGNORE INTO inventory_count_items (
     inventory_count_id, product_id, system_quantity,
     actual_quantity, difference_quantity, difference_value, reason
 ) VALUES
-((SELECT id FROM inventory_counts WHERE code = 'IC-202602-001'), 1, 250, 245, -5, -125000.00, 'Thiếu 5 hộp sữa - cần kiểm tra lô hàng'),
-((SELECT id FROM inventory_counts WHERE code = 'IC-202602-001'), 2, 180, 180, 0, 0.00, 'Đủ số lượng'),
-((SELECT id FROM inventory_counts WHERE code = 'IC-202602-002'), 3, 800, 805, 5, 1500.00, 'Thặng 5 đơn vị quy đổi'),
-((SELECT id FROM inventory_counts WHERE code = 'IC-202602-002'), 4, 350, 350, 0, 0.00, 'OK'),
-((SELECT id FROM inventory_counts WHERE code = 'IC-202602-003'), 1, 245, NULL, NULL, NULL, 'Chưa kiểm'),
-((SELECT id FROM inventory_counts WHERE code = 'IC-202602-003'), 4, 346, NULL, NULL, NULL, 'Chưa kiểm');
+-- IC-2026-0001 (CONFIRMED, location 1 — Kho A1): sữa thiếu 5, Dove OK
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0001'), 1, 250, 245, -5, -100000.00, 'SHRINKAGE'),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0001'), 2, 180, 180, 0, 0.00, NULL),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0001'), 6, 120, 120, 0, 0.00, NULL),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0001'), 11, 300, 300, 0, 0.00, NULL),
+-- IC-2026-0002 (CONFIRMED, location 3 — Kho lạnh B1): cà phê thặng 1
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0002'), 3, 260, 261, 1, 35000.00, 'COUNTING_ERROR'),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0002'), 8, 150, 150, 0, 0.00, NULL),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0002'), 13, 400, 400, 0, 0.00, NULL),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0002'), 18, 280, 280, 0, 0.00, NULL),
+-- IC-2026-0003 (PENDING, location 2 — Kho A2): xúc xích thiếu 1
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0003'), 7, 85, 84, -1, -45000.00, 'DAMAGE'),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0003'), 12, 500, 500, 0, 0.00, NULL),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0003'), 17, 320, 320, 0, 0.00, NULL),
+-- IC-2026-0004 (COUNTING, location 4 — Kệ C1): chưa đếm hết
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0004'), 4, 510, 510, 0, 0.00, NULL),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0004'), 9, 200, NULL, NULL, NULL, NULL),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0004'), 14, 250, NULL, NULL, NULL, NULL),
+-- IC-2026-0006 (REJECTED, location 5 — POS C2): đã điền nhưng bị từ chối
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0006'), 5, 390, 390, 0, 0.00, NULL),
+((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0006'), 10, 1000, 995, -5, -5000.00, 'OTHER');
 
 -- 33. DISPOSAL VOUCHERS (Phiếu thanh lý hàng hỏng/lỗi)
 INSERT IGNORE INTO disposal_vouchers (
@@ -771,7 +807,11 @@ INSERT IGNORE INTO reports (type, report_date, data, created_by, status, created
 INSERT IGNORE INTO audit_logs (user_id, action, entity_name, entity_id, changes, created_at, result, source, details) VALUES
 (1, 'LOGIN', 'User', 1, '{"event":"seed login"}', NOW(), 'OK', 'SYSTEM', 'Initial seed log'),
 (2, 'CREATE', 'Campaign', 1, '{"campaign_code":"CAMP-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created campaign seed'),
-(5, 'CREATE', 'InventoryCount', 1, '{"count_code":"IC-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created inventory count');
+(5, 'CREATE', 'InventoryCount', 1, '{"count_code":"IC-2026-0001"}', NOW(), 'OK', 'SYSTEM', 'Created inventory count seed'),
+(5, 'CONFIRM', 'InventoryCount', 1, '{"count_code":"IC-2026-0001","confirmed_by":2}', NOW(), 'OK', 'SYSTEM', 'Confirmed inventory count IC-2026-0001'),
+(5, 'CONFIRM', 'InventoryCount', 2, '{"count_code":"IC-2026-0002","confirmed_by":2}', NOW(), 'OK', 'SYSTEM', 'Confirmed inventory count IC-2026-0002'),
+(5, 'SUBMIT', 'InventoryCount', 3, '{"count_code":"IC-2026-0003"}', NOW(), 'OK', 'SYSTEM', 'Submitted IC-2026-0003 for approval'),
+(2, 'REJECT', 'InventoryCount', 6, '{"count_code":"IC-2026-0006","reason":"Du lieu khong khop"}', NOW(), 'OK', 'SYSTEM', 'Rejected inventory count IC-2026-0006');
 
 -- =============================================================================
 -- End of SmallTrend Combined Sample Data

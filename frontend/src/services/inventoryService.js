@@ -527,6 +527,25 @@ export const toggleLocationStatus = async (id) => {
   };
 };
 
+export const transferStock = async ({
+  fromLocationId,
+  toLocationId,
+  variantId,
+  batchId,
+  quantity,
+}) => {
+  const response = await fetch(`${SPRING_API}/locations/transfer`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ fromLocationId, toLocationId, variantId, batchId, quantity }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi chuyển hàng giữa vị trí");
+  }
+  return response.json();
+};
+
 export const getActiveLocations = async () => {
   const response = await fetch(`${SPRING_API}/locations/active`, {
     headers: getAuthHeaders(),

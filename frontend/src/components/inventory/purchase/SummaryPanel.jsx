@@ -1,5 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MapPin, Truck, ChevronDown, X, Search } from "lucide-react";
+import {
+  MapPin,
+  Truck,
+  ChevronDown,
+  X,
+  Search,
+  AlertTriangle,
+} from "lucide-react";
 import { PO_STATUS_CONFIG, formatVND } from "../../../utils/purchaseOrder";
 
 export default function SummaryPanel({
@@ -18,6 +25,10 @@ export default function SummaryPanel({
 }) {
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const supplierRef = useRef(null);
+
+  // Capacity warning state
+  const [capacityWarning, setCapacityWarning] = useState(null);
+  // { locationId, locationName, capacity, current, incoming, projected }
 
   // Close supplier dropdown on outside click
   useEffect(() => {
@@ -148,12 +159,36 @@ export default function SummaryPanel({
           </label>
           <select
             value={order.location_id || ""}
-            onChange={(e) =>
-              updateOrder(
-                "location_id",
-                e.target.value ? parseInt(e.target.value) : null,
-              )
-            }
+            onChange={(e) => {
+              const locId = e.target.value ? parseInt(e.target.value) : null;
+              if (!locId) {
+                updateOrder("location_id", null);
+                return;
+              }
+              const loc = locations.find((l) => l.id === locId);
+              const capacity = loc?.capacity || 0;
+              if (capacity > 0) {
+                const current = loc?.total_products || 0;
+                const incoming = items.reduce(
+                  (sum, item) => sum + (item.quantity || 0),
+                  0,
+                );
+                const projected = current + incoming;
+                if (projected > capacity) {
+                  // Show warning first, don't select yet
+                  setCapacityWarning({
+                    locationId: locId,
+                    locationName: loc.location_name,
+                    capacity,
+                    current,
+                    incoming,
+                    projected,
+                  });
+                  return;
+                }
+              }
+              updateOrder("location_id", locId);
+            }}
             disabled={!isEditable}
             className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-500"
           >
@@ -164,7 +199,133 @@ export default function SummaryPanel({
               </option>
             ))}
           </select>
+
+          {/* Capacity warning inline indicator */}
+          {(() => {
+            const loc = locations.find((l) => l.id === order.location_id);
+            if (!loc || !loc.capacity) return null;
+            const current = loc.total_products || 0;
+            const incoming = items.reduce(
+              (sum, i) => sum + (i.quantity || 0),
+              0,
+            );
+            const projected = current + incoming;
+            const pct = Math.round((projected / loc.capacity) * 100);
+            if (pct < 80) return null;
+            return (
+              <div
+                className={`mt-2 flex items-start gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
+                  pct >= 100
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                }`}
+              >
+                <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                <span>
+                  {pct >= 100 ? "Vượt" : "Gần đầy"} sức chứa: dự kiến{" "}
+                  <strong>
+                    {projected}/{loc.capacity}
+                  </strong>{" "}
+                  ({pct}%)
+                </span>
+              </div>
+            );
+          })()}
         </div>
+
+        {/* Capacity Warning Modal */}
+        {capacityWarning && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+              {/* Header */}
+              <div className="px-6 py-4 bg-amber-50 border-b border-amber-200 flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                  <AlertTriangle size={20} className="text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Cảnh báo vượt sức chứa
+                  </h3>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Xem xét trước khi tiếp tục
+                  </p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-5">
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  Vị trí{" "}
+                  <span className="font-bold text-slate-900">
+                    {capacityWarning.locationName}
+                  </span>{" "}
+                  sẽ vượt quá sức chứa thiết kế.
+                </p>
+
+                <div className="mt-4 bg-slate-50 rounded-xl p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Tồn kho hiện tại</span>
+                    <span className="font-semibold text-slate-700">
+                      {capacityWarning.current}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Hàng sắp nhập</span>
+                    <span className="font-semibold text-indigo-600">
+                      +{capacityWarning.incoming}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-200 pt-2">
+                    <span className="text-slate-600 font-medium">
+                      Dự kiến sau nhập
+                    </span>
+                    <span className="font-bold text-red-600">
+                      {capacityWarning.projected}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Sức chứa tối đa</span>
+                    <span className="font-semibold text-slate-700">
+                      {capacityWarning.capacity}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700">
+                  ⚠️ Dự kiến:{" "}
+                  <strong>
+                    {capacityWarning.projected}/{capacityWarning.capacity}
+                  </strong>{" "}
+                  (+
+                  {Math.round(
+                    (capacityWarning.projected / capacityWarning.capacity - 1) *
+                      100,
+                  )}
+                  % vượt mức)
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 pb-5 flex gap-3">
+                <button
+                  onClick={() => setCapacityWarning(null)}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition-colors text-sm"
+                >
+                  Chọn vị trí khác
+                </button>
+                <button
+                  onClick={() => {
+                    updateOrder("location_id", capacityWarning.locationId);
+                    setCapacityWarning(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-amber-500 text-white font-semibold rounded-xl hover:bg-amber-600 transition-colors text-sm"
+                >
+                  Tiếp tục cất hàng
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Financial Summary */}
         <div className="px-5 py-4 border-b border-slate-100">

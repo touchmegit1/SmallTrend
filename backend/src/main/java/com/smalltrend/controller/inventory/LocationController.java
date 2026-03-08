@@ -99,5 +99,25 @@ public class LocationController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    /**
+     * POST /api/inventory/locations/transfer
+     * Transfer stock items from one location to another
+     * Body: { fromLocationId, toLocationId, variantId, batchId, quantity }
+     */
+    @PostMapping("/transfer")
+    public ResponseEntity<?> transferStock(@RequestBody Map<String, Object> body) {
+        try {
+            Integer fromLocationId = ((Number) body.get("fromLocationId")).intValue();
+            Integer toLocationId   = ((Number) body.get("toLocationId")).intValue();
+            Integer variantId      = ((Number) body.get("variantId")).intValue();
+            Integer batchId        = ((Number) body.get("batchId")).intValue();
+            int quantity           = ((Number) body.get("quantity")).intValue();
+            locationService.transferStock(fromLocationId, toLocationId, variantId, batchId, quantity);
+            return ResponseEntity.ok(Map.of("message", "Chuyển hàng thành công"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
 }
 
