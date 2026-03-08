@@ -1,6 +1,7 @@
 package com.smalltrend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,10 +12,13 @@ import java.util.List;
 
 @Entity
 @Table(name = "brands")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = { "products", "category", "supplier" })
+@EqualsAndHashCode(exclude = { "products", "category", "supplier" })
 public class Brand {
 
     @Id
@@ -38,7 +42,13 @@ public class Brand {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private Category category;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "supplier_id")
+    @JsonIgnoreProperties({ "brands", "purchaseOrders", "hibernateLazyInitializer", "handler" })
+    private Supplier supplier;
 
     @OneToMany(mappedBy = "brand")
     @JsonIgnore

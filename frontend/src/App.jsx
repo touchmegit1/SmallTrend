@@ -130,9 +130,7 @@ function App() {
           element={<CreatePurchaseOrder />}
         />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
-        <Route
-          path="inventory/suppliers" element={<Suppliers />}
-        />
+
         <Route path="inventory-counts" element={<InventoryCountList />} />
         <Route
           path="inventory-counts/create"
@@ -171,6 +169,11 @@ function App() {
         <Route
           path="products/price"
           element={<div className="p-4"><PriceSetting /></div>}
+        />
+
+        <Route
+          path="products/suppliers"
+          element={<div className="p-4"><Suppliers/></div>}
         />
         {/* Module 4: CRM (Khách hàng) */}
         <Route

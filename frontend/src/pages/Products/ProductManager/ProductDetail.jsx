@@ -455,7 +455,14 @@ function ProductDetail() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-bold text-gray-400 uppercase tracking-wide">Thương hiệu đại diện (Brand)</Label>
-                <p className="text-base font-medium text-gray-800">{product.brand_name || "—"}</p>
+                <p className="text-base font-medium text-gray-800 flex items-center gap-2">
+                  {product.brand_name || "—"}
+                  {product.supplier_name && (
+                    <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 border-blue-100 px-1.5 py-0">
+                      Cung cấp bởi: {product.supplier_name}
+                    </Badge>
+                  )}
+                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-bold text-gray-400 uppercase tracking-wide">Nhóm mặt hàng (Category)</Label>
@@ -605,7 +612,7 @@ function ProductDetail() {
                       </TableCell>
 
                       <TableCell className="text-center">
-                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{variant.stockQuantity || 0}</span>
+                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{variant.stock_quantity || 0}</span>
                       </TableCell>
 
                       <TableCell className="text-center">

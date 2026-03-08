@@ -62,17 +62,7 @@ TRUNCATE TABLE brands;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- 1. BRANDS & CATEGORIES
-INSERT IGNORE INTO brands (name) VALUES
-('Vinamilk'), ('Nestle'), ('Coca-Cola'), ('Unilever'), ('P&G'), ('Kinh Do'), ('Oishi'),
-('Cholimex'), ('CP'), ('Vissan'), ('Orion'), ('Chupa Chups'), ('Vifon'), ('Acecook'),
-('Masan'), ('TH True Milk'), ('Pepsico'), ('Knorr'), ('Maggi');
-
-INSERT IGNORE INTO categories (name) VALUES
-('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
-('Đồ hộp'), ('Bánh ngọt'), ('Thịt & Hải sản'), ('Gia vị & Nước chấm'), ('Mì ăn liền');
-
--- 2. SUPPLIERS
+-- 1. SUPPLIERS
 INSERT INTO suppliers (name, tax_code, address, email, phone, contact_person, contract_files, contract_signed_date, contract_expiry, active, notes) VALUES
 ('Vinamilk Distribution', '0100170098', '10 Tan Trao, Tan Phu Ward, District 7, HCMC', 'sales@vinamilk.com.vn', '1800-1199', 'Nguyen Van A', '["https://res.cloudinary.com/demo/sample_contract1.pdf"]', '2023-01-15', '2025-01-15', TRUE, 'Main dairy supplier with 2-year contract'),
 ('Unilever Vietnam', '0300491828', '15 Le Duan Blvd, District 1, HCMC', 'contact@unilever.com.vn', '1800-5588', 'Tran Thi B', '["https://res.cloudinary.com/demo/sample_contract2.pdf", "https://res.cloudinary.com/demo/sample_contract2_annex.pdf"]', '2023-03-01', '2024-12-31', TRUE, 'Personal care and household items supplier'),
@@ -91,6 +81,17 @@ contract_expiry = new_supplier.contract_expiry,
 active = new_supplier.active,
 notes = new_supplier.notes,
 updated_at = NOW();
+
+-- 2. BRANDS & CATEGORIES
+INSERT IGNORE INTO brands (name, supplier_id) VALUES
+('Vinamilk', 1), ('Nestle', 3), ('Coca-Cola', 4), ('P&G', 2), ('Kinh Do', 4), ('Oishi', 3),
+('Cholimex', 4), ('CP', 1), ('Vissan', 1), ('Orion', 3), ('Chupa Chups', 3), ('Vifon', 4), ('Acecook', 4),
+('Masan', 4), ('TH True Milk', 1), ('Pepsico', 4), ('Maggi', 3),
+('Dove', 2), ('Knorr', 2), ('Lifebuoy', 2), ('OMO', 2), ('Sunsilk', 2);
+
+INSERT IGNORE INTO categories (name) VALUES
+('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
+('Đồ hộp'), ('Bánh ngọt'), ('Thịt & Hải sản'), ('Gia vị & Nước chấm'), ('Mì ăn liền');
 
 -- 2.1 SUPPLIER CONTRACTS
 INSERT IGNORE INTO supplier_contracts (
