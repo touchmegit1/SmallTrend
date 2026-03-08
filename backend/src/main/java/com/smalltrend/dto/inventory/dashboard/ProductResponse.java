@@ -17,4 +17,6 @@ public class ProductResponse {
     private java.math.BigDecimal purchasePrice;
     private Integer stockQuantity;  // Tổng tồn kho từ inventory_stock
     private String unit;            // Đơn vị tính
+    private Integer productId;      // Id sản phẩm gốc
+    private Integer variantId;      // Id phiên bản
 }

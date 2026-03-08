@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -16,6 +17,7 @@ import {
   ToggleLeft,
   ToggleRight,
   ArrowRightLeft,
+  ArrowLeft,
 } from "lucide-react";
 import {
   getLocations,
@@ -26,9 +28,11 @@ import {
 } from "../../services/inventoryService";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { useToast } from "../../components/ui/Toast";
+import CustomSelect from "../../components/common/CustomSelect";
 
 function LocationManagement() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,7 +41,8 @@ function LocationManagement() {
   const [expandedLocationId, setExpandedLocationId] = useState(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockModalData, setStockModalData] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     location: null,
@@ -211,8 +216,15 @@ function LocationManagement() {
       (loc.location_code || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter ? loc.status === statusFilter : true;
-    return matchesSearch && matchesStatus;
+    const matchesStatus =
+      statusFilter && statusFilter !== "all"
+        ? loc.status === statusFilter
+        : true;
+    const matchesType =
+      typeFilter && typeFilter !== "all"
+        ? loc.location_type === typeFilter
+        : true;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   const getIcon = (type) => {
@@ -235,14 +247,22 @@ function LocationManagement() {
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Quản lý khu vực & vị trí
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Sắp xếp không gian cửa hàng và vị trí trưng bày sản phẩm
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/inventory")}
+            className="p-1.5 rounded-lg hover:bg-slate-200 transition text-slate-500 shrink-0"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Quản lý khu vực & vị trí
+            </h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Sắp xếp không gian cửa hàng và vị trí trưng bày sản phẩm
+            </p>
+          </div>
         </div>
         <button
           onClick={() => handleOpenModal()}
@@ -269,23 +289,29 @@ function LocationManagement() {
             />
           </div>
           <div className="flex gap-2">
-            <select className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="">Tất cả loại hình</option>
-              {locationTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            <select
+            <CustomSelect
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={[
+                { value: "all", label: "Tất cả loại hình" },
+                ...locationTypes.map((t) => ({
+                  value: t.value,
+                  label: t.label,
+                })),
+              ]}
+              className="min-w-[170px]"
+            />
+            <CustomSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="ACTIVE">Đang hoạt động</option>
-              <option value="INACTIVE">Ngừng hoạt động</option>
-            </select>
+              onChange={setStatusFilter}
+              variant="status"
+              options={[
+                { value: "all", label: "Tất cả trạng thái" },
+                { value: "ACTIVE", label: "Đang hoạt động" },
+                { value: "INACTIVE", label: "Ngừng hoạt động" },
+              ]}
+              className="min-w-[170px]"
+            />
           </div>
         </div>
 

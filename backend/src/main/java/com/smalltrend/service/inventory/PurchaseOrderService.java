@@ -31,6 +31,7 @@ public class PurchaseOrderService {
     private final InventoryStockRepository inventoryStockRepository;
     private final LocationRepository locationRepository;
     private final StockMovementRepository stockMovementRepository;
+    private final UnitConversionRepository unitConversionRepository;
 
     // ═══════════════════════════════════════════════════════════
     // Public API
@@ -391,34 +392,29 @@ public class PurchaseOrderService {
     }
 
     // ─── Get All Products (with variant info, stock quantity, unit) ─
+    @Transactional(readOnly = true)
     public List<ProductResponse> getAllProducts() {
-        return productRepository.findAll().stream()
-                .map(p -> {
+        return productVariantRepository.findAll().stream()
+                .map(v -> {
+                    Product p = v.getProduct();
                     ProductResponse.ProductResponseBuilder builder = ProductResponse.builder()
-                            .id(p.getId())
-                            .name(p.getName())
-                            .imageUrl(p.getImageUrl());
+                            .id(v.getId() != null ? v.getId().intValue() : null)
+                            .productId(p != null && p.getId() != null ? p.getId().intValue() : null)
+                            .variantId(v.getId() != null ? v.getId().intValue() : null)
+                            .name(p != null ? p.getName() : "Sản phẩm")
+                            .imageUrl(p != null ? p.getImageUrl() : null)
+                            .sku(v.getSku())
+                            .purchasePrice(v.getSellPrice());
+
+                    if (v.getUnit() != null) {
+                        builder.unit(v.getUnit().getName());
+                    }
 
                     int totalStock = 0;
-
-                    if (p.getVariants() != null && !p.getVariants().isEmpty()) {
-                        // Lấy SKU, giá, đơn vị từ variant đầu tiên
-                        ProductVariant firstVariant = p.getVariants().get(0);
-                        builder.sku(firstVariant.getSku());
-                        builder.purchasePrice(firstVariant.getSellPrice());
-
-                        if (firstVariant.getUnit() != null) {
-                            builder.unit(firstVariant.getUnit().getName());
-                        }
-
-                        // Tính tổng tồn kho từ tất cả variants
-                        for (ProductVariant v : p.getVariants()) {
-                            if (v.getInventoryStocks() != null) {
-                                for (InventoryStock stock : v.getInventoryStocks()) {
-                                    if (stock.getQuantity() != null) {
-                                        totalStock += stock.getQuantity();
-                                    }
-                                }
+                    if (v.getInventoryStocks() != null) {
+                        for (InventoryStock stock : v.getInventoryStocks()) {
+                            if (stock.getQuantity() != null) {
+                                totalStock += stock.getQuantity();
                             }
                         }
                     }
@@ -555,14 +551,34 @@ public class PurchaseOrderService {
                 continue;
             }
 
+            // --- Quy đổi đơn vị (Unit Conversion) ---
+            ProductVariant baseVariant = variant;
+            int finalQty = qty;
+
+            if (variant.getProduct() != null && variant.getProduct().getVariants() != null) {
+                for (ProductVariant bv : variant.getProduct().getVariants()) {
+                    if (bv.getId().equals(variant.getId())) continue;
+
+                    if (variant.getUnit() != null) {
+                        java.util.Optional<UnitConversion> conversionOpt = unitConversionRepository.findByVariantIdAndToUnitId(bv.getId(), variant.getUnit().getId());
+                        if (conversionOpt.isPresent()) {
+                            UnitConversion conversion = conversionOpt.get();
+                            baseVariant = bv; // Fallback to base variant
+                            finalQty = qty * conversion.getConversionFactor().intValue();
+                            break;
+                        }
+                    }
+                }
+            }
+
             BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
 
             LocalDate expiryDate = itemReq.getExpiryDate() != null ? itemReq.getExpiryDate() : LocalDate.now().plusYears(1);
 
             // 3. Create ProductBatch
-            String batchNumber = generateBatchNumber(variant);
+            String batchNumber = generateBatchNumber(baseVariant);
             ProductBatch batch = ProductBatch.builder()
-                    .variant(variant)
+                    .variant(baseVariant)
                     .batchNumber(batchNumber)
                     .mfgDate(LocalDate.now())
                     .expiryDate(expiryDate)
@@ -572,27 +588,27 @@ public class PurchaseOrderService {
 
             // 4. Create or update InventoryStock
             InventoryStock stock = InventoryStock.builder()
-                    .variant(variant)
+                    .variant(baseVariant)
                     .batch(batch)
                     .location(targetLocation)
-                    .quantity(qty)
+                    .quantity(finalQty)
                     .build();
             inventoryStockRepository.save(stock);
 
             // 5. Create StockMovement for audit
             StockMovement movement = StockMovement.builder()
-                    .variant(variant)
+                    .variant(baseVariant)
                     .batch(batch)
                     .location(targetLocation)
                     .type("IN")
-                    .quantity(qty)
+                    .quantity(finalQty)
                     .referenceType("purchase_order")
                     .referenceId(order.getId() != null ? order.getId().longValue() : null)
-                    .notes("Nhập hàng từ PO " + order.getOrderNumber())
+                    .notes("Nhập hàng từ PO " + order.getOrderNumber() + (finalQty != qty ? " (Quy đổi từ " + qty + " " + variant.getUnit().getName() + ")" : ""))
                     .build();
             stockMovementRepository.save(movement);
 
-            log.info("📦 Stock IN: variant={}, batch={}, qty={}", variant.getSku(), batchNumber, qty);
+            log.info("📦 Stock IN: variant={}, batch={}, qty={}", baseVariant.getSku(), batchNumber, finalQty);
         }
     }
 

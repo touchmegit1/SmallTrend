@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { useNavigate } from "react-router-dom";
 import { PO_STATUS_CONFIG } from "../../utils/purchaseOrder";
 
@@ -7,7 +7,7 @@ function PurchaseOrderRecordsTable({ records, suppliers }) {
   if (records.length === 0) {
     return (
       <tr>
-        <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+        <td colSpan="6" className="px-4 py-8 text-center text-slate-500">
           Không có phiếu nhập nào
         </td>
       </tr>
@@ -17,7 +17,7 @@ function PurchaseOrderRecordsTable({ records, suppliers }) {
   return records.map((record) => (
     <tr
       key={record.id}
-      className="hover:bg-gray-50 cursor-pointer"
+      className="hover:bg-slate-50 cursor-pointer"
       onClick={() => navigate(`/inventory/purchase-orders/${record.id}`)}
     >
       <td className="px-4 py-3 text-sm font-mono text-blue-600">
@@ -26,7 +26,7 @@ function PurchaseOrderRecordsTable({ records, suppliers }) {
           record.order_number ||
           record.orderNumber}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-900">
+      <td className="px-4 py-3 text-sm text-slate-900">
         {new Date(record.created_at).toLocaleString("vi-VN", {
           day: "2-digit",
           month: "2-digit",
@@ -35,14 +35,14 @@ function PurchaseOrderRecordsTable({ records, suppliers }) {
           minute: "2-digit",
         })}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-900">
+      <td className="px-4 py-3 text-sm text-slate-900">
         {suppliers.find((s) => s.id === record.supplier_id)?.code ||
           `NCC${String(record.supplier_id).padStart(4, "0")}`}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-900">
+      <td className="px-4 py-3 text-sm text-slate-900">
         {record.supplier_name}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-900 text-right">
+      <td className="px-4 py-3 text-sm text-slate-900 text-right">
         {record.total_amount?.toLocaleString() || "0"}
       </td>
       <td className="px-4 py-3 text-center">
@@ -63,3 +63,4 @@ function PurchaseOrderRecordsTable({ records, suppliers }) {
 }
 
 export default PurchaseOrderRecordsTable;
+

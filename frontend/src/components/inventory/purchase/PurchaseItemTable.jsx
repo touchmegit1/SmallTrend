@@ -218,7 +218,7 @@ export default function PurchaseItemTable({
               Số lượng
             </th>
             <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 w-36">
-              Hạn SD
+              Hạn SD <span className="text-red-500 ml-1">*</span>
             </th>
             <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 w-32">
               Đơn giá

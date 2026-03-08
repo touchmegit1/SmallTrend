@@ -141,6 +141,14 @@ export function calcOrderFinancials(items, orderDiscount = 0, taxPercent = 0, sh
 export function validateDraft(order, items) {
   const errors = [];
 
+  if (!order.supplier_id) {
+    errors.push("Vui lòng chọn nhà cung cấp.");
+  }
+
+  if (!order.location_id) {
+    errors.push("Vui lòng chọn vị trí nhập kho.");
+  }
+
   if (!items || items.length === 0) {
     errors.push("Phiếu nhập phải có ít nhất 1 sản phẩm.");
   }
@@ -151,6 +159,9 @@ export function validateDraft(order, items) {
     }
     if ((item.unit_price || 0) < 0) {
       errors.push(`Sản phẩm "${item.name}": đơn giá không được âm.`);
+    }
+    if (!item.expiry_date) {
+      errors.push(`Sản phẩm "${item.name}": bắt buộc phải nhập hạn sử dụng (HSD).`);
     }
   }
 
@@ -165,20 +176,19 @@ export function validateConfirm(order, items) {
   const draftResult = validateDraft(order, items);
   const errors = [...draftResult.errors];
 
-  if (!order.supplier_id) {
-    errors.push("Vui lòng chọn nhà cung cấp trước khi xác nhận.");
-  }
-
-  if (!order.location_id) {
-    errors.push("Vui lòng chọn vị trí nhập kho.");
-  }
-
-  if (!items || items.length === 0) {
-    errors.push("Không thể xác nhận phiếu nhập rỗng.");
-  }
+  // No need to duplicate supplier_id and location_id checks since they are now in validateDraft
 
   // Check batches – each item should have batch info for perishable goods
   // (Optional: we make this a warning, not a hard error)
+
+  // Double check item HSD again just in case
+  for (const item of items) {
+    if (!item.expiry_date) {
+      if (!errors.some(e => e.includes(item.name) && e.includes("HSD"))) {
+         errors.push(`Sản phẩm "${item.name}": bắt buộc phải nhập hạn sử dụng (HSD).`);
+      }
+    }
+  }
 
   return { valid: errors.length === 0, errors };
 }
@@ -212,7 +222,8 @@ export function createDefaultOrder(code) {
 export function createOrderItem(product) {
   return {
     _key: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    product_id: product.id,
+    product_id: product.productId || product.product_id || product.id,
+    variant_id: product.variantId || product.variant_id || product.id,
     sku: product.sku,
     name: product.name,
     unit: product.unit,
