@@ -1,15 +1,215 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import CustomerSearch from "./CustomerSearch";
+
 import api from "../../config/axiosConfig";
 
-export default function PaymentModal({ cart, customer, onClose, onComplete }) {
+const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
+
+const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
+  const [paymentCode] = useState(() => "DH" + Date.now());
+  const [status, setStatus] = useState("waiting"); // waiting | success | error
+  const pollingRef = useRef(null);
+
+  const qrUrl = `https://qr.sepay.vn/img?bank=MBBank&acc=0961390486&template=compact&amount=${amount}&des=${paymentCode}`;
+
+  // Auto-poll SePay API to check for payment
+  useEffect(() => {
+    const checkPayment = async () => {
+      try {
+        const response = await fetch(
+          `/sepay-api/userapi/transactions/list?amount_in=${amount}&content=${paymentCode}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${SEPAY_API_TOKEN}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+        const data = await response.json();
+        console.log("SePay API response:", JSON.stringify(data));
+
+        if (data.transactions && data.transactions.length > 0) {
+          // Double-check: verify at least one transaction content contains our exact payment code
+          const matched = data.transactions.some(tx => {
+            const content = (tx.transaction_content || tx.content || tx.description || "").toUpperCase();
+            return content.includes(paymentCode.toUpperCase());
+          });
+
+          if (matched) {
+            setStatus("success");
+            clearInterval(pollingRef.current);
+            // Auto-complete after showing success for 30s
+            setTimeout(() => {
+              onSuccess();
+            }, 30000);
+          }
+        }
+
+      } catch (err) {
+        console.error("SePay polling error:", err);
+      }
+    };
+
+    // Delay 5 seconds before first poll to let the user scan first
+    const initialDelay = setTimeout(() => {
+      checkPayment(); // first check
+      pollingRef.current = setInterval(checkPayment, 3000);
+    }, 5000);
+
+    return () => {
+      clearTimeout(initialDelay);
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [amount, paymentCode, onSuccess]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      } else if (status === 'success' && e.key === 'Enter') {
+        // Cho phép ấn Enter để đóng sớm nếu không muốn chờ 30s
+        e.preventDefault();
+        onSuccess();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [onCancel, onSuccess, status]);
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: "rgba(0,0,0,0.7)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1001
+    }}>
+      <div style={{
+        background: "white",
+        borderRadius: "12px",
+        padding: "30px",
+        width: "90%",
+        maxWidth: "420px",
+        textAlign: "center",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.3)"
+      }}>
+        {status === "success" ? (
+          <>
+            <div style={{ fontSize: "60px", marginBottom: "10px" }}>✅</div>
+            <h2 style={{ marginTop: 0, marginBottom: "10px", fontSize: "22px", color: "#28a745" }}>
+              Thanh toán thành công!
+            </h2>
+            <h3 style={{ marginTop: 0, marginBottom: "15px", fontSize: "18px", color: "#007bff" }}>
+              Cảm ơn quý khách!
+            </h3>
+            <p style={{ color: "#666", fontSize: "14px", marginBottom: "20px" }}>Đang xử lý hóa đơn...</p>
+            <button
+              onClick={onSuccess}
+              style={{
+                padding: "10px 20px",
+                background: "#28a745",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                cursor: "pointer",
+                transition: "background 0.2s"
+              }}
+              onMouseOver={(e) => e.target.style.background = "#218838"}
+              onMouseOut={(e) => e.target.style.background = "#28a745"}
+            >
+              Hoàn tất ngay (Enter)
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 style={{ marginTop: 0, marginBottom: "15px", fontSize: "22px", color: "#333" }}>
+              Quét mã QR để thanh toán
+            </h2>
+
+            <div style={{
+              border: "2px solid #007bff",
+              borderRadius: "12px",
+              padding: "10px",
+              marginBottom: "15px",
+              display: "inline-block",
+              background: "#fff"
+            }}>
+              <img
+                src={qrUrl}
+                alt="Mã QR Chuyển khoản"
+                style={{ width: "100%", maxWidth: "280px", height: "auto", display: "block" }}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://via.placeholder.com/300x300?text=L%E1%BB%97i+t%E1%BA%A3i+QR";
+                }}
+              />
+            </div>
+
+            <div style={{ fontSize: "14px", marginBottom: "6px", color: "#555" }}>
+              Ngân hàng: <strong>MBBank</strong> — STK: <strong>0961390486</strong>
+            </div>
+            <div style={{ fontSize: "14px", marginBottom: "6px", color: "#555" }}>
+              Nội dung CK: <strong style={{ color: "#007bff", fontSize: "16px", letterSpacing: "1px" }}>{paymentCode}</strong>
+            </div>
+            <div style={{ fontSize: "16px", marginBottom: "15px", color: "#555" }}>
+              Số tiền: <strong style={{ color: "#d9534f", fontSize: "24px" }}>{amount.toLocaleString()}đ</strong>
+            </div>
+
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                onClick={onCancel}
+                style={{
+                  padding: "12px 20px",
+                  background: "#6c757d",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  flex: 1,
+                  transition: "background 0.2s"
+                }}
+                onMouseOver={(e) => e.target.style.background = "#5a6268"}
+                onMouseOut={(e) => e.target.style.background = "#6c757d"}
+              >
+                Hủy (ESC)
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+export default function PaymentModal({ cart, customer, onClose, onComplete, shortcuts }) {
+  const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
   const [usePoints, setUsePoints] = useState(false);
   const [voucher, setVoucher] = useState("");
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
+  const [focusedField, setFocusedField] = useState("customerSearch");
+  const [suggestedIndex, setSuggestedIndex] = useState(-1);
+
+  const customerSearchRef = useRef(null);
+  const voucherInputRef = useRef(null);
+  const voucherButtonRef = useRef(null);
+  const notesRef = useRef(null);
+  const cashInputRef = useRef(null);
+  const paymentButtonRef = useRef(null);
+  const suggestedAmountsRef = useRef([]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const currentLoyaltyPoints = selectedCustomer?.loyaltyPoints || 0;
@@ -19,30 +219,157 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
       : 0;
   const totalDiscount = pointsDiscount + discount;
   const finalTotal = subtotal - totalDiscount;
-  const change = cashAmount
-    ? Math.max(0, parseFloat(cashAmount) - finalTotal)
-    : 0;
+  const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
+
+  useEffect(() => {
+    if (focusedField === "customerSearch" && customerSearchRef.current) {
+      customerSearchRef.current.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // ArrowDown navigation
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (focusedField === "customerSearch") {
+          setFocusedField("voucher");
+          voucherInputRef.current?.focus();
+        } else if (focusedField === "voucher") {
+          setFocusedField("notes");
+          notesRef.current?.focus();
+        } else if (focusedField === "notes") {
+          setFocusedField("paymentMethod");
+          if (!paymentMethod) setPaymentMethod("cash");
+        } else if (focusedField === "paymentMethod") {
+          if (paymentMethod === "cash") {
+            setFocusedField("cashAmount");
+            cashInputRef.current?.focus();
+          } else if (paymentMethod === "transfer") {
+            setFocusedField("paymentButton");
+            paymentButtonRef.current?.focus();
+          }
+        } else if (focusedField === "cashAmount") {
+          if (getSuggestedAmounts().length > 0) {
+            setFocusedField("suggestedAmounts");
+            setSuggestedIndex(0);
+          } else {
+            setFocusedField("paymentButton");
+            paymentButtonRef.current?.focus();
+          }
+        } else if (focusedField === "suggestedAmounts") {
+          setFocusedField("paymentButton");
+          paymentButtonRef.current?.focus();
+          setSuggestedIndex(-1);
+        }
+      }
+      // ArrowUp navigation
+      else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (focusedField === "voucher") {
+          setFocusedField("customerSearch");
+          customerSearchRef.current?.focus();
+        } else if (focusedField === "notes") {
+          setFocusedField("voucher");
+          voucherInputRef.current?.focus();
+        } else if (focusedField === "paymentMethod") {
+          setFocusedField("notes");
+          notesRef.current?.focus();
+        } else if (focusedField === "cashAmount") {
+          setFocusedField("paymentMethod");
+        } else if (focusedField === "suggestedAmounts") {
+          setFocusedField("cashAmount");
+          cashInputRef.current?.focus();
+          setSuggestedIndex(-1);
+        } else if (focusedField === "paymentButton") {
+          if (paymentMethod === "cash") {
+            if (getSuggestedAmounts().length > 0) {
+              setFocusedField("suggestedAmounts");
+              setSuggestedIndex(0);
+            } else {
+              setFocusedField("cashAmount");
+              cashInputRef.current?.focus();
+            }
+          } else {
+            setFocusedField("paymentMethod");
+          }
+        }
+      }
+      // ArrowLeft/Right for payment method and suggested amounts
+      else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (focusedField === "paymentMethod") {
+          setPaymentMethod("cash");
+        } else if (focusedField === "suggestedAmounts" && suggestedIndex > 0) {
+          setSuggestedIndex(suggestedIndex - 1);
+        } else if (focusedField === "cashAmount") {
+          setFocusedField("paymentMethod");
+        } else if (focusedField === "paymentButton") {
+          setFocusedField("paymentMethod");
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (focusedField === "paymentMethod") {
+          setPaymentMethod("transfer");
+        } else if (focusedField === "notes") {
+          setFocusedField("paymentMethod");
+        } else if (focusedField === "suggestedAmounts" && suggestedIndex < getSuggestedAmounts().length - 1) {
+          setSuggestedIndex(suggestedIndex + 1);
+        } else if (focusedField === "cashAmount") {
+          setFocusedField("paymentMethod");
+        }
+      }
+      // Enter key actions
+      else if (e.key === 'Enter' || e.key === 'F9' || e.key === 'F10') {
+        if (focusedField === "voucher") {
+          e.preventDefault();
+          voucherButtonRef.current?.click();
+        } else if (focusedField === "paymentMethod") {
+          e.preventDefault();
+          if (paymentMethod === "cash") {
+            setFocusedField("cashAmount");
+            cashInputRef.current?.focus();
+          } else {
+            setFocusedField("paymentButton");
+            paymentButtonRef.current?.focus();
+          }
+        } else if (focusedField === "suggestedAmounts" && suggestedIndex >= 0) {
+          e.preventDefault();
+          const amounts = getSuggestedAmounts();
+          setCashAmount(amounts[suggestedIndex].toString());
+          setFocusedField("paymentButton");
+          paymentButtonRef.current?.focus();
+          setSuggestedIndex(-1);
+        } else if (focusedField === "paymentButton" || (shortcuts && (e.key === shortcuts.payment1 || e.key === shortcuts.payment2))) {
+          e.preventDefault();
+          paymentButtonRef.current?.click();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedField, paymentMethod, cashAmount, finalTotal, suggestedIndex, shortcuts]);
 
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
-    const firstDigit = cashAmount[0];
-    return [
-      parseInt(firstDigit + "0000"),
-      parseInt(firstDigit + "00000"),
-      parseInt(firstDigit + "000000"),
-    ];
-  };
+    const num = parseInt(cashAmount.replace(/[^0-9]/g, ''));
+    if (isNaN(num)) return [];
 
-  const handlePayment = async () => {
-    if (
-      paymentMethod === "cash" &&
-      (!cashAmount || parseFloat(cashAmount) < finalTotal)
-    ) {
-      alert("Số tiền không đủ!");
-      return;
+    // Nếu người dùng nhập số có 1-3 chữ số, tự động gợi ý thêm các số lớn hơn (x1.000, x10.000, vv...)
+    if (cashAmount.length <= 3) {
+      return [
+        num * 1000,
+        num * 10000,
+        num * 100000
+      ];
     }
 
+    return [];
+  };
+
+  const completePaymentProcess = async (method, receivedAmt, changeAmt) => {
     let customerToUpdate = selectedCustomer;
+
 
     // Cập nhật điểm trung thành trong bảng customers
     if (selectedCustomer && selectedCustomer.id) {
@@ -50,6 +377,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
         const earnedPoints = Math.floor(finalTotal / 10000); // 1 điểm/10,000đ
         const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
         const currentPoints = selectedCustomer.loyaltyPoints || 0;
+
 
         // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
         const newPoints = currentPoints - pointsUsed + earnedPoints;
@@ -66,8 +394,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
           loyaltyPoints: newPoints,
         };
       } catch (error) {
-        console.error("Error updating customer loyalty points:", error);
-        alert("Không thể cập nhật điểm khách hàng");
+        console.error('Error updating customer loyalty points:', error);
+        // Không hiện alert, chỉ log lỗi và tiếp tục thanh toán
       }
     }
 
@@ -75,14 +403,26 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
       cart,
       customer: customerToUpdate,
       total: finalTotal,
-      customerMoney:
-        paymentMethod === "cash" ? parseFloat(cashAmount) : finalTotal,
-      change: paymentMethod === "cash" ? change : 0,
+      customerMoney: receivedAmt,
+      change: changeAmt,
       pointsDiscount,
       discount,
       notes,
-      paymentMethod: paymentMethod === "cash" ? "Tiền mặt" : "Chuyển khoản",
+      paymentMethod: method === "cash" ? "Tiền mặt" : "Chuyển khoản"
     });
+  };
+
+  const initiatePayment = () => {
+    if (paymentMethod === "cash") {
+      if (!cashAmount || parseFloat(cashAmount) < finalTotal) {
+        alert("Số tiền không đủ!");
+        return;
+      }
+      completePaymentProcess("cash", parseFloat(cashAmount), change);
+    } else {
+      // Chuyển khoản -> mở QR Modal
+      setShowQRModal(true);
+    }
   };
 
   return (
@@ -149,9 +489,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
         >
           {/* Left: Tạm tính */}
           <div>
-            <h3 style={{ margin: "0 0 15px 0", fontSize: "16px" }}>
-              Tạm tính tiền
-            </h3>
+            <h3 style={{ margin: "0 0 15px 0", fontSize: "16px" }}>Tạm tính tiền</h3>
 
             {/* Danh sách sản phẩm */}
             <div
@@ -236,8 +574,13 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
 
             {/* Tìm kiếm khách hàng */}
             <CustomerSearch
+              ref={customerSearchRef}
               onSelectCustomer={setSelectedCustomer}
               cart={cart}
+              onNavigateDown={() => {
+                setFocusedField("voucher");
+                voucherInputRef.current?.focus();
+              }}
             />
 
             {/* Thông tin khách hàng */}
@@ -298,19 +641,22 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
               </label>
               <div style={{ display: "flex", gap: "8px" }}>
                 <input
+                  ref={voucherInputRef}
                   type="text"
                   placeholder="Nhập mã voucher"
                   value={voucher}
                   onChange={(e) => setVoucher(e.target.value)}
+                  onFocus={() => setFocusedField("voucher")}
                   style={{
                     flex: 1,
                     padding: "8px",
-                    border: "1px solid #ddd",
+                    border: focusedField === "voucher" ? "2px solid #007bff" : "1px solid #ddd",
                     borderRadius: "4px",
                     fontSize: "13px",
                   }}
                 />
                 <button
+                  ref={voucherButtonRef}
                   onClick={() => {
                     if (voucher === "GIAM10") setDiscount(subtotal * 0.1);
                     else alert("Mã không hợp lệ");
@@ -370,14 +716,16 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 Ghi chú:
               </label>
               <textarea
+                ref={notesRef}
                 placeholder="Thêm ghi chú..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                onFocus={() => setFocusedField("notes")}
                 rows={2}
                 style={{
                   width: "100%",
                   padding: "8px",
-                  border: "1px solid #ddd",
+                  border: focusedField === "notes" ? "2px solid #007bff" : "1px solid #ddd",
                   borderRadius: "4px",
                   fontSize: "13px",
                   resize: "none",
@@ -429,6 +777,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
               >
                 <button
                   onClick={() => setPaymentMethod("cash")}
+                  onFocus={() => setFocusedField("paymentMethod")}
                   style={{
                     padding: "15px",
                     background: paymentMethod === "cash" ? "#007bff" : "white",
@@ -440,12 +789,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     cursor: "pointer",
                     fontSize: "13px",
                     fontWeight: "500",
+                    outline: focusedField === "paymentMethod" && paymentMethod === "cash" ? "3px solid #80bdff" : "none"
                   }}
                 >
+                  Tiền mặt
                   Tiền mặt
                 </button>
                 <button
                   onClick={() => setPaymentMethod("transfer")}
+                  onFocus={() => setFocusedField("paymentMethod")}
                   style={{
                     padding: "15px",
                     background:
@@ -458,8 +810,10 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     cursor: "pointer",
                     fontSize: "13px",
                     fontWeight: "500",
+                    outline: focusedField === "paymentMethod" && paymentMethod === "transfer" ? "3px solid #80bdff" : "none"
                   }}
                 >
+                  Chuyển khoản
                   Chuyển khoản
                 </button>
               </div>
@@ -486,10 +840,12 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                   Tiền khách đưa:
                 </label>
                 <input
+                  ref={cashInputRef}
                   type="number"
                   placeholder="Nhập số tiền"
                   value={cashAmount}
                   onChange={(e) => setCashAmount(e.target.value)}
+                  onFocus={() => setFocusedField("cashAmount")}
                   style={{
                     width: "100%",
                     padding: "12px",
@@ -499,6 +855,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                     marginBottom: "10px",
                   }}
                 />
+
 
                 {/* Gợi ý tiền */}
                 {cashAmount && getSuggestedAmounts().length > 0 && (
@@ -513,25 +870,29 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                       Gợi ý:
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      {getSuggestedAmounts().map((amount) => (
-                        <button
-                          key={amount}
-                          onClick={() => setCashAmount(amount.toString())}
-                          style={{
-                            flex: 1,
-                            padding: "8px",
-                            background: "#007bff",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            fontSize: "12px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          {amount.toLocaleString()}đ
-                        </button>
-                      ))}
+                      {getSuggestedAmounts().map((amount, index) => {
+                        suggestedAmountsRef.current[index] = amount;
+                        return (
+                          <button
+                            key={amount}
+                            onClick={() => setCashAmount(amount.toString())}
+                            style={{
+                              flex: 1,
+                              padding: "8px",
+                              background: focusedField === "suggestedAmounts" && suggestedIndex === index ? "#0056b3" : "#007bff",
+                              color: "white",
+                              border: focusedField === "suggestedAmounts" && suggestedIndex === index ? "2px solid #fff" : "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "12px",
+                              fontWeight: "500",
+                              outline: focusedField === "suggestedAmounts" && suggestedIndex === index ? "3px solid #80bdff" : "none"
+                            }}
+                          >
+                            {amount.toLocaleString()}đ
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -569,14 +930,34 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
               </div>
             )}
 
+            {/* Chuyển khoản */}
+            {paymentMethod === "transfer" && (
+              <div style={{
+                padding: "20px",
+                background: "#f8f9fa",
+                borderRadius: "8px",
+                marginBottom: "20px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px dashed #007bff"
+              }}>
+                <div style={{ fontSize: "14px", fontWeight: "600", color: "#333", textAlign: "center", marginBottom: "5px" }}>
+                  Phương thức: Chuyển khoản ngân hàng (VietQR)
+                </div>
+                <div style={{ fontSize: "12px", color: "#666", textAlign: "center" }}>
+                  Bấm xác nhận bên dưới, hệ thống sẽ tự động tạo mã chờ thanh toán cho khách hàng quét.
+                </div>
+              </div>
+            )}
+
             {/* Nút thanh toán */}
             <button
-              onClick={handlePayment}
-              disabled={
-                !paymentMethod ||
-                (paymentMethod === "cash" &&
-                  (!cashAmount || parseFloat(cashAmount) < finalTotal))
-              }
+              ref={paymentButtonRef}
+              onClick={initiatePayment}
+              onFocus={() => setFocusedField("paymentButton")}
+              disabled={!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal))}
               style={{
                 width: "100%",
                 padding: "18px",
@@ -600,18 +981,22 @@ export default function PaymentModal({ cart, customer, onClose, onComplete }) {
                 boxShadow: "0 4px 12px rgba(0,123,255,0.3)",
               }}
             >
-              {!paymentMethod
-                ? "CHỌN HÌNH THỨC THANH TOÁN"
-                : paymentMethod === "cash" && !cashAmount
-                  ? "NHẬP TIỀN KHÁCH ĐƯA"
-                  : paymentMethod === "cash" &&
-                      parseFloat(cashAmount) < finalTotal
-                    ? "TIỀN KHÔNG ĐỦ"
-                    : "THANH TOÁN"}
+              {paymentMethod === 'cash' ? `Hoàn tất(${shortcuts?.payment1 || 'F9'})` : `Xác nhận chuyển khoản(${shortcuts?.payment2 || 'F10'})`}
             </button>
           </div>
         </div>
       </div>
+
+      {showQRModal && (
+        <QRTransferModal
+          amount={finalTotal}
+          onCancel={() => setShowQRModal(false)}
+          onSuccess={() => {
+            setShowQRModal(false);
+            completePaymentProcess("transfer", finalTotal, 0);
+          }}
+        />
+      )}
     </div>
   );
 }

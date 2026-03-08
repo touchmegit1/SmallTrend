@@ -24,17 +24,16 @@ const STATUS_COLORS = {
   COUNTING: { bg: "#f3e8ff", color: "#6b21a8", label: "Đang kiểm" },
 };
 
-const CustomSelect = ({
-  value,
-  onChange,
-  options,
-  className = "",
-  variant = "default",
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+const CustomSelect = ({ value, onChange, options, className = '', variant = 'default', disabled = false }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
-  const selectedOption = options.find((opt) => opt.value === value);
+    const selectedOption = options.find(opt => opt.value === value);
+
+    // Force update when options change
+    useEffect(() => {
+        // This ensures the component re-renders when options change
+    }, [options]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -65,23 +64,27 @@ const CustomSelect = ({
 
   const variantStyle = getVariantStyles();
 
-  return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2.5 text-sm font-medium rounded-xl border-none outline-none transition-all cursor-pointer hover:opacity-90 hover:scale-[1.02] focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 shadow-md hover:shadow-lg flex items-center justify-between"
-        style={{
-          backgroundColor: variantStyle.bg,
-          color: variantStyle.color,
-        }}
-      >
-        <span>{selectedOption?.label || "Chọn..."}</span>
-        <ChevronDown
-          size={16}
-          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-        />
-      </button>
+    return (
+        <div className={`relative ${className}`} ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                disabled={disabled}
+                className={`w-full px-4 py-2.5 text-sm font-medium rounded-xl border-none outline-none transition-all shadow-md flex items-center justify-between ${disabled
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'cursor-pointer hover:opacity-90 hover:scale-[1.02] focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 hover:shadow-lg'
+                    }`}
+                style={{
+                    backgroundColor: variantStyle.bg,
+                    color: variantStyle.color
+                }}
+            >
+                <span>{selectedOption?.label || 'Chọn...'}</span>
+                <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                />
+            </button>
 
       {isOpen && (
         <div

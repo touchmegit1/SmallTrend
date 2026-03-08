@@ -151,9 +151,16 @@ export default function ShiftHandover() {
     localStorage.removeItem('currentShiftCash');
     localStorage.removeItem('currentShiftNotes');
 
-    alert("Chốt ca thành công!");
+    alert("Chốt ca thành công! Bạn sẽ được đăng xuất.");
     setShowConfirm(false);
     setShiftData(prev => ({ ...prev, status: "Đã chốt" }));
+
+    // Đăng xuất sau 1 giây
+    setTimeout(() => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }, 1000);
   };
 
   return (

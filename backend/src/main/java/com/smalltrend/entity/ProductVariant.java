@@ -9,10 +9,10 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "product_variants")
@@ -30,8 +30,14 @@ public class ProductVariant {
     @JoinColumn(name = "product_id", nullable = false)
     @JsonIgnore
     private Product product;
+    @Column(unique = true)
     private String sku;
+
+    @Column(unique = true)
     private String barcode;
+
+    @Column(name = "plu_code", length = 5)
+    private String pluCode;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "unit_id", nullable = false)
@@ -41,8 +47,9 @@ public class ProductVariant {
     private String imageUrl;
     private BigDecimal sellPrice;
 
-    @Column(name = "unit_value")
-    private BigDecimal unitValue;
+    @Builder.Default
+    @Column(name = "is_base_unit", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean isBaseUnit = false;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
@@ -55,6 +62,12 @@ public class ProductVariant {
     @UpdateTimestamp
     @Column(name = "updated_at", columnDefinition = "DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)")
     private LocalDateTime updatedAt;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "variant_attributes", joinColumns = @JoinColumn(name = "variant_id"))
+    @MapKeyColumn(name = "attribute_name")
+    @Column(name = "attribute_value")
+    private Map<String, String> attributes;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coupon_id", nullable = true)

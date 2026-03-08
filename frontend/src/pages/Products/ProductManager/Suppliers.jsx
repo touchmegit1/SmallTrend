@@ -7,14 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/c
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Building2, X, Save } from "lucide-react";
-import { useFetchSuppliers } from "../../../hooks/suppliers";
+import { useFetchSuppliers } from "../../../hooks/useSuppliers";
 
 export function SuppliersScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
-  const { suppliers, loading, error } = useFetchSuppliers();
+  const { suppliers, loading, error, createSupplier, updateSupplier, deleteSupplier } = useFetchSuppliers();
   const [formData, setFormData] = useState({
     name: "",
     contact: "",
@@ -37,8 +37,8 @@ export function SuppliersScreen() {
       supplier.phone?.includes(searchQuery) ||
       supplier.email?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = 
-      filterStatus === "all" || 
+    const matchesStatus =
+      filterStatus === "all" ||
       (filterStatus === "active" && supplier.status === "active") ||
       (filterStatus === "inactive" && supplier.status === "inactive");
 
@@ -58,10 +58,20 @@ export function SuppliersScreen() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    console.log("Saving:", formData);
+    if (editingSupplier) {
+      await updateSupplier(editingSupplier.id, formData);
+    } else {
+      await createSupplier(formData);
+    }
     setIsModalOpen(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa nhà cung cấp này?")) {
+      await deleteSupplier(id);
+    }
   };
 
   const handleChange = (e) => {
@@ -141,7 +151,6 @@ export function SuppliersScreen() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">{supplier.name}</p>
                         <p className="text-xs text-gray-500">{supplier.contact_person}</p>
-                        <p className="text-xs text-gray-500">{supplier.contact}</p>
                       </div>
                     </div>
                   </TableCell>
@@ -180,7 +189,7 @@ export function SuppliersScreen() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" title="Xóa">
+                      <Button size="sm" variant="ghost" title="Xóa" onClick={() => handleDelete(supplier.id)}>
                         <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </div>

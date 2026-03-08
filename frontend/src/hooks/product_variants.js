@@ -21,11 +21,15 @@ export const useFetchVariants = (productId) => {
         unit_value: v.unitValue,
         sku: v.sku,
         barcode: v.barcode,
+        plu_code: v.pluCode,
         sell_price: v.sellPrice,
         cost_price: v.costPrice,
         stock_quantity: v.stockQuantity,
         image_url: v.imageUrl,
-        is_active: v.isActive
+        is_active: v.isActive,
+        created_at: v.createdAt,
+        attributes: v.attributes,
+        unit_conversions: v.unitConversions || []
       }));
       setVariants(mappedVariants);
       setError(null);
@@ -65,5 +69,5 @@ export const useFetchUnits = () => {
     fetchUnits();
   }, []);
 
-  return { units, loading };
+  return { units, loading, fetchUnits };
 };

@@ -35,5 +35,12 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
     // Tìm tất cả stock records tại một location
     @Query("SELECT i FROM InventoryStock i JOIN FETCH i.variant v JOIN FETCH v.product WHERE i.location.id = :locationId AND i.quantity > 0")
     List<InventoryStock> findByLocationIdWithProduct(@Param("locationId") Integer locationId);
-}
 
+    // Tổng tồn kho của một variant (tất cả batch + location)
+    @Query("SELECT COALESCE(SUM(i.quantity), 0) FROM InventoryStock i WHERE i.variant.id = :variantId")
+    int sumQuantityByVariantId(@Param("variantId") Integer variantId);
+
+    // Tìm stock cụ thể theo variant + batch + location
+    Optional<InventoryStock> findByVariantIdAndBatchIdAndLocationId(Integer variantId, Integer batchId,
+            Integer locationId);
+}

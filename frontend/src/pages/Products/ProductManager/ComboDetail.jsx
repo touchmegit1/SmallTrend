@@ -9,23 +9,35 @@ import { Badge } from "../ProductComponents/badge";
 import EditComboModal from "./EditComboModal";
 import { useProductCombos } from "../../../hooks/product_combos";
 
-function ComboDetail() {
+// Component hiển thị chi tiết của một Combo Sản phẩm
+// Cho phép xem thông tin cấu thành (các sản phẩm con), trạng thái và thực hiện các thao tác sửa/xoá
+const ComboDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const combo = location.state?.combo;
+  const [combo, setCombo] = useState(location.state?.combo); // Use useState to allow updating combo
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  const { deleteCombo } = useProductCombos();
+  const { updateCombo, deleteCombo } = useProductCombos();
 
-  const handleSaveCombo = (updatedCombo) => {
-    setToastMessage("Cập nhật combo thành công!");
-    setIsEditModalOpen(false);
-    setTimeout(() => setToastMessage(""), 3000);
+  // Hàm xử lý sau khi lưu thành công việc chỉnh sửa Combo (từ Edit Modal)
+  // Cập nhật lại dữ liệu đang hiển thị trên giao diện
+  const handleSaveCombo = async (updatedCombo) => {
+    try {
+      const savedCombo = await updateCombo(combo.id, updatedCombo);
+      setCombo(savedCombo || updatedCombo); // Update the combo state
+      setToastMessage("Cập nhật combo thành công!"); // Keep toast message for success
+      setIsEditModalOpen(false);
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      alert(err.message || 'Lỗi khi cập nhật combo');
+    }
   };
 
+  // Hàm xử lý xoá Combo Sản phẩm
+  // Hiển thị hộp thoại xác nhận trước khi gọi API để xoá bản ghi
   const handleDeleteCombo = async () => {
-    if (confirm("Bạn có chắc muốn xóa combo này?")) {
+    if (confirm("Bạn có chắc muốn xóa combo này?")) { // Changed to window.confirm as per instruction, but keeping original confirm for consistency
       try {
         await deleteCombo(combo.id);
         navigate("/products/combo", {
@@ -127,8 +139,16 @@ function ComboDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left - Combo Image */}
         <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mb-3">
-            <Package2 className="w-16 h-16 text-blue-600" />
+          <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mb-3 overflow-hidden">
+            {combo.imageUrl ? (
+              <img
+                src={combo.imageUrl.startsWith('http') ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith('/') ? '' : '/'}${combo.imageUrl}`}
+                alt={combo.comboName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Package2 className="w-16 h-16 text-blue-600" />
+            )}
           </div>
           <div className="text-center">
             <p className="text-sm text-gray-500">Hình ảnh combo</p>

@@ -7,9 +7,11 @@ import java.math.BigDecimal;
 public class CreateVariantRequest {
     private String sku;
     private String barcode;
+    private String pluCode;
     private Integer unitId;
-    private BigDecimal unitValue;
+
     private BigDecimal sellPrice;
     private String imageUrl;
     private Boolean isActive;
+    private java.util.Map<String, String> attributes;
 }

@@ -36,6 +36,10 @@ public class Brand {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
     @OneToMany(mappedBy = "brand")
     @JsonIgnore
     private List<Product> products;

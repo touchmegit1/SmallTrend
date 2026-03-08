@@ -19,6 +19,7 @@ import com.smalltrend.repository.OrderRepository;
 import com.smalltrend.repository.OrderStatusHistoryRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.UserRepository;
+import com.smalltrend.service.inventory.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,10 +44,12 @@ public class SaleOrderService {
     private final UserRepository userRepository;
     private final ProductVariantRepository productVariantRepository;
     private final CashRegisterRepository cashRegisterRepository;
+    private final InventoryStockService inventoryStockService;
 
     public List<OrderResponse> listOrders(String status, Integer cashierId, LocalDate fromDate, LocalDate toDate) {
         List<Order> orders = orderRepository.findAll().stream()
-                .sorted(Comparator.comparing(Order::getOrderDate, Comparator.nullsLast(LocalDateTime::compareTo)).reversed())
+                .sorted(Comparator.comparing(Order::getOrderDate, Comparator.nullsLast(LocalDateTime::compareTo))
+                        .reversed())
                 .collect(Collectors.toList());
 
         return orders.stream()
@@ -171,6 +174,18 @@ public class SaleOrderService {
 
         Order saved = orderRepository.save(order);
 
+        // --- INVENTORY INTEGRATION ---
+        // Deduct stock when order is successfully completed
+        if ("COMPLETED".equals(toStatus) && !"COMPLETED".equals(fromStatus)) {
+            for (OrderItem item : saved.getItems()) {
+                inventoryStockService.deductStock(
+                        item.getProductVariant(),
+                        item.getQuantity(),
+                        Long.valueOf(saved.getId()),
+                        "Bán hàng đơn " + saved.getOrderCode());
+            }
+        }
+
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .order(saved)
                 .fromStatus(fromStatus)
@@ -264,7 +279,8 @@ public class SaleOrderService {
             }
 
             ProductVariant variant = productVariantRepository.findById(itemRequest.getProductVariantId())
-                    .orElseThrow(() -> new RuntimeException("Product variant not found: " + itemRequest.getProductVariantId()));
+                    .orElseThrow(() -> new RuntimeException(
+                            "Product variant not found: " + itemRequest.getProductVariantId()));
 
             BigDecimal unitPrice = itemRequest.getUnitPrice() != null
                     ? itemRequest.getUnitPrice()
@@ -304,7 +320,8 @@ public class SaleOrderService {
         for (OrderItem item : items) {
             BigDecimal lineBase = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             subtotal = subtotal.add(lineBase);
-            discount = discount.add(item.getLineDiscountAmount() != null ? item.getLineDiscountAmount() : BigDecimal.ZERO);
+            discount = discount
+                    .add(item.getLineDiscountAmount() != null ? item.getLineDiscountAmount() : BigDecimal.ZERO);
             tax = tax.add(item.getLineTaxAmount() != null ? item.getLineTaxAmount() : BigDecimal.ZERO);
         }
 
