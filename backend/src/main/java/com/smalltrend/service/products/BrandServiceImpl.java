@@ -36,7 +36,6 @@ public class BrandServiceImpl implements BrandService {
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
     }
 
-    // Cập nhật Tên, Quốc gia và Mô tả của Thương hiệu hiện có
     @Override
     public Brand update(Integer id, Brand brand) {
         Brand existing = getById(id);
@@ -44,6 +43,7 @@ public class BrandServiceImpl implements BrandService {
         existing.setCountry(brand.getCountry());
         existing.setDescription(brand.getDescription());
         existing.setCategory(brand.getCategory());
+        existing.setSupplier(brand.getSupplier());
         return brandRepository.save(existing);
     }
 
