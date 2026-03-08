@@ -131,7 +131,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
           </div>
           {!collapsed && (
             <h1 className="text-xl font-bold text-slate-800 tracking-tight">
-              LocalStore
+              Smalltrend
             </h1>
           )}
         </div>

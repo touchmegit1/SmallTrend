@@ -43,6 +43,7 @@ import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
 import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
 import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
+import NotFoundPage from "./pages/Common/NotFoundPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -314,7 +315,8 @@ function App() {
         <Route path="account/profile" element={<PersonalInfoPage />} />
         <Route path="account/settings" element={<AccountSettingsPage />} />
 
-        <Route path="*" element={<Navigate to="/pos" replace />} />
+        {/* 404 Not Found - Show error page instead of redirect */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
