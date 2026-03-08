@@ -1,8 +1,9 @@
 // ─── Disposal Voucher Status ─────────────────────────────────
 export const DV_STATUS = {
   DRAFT: "DRAFT",
+  PENDING: "PENDING",
   CONFIRMED: "CONFIRMED",
-  CANCELLED: "CANCELLED",
+  REJECTED: "REJECTED",
 };
 
 export const DV_STATUS_CONFIG = {
@@ -14,6 +15,14 @@ export const DV_STATUS_CONFIG = {
     dot: "bg-amber-500",
     badgeBg: "bg-amber-100",
   },
+  [DV_STATUS.PENDING]: {
+    label: "Chờ duyệt",
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    border: "border-indigo-200",
+    dot: "bg-indigo-500",
+    badgeBg: "bg-indigo-100",
+  },
   [DV_STATUS.CONFIRMED]: {
     label: "Đã xác nhận",
     bg: "bg-emerald-50",
@@ -22,8 +31,8 @@ export const DV_STATUS_CONFIG = {
     dot: "bg-emerald-500",
     badgeBg: "bg-emerald-100",
   },
-  [DV_STATUS.CANCELLED]: {
-    label: "Đã hủy",
+  [DV_STATUS.REJECTED]: {
+    label: "Từ chối",
     bg: "bg-red-50",
     text: "text-red-700",
     border: "border-red-200",

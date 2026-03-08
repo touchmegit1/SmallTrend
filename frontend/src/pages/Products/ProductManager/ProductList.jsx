@@ -75,10 +75,29 @@ export function ProductListScreen() {
   // --- DEPENDENT FILTER LOGIC ---
 
   // Brands lọc theo Category đã chọn
+  // Mở rộng logic: lấy trực tiếp thuộc tính category(Id) của brand VÀ cả những brand đang được gán cho các sản phẩm trong danh mục này.
   const brandsForCategory = useMemo(() => {
     if (!filterCategory) return [];
-    return brands.filter((b) => b.category && String(b.category.id) === String(filterCategory));
-  }, [filterCategory, brands]);
+
+    // Lấy Set chứa các brand_id từ danh sách products thuộc category hiện tại
+    const activeBrandIds = new Set(
+      (products || [])
+        .filter((p) => String(p.category_id) === String(filterCategory) && p.brand_id)
+        .map((p) => String(p.brand_id))
+    );
+
+    return brands.filter((b) => {
+      // 1. Brand có thông tin object category
+      const matchObj = b.category && String(b.category.id) === String(filterCategory);
+      // 2. Brand trả về theo field category_id hoặc categoryId trực tiếp
+      const matchField = (b.category_id && String(b.category_id) === String(filterCategory)) ||
+        (b.categoryId && String(b.categoryId) === String(filterCategory));
+      // 3. Brand đang được dùng bởi ít nhất 1 product trong category này
+      const matchProduct = activeBrandIds.has(String(b.id));
+
+      return matchObj || matchField || matchProduct;
+    });
+  }, [filterCategory, brands, products]);
 
   // Products lọc theo Brand đã chọn (trong category đã chọn)
   const productsForBrand = useMemo(() => {
@@ -650,6 +669,10 @@ export function ProductListScreen() {
                     <p className="font-medium text-gray-700">{variant.unit_name || 'N/A'}</p>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Tồn kho</p>
+                    <p className="font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg w-fit border border-indigo-100">{variant.stockQuantity || 0}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Trạng thái</p>
                     {variant.is_active ? (
                       <Badge className="bg-green-50 text-green-700 border border-green-200 font-medium" variant="success">Đang bán</Badge>
@@ -693,6 +716,7 @@ export function ProductListScreen() {
                     <TableHead className="font-semibold">Loại sản phẩm</TableHead>
                     <TableHead className="font-semibold">SKU</TableHead>
                     <TableHead className="font-semibold">Giá bán</TableHead>
+                    <TableHead className="font-semibold">Tồn kho</TableHead>
                     <TableHead className="font-semibold">Đơn vị</TableHead>
                     <TableHead className="font-semibold">Trạng thái</TableHead>
                     <TableHead className="font-semibold">Thuộc tính</TableHead>
@@ -720,6 +744,9 @@ export function ProductListScreen() {
                       <TableCell className="text-sm font-mono text-gray-600">{v.sku || 'N/A'}</TableCell>
                       <TableCell className="text-sm font-bold text-emerald-600">
                         {v.sell_price ? Number(v.sell_price).toLocaleString('vi-VN') + ' ₫' : 'N/A'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{v.stockQuantity || 0}</span>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">{v.unit_name || 'N/A'}</TableCell>
                       <TableCell>

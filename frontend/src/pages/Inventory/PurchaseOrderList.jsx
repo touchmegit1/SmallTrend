@@ -31,13 +31,12 @@ function PurchaseOrderList() {
 
   // --- TAB: KIỂM KÊ (NHÂN VIÊN KHO) ---
   const auditOrders = filteredOrders.filter((o) =>
-    ["CONFIRMED", "CHECKING", "RECEIVED"].includes(o.status),
+    ["CONFIRMED", "CHECKING"].includes(o.status),
   );
 
   // If we are in audit tab, and want to show ALL audit, we default it to 'ALL' (but inside auditOrders)
   const displayedAuditOrders =
-    statusFilter === "ALL" ||
-    !["CONFIRMED", "CHECKING", "RECEIVED"].includes(statusFilter)
+    statusFilter === "ALL" || !["CONFIRMED", "CHECKING"].includes(statusFilter)
       ? auditOrders
       : auditOrders.filter((o) => o.status === statusFilter);
 
@@ -58,7 +57,7 @@ function PurchaseOrderList() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Theo mã hợp đồng/phiếu nhập"
+                placeholder="Tìm theo mã phiếu nhập..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -130,7 +129,6 @@ function PurchaseOrderList() {
                       { value: "ALL", label: "Tất cả" },
                       { value: "CONFIRMED", label: "Chờ kiểm" },
                       { value: "CHECKING", label: "Đang kiểm kê" },
-                      { value: "RECEIVED", label: "Đã nhập kho" },
                     ]
               }
               variant="status"
@@ -154,7 +152,7 @@ function PurchaseOrderList() {
               <thead className="bg-slate-50/80 border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                    Mã phiếu / HĐ
+                    Mã phiếu
                   </th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                     Thời gian tạo

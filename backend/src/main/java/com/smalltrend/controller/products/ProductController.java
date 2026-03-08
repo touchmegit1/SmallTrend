@@ -89,6 +89,22 @@ public class ProductController {
         return ResponseEntity.ok("Variant deleted");
     }
 
+    // Tự động tạo mã SKU dựa trên thông tin sản phẩm
+    @GetMapping("/{id}/generate-sku")
+    public ResponseEntity<java.util.Map<String, String>> generateSku(
+            @PathVariable Integer id,
+            @RequestParam(required = false) Integer unitId) {
+        String sku = productVariantService.generateSku(id, unitId);
+        return ResponseEntity.ok(java.util.Map.of("sku", sku));
+    }
+
+    // Tự động tạo mã Barcode nội bộ (dành cho sản phẩm đóng gói tại cửa hàng)
+    @GetMapping("/{id}/generate-barcode")
+    public ResponseEntity<java.util.Map<String, String>> generateBarcode(@PathVariable Integer id) {
+        String barcode = productVariantService.generateInternalBarcode(id);
+        return ResponseEntity.ok(java.util.Map.of("barcode", barcode));
+    }
+
     // Lấy danh sách quy đổi đơn vị của biến thể
     @GetMapping("/variants/{variantId}/conversions")
     public ResponseEntity<List<UnitConversionResponse>> getConversionsByVariantId(@PathVariable Integer variantId) {

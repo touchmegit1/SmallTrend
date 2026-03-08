@@ -56,12 +56,12 @@ export function useInventoryDashboard() {
             getDashboardSummary(),
             getRecentActivities().catch(() => []),
           ]);
-        
+
         console.log("📊 Dashboard Summary:", summaryData);
         console.log("📦 Products:", productsData.length);
         console.log("🏷️ Batches:", batchesData.length);
         console.log("📋 Activities:", activitiesData.length);
-        
+
         setProducts(productsData);
         setBatches(batchesData);
         setCategories(categoriesData);
@@ -102,14 +102,22 @@ export function useInventoryDashboard() {
     return batches.map((b) => {
       // Use productName from API response (BatchStatusResponse includes it)
       const productName = b.productName || b.product_name || "N/A";
-      const status = b.status || classifyBatch(b.expiry_date);
-      const days = b.days_until_expiry ?? b.daysUntilExpiry ?? daysUntilExpiry(b.expiry_date);
+      const expiryDate = b.expiry_date || b.expiryDate;
+      const receivedDate = b.received_date || b.receivedDate;
+      const batchCode = b.batchCode || b.batch_code || "N/A";
+      const status = classifyBatch(expiryDate);
+      const days = b.days_until_expiry ?? b.daysUntilExpiry ?? daysUntilExpiry(expiryDate);
       return {
         ...b,
+        id: b.id || b.batchId,
         productName,
-        productSku: b.batchCode || b.batch_code || "N/A",
+        productSku: batchCode,
+        batch_code: batchCode,
         status,
-        daysRemaining: b.expiry_date ? days : null,
+        expiry_date: expiryDate,
+        received_date: receivedDate,
+        quantity: b.quantity ?? 0,
+        daysRemaining: expiryDate ? days : null,
       };
     });
   }, [batches, products]);

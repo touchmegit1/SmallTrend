@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 public class CreateVariantRequest {
     private String sku;
     private String barcode;
+    private String pluCode;
     private Integer unitId;
 
     private BigDecimal sellPrice;

@@ -18,15 +18,20 @@ const ComboDetail = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  const { deleteCombo } = useProductCombos();
+  const { updateCombo, deleteCombo } = useProductCombos();
 
   // Hàm xử lý sau khi lưu thành công việc chỉnh sửa Combo (từ Edit Modal)
   // Cập nhật lại dữ liệu đang hiển thị trên giao diện
-  const handleSaveCombo = (updatedCombo) => {
-    setCombo(updatedCombo); // Update the combo state
-    setToastMessage("Cập nhật combo thành công!"); // Keep toast message for success
-    setIsEditModalOpen(false);
-    setTimeout(() => setToastMessage(""), 3000);
+  const handleSaveCombo = async (updatedCombo) => {
+    try {
+      const savedCombo = await updateCombo(combo.id, updatedCombo);
+      setCombo(savedCombo || updatedCombo); // Update the combo state
+      setToastMessage("Cập nhật combo thành công!"); // Keep toast message for success
+      setIsEditModalOpen(false);
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      alert(err.message || 'Lỗi khi cập nhật combo');
+    }
   };
 
   // Hàm xử lý xoá Combo Sản phẩm
@@ -134,8 +139,16 @@ const ComboDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left - Combo Image */}
         <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mb-3">
-            <Package2 className="w-16 h-16 text-blue-600" />
+          <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mb-3 overflow-hidden">
+            {combo.imageUrl ? (
+              <img
+                src={combo.imageUrl.startsWith('http') ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith('/') ? '' : '/'}${combo.imageUrl}`}
+                alt={combo.comboName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Package2 className="w-16 h-16 text-blue-600" />
+            )}
           </div>
           <div className="text-center">
             <p className="text-sm text-gray-500">Hình ảnh combo</p>

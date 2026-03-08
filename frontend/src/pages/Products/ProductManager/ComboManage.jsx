@@ -238,8 +238,16 @@ const ComboManage = () => {
                     <TableRow className="hover:bg-blue-50/50 transition-colors border-b border-gray-100" key={combo.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center shadow-sm">
-                            <Package2 className="w-6 h-6 text-blue-600" />
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center shadow-sm overflow-hidden">
+                            {combo.imageUrl ? (
+                              <img
+                                src={combo.imageUrl.startsWith('http') ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith('/') ? '' : '/'}${combo.imageUrl}`}
+                                alt={combo.comboName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Package2 className="w-6 h-6 text-blue-600" />
+                            )}
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-900">{combo.comboName}</p>

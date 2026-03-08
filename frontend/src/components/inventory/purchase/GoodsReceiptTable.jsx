@@ -51,8 +51,11 @@ export default function GoodsReceiptTable({
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
               Sản phẩm
             </th>
+            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-28">
+              Hạn SD
+            </th>
             <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-24">
-              SL hợp đồng
+              SL đặt hàng
             </th>
             <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-32">
               SL thực nhận
@@ -100,6 +103,17 @@ export default function GoodsReceiptTable({
                       </p>
                     </div>
                   </div>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {item.expiry_date || item.expiryDate ? (
+                    <span className="text-sm text-slate-600">
+                      {new Date(
+                        item.expiry_date || item.expiryDate,
+                      ).toLocaleDateString("vi-VN")}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className="text-sm font-semibold text-slate-700">

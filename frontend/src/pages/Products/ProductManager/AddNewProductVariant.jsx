@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Trash } from "lucide-react";
+import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Trash, Zap, Barcode } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
@@ -9,7 +9,7 @@ import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
 // Màn hình Thêm mới một Variant (Sản phẩm biến thể)
-// Cho phép khai báo đơn vị, giá bán, giá nhập và hình ảnh
+// Cho phép khai báo SKU, Barcode, PLU Code, đơn vị, giá bán và hình ảnh
 const AddNewProductVariant = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,6 +20,7 @@ const AddNewProductVariant = () => {
   const [formData, setFormData] = useState({
     sku: "",
     barcode: "",
+    plu_code: "",
     unit_id: "",
     sell_price: "",
     is_active: product?.is_active === false ? false : true,
@@ -28,6 +29,8 @@ const AddNewProductVariant = () => {
   const [conversions, setConversions] = useState([]); // [{ toUnitId: "", conversionFactor: "", sellPrice: "", isActive: true }]
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [generatingSku, setGeneratingSku] = useState(false);
+  const [generatingBarcode, setGeneratingBarcode] = useState(false);
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -38,20 +41,14 @@ const AddNewProductVariant = () => {
   // Xử lý đọc file ảnh cục bộ dưới dạng DateURL để hiển thị Preview
   const handleImageSelect = (file) => {
     if (file) {
-      // The original code had a type check, let's keep it for robustness
       if (!file.type.startsWith("image/")) {
-        // toast.error("File không phải là ảnh"); // Assuming toast is available
         console.error("File is not an image.");
         return;
       }
-      // if (file.size > 5 * 1024 * 1024) { // Assuming toast is available
-      //   toast.error("Kích thước ảnh không được vượt quá 5MB");
-      //   return;
-      // }
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
-        setImageFile(file); // Changed from setSelectedImage to setImageFile
+        setImageFile(file);
       };
       reader.readAsDataURL(file);
     }
@@ -86,7 +83,7 @@ const AddNewProductVariant = () => {
   // Gỡ ảnh hiện tại ra khỏi form
   const removeImage = () => {
     setImagePreview(null);
-    setImageFile(null); // Changed from setSelectedImage to setImageFile
+    setImageFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -94,26 +91,31 @@ const AddNewProductVariant = () => {
 
   // Hàm đẩy ảnh dạng Binary Form-data lên Server và nhận link URL trả về
   const uploadImage = async () => {
-    if (!imageFile) return null; // Changed from selectedImage to imageFile
-    setUploadingImage(true); // Kept from original
+    if (!imageFile) return null;
+    setUploadingImage(true);
     const formData = new FormData();
-    formData.append("file", imageFile); // Changed from selectedImage to imageFile
+    formData.append("file", imageFile);
     try {
-      const response = await api.post("/upload/image", formData, { // Changed endpoint from /upload to /upload/image
-        headers: { "Content-Type": undefined }, // Changed from "multipart/form-data" to undefined to let browser set it
+      const response = await api.post("/upload/image", formData, {
+        headers: { "Content-Type": undefined },
       });
       return response.data.url;
     } catch (error) {
-      console.error("Lỗi upload ảnh:", error); // Changed error message
-      throw new Error("Không thể upload ảnh"); // Changed error handling
+      console.error("Lỗi upload ảnh:", error);
+      throw new Error("Không thể upload ảnh");
     } finally {
-      setUploadingImage(false); // Kept from original
+      setUploadingImage(false);
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "sku") {
+      // Auto uppercase, no spaces, words separated by dash
+      setFormData((prev) => ({ ...prev, [name]: value.toUpperCase().replace(/\s+/g, "-") }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleAddAttribute = () => {
@@ -144,26 +146,72 @@ const AddNewProductVariant = () => {
     setConversions(newConvs);
   };
 
-  // Hàm Submit: Tiến hành Upload image (nếu có) trước rồi lấy URL đính vào payload Variant để Post tạo mới
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg(""); // Kept from original
+  // ─── Generate SKU ──────────────────────────────────────────────────
+  const handleGenerateSku = async () => {
+    if (!product?.id) return;
+    setGeneratingSku(true);
+    try {
+      const params = {};
+      if (formData.unit_id) params.unitId = formData.unit_id;
+      const res = await api.get(`/products/${product.id}/generate-sku`, { params });
+      setFormData((prev) => ({ ...prev, sku: res.data.sku }));
+    } catch (err) {
+      console.error("Error generating SKU:", err);
+      setErrorMsg("Không thể tạo mã SKU tự động.");
+    } finally {
+      setGeneratingSku(false);
+    }
+  };
 
-    // if (isSubmitting) return; // isSubmitting state variable is not defined in the original code, so commenting out or adding it. Assuming it should be `saving`
-    if (saving) return;
+  // ─── Generate Internal Barcode ─────────────────────────────────────
+  const handleGenerateBarcode = async () => {
+    if (!product?.id) return;
+    setGeneratingBarcode(true);
+    try {
+      const res = await api.get(`/products/${product.id}/generate-barcode`);
+      setFormData((prev) => ({ ...prev, barcode: res.data.barcode }));
+    } catch (err) {
+      console.error("Error generating barcode:", err);
+      setErrorMsg("Không thể tạo mã Barcode nội bộ.");
+    } finally {
+      setGeneratingBarcode(false);
+    }
+  };
 
+  // ─── Client-side Validation ────────────────────────────────────────
+  const validateForm = () => {
     if (!formData.sku.trim()) {
-      setErrorMsg("Vui lòng nhập SKU");
-      return;
+      setErrorMsg("SKU là bắt buộc. Vui lòng nhập hoặc tạo mã SKU.");
+      return false;
     }
     if (!formData.unit_id) {
       setErrorMsg("Vui lòng chọn đơn vị");
-      return;
+      return false;
     }
     if (!formData.sell_price) {
       setErrorMsg("Vui lòng nhập giá bán");
-      return;
+      return false;
     }
+    // Barcode: optional but must be 12-13 digits if provided
+    if (formData.barcode.trim() && !/^\d{12,13}$/.test(formData.barcode.trim())) {
+      setErrorMsg("Barcode phải gồm 12-13 chữ số.");
+      return false;
+    }
+    // PLU: optional but must be 4-5 digits if provided
+    if (formData.plu_code.trim() && !/^\d{4,5}$/.test(formData.plu_code.trim())) {
+      setErrorMsg("Mã PLU phải gồm 4-5 chữ số.");
+      return false;
+    }
+    return true;
+  };
+
+  // Hàm Submit: Tiến hành Upload image (nếu có) trước rồi lấy URL đính vào payload Variant để Post tạo mới
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (saving) return;
+    if (!validateForm()) return;
 
     setSaving(true);
     try {
@@ -182,6 +230,7 @@ const AddNewProductVariant = () => {
       const response = await api.post(`/products/${product.id}/variants`, {
         sku: formData.sku,
         barcode: formData.barcode || null,
+        pluCode: formData.plu_code || null,
         unitId: parseInt(formData.unit_id),
         sellPrice: parseFloat(formData.sell_price),
         imageUrl: imageUrl,
@@ -293,37 +342,86 @@ const AddNewProductVariant = () => {
               <Card className="h-full border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col">
                 <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-200">
                   <CardTitle className="text-xl font-bold text-gray-800">
-                    Thông tin cơ bản
+                    Mã sản phẩm & Thông tin cơ bản
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5 p-6 flex-1">
-                  <div className="grid grid-cols-2 gap-5">
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700">
-                        SKU <span className="text-red-500">*</span>
-                      </Label>
+
+                  {/* ── SKU Field with Generate Button ── */}
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-700">
+                      SKU (Mã nội bộ) <span className="text-red-500">*</span>
+                    </Label>
+                    <p className="text-xs text-gray-400 mb-1">Mã quản lý tồn kho nội bộ cửa hàng. VD: BEV-COCA-COLA-330ML</p>
+                    <div className="flex gap-2">
                       <Input
-                        className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono uppercase"
-                        placeholder="VD: SKU-001"
+                        className="flex-1 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono uppercase tracking-wider"
+                        placeholder="VD: BEV-COCA-COLA-330ML"
                         name="sku"
                         value={formData.sku}
                         onChange={handleChange}
                         required
                       />
+                      <Button
+                        type="button"
+                        onClick={handleGenerateSku}
+                        disabled={generatingSku}
+                        className="h-11 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-medium text-sm flex items-center gap-2 whitespace-nowrap shadow-md shadow-emerald-200/50 transition-all"
+                      >
+                        <Zap className="w-4 h-4" />
+                        {generatingSku ? "Đang tạo..." : "Tạo SKU"}
+                      </Button>
                     </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700">
-                        Barcode
-                      </Label>
+                  </div>
+
+                  {/* ── Barcode Field with Generate Button ── */}
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-700">
+                      Barcode (Mã vạch)
+                    </Label>
+                    <p className="text-xs text-gray-400 mb-1">
+                      Nhập barcode nhà sản xuất (EAN-13) hoặc tạo mã nội bộ. 12-13 chữ số.
+                    </p>
+                    <div className="flex gap-2">
                       <Input
-                        className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-                        placeholder="VD: 893458..."
+                        className="flex-1 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono tracking-widest"
+                        placeholder="VD: 8938505974192"
                         name="barcode"
                         value={formData.barcode}
                         onChange={handleChange}
+                        maxLength={13}
                       />
+                      <Button
+                        type="button"
+                        onClick={handleGenerateBarcode}
+                        disabled={generatingBarcode}
+                        className="h-11 px-4 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white rounded-xl font-medium text-sm flex items-center gap-2 whitespace-nowrap shadow-md shadow-violet-200/50 transition-all"
+                      >
+                        <Barcode className="w-4 h-4" />
+                        {generatingBarcode ? "Đang tạo..." : "Tạo Barcode"}
+                      </Button>
                     </div>
                   </div>
+
+                  {/* ── PLU Code (Optional) ── */}
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-700">
+                      PLU Code (Mã sản phẩm tươi sống)
+                    </Label>
+                    <p className="text-xs text-gray-400 mb-1">
+                      Dùng cho sản phẩm bán theo cân (rau, trái cây...). 4-5 chữ số. VD: 4011 (Chuối)
+                    </p>
+                    <Input
+                      className="h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono w-48"
+                      placeholder="VD: 4011"
+                      name="plu_code"
+                      value={formData.plu_code}
+                      onChange={handleChange}
+                      maxLength={5}
+                    />
+                  </div>
+
+                  <div className="border-t border-gray-100 pt-4" />
 
                   <div className="grid grid-cols-2 gap-5">
                     <div>
@@ -345,23 +443,21 @@ const AddNewProductVariant = () => {
                         ))}
                       </select>
                     </div>
-
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700">
-                      Giá bán <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      type="number"
-                      step="any"
-                      className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="VD: 93000"
-                      name="sell_price"
-                      value={formData.sell_price}
-                      onChange={handleChange}
-                      required
-                    />
+                    <div>
+                      <Label className="text-sm font-semibold text-gray-700">
+                        Giá bán <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        step="any"
+                        className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="VD: 93000"
+                        name="sell_price"
+                        value={formData.sell_price}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -588,8 +684,8 @@ const AddNewProductVariant = () => {
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
                       className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
-                          ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
-                          : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
+                        ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
+                        : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
                         }`}
                       style={{ minHeight: "300px" }}
                     >
@@ -602,6 +698,33 @@ const AddNewProductVariant = () => {
                       <p className="text-xs text-gray-500">
                         Hỗ trợ JPG, PNG, GIF
                       </p>
+                    </div>
+                  )}
+
+                  {/* Product Code Summary Card */}
+                  {(formData.sku || formData.barcode || formData.plu_code) && (
+                    <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl border border-gray-200">
+                      <p className="text-sm font-bold text-gray-700 mb-3">📦 Tổng kết mã sản phẩm</p>
+                      <div className="space-y-2">
+                        {formData.sku && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-500">SKU</span>
+                            <span className="font-mono text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-lg">{formData.sku}</span>
+                          </div>
+                        )}
+                        {formData.barcode && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-500">Barcode</span>
+                            <span className="font-mono text-sm font-semibold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg">{formData.barcode}</span>
+                          </div>
+                        )}
+                        {formData.plu_code && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-500">PLU</span>
+                            <span className="font-mono text-sm font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg">{formData.plu_code}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </CardContent>

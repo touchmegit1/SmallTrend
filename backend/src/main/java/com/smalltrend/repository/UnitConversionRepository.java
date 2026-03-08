@@ -5,11 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UnitConversionRepository extends JpaRepository<UnitConversion, Integer> {
 
     List<UnitConversion> findByVariantId(Integer variantId);
+
+    Optional<UnitConversion> findByVariantIdAndToUnitId(Integer variantId, Integer toUnitId);
 
     boolean existsByVariantIdAndToUnitId(Integer variantId, Integer toUnitId);
 

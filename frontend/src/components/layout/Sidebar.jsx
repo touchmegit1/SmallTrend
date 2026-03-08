@@ -51,10 +51,9 @@ const Sidebar = () => {
       children: [
         { label: "Tổng quan kho", path: "/inventory" },
         { label: "Nhập hàng", path: "/inventory/purchase-orders" },
-        { label: "Kiểm kê", path: "/inventory-counts" },
+        { label: "Kiểm kê kho", path: "/inventory-counts" },
         { label: "Quản lý vị trí", path: "/inventory/locations" },
-        { label: "Xuất hủy", path: "/inventory/disposal" },
-        { label: "Nhà cung cấp", path: "/inventory/suppliers" },
+        { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
       ],
     },
     {

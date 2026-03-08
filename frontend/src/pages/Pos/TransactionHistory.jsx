@@ -15,6 +15,8 @@ function TransactionHistory() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const loadAndSaveTransactions = async () => {
@@ -135,6 +137,34 @@ function TransactionHistory() {
 
     setShowActionMenu(null);
     setDeleteConfirm(null);
+    setSelectedIds(prev => prev.filter(id => id !== transactionId));
+  };
+
+  const bulkDeleteTransactions = () => {
+    const updatedTransactions = transactions.filter(t => !selectedIds.includes(t.id));
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+
+    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+    const updatedPendingOrders = pendingOrders.filter(o => !selectedIds.includes(o.id));
+    localStorage.setItem('pendingOrders', JSON.stringify(updatedPendingOrders));
+
+    setSelectedIds([]);
+    setBulkDeleteConfirm(false);
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredTransactions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredTransactions.map(t => t.id));
+    }
   };
 
   const parseDateTime = (timeStr) => {
@@ -379,6 +409,27 @@ function TransactionHistory() {
               Xóa lọc
             </button>
           )}
+
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => setBulkDeleteConfirm(true)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "8px",
+                border: "none",
+                background: "#dc3545",
+                color: "white",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              🗑 Xóa ({selectedIds.length}) đơn
+            </button>
+          )}
         </div>
       </div>
 
@@ -392,6 +443,14 @@ function TransactionHistory() {
       >
         <thead>
           <tr style={{ background: "#f8f9fa" }}>
+            <th style={{ padding: "12px", textAlign: "center", width: "40px" }}>
+              <input
+                type="checkbox"
+                checked={filteredTransactions.length > 0 && selectedIds.length === filteredTransactions.length}
+                onChange={toggleSelectAll}
+                style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#0d6efd" }}
+              />
+            </th>
             <th style={{ padding: "12px", textAlign: "left" }}>Mã đơn</th>
             <th style={{ padding: "12px", textAlign: "left" }}>Thời gian</th>
             <th style={{ padding: "12px", textAlign: "left" }}>Số lượng</th>
@@ -405,13 +464,27 @@ function TransactionHistory() {
         <tbody>
           {filteredTransactions.length === 0 ? (
             <tr>
-              <td colSpan="7" style={{ padding: "20px", textAlign: "center", color: "gray" }}>
+              <td colSpan="8" style={{ padding: "20px", textAlign: "center", color: "gray" }}>
                 {transactions.length === 0 ? "Chưa có giao dịch nào" : "Không tìm thấy giao dịch phù hợp"}
               </td>
             </tr>
           ) : (
             filteredTransactions.map((item, index) => (
-              <tr key={index} style={{ borderBottom: "1px solid #eee" }}>
+              <tr
+                key={index}
+                style={{
+                  borderBottom: "1px solid #eee",
+                  background: selectedIds.includes(item.id) ? "#e8f0fe" : "transparent",
+                }}
+              >
+                <td style={{ padding: "12px", textAlign: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#0d6efd" }}
+                  />
+                </td>
                 <td
                   style={{
                     padding: "12px",
@@ -498,7 +571,7 @@ function TransactionHistory() {
                             onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
                             onMouseLeave={(e) => e.target.style.background = "white"}
                           >
-                            ↩ Quay lại POS
+                            💳 Tiếp tục thanh toán
                           </button>
                         )}
                         <button
@@ -624,6 +697,84 @@ function TransactionHistory() {
                 }}
               >
                 Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xác nhận xóa hàng loạt */}
+      {bulkDeleteConfirm && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: "white",
+            borderRadius: "12px",
+            padding: "30px",
+            width: "400px",
+            maxWidth: "90%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            textAlign: "center"
+          }}>
+            <div style={{
+              width: "50px",
+              height: "50px",
+              borderRadius: "50%",
+              background: "#fff3f3",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 15px",
+              fontSize: "24px"
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ margin: "0 0 10px", fontSize: "18px", color: "#333" }}>
+              Xác nhận xóa {selectedIds.length} giao dịch
+            </h3>
+            <p style={{ color: "#666", fontSize: "14px", margin: "0 0 20px" }}>
+              Bạn có chắc chắn muốn xóa <strong style={{ color: "#dc3545" }}>{selectedIds.length} đơn hàng</strong> đã chọn không?<br />
+              Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                onClick={() => setBulkDeleteConfirm(false)}
+                style={{
+                  padding: "10px 25px",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd",
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}
+              >
+                Không
+              </button>
+              <button
+                onClick={bulkDeleteTransactions}
+                style={{
+                  padding: "10px 25px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "#dc3545",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}
+              >
+                Xóa tất cả
               </button>
             </div>
           </div>

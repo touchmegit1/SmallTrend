@@ -11,9 +11,13 @@ import java.util.Optional;
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Integer> {
     Optional<ProductVariant> findBySku(String sku);
 
+    Optional<ProductVariant> findByBarcode(String barcode);
+
     List<ProductVariant> findBySkuContainingIgnoreCase(String sku);
 
     List<ProductVariant> findByProductId(Integer productId);
+
+    Optional<ProductVariant> findByProductIdAndIsBaseUnitTrue(Integer productId);
 
     boolean existsBySku(String sku);
 

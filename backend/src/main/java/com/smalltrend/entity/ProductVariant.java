@@ -36,6 +36,9 @@ public class ProductVariant {
     @Column(unique = true)
     private String barcode;
 
+    @Column(name = "plu_code", length = 5)
+    private String pluCode;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "unit_id", nullable = false)
     private Unit unit;
@@ -43,6 +46,10 @@ public class ProductVariant {
     @Column(name = "image_url")
     private String imageUrl;
     private BigDecimal sellPrice;
+
+    @Builder.Default
+    @Column(name = "is_base_unit", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean isBaseUnit = false;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
