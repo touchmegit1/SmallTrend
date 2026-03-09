@@ -4,9 +4,11 @@ import com.smalltrend.dto.auditlog.AuditLogDTO;
 import com.smalltrend.dto.auditlog.AuditLogFilterRequest;
 import com.smalltrend.dto.auditlog.AuditLogPageResponse;
 import com.smalltrend.entity.AuditLog;
+import com.smalltrend.entity.User;
 import com.smalltrend.repository.AuditLogRepository;
 import com.smalltrend.repository.AuditLogSpecification;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -15,14 +17,52 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
+
+    /**
+     * Save an audit log entry.
+     *
+     * @param actor      User who performed the action (nullable for anonymous actions)
+     * @param action     Action name, e.g. LOGIN, CREATE_USER, UPDATE_USER, DELETE_USER
+     * @param entityName Target entity type, e.g. "User"
+     * @param entityId   PK of the affected entity (nullable)
+     * @param result     "OK", "FAIL", or "DENIED"
+     * @param ipAddress  Client IP address
+     * @param changes    JSON/text describing changed fields (nullable)
+     * @param details    Additional free-text details (nullable)
+     */
+    @Transactional
+    public void logAction(User actor, String action, String entityName, Integer entityId,
+                          String result, String ipAddress, String changes, String details) {
+        try {
+            AuditLog entry = AuditLog.builder()
+                    .user(actor)
+                    .action(action)
+                    .entityName(entityName)
+                    .entityId(entityId)
+                    .result(result)
+                    .ipAddress(ipAddress)
+                    .changes(changes)
+                    .details(details)
+                    .source("WEB")
+                    .createdAt(LocalDateTime.now())
+                    .traceId(UUID.randomUUID().toString())
+                    .build();
+            auditLogRepository.save(entry);
+        } catch (Exception e) {
+            log.error("Failed to save audit log [action={}, result={}]: {}", action, result, e.getMessage());
+        }
+    }
 
     /**
      * Get filtered audit logs with pagination
