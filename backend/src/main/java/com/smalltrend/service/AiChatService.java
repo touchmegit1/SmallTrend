@@ -41,7 +41,13 @@ public class AiChatService {
         String context = buildContext(settings);
         String systemPrompt = settings.getSystemPrompt();
 
+        String language = settings.getResponseLanguage();
+        String languageInstruction = "en".equals(language)
+                ? "\n\nIMPORTANT: You MUST respond in English only."
+                : "\n\nQUAN TRỌNG: Bạn PHẢI trả lời bằng tiếng Việt.";
+
         String fullPrompt = systemPrompt
+                + languageInstruction
                 + "\n\n=== DỮ LIỆU HỆ THỐNG HIỆN TẠI ===\n"
                 + context
                 + "\n\n=== CÂU HỎI CỦA NHÂN VIÊN ===\n"

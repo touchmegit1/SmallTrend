@@ -87,9 +87,17 @@ public class AiSettingsService {
         if (settings.getQuickPrompt4() != null && !settings.getQuickPrompt4().isBlank()) prompts.add(settings.getQuickPrompt4());
         if (settings.getQuickPrompt5() != null && !settings.getQuickPrompt5().isBlank()) prompts.add(settings.getQuickPrompt5());
 
+        String welcomeMessage = settings.getWelcomeMessage() != null && !settings.getWelcomeMessage().isBlank()
+                ? settings.getWelcomeMessage()
+                : "Xin chào! Tôi là trợ lý AI của SmallTrend. Hỏi tôi về doanh thu, kho hàng, khách hàng hoặc bất kỳ điều gì liên quan đến hệ thống.";
+
+        String aiName = settings.getAiName() != null && !settings.getAiName().isBlank()
+                ? settings.getAiName()
+                : "SmallTrend AI";
+
         return AiPublicSettingsResponse.builder()
-                .aiName(settings.getAiName())
-                .welcomeMessage(settings.getWelcomeMessage())
+                .aiName(aiName)
+                .welcomeMessage(welcomeMessage)
                 .aiEnabled(settings.getAiEnabled())
                 .quickPrompts(prompts)
                 .build();

@@ -39,7 +39,7 @@ public class GeminiService {
 
         String model = settings != null && settings.getGeminiModel() != null
                 ? settings.getGeminiModel()
-                : "gemini-2.0-flash";
+                : "gemini-2.5-flash-lite";
         String url = GEMINI_API_BASE + model + ":generateContent?key=" + apiKey;
 
         HttpHeaders headers = new HttpHeaders();
@@ -71,7 +71,7 @@ public class GeminiService {
             }
             return "No response from Gemini.";
         } catch (HttpClientErrorException.TooManyRequests e) {
-            log.error("Gemini API Quota Exceeded: {}", e.getMessage());
+            log.error("Gemini 429 body: {}", e.getResponseBodyAsString());
             return "I am currently overwhelmed with requests. Please try again later.";
         } catch (Exception e) {
             log.error("Error calling Gemini API: {}", e.getMessage());

@@ -19,7 +19,7 @@ public class AiSettings {
     // --- Model Configuration ---
     @Column(length = 50)
     @Builder.Default
-    private String geminiModel = "gemini-2.0-flash";
+    private String geminiModel = "gemini-2.5-flash-lite";
 
     @Builder.Default
     private Double temperature = 1.0;

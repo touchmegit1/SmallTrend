@@ -14,9 +14,10 @@ import {
 import aiChatService from "../../services/aiChatService";
 
 const GEMINI_MODELS = [
-    { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Recommended)" },
-    { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (Faster)" },
-    { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Legacy)" },
+    { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite (Recommended)" },
+    { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" },
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+    { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
 ];
 
 const LANGUAGES = [
