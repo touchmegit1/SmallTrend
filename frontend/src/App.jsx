@@ -39,8 +39,10 @@ import Login from "./pages/Auth/Login";
 import MainLayout from "./components/layout/MainLayout";
 import { useAuth } from "./context/AuthContext";
 import TicketCenter from "./pages/Admin/TicketCenter";
+import ReportCenterPage from "./pages/Admin/ReportCenterPage";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
+import AiSettingsPage from "./pages/Admin/AiSettingsPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -258,10 +260,28 @@ function App() {
         />
 
         <Route
+          path="admin/report-center"
+          element={
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+              <ReportCenterPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="admin/audit-logs"
           element={
             <ProtectedRoute allowedRoles={ADMIN_ROLES}>
               <AuditLogPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="admin/ai-settings"
+          element={
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+              <AiSettingsPage />
             </ProtectedRoute>
           }
         />
