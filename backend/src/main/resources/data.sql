@@ -77,7 +77,10 @@ INSERT INTO suppliers (name, tax_code, address, email, phone, contact_person, co
 ('Vinamilk Distribution', '0100170098', '10 Tan Trao, Tan Phu Ward, District 7, HCMC', 'sales@vinamilk.com.vn', '1800-1199', 'Nguyen Van A', '["https://res.cloudinary.com/demo/sample_contract1.pdf"]', '2023-01-15', '2025-01-15', TRUE, 'Main dairy supplier with 2-year contract'),
 ('Unilever Vietnam', '0300491828', '15 Le Duan Blvd, District 1, HCMC', 'contact@unilever.com.vn', '1800-5588', 'Tran Thi B', '["https://res.cloudinary.com/demo/sample_contract2.pdf", "https://res.cloudinary.com/demo/sample_contract2_annex.pdf"]', '2023-03-01', '2024-12-31', TRUE, 'Personal care and household items supplier'),
 ('Nestle Vietnam', '0302127854', 'The Vista Building, 628C Hanoi Highway, HCMC', 'info@nestle.com.vn', '1900-6011', 'Le Van C', '["https://res.cloudinary.com/demo/sample_contract3.pdf"]', '2023-06-01', '2025-06-01', TRUE, 'Beverages and snacks supplier'),
-('Coca-Cola Vietnam', '0300693409', '124 Kim Ma Street, Ba Dinh, Hanoi', 'vietnam@cocacola.com', '1900-0180', 'Pham Thi D', NULL, NULL, NULL, TRUE, 'Soft drinks supplier - contract pending')
+('Coca-Cola Vietnam', '0300693409', '124 Kim Ma Street, Ba Dinh, Hanoi', 'vietnam@cocacola.com', '1900-0180', 'Pham Thi D', NULL, NULL, NULL, TRUE, 'Soft drinks supplier - contract pending'),
+('Masan Consumer', '0302017440', 'Kumho Asiana Plaza, 39 Le Duan, District 1, HCMC', 'contact@masan.com.vn', '1800-9090', 'Le Van M', '["https://res.cloudinary.com/demo/masan_contract.pdf"]', '2023-08-01', '2025-08-01', TRUE, 'Masan consumer goods supplier'),
+('Heineken Vietnam', '0300847056', 'Blue Sky Tower, 1 Bach Dang, Tan Binh, HCMC', 'sales@heineken.com.vn', '1900-1111', 'Tran Heineken', '["https://res.cloudinary.com/demo/heineken_contract.pdf"]', '2023-10-01', '2025-10-01', TRUE, 'Beverages and beers supplier'),
+('KIDO Group (Tường An)', '0302266881', '138-142 Hai Ba Trung, District 1, HCMC', 'info@kido.vn', '1800-6688', 'Bui Kido', NULL, NULL, NULL, TRUE, 'Edible oils and foods supplier')
 AS new_supplier
 ON DUPLICATE KEY UPDATE
 name = new_supplier.name,
@@ -93,11 +96,12 @@ notes = new_supplier.notes,
 updated_at = NOW();
 
 -- 2. BRANDS & CATEGORIES
-INSERT IGNORE INTO brands (name) VALUES
-('Vinamilk'), ('Nestle'), ('Coca-Cola'), ('P&G'), ('Kinh Do'), ('Oishi'),
-('Cholimex'), ('CP'), ('Vissan'), ('Orion'), ('Chupa Chups'), ('Vifon'), ('Acecook'),
-('Masan'), ('TH True Milk'), ('Pepsico'), ('Maggi'),
-('Dove'), ('Knorr'), ('Lifebuoy'), ('OMO'), ('Sunsilk');
+INSERT IGNORE INTO brands (name, supplier_id) VALUES
+('Vinamilk', 1), ('Nestle', 3), ('Coca-Cola', 4), ('P&G', NULL), ('Kinh Do', NULL), ('Oishi', NULL),
+('Cholimex', NULL), ('CP', NULL), ('Vissan', NULL), ('Orion', NULL), ('Chupa Chups', NULL), ('Vifon', NULL), ('Acecook', NULL),
+('Masan', 5), ('TH True Milk', NULL), ('Pepsico', NULL), ('Maggi', 3),
+('Dove', 2), ('Knorr', 2), ('Lifebuoy', 2), ('OMO', 2), ('Sunsilk', 2),
+('Heineken', 6), ('Tiger', 6), ('Tường An', 7);
 
 INSERT IGNORE INTO categories (name) VALUES
 ('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
@@ -188,26 +192,32 @@ INSERT IGNORE INTO customers (name, phone, loyalty_points) VALUES
 
 -- 8. PRODUCTS
 INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_id, is_active, created_at, updated_at) VALUES
-('Fresh Milk 1L', 'Vinamilk Fresh Milk', 1, 2, 2, TRUE, NOW(6), NOW(6)),
-('Dove Soap 90g', 'Dove Beauty Bar', 4, 3, 1, TRUE, NOW(6), NOW(6)),
-('Nescafe 3in1', 'Instant Coffee 20g x 10', 2, 1, 1, TRUE, NOW(6), NOW(6)),
-('Coca Cola 330ml', 'Coca Cola Classic', 3, 1, 1, TRUE, NOW(6), NOW(6)),
-('Oishi Snack', 'Potato Chips 50g', 7, 5, 1, TRUE, NOW(6), NOW(6)),
-('Tương ớt Cholimex', 'Tương ớt chua cay 250g', 8, 10, 1, TRUE, NOW(6), NOW(6)),
-('Xúc xích CP', 'Xúc xích Vườn Hồng 500g', 9, 9, 1, TRUE, NOW(6), NOW(6)),
-('Đồ hộp Vissan', 'Thịt heo hầm 150g', 10, 7, 1, TRUE, NOW(6), NOW(6)),
+('Sữa dinh dưỡng Vinamilk', 'Vinamilk Fresh Milk', 1, 2, 2, TRUE, NOW(6), NOW(6)),
+('Xà Phòng Dove', 'Dove Beauty Bar', 4, 3, 1, TRUE, NOW(6), NOW(6)),
+('Cà phê Nescafe 3in1', 'Instant Coffee 20g x 10', 2, 1, 1, TRUE, NOW(6), NOW(6)),
+('Nước ngọt Coca Cola', 'Coca Cola Classic', 3, 1, 1, TRUE, NOW(6), NOW(6)),
+('Bánh snack Oishi', 'Potato Chips ', 7, 5, 1, TRUE, NOW(6), NOW(6)),
+('Tương ớt Cholimex', 'Tương ớt chua cay ', 8, 10, 1, TRUE, NOW(6), NOW(6)),
+('Xúc xích CP', 'Xúc xích Vườn Hồng ', 9, 9, 1, TRUE, NOW(6), NOW(6)),
+('Đồ hộp Vissan', 'Thịt heo hầm ', 10, 7, 1, TRUE, NOW(6), NOW(6)),
 ('Bánh Chocopie', 'Bánh chocopie Orion hộp 12 cái', 11, 8, 1, TRUE, NOW(6), NOW(6)),
 ('Kẹo mút Chupa Chups', 'Kẹo mút hương trái cây', 12, 5, 1, TRUE, NOW(6), NOW(6)),
-('Phở sắn Vifon', 'Phở hương vị bò 80g', 13, 11, 1, TRUE, NOW(6), NOW(6)),
-('Mì Hảo Hảo', 'Mì tôm chua cay 75g', 14, 11, 1, TRUE, NOW(6), NOW(6)),
-('Mì Omachi', 'Mì khoai tây sườn hầm 80g', 15, 11, 1, TRUE, NOW(6), NOW(6)),
-('Nước tương Chin-su', 'Nước tương tỏi ớt 250ml', 15, 10, 1, TRUE, NOW(6), NOW(6)),
-('Sữa chua TH True Milk', 'Sữa chua nha đam 100g', 16, 2, 2, TRUE, NOW(6), NOW(6)),
-('Sữa tươi TH True Milk', 'Sữa tươi ít đường 1L', 16, 2, 2, TRUE, NOW(6), NOW(6)),
-('Snack Lays', 'Snack khoai tây tự nhiên 50g', 17, 5, 1, TRUE, NOW(6), NOW(6)),
-('Trà Ô Long TEA+ Plus', 'Trà Ô Long giảm béo 455ml', 17, 1, 1, TRUE, NOW(6), NOW(6)),
-('Hạt nêm Knorr', 'Hạt nêm thịt thăn xương ống 400g', 18, 10, 1, TRUE, NOW(6), NOW(6)),
-('Dầu hào Maggi', 'Dầu hào tự nhiên nấm hương 350g', 19, 10, 1, TRUE, NOW(6), NOW(6));
+('Phở sắn Vifon', 'Phở hương vị bò ', 13, 11, 1, TRUE, NOW(6), NOW(6)),
+('Mì Hảo Hảo', 'Mì tôm chua cay ', 14, 11, 1, TRUE, NOW(6), NOW(6)),
+('Mì Omachi', 'Mì khoai tây sườn hầm ', 15, 11, 1, TRUE, NOW(6), NOW(6)),
+('Nước tương Chin-su', 'Nước tương tỏi ớt ', 15, 10, 1, TRUE, NOW(6), NOW(6)),
+('Sữa chua TH True Milk', 'Sữa chua nha đam ', 16, 2, 2, TRUE, NOW(6), NOW(6)),
+('Sữa tươi TH True Milk', 'Sữa tươi ít đường ', 16, 2, 2, TRUE, NOW(6), NOW(6)),
+('Snack Lays', 'Snack khoai tây tự nhiên ', 17, 5, 1, TRUE, NOW(6), NOW(6)),
+('Trà Ô Long TEA+ Plus', 'Trà Ô Long giảm béo ', 17, 1, 1, TRUE, NOW(6), NOW(6)),
+('Hạt nêm Knorr', 'Hạt nêm thịt thăn xương ống ', 18, 10, 1, TRUE, NOW(6), NOW(6)),
+('Dầu hào Maggi', 'Dầu hào tự nhiên nấm hương ', 19, 10, 1, TRUE, NOW(6), NOW(6)),
+('Bia Heineken Silver', 'Bia Heineken Silver lon ', 23, 1, 1, TRUE, NOW(6), NOW(6)),
+('Bia Tiger Bạc', 'Bia Tiger Crystal lon ', 24, 1, 1, TRUE, NOW(6), NOW(6)),
+('Nước mắm Nam Ngư', 'Nước mắm Nam Ngư chai ', 14, 10, 1, TRUE, NOW(6), NOW(6)),
+('Sữa đặc Ông Thọ', 'Sữa đặc có đường Ông Thọ đỏ lon ', 1, 2, 2, TRUE, NOW(6), NOW(6)),
+('Dầu ăn Tường An', 'Dầu ăn thực vật Tường An chai', 25, 10, 1, TRUE, NOW(6), NOW(6)),
+('Bột giặt OMO', 'Bột giặt OMO hệ bọt thông minh ', 21, 4, 1, TRUE, NOW(6), NOW(6));
 
 -- 8.1 UNITS
 INSERT IGNORE INTO units (code, name, material_type, symbol) VALUES
@@ -215,7 +225,11 @@ INSERT IGNORE INTO units (code, name, material_type, symbol) VALUES
 ('LOC', 'Lốc', 'SOLID', 'lốc'),
 ('THUNG', 'Thùng', 'SOLID', 'thùng'),
 ('GOI', 'Gói', 'SOLID', 'gói'),
-('CAI', 'Cái', 'SOLID', 'cái');
+('CAI', 'Cái', 'SOLID', 'cái'),
+('LON', 'Lon', 'SOLID', 'lon'),
+('CHAI', 'Chai', 'SOLID', 'chai'),
+('BICH', 'Bịch', 'SOLID', 'bich');
+
 
 -- 8.2 UNIT CONVERSIONS (Conversion between units for variants)
 -- Example: 1 carton (THUNG) = 12 boxes (HOP), 1 pack (LOC) = 4 boxes
@@ -240,11 +254,18 @@ INSERT IGNORE INTO unit_conversions (variant_id, to_unit_id, conversion_factor, 
 (12, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 135000.00, '1 thùng = 30 gói mì Hảo Hảo 75g', TRUE),
 
 -- Mì Omachi (variant 13, base unit: GOI=4): 1 THUNG = 30 GOI
-(13, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 300000.00, '1 thùng = 30 gói mì Omachi 80g', TRUE);
+(13, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 300000.00, '1 thùng = 30 gói mì Omachi 80g', TRUE),
+
+(21, (SELECT id FROM units WHERE code = 'THUNG'), 24.0000, 470000.00, '1 thùng = 24 lon Bia Heineken', TRUE),
+(22, (SELECT id FROM units WHERE code = 'THUNG'), 24.0000, 420000.00, '1 thùng = 24 lon Bia Tiger', TRUE),
+(23, (SELECT id FROM units WHERE code = 'THUNG'), 15.0000, 510000.00, '1 thùng = 15 chai Nước mắm Nam Ngư', TRUE),
+(24, (SELECT id FROM units WHERE code = 'THUNG'), 48.0000, 1180000.00, '1 thùng = 48 lon Sữa đặc Ông Thọ', TRUE),
+(25, (SELECT id FROM units WHERE code = 'THUNG'), 12.0000, 590000.00, '1 thùng = 12 chai Dầu ăn Tường An', TRUE),
+(26, (SELECT id FROM units WHERE code = 'THUNG'), 20.0000, 780000.00, '1 thùng = 20 gói Bột giặt OMO', TRUE);
 
 -- 9. PRODUCT VARIANTS
 INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active, is_base_unit, created_at, updated_at) VALUES
-(1, 'VMILK-1L', '8901234567890', 1, 25000.00, TRUE, TRUE, NOW(6), NOW(6)),
+(1, 'VMILK-220ml-BICH', '8901234567890', 1, 9333.00, TRUE, TRUE, NOW(6), NOW(6)),
 (2, 'DOVE-90G', '8901234567891', 3, 15000.00, TRUE, TRUE, NOW(6), NOW(6)),
 (3, 'NESCAFE-200G', '8901234567892', 3, 45000.00, TRUE, TRUE, NOW(6), NOW(6)),
 (4, 'COCA-330ML', '8901234567893', 2, 12000.00, TRUE, TRUE, NOW(6), NOW(6)),
@@ -263,7 +284,13 @@ INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_pri
 (17, 'LAYS-K-50G', '8901234567906', 4, 12000.00, TRUE, TRUE, NOW(6), NOW(6)),
 (18, 'TEA-PLUS-455ML', '8901234567907', 1, 10000.00, TRUE, TRUE, NOW(6), NOW(6)),
 (19, 'KNORR-T-400G', '8901234567908', 4, 30000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(20, 'MAGGI-H-350G', '8901234567909', 1, 25000.00, TRUE, TRUE, NOW(6), NOW(6));
+(20, 'MAGGI-H-350G', '8901234567909', 1, 25000.00, TRUE, TRUE, NOW(6), NOW(6)),
+(21, 'HEI-SIL-330ML', '8901234567910', 6, 20000.00, TRUE, TRUE, NOW(6), NOW(6)),
+(22, 'TIG-CRY-330ML', '8901234567911', 6, 18000.00, TRUE, TRUE, NOW(6), NOW(6)),
+(23, 'NN-500ML', '8901234567912', 7, 35000.00, TRUE, TRUE, NOW(6), NOW(6)),
+(24, 'ONGTHO-D-380G', '8901234567913', 6, 25000.00, TRUE, TRUE, NOW(6), NOW(6)),
+(25, 'TA-1L', '8901234567914', 7, 50000.00, TRUE, TRUE, NOW(6), NOW(6)),
+(26, 'OMO-800G', '8901234567915', 4, 40000.00, TRUE, TRUE, NOW(6), NOW(6));
 
 -- 10. LOCATIONS
 INSERT IGNORE INTO locations (id, name, type, zone, grid_row, grid_col, grid_level, location_code, address, capacity, status, created_at) VALUES
@@ -295,7 +322,13 @@ INSERT IGNORE INTO product_batches (variant_id, batch_number, cost_price, mfg_da
 (17, 'LA2026001', 8000.00, '2026-02-10', '2026-11-10'),
 (18, 'TP2026001', 7000.00, '2026-02-15', '2026-10-15'),
 (19, 'KN2026001', 24000.00, '2026-01-20', '2027-01-20'),
-(20, 'MG2026001', 20000.00, '2026-02-10', '2027-02-10');
+(20, 'MG2026001', 20000.00, '2026-02-10', '2027-02-10'),
+(21, 'HEI2026001', 16000.00, '2026-02-15', '2027-02-15'),
+(22, 'TIG2026001', 14000.00, '2026-02-15', '2027-02-15'),
+(23, 'NN2026001', 28000.00, '2026-02-15', '2027-02-15'),
+(24, 'OT2026001', 20000.00, '2026-02-15', '2027-02-15'),
+(25, 'TA2026001', 40000.00, '2026-02-15', '2027-02-15'),
+(26, 'OMO2026001', 32000.00, '2026-02-15', '2027-02-15');
 
 -- 11.1 INVENTORY STOCK
 INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity) VALUES
@@ -318,7 +351,13 @@ INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity)
 (17, 2, 17, 320),
 (18, 3, 18, 280),
 (19, 4, 19, 140),
-(20, 5, 20, 190);
+(20, 5, 20, 190),
+(21, 1, 21, 300),
+(22, 2, 22, 250),
+(23, 3, 23, 100),
+(24, 4, 24, 150),
+(25, 5, 25, 200),
+(26, 1, 26, 80);
 
 -- Điều chỉnh số lượng tồn kho để phản ánh trạng thái sau khi đã xác nhận phiếu kiểm kho
 -- và các giao dịch bán hàng đã ghi nhận trong stock_movements
