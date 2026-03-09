@@ -73,35 +73,84 @@ TRUNCATE TABLE advertisements;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- 1. SUPPLIERS
-INSERT INTO suppliers (name, tax_code, address, email, phone, contact_person, contract_files, contract_signed_date, contract_expiry, active, notes) VALUES
-('Vinamilk Distribution', '0100170098', '10 Tan Trao, Tan Phu Ward, District 7, HCMC', 'sales@vinamilk.com.vn', '1800-1199', 'Nguyen Van A', '["https://res.cloudinary.com/demo/sample_contract1.pdf"]', '2023-01-15', '2025-01-15', TRUE, 'Main dairy supplier with 2-year contract'),
-('Unilever Vietnam', '0300491828', '15 Le Duan Blvd, District 1, HCMC', 'contact@unilever.com.vn', '1800-5588', 'Tran Thi B', '["https://res.cloudinary.com/demo/sample_contract2.pdf", "https://res.cloudinary.com/demo/sample_contract2_annex.pdf"]', '2023-03-01', '2024-12-31', TRUE, 'Personal care and household items supplier'),
-('Nestle Vietnam', '0302127854', 'The Vista Building, 628C Hanoi Highway, HCMC', 'info@nestle.com.vn', '1900-6011', 'Le Van C', '["https://res.cloudinary.com/demo/sample_contract3.pdf"]', '2023-06-01', '2025-06-01', TRUE, 'Beverages and snacks supplier'),
-('Coca-Cola Vietnam', '0300693409', '124 Kim Ma Street, Ba Dinh, Hanoi', 'vietnam@cocacola.com', '1900-0180', 'Pham Thi D', NULL, NULL, NULL, TRUE, 'Soft drinks supplier - contract pending'),
-('Masan Consumer', '0302017440', 'Kumho Asiana Plaza, 39 Le Duan, District 1, HCMC', 'contact@masan.com.vn', '1800-9090', 'Le Van M', '["https://res.cloudinary.com/demo/masan_contract.pdf"]', '2023-08-01', '2025-08-01', TRUE, 'Masan consumer goods supplier'),
-('Heineken Vietnam', '0300847056', 'Blue Sky Tower, 1 Bach Dang, Tan Binh, HCMC', 'sales@heineken.com.vn', '1900-1111', 'Tran Heineken', '["https://res.cloudinary.com/demo/heineken_contract.pdf"]', '2023-10-01', '2025-10-01', TRUE, 'Beverages and beers supplier'),
-('KIDO Group (Tường An)', '0302266881', '138-142 Hai Ba Trung, District 1, HCMC', 'info@kido.vn', '1800-6688', 'Bui Kido', NULL, NULL, NULL, TRUE, 'Edible oils and foods supplier')
-AS new_supplier
+INSERT INTO suppliers
+(name, tax_code, address, email, phone, contact_person, contract_files, contract_signed_date, contract_expiry, active, notes)
+VALUES
+('Vinamilk Distribution', '0100170098', '10 Tan Trao, District 7, Ho Chi Minh City, Vietnam', 'sales@vinamilk.com.vn', '1800-1199', 'Nguyen Van A', NULL, '2023-01-15', '2025-01-15', TRUE, 'Main dairy supplier'),
+
+('Unilever Vietnam', '0300491828', '15 Le Duan Blvd, District 1, Ho Chi Minh City, Vietnam', 'contact@unilever.com.vn', '1800-5588', 'Tran Thi B', NULL, '2023-03-01', '2025-03-01', TRUE, 'Personal care and household products'),
+
+('Nestle Vietnam', '0302127854', 'The Vista Building, Hanoi Highway, Ho Chi Minh City, Vietnam', 'info@nestle.com.vn', '1900-6011', 'Le Van C', NULL, '2023-06-01', '2025-06-01', TRUE, 'Food and beverage supplier'),
+
+('Coca-Cola Vietnam', '0300693409', '124 Kim Ma Street, Ba Dinh, Hanoi, Vietnam', 'vietnam@cocacola.com', '1900-0180', 'Pham Thi D', NULL, '2023-07-01', '2025-07-01', TRUE, 'Soft drinks supplier'),
+
+('Masan Consumer', '0302017440', '39 Le Duan, District 1, Ho Chi Minh City, Vietnam', 'contact@masan.com.vn', '1800-9090', 'Le Van M', NULL, '2023-08-01', '2025-08-01', TRUE, 'Consumer goods supplier'),
+
+('Heineken Vietnam', '0300847056', '1 Bach Dang, Tan Binh District, Ho Chi Minh City, Vietnam', 'sales@heineken.com.vn', '1900-1111', 'Tran Van H', NULL, '2023-10-01', '2025-10-01', TRUE, 'Beer and beverages supplier'),
+
+('KIDO Group (Tuong An)', '0302266881', '138 Hai Ba Trung, District 1, Ho Chi Minh City, Vietnam', 'info@kido.vn', '1800-6688', 'Bui Van K', NULL, '2023-05-01', '2025-05-01', TRUE, 'Edible oils and foods'),
+
+('PepsiCo Vietnam', '0300811445', '182 Le Dai Hanh, District 11, Ho Chi Minh City, Vietnam', 'contact@pepsico.com.vn', '1900-1220', 'Nguyen Van P', NULL, '2023-04-01', '2025-04-01', TRUE, 'Soft drinks and snacks'),
+
+('TH Milk Distribution', '2900326335', 'Thai Hoa Town, Nghe An Province, Vietnam', 'sales@thmilk.vn', '1800-545440', 'Tran Thi T', NULL, '2023-02-01', '2025-02-01', TRUE, 'Dairy supplier'),
+
+('Acecook Vietnam', '0300808680', 'Tan Binh Industrial Park, Ho Chi Minh City, Vietnam', 'info@acecookvietnam.vn', '1900-0120', 'Le Van AC', NULL, '2023-05-01', '2025-05-01', TRUE, 'Instant noodle supplier'),
+
+('Vifon Vietnam', '0300391837', 'Tan Binh District, Ho Chi Minh City, Vietnam', 'info@vifon.com.vn', '028-3815-4364', 'Pham Van V', NULL, '2023-05-10', '2025-05-10', TRUE, 'Instant noodles and pho'),
+
+('Orion Food Vina', '3700381324', 'My Phuoc Industrial Park, Binh Duong, Vietnam', 'contact@orion.vn', '0274-355-0166', 'Kim Orion', NULL, '2023-04-01', '2025-04-01', TRUE, 'Snack supplier'),
+
+('Oishi Vietnam', '0302752277', 'VSIP Industrial Park, Binh Duong, Vietnam', 'sales@oishi.vn', '0274-378-4088', 'Nguyen Van O', NULL, '2023-04-15', '2025-04-15', TRUE, 'Snack foods'),
+
+('Cholimex Food', '0304475742', 'Vinh Loc Industrial Park, Binh Chanh, Ho Chi Minh City, Vietnam', 'info@cholimexfood.com.vn', '028-3765-2101', 'Tran Thi C', NULL, '2023-03-15', '2025-03-15', TRUE, 'Sauces and condiments'),
+
+('CP Vietnam Corporation', '3600235308', 'Bien Hoa Industrial Zone, Dong Nai, Vietnam', 'info@cp.com.vn', '0251-3836-501', 'Somchai CP', NULL, '2023-06-01', '2025-06-01', TRUE, 'Meat and food products'),
+
+('Perfetti Van Melle Vietnam', '0300588569', 'VSIP Industrial Park, Binh Duong, Vietnam', 'info@perfettivanmelle.com', '0274-376-8586', 'Marco Perfetti', NULL, '2023-06-10', '2025-06-10', TRUE, 'Candy supplier (Chupa Chups)')
 ON DUPLICATE KEY UPDATE
-name = new_supplier.name,
-address = new_supplier.address,
-email = new_supplier.email,
-phone = new_supplier.phone,
-contact_person = new_supplier.contact_person,
-contract_files = new_supplier.contract_files,
-contract_signed_date = new_supplier.contract_signed_date,
-contract_expiry = new_supplier.contract_expiry,
-active = new_supplier.active,
-notes = new_supplier.notes,
+name = VALUES(name),
+address = VALUES(address),
+email = VALUES(email),
+phone = VALUES(phone),
+contact_person = VALUES(contact_person),
+contract_files = VALUES(contract_files),
+contract_signed_date = VALUES(contract_signed_date),
+contract_expiry = VALUES(contract_expiry),
+active = VALUES(active),
+notes = VALUES(notes),
 updated_at = NOW();
 
 -- 2. BRANDS & CATEGORIES
-INSERT IGNORE INTO brands (name, supplier_id) VALUES
-('Vinamilk', 1), ('Nestle', 3), ('Coca-Cola', 4), ('P&G', NULL), ('Kinh Do', NULL), ('Oishi', NULL),
-('Cholimex', NULL), ('CP', NULL), ('Vissan', NULL), ('Orion', NULL), ('Chupa Chups', NULL), ('Vifon', NULL), ('Acecook', NULL),
-('Masan', 5), ('TH True Milk', NULL), ('Pepsico', NULL), ('Maggi', 3),
-('Dove', 2), ('Knorr', 2), ('Lifebuoy', 2), ('OMO', 2), ('Sunsilk', 2),
-('Heineken', 6), ('Tiger', 6), ('Tường An', 7);
+INSERT IGNORE INTO brands (name, country, supplier_id) VALUES
+('Vinamilk', 'Việt Nam', 1),
+('Nestle', 'Thuỵ Sĩ', 3),
+('Coca-Cola', 'Hoa Kỳ', 4),
+('P&G', 'Hoa Kỳ', 2),
+('Kinh Do', 'Việt Nam', 7),
+('Oishi', 'Philippines', 13),
+
+('Cholimex', 'Việt Nam', 14),
+('CP', 'Thái Lan', 15),
+('Vissan', 'Việt Nam', 15),
+('Orion', 'Hàn Quốc', 12),
+('Chupa Chups', 'Tây Ban Nha', 16),
+('Vifon', 'Việt Nam', 11),
+('Acecook', 'Nhật Bản', 10),
+
+('Masan', 'Việt Nam', 5),
+('TH True Milk', 'Việt Nam', 9),
+('Pepsico', 'Hoa Kỳ', 8),
+('Maggi', 'Thụy Sĩ', 3),
+
+('Dove', 'Vương Quốc Anh', 2),
+('Knorr', 'Đức', 2),
+('Lifebuoy', 'Vương Quốc Anh', 2),
+('OMO', 'Vương Quốc Anh', 2),
+('Sunsilk', 'Vương Quốc Anh', 2),
+
+('Heineken', 'Hà Lan', 6),
+('Tiger', 'Singapore', 6),
+('Tường An', 'Việt Nam', 7);
 
 INSERT IGNORE INTO categories (name) VALUES
 ('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
@@ -480,43 +529,90 @@ INSERT IGNORE INTO coupons (coupon_code, coupon_name, description, coupon_type, 
 ('FLASH50K', 'Giảm 50K Flash Sale', 'Giảm ngay 50k cho đơn từ 300k', 'FIXED_AMOUNT', 2, NULL, 50000.00, NULL, 300000.00, '2026-02-14', '2026-02-15', 500, 2, 'ACTIVE', 2, NOW(), NOW());
 
 -- 16. PRODUCT COMBOS
-INSERT IGNORE INTO product_combos (combo_code, combo_name, description, original_price, combo_price, saved_amount, discount_percent, valid_from, valid_to, is_active, status, created_by) VALUES
-('COMBO-BREAKFAST', 'Combo Sáng Năng Động', 'Sữa + Bánh mì + Nước ngọt', 60000.00, 50000.00, 10000.00, 16.67, '2026-02-01', '2026-03-31', TRUE, 'ACTIVE', 2),
-('COMBO-SNACK', 'Combo Snack Vui Vẻ', 'Snack + Nước ngọt', 20000.00, 18000.00, 2000.00, 10.00, '2026-02-14', '2026-02-28', TRUE, 'ACTIVE', 2);
+INSERT IGNORE INTO product_combos (
+  combo_code, combo_name, description, image_url,
+  original_price, combo_price, saved_amount, discount_percent,
+  valid_from, valid_to, is_active,
+  max_quantity_per_order, total_sold, stock_limit,
+  combo_type, is_featured, display_order, tags,
+  status, created_by, created_at, updated_at
+) VALUES 
 
-INSERT IGNORE INTO product_combo_items (combo_id, product_variant_id, quantity, display_order) VALUES
-(1,1,1,1),(1,3,1,2),(1,4,1,3),(2,5,2,1),(2,4,2,2);
+('CB-SNACK-1','Combo Siêu Ăn Vặt','Gói snack tổng hợp cho cuối tuần',NULL,31000,25000,6000,19.35,'2026-02-01','2026-12-31',TRUE,5,0,100,'DISCOUNT',TRUE,1,'snack,combo,hot','ACTIVE',1,NOW(),NOW()),
+
+('CB-DRINK-1','Combo Nước Giải Khát','2 lon Coca và 1 bịch Oishi',NULL,32000,28000,4000,12.50,'2026-02-01','2026-12-31',TRUE,10,0,200,'BUNDLE',FALSE,2,'drink,summer','ACTIVE',1,NOW(),NOW()),
+
+('COMBO-BREAKFAST','Combo Sáng Năng Động','Sữa + Bánh mì + Nước ngọt',NULL,60000,50000,10000,16.67,'2026-02-01','2026-03-31',TRUE,10,0,100,'BUNDLE',FALSE,3,'breakfast','ACTIVE',2,NOW(),NOW()),
+
+('COMBO-SNACK','Combo Snack Vui Vẻ','Snack + Nước ngọt',NULL,20000,18000,2000,10.00,'2026-02-14','2026-02-28',TRUE,10,0,100,'DISCOUNT',FALSE,4,'snack','ACTIVE',2,NOW(),NOW()),
+
+('CB-MILK-1','Combo Sữa Gia Đình','Sữa Vinamilk + TH Milk',NULL,60000,52000,8000,13.33,'2026-02-01','2026-12-31',TRUE,10,0,100,'BUNDLE',FALSE,5,'milk,family','ACTIVE',1,NOW(),NOW()),
+
+('CB-NOODLE-1','Combo Mì Tiết Kiệm','Mì Acecook + Mì Vifon',NULL,45000,39000,6000,13.33,'2026-02-01','2026-12-31',TRUE,10,0,150,'DISCOUNT',FALSE,6,'noodle,combo','ACTIVE',1,NOW(),NOW()),
+
+('CB-PARTY-1','Combo Party Nhỏ','Snack + Nước + Kẹo',NULL,70000,59000,11000,15.71,'2026-02-01','2026-12-31',TRUE,5,0,80,'BUNDLE',TRUE,7,'party,snack','ACTIVE',1,NOW(),NOW()),
+
+('CB-COFFEE-1','Combo Cà Phê Sáng','Cà phê + Snack',NULL,30000,26000,4000,13.33,'2026-02-01','2026-12-31',TRUE,10,0,120,'DISCOUNT',FALSE,8,'coffee,morning','ACTIVE',1,NOW(),NOW()),
+
+('CB-SUMMER-1','Combo Mùa Hè','Pepsi + Coca + Snack',NULL,50000,43000,7000,14.00,'2026-04-01','2026-08-31',TRUE,10,0,200,'SUMMER',TRUE,9,'summer,drink','ACTIVE',1,NOW(),NOW()),
+
+('CB-KIDS-1','Combo Trẻ Em','Kẹo + Snack + Sữa',NULL,35000,30000,5000,14.28,'2026-02-01','2026-12-31',TRUE,10,0,120,'BUNDLE',TRUE,10,'kids,candy','ACTIVE',1,NOW(),NOW());
+
+
+-- PRODUCT COMBO ITEMS
+INSERT IGNORE INTO product_combo_items (
+combo_id, product_variant_id, quantity, display_order, is_optional
+) VALUES
+
+-- Combo 1
+(1,5,2,1,FALSE),
+(1,17,1,2,FALSE),
+(1,10,4,3,FALSE),
+
+-- Combo 2
+(2,4,2,1,FALSE),
+(2,5,1,2,FALSE),
+
+-- Combo 3
+(3,1,1,1,FALSE),
+(3,3,1,2,FALSE),
+(3,4,1,3,FALSE),
+
+-- Combo 4
+(4,5,2,1,FALSE),
+(4,4,2,2,FALSE),
+
+-- Combo 5
+(5,1,2,1,FALSE),
+(5,2,2,2,FALSE),
+
+-- Combo 6
+(6,12,3,1,FALSE),
+(6,13,3,2,FALSE),
+
+-- Combo 7
+(7,5,2,1,FALSE),
+(7,4,2,2,FALSE),
+(7,10,3,3,FALSE),
+
+-- Combo 8
+(8,14,1,1,FALSE),
+(8,5,1,2,FALSE),
+
+-- Combo 9
+(9,4,2,1,FALSE),
+(9,18,2,2,FALSE),
+(9,5,1,3,FALSE),
+
+-- Combo 10
+(10,10,3,1,FALSE),
+(10,5,1,2,FALSE),
+(10,1,1,3,FALSE);
 
 -- 17. CASH REGISTERS
 INSERT IGNORE INTO cash_registers (register_code, register_name, store_name, location, register_type, status, device_id, current_cash, opening_balance, current_operator_id, session_start_time, total_transactions_today, created_at, updated_at) VALUES
 ('POS-001', 'Quầy 1', 'SmallTrend Store', 'Front Counter', 'MAIN', 'ACTIVE', 'DEV-POS-001', 5000000.00, 2000000.00, 3, NOW(), 0, NOW(), NOW()),
 ('POS-002', 'Quầy 2', 'SmallTrend Store', 'Express Counter', 'EXPRESS', 'ACTIVE', 'DEV-POS-002', 3000000.00, 1000000.00, NULL, NULL, 0, NOW(), NOW());
-
--- 16. PRODUCT COMBOS
-INSERT IGNORE INTO product_combos (
-  combo_code, combo_name, description, image_url, original_price, combo_price, 
-  saved_amount, discount_percent, valid_from, valid_to, is_active, 
-  max_quantity_per_order, total_sold, stock_limit, combo_type, is_featured, 
-  display_order, tags, status, created_by, created_at, updated_at
-) VALUES 
-('CB-SNACK-1', 'Combo Siêu Ăn Vặt', 'Gói snack tổng hợp cho cuối tuần', NULL, 31000.00, 25000.00, 
- 6000.00, 19.35, '2026-02-01', '2026-12-31', TRUE, 
- 5, 0, 100, 'DISCOUNT', TRUE, 1, 'snack,combo,hot', 'ACTIVE', 1, NOW(), NOW()),
-('CB-DRINK-1', 'Combo Nước Giải Khát', '2 lon Coca và 1 bịch Oishi', NULL, 32000.00, 28000.00,
- 4000.00, 12.50, '2026-02-01', '2026-12-31', TRUE,
- 10, 0, 200, 'BUNDLE', FALSE, 2, 'drink,summer', 'ACTIVE', 1, NOW(), NOW());
-
--- 17. PRODUCT COMBO ITEMS
-INSERT IGNORE INTO product_combo_items (
-  combo_id, product_variant_id, quantity, display_order, is_optional
-) VALUES
--- Combo Siêu Ăn Vặt (Combo 1): Oishi (5) x 2, Lays (17) x 1, Chupa Chups (10) x 4
-(1, 5, 2, 1, FALSE),
-(1, 17, 1, 2, FALSE),
-(1, 10, 4, 3, FALSE),
--- Combo Nước Giải Khát (Combo 2): Coca (4) x 2, Oishi (5) x 1
-(2, 4, 2, 1, FALSE),
-(2, 5, 1, 2, FALSE);
 
 -- 18. SALE ORDERS (2026)
 INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES
