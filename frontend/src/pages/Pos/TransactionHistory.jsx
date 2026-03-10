@@ -223,6 +223,20 @@ function TransactionHistory() {
 
   const uniquePayments = [...new Set(transactions.map(t => t.payment).filter(Boolean))];
 
+  // Logic phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const paginatedTransactions = filteredTransactions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset trang về 1 khi có thay đổi bộ lọc
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedDate, statusFilter, paymentFilter, sortBy]);
+
   // Tính toán thống kê
   const totalTransactions = filteredTransactions.length;
   const totalRevenue = filteredTransactions.reduce((sum, t) => {
@@ -444,8 +458,17 @@ function TransactionHistory() {
             <th style={{ padding: "12px", textAlign: "center", width: "40px" }}>
               <input
                 type="checkbox"
-                checked={filteredTransactions.length > 0 && selectedIds.length === filteredTransactions.length}
-                onChange={toggleSelectAll}
+                checked={paginatedTransactions.length > 0 && paginatedTransactions.every(t => selectedIds.includes(t.id))}
+                onChange={() => {
+                  const currentIds = paginatedTransactions.map(t => t.id);
+                  const allSelected = currentIds.every(id => selectedIds.includes(id));
+                  if (allSelected) {
+                    setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+                  } else {
+                    const newIds = currentIds.filter(id => !selectedIds.includes(id));
+                    setSelectedIds(prev => [...prev, ...newIds]);
+                  }
+                }}
                 style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#0d6efd" }}
               />
             </th>
@@ -460,14 +483,14 @@ function TransactionHistory() {
         </thead>
 
         <tbody>
-          {filteredTransactions.length === 0 ? (
+          {paginatedTransactions.length === 0 ? (
             <tr>
               <td colSpan="8" style={{ padding: "20px", textAlign: "center", color: "gray" }}>
                 {transactions.length === 0 ? "Chưa có giao dịch nào" : "Không tìm thấy giao dịch phù hợp"}
               </td>
             </tr>
           ) : (
-            filteredTransactions.map((item, index) => (
+            paginatedTransactions.map((item, index) => (
               <tr
                 key={index}
                 style={{
@@ -622,6 +645,87 @@ function TransactionHistory() {
           )}
         </tbody>
       </table>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: "20px",
+          padding: "10px 0",
+          borderTop: "1px solid #eee"
+        }}>
+          <div style={{ color: "gray", fontSize: "14px" }}>
+            Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} trong tổng số {filteredTransactions.length} giao dịch
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #ddd",
+                background: currentPage === 1 ? "#f5f5f5" : "white",
+                color: currentPage === 1 ? "#aaa" : "#333",
+                borderRadius: "6px",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer"
+              }}
+            >
+              &laquo; Trước
+            </button>
+            <div style={{ display: "flex", gap: "5px" }}>
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const pageNum = i + 1;
+                // Chỉ hiển thị vài trang xung quanh trang hiện tại
+                if (
+                  pageNum === 1 ||
+                  pageNum === totalPages ||
+                  (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      style={{
+                        padding: "8px 12px",
+                        border: "1px solid",
+                        borderColor: currentPage === pageNum ? "#0d6efd" : "#ddd",
+                        background: currentPage === pageNum ? "#0d6efd" : "white",
+                        color: currentPage === pageNum ? "white" : "#333",
+                        borderRadius: "6px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                } else if (
+                  pageNum === currentPage - 2 ||
+                  pageNum === currentPage + 2
+                ) {
+                  return <span key={pageNum} style={{ padding: "8px 4px", color: "gray" }}>...</span>;
+                }
+                return null;
+              })}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #ddd",
+                background: currentPage === totalPages ? "#f5f5f5" : "white",
+                color: currentPage === totalPages ? "#aaa" : "#333",
+                borderRadius: "6px",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer"
+              }}
+            >
+              Sau &raquo;
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal xác nhận xóa */}
       {deleteConfirm && (
