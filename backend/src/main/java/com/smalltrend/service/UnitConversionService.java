@@ -4,11 +4,15 @@ import com.smalltrend.dto.products.UnitConversionRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.ProductVariant;
+import com.smalltrend.entity.ProductBatch;
+import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.Unit;
 import com.smalltrend.entity.UnitConversion;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.UnitConversionRepository;
 import com.smalltrend.repository.UnitRepository;
+import com.smalltrend.repository.InventoryStockRepository;
+import com.smalltrend.repository.ProductBatchRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +28,8 @@ public class UnitConversionService {
         private final ProductVariantRepository productVariantRepository;
         private final UnitRepository unitRepository;
         private final ProductVariantService productVariantService;
+        private final InventoryStockRepository inventoryStockRepository;
+        private final ProductBatchRepository productBatchRepository;
 
         public List<UnitConversionResponse> getConversionsByVariantId(Integer variantId) {
                 return unitConversionRepository.findByVariantId(variantId)
@@ -99,7 +105,49 @@ public class UnitConversionService {
                 savedVariant.setBarcode(autoBarcode);
                 productVariantRepository.save(savedVariant);
 
-                // ─── 4. Trả về response kèm thông tin variant tự động tạo ─────────────
+                // ─── 4. Chia sẻ tồn kho từ variant gốc cho variant quy đổi ─────────────
+                // Lấy tất cả inventory stock của variant gốc
+                List<InventoryStock> baseStocks = inventoryStockRepository.findByVariantId(baseVariant.getId());
+                int conversionFactor = request.getConversionFactor().intValue();
+
+                if (baseStocks != null && !baseStocks.isEmpty()) {
+                        for (InventoryStock baseStock : baseStocks) {
+                                if (baseStock.getQuantity() != null && baseStock.getQuantity() > 0
+                                                && conversionFactor > 0) {
+                                        // Tính tồn kho cho đơn vị quy đổi = tồn kho gốc / hệ số
+                                        int convertedQty = baseStock.getQuantity() / conversionFactor;
+
+                                        if (convertedQty > 0) {
+                                                // Tạo batch cho variant quy đổi (kế thừa từ batch gốc)
+                                                ProductBatch packagingBatch = ProductBatch.builder()
+                                                                .variant(savedVariant)
+                                                                .batchNumber("CONV-" + savedVariant.getSku())
+                                                                .costPrice(baseStock.getBatch() != null
+                                                                                ? baseStock.getBatch().getCostPrice()
+                                                                                : null)
+                                                                .mfgDate(baseStock.getBatch() != null
+                                                                                ? baseStock.getBatch().getMfgDate()
+                                                                                : null)
+                                                                .expiryDate(baseStock.getBatch() != null
+                                                                                ? baseStock.getBatch().getExpiryDate()
+                                                                                : null)
+                                                                .build();
+                                                ProductBatch savedBatch = productBatchRepository.save(packagingBatch);
+
+                                                // Tạo inventory stock cho variant quy đổi
+                                                InventoryStock packagingStock = InventoryStock.builder()
+                                                                .variant(savedVariant)
+                                                                .batch(savedBatch)
+                                                                .location(baseStock.getLocation())
+                                                                .quantity(convertedQty)
+                                                                .build();
+                                                inventoryStockRepository.save(packagingStock);
+                                        }
+                                }
+                        }
+                }
+
+                // ─── 5. Trả về response kèm thông tin variant tự động tạo ─────────────
                 UnitConversionResponse response = mapToResponse(savedConversion);
                 response.setAutoCreatedVariantId(savedVariant.getId());
                 response.setAutoCreatedSku(savedVariant.getSku());

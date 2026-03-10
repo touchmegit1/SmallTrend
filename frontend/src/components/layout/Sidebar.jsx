@@ -67,7 +67,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         { label: "Danh mục & Thương hiệu", path: "/products/categories" },
         { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
         { label: "Danh sách sản phẩm", path: "/products" },
-        { label: "Thêm sản phẩm", path: "/products/addproduct" },
         { label: "Thiết lập giá", path: "/products/price" },
         { label: "Combo sản phẩm", path: "/products/combo" },
       ],
@@ -135,7 +134,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
             </h1>
           )}
         </div>
-        
+
         {/* Collapse Button */}
         <button
           type="button"

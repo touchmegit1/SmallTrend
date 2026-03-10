@@ -18,6 +18,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     barcode: "",
     plu_code: "",
     unit_id: "",
+    cost_price: "",
     sell_price: "",
     is_active: true,
   });
@@ -40,8 +41,10 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         barcode: variant.barcode || "",
         plu_code: variant.plu_code || "",
         unit_id: variant.unit_id ? String(variant.unit_id) : "",
+        cost_price:
+          variant.costPrice != null ? String(variant.costPrice) : variant.cost_price != null ? String(variant.cost_price) : "",
         sell_price:
-          variant.sell_price != null ? String(variant.sell_price) : "",
+          variant.sellPrice != null ? String(variant.sellPrice) : variant.sell_price != null ? String(variant.sell_price) : "",
         is_active:
           parentProduct?.is_active === false
             ? false
@@ -237,11 +240,19 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         barcode: formData.barcode || null,
         pluCode: formData.plu_code || null,
         unitId: parseInt(formData.unit_id),
-        sellPrice: parseFloat(formData.sell_price),
+        costPrice: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        sellPrice: (parentProduct?.tax_rate_value || variant?.taxRate)
+          ? Math.round(parseFloat(formData.sell_price) * (1 + (parentProduct?.tax_rate_value || variant?.taxRate) / 100))
+          : parseFloat(formData.sell_price),
         imageUrl: imageUrl,
         isActive: formData.is_active,
         attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
       });
+
+      const taxRate = parentProduct?.tax_rate_value || variant?.taxRate || 0;
+      const finalSellPrice = taxRate > 0
+        ? Math.round(parseFloat(formData.sell_price) * (1 + taxRate / 100))
+        : parseFloat(formData.sell_price);
 
       onSave({
         ...variant,
@@ -249,7 +260,9 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         barcode: formData.barcode,
         plu_code: formData.plu_code,
         unit_id: parseInt(formData.unit_id),
-        sell_price: parseFloat(formData.sell_price),
+        costPrice: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        sellPrice: finalSellPrice,
+        sell_price: finalSellPrice,
         image_url: imageUrl,
         is_active: formData.is_active,
         attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
@@ -370,14 +383,14 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
 
               <div className="border-t border-gray-100 pt-4" />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <Label>
                     Đơn vị <span className="text-red-600">*</span>
                   </Label>
                   <select
                     name="unit_id"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     value={formData.unit_id}
                     onChange={handleChange}
                     required
@@ -391,22 +404,47 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   </select>
                 </div>
 
-              </div>
+                <div>
+                  <Label>
+                    Giá nhập
+                  </Label>
+                  <Input
+                    type="text"
+                    className="text-md bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
+                    placeholder="0"
+                    name="cost_price"
+                    value={formData.cost_price || "0"}
+                    readOnly
+                    disabled
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1 italic">Sẽ tự động cập nhật từ phiếu nhập kho</p>
+                </div>
 
-              <div>
-                <Label>
-                  Giá bán <span className="text-red-600">*</span>
-                </Label>
-                <Input
-                  type="number"
-                  step="any"
-                  className="text-md bg-gray-200 border border-gray-200 rounded-lg"
-                  placeholder="93000"
-                  name="sell_price"
-                  value={formData.sell_price}
-                  onChange={handleChange}
-                  required
-                />
+                <div>
+                  <Label>
+                    Giá bán <span className="text-red-600">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    className="text-md bg-white border border-gray-200 rounded-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="85000"
+                    name="sell_price"
+                    value={formData.sell_price}
+                    onChange={handleChange}
+                    required
+                  />
+                  {formData.sell_price && !isNaN(formData.sell_price) && (parentProduct?.tax_rate_value > 0 || variant?.taxRate > 0) ? (
+                    <p className="text-xs text-emerald-700 mt-1.5 font-medium flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1.5 rounded-lg w-max border border-emerald-100">
+                      Giá bán cho khách (+ thuế {parentProduct?.tax_rate_value || variant?.taxRate}%):
+                      <span className="font-bold text-sm">
+                        {Math.round(parseFloat(formData.sell_price) * (1 + (parentProduct?.tax_rate_value || variant?.taxRate) / 100)).toLocaleString('vi-VN')} đ
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 mt-1 ml-1">Nhập giá bán trước thuế, hệ thống sẽ tự cộng thuế</p>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -593,6 +631,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
               <CardContent>
                 <UnitConversionSection
                   variant={variant}
+                  product={parentProduct}
                   units={units}
                   onSuccess={() => { /* nothing to do, state is handled internally */ }}
                 />

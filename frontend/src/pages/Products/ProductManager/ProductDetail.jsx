@@ -683,6 +683,7 @@ function ProductDetail() {
                           <div className="px-6 py-4 animate-in slide-in-from-top-2 duration-200 border-b border-gray-100">
                             <UnitConversionSection
                               variant={variant}
+                              product={product}
                               units={units}
                               onSuccess={() => fetchVariants()}
                             />

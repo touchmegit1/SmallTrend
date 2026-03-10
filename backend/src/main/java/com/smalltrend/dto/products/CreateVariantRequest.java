@@ -10,6 +10,7 @@ public class CreateVariantRequest {
     private String pluCode;
     private Integer unitId;
 
+    private BigDecimal costPrice;
     private BigDecimal sellPrice;
     private String imageUrl;
     private Boolean isActive;
