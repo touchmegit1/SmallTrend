@@ -5,26 +5,20 @@ import com.smalltrend.dto.products.ProductResponse;
 import com.smalltrend.service.products.ProductService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
- * Test class cho ProductController
- * Kiểm tra các endpoint API liên quan đến sản phẩm
+ * Unit Test for ProductController
  */
 @ExtendWith(MockitoExtension.class)
 class ProductControllerTest {
@@ -35,204 +29,230 @@ class ProductControllerTest {
     private ProductController productController;
 
     @BeforeEach
-    void setUp() {
+    void setup() {
         productController = new ProductController(productService, null, null, null);
     }
 
-    // ========== GET ALL TESTS ==========
+    // ================= GET ALL =================
     @Test
-    void getAll_shouldReturnOk() {
-        List<ProductResponse> expected = List.of(
+    void getAll_shouldReturnProductList() {
+
+        // Arrange
+        List<ProductResponse> products = List.of(
                 ProductResponse.builder()
                         .id(1)
                         .name("Coca-Cola 330ml")
                         .brand_name("Coca-Cola")
                         .category_name("Đồ uống")
                         .is_active(true)
-                        .build()
-        );
-        when(productService.getAll()).thenReturn(expected);
+                        .build());
 
+        when(productService.getAll()).thenReturn(products);
+
+        // Act
         ResponseEntity<List<ProductResponse>> response = productController.getAll();
 
+        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(expected, response.getBody());
+        assertEquals(products, response.getBody());
         verify(productService).getAll();
     }
 
-    // ========== GET BY ID TESTS ==========
+    // ================= GET BY ID =================
     @Test
-    void getById_shouldReturnOk_whenProductExists() {
-        ProductResponse expected = ProductResponse.builder()
+    @DisplayName("Get product by id - success")
+    void getById_shouldReturnProduct_whenExists() {
+
+        ProductResponse product = ProductResponse.builder()
                 .id(5)
-                .name("Sữa Vinamilk 1L")
+                .name("Sữa Vinamilk")
                 .brand_name("Vinamilk")
                 .category_name("Sữa")
-                .is_active(true)
                 .variant_count(2)
+                .is_active(true)
                 .build();
-        when(productService.getById(5)).thenReturn(expected);
+
+        when(productService.getById(5)).thenReturn(product);
 
         ResponseEntity<ProductResponse> response = productController.getById(5);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(expected, response.getBody());
+        assertEquals(product, response.getBody());
+
         verify(productService).getById(5);
     }
 
     @Test
-    void getById_shouldThrow_whenProductNotFound() {
-        // Kiểm tra khi sản phẩm không tồn tại
-        when(productService.getById(999)).thenThrow(new RuntimeException("Product not found with id: 999"));
+    void getById_shouldThrowException_whenProductNotFound() {
 
-        RuntimeException ex = org.junit.jupiter.api.Assertions.assertThrows(
+        when(productService.getById(999))
+                .thenThrow(new RuntimeException("Product not found with id: 999"));
+
+        RuntimeException exception = assertThrows(
                 RuntimeException.class,
-                () -> productController.getById(999));
+                () -> productController.getById(999)
+        );
 
-        assertEquals("Product not found with id: 999", ex.getMessage());
+        assertEquals("Product not found with id: 999", exception.getMessage());
     }
 
-    // ========== CREATE TESTS ==========
+    // ================= CREATE =================
     @Test
-    void create_shouldReturnOk_whenValid() {
+    void create_shouldCreateProductSuccessfully() {
+
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Nước cam Minute Maid")
                 .description("Nước cam tươi")
-                .categoryId(2)
                 .brandId(3)
+                .categoryId(2)
                 .isActive(true)
                 .build();
-        ProductResponse expected = ProductResponse.builder()
+
+        ProductResponse responseData = ProductResponse.builder()
                 .id(10)
                 .name("Nước cam Minute Maid")
                 .brand_id(3)
                 .category_id(2)
                 .is_active(true)
                 .build();
-        when(productService.create(request)).thenReturn(expected);
+
+        when(productService.create(request)).thenReturn(responseData);
 
         ResponseEntity<ProductResponse> response = productController.create(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(expected, response.getBody());
+        assertEquals(responseData, response.getBody());
         verify(productService).create(request);
     }
 
     @Test
-    void create_shouldThrow_whenCategoryNotFound() {
-        // Kiểm tra khi danh mục không tồn tại
+    void create_shouldThrowException_whenCategoryNotFound() {
+
         CreateProductRequest request = CreateProductRequest.builder()
-                .name("Product")
+                .name("Test Product")
                 .categoryId(999)
                 .build();
+
         when(productService.create(request))
                 .thenThrow(new RuntimeException("Category not found with id: 999"));
 
-        RuntimeException ex = org.junit.jupiter.api.Assertions.assertThrows(
+        RuntimeException exception = assertThrows(
                 RuntimeException.class,
                 () -> productController.create(request));
 
-        assertEquals("Category not found with id: 999", ex.getMessage());
+        assertEquals("Category not found with id: 999", exception.getMessage());
     }
 
     @Test
-    void create_shouldThrow_whenBrandNotFound() {
-        // Kiểm tra khi thương hiệu không tồn tại
+    void create_shouldThrowException_whenBrandNotFound() {
+
         CreateProductRequest request = CreateProductRequest.builder()
-                .name("Product")
+                .name("Test Product")
                 .brandId(999)
                 .build();
+
         when(productService.create(request))
                 .thenThrow(new RuntimeException("Brand not found with id: 999"));
 
-        RuntimeException ex = org.junit.jupiter.api.Assertions.assertThrows(
+        RuntimeException exception = assertThrows(
                 RuntimeException.class,
                 () -> productController.create(request));
 
-        assertEquals("Brand not found with id: 999", ex.getMessage());
+        assertEquals("Brand not found with id: 999", exception.getMessage());
     }
 
-    // ========== UPDATE TESTS ==========
+    // ================= UPDATE =================
     @Test
-    void update_shouldReturnOk_whenValid() {
+    void update_shouldUpdateProductSuccessfully() {
+
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Coca-Cola 500ml")
-                .description("Cập nhật")
+                .description("Update")
                 .categoryId(2)
                 .isActive(true)
                 .build();
-        ProductResponse expected = ProductResponse.builder()
+
+        ProductResponse responseData = ProductResponse.builder()
                 .id(1)
                 .name("Coca-Cola 500ml")
                 .category_id(2)
                 .is_active(true)
                 .build();
-        when(productService.update(1, request)).thenReturn(expected);
+
+        when(productService.update(1, request)).thenReturn(responseData);
 
         ResponseEntity<ProductResponse> response = productController.update(1, request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(expected, response.getBody());
+        assertEquals(responseData, response.getBody());
+
         verify(productService).update(1, request);
     }
 
     @Test
-    void update_shouldThrow_whenProductNotFound() {
-        // Kiểm tra khi sản phẩm không tồn tại
-        CreateProductRequest request = CreateProductRequest.builder().name("Test").build();
+    void update_shouldThrowException_whenProductNotFound() {
+
+        CreateProductRequest request = CreateProductRequest.builder()
+                .name("Test")
+                .build();
+
         when(productService.update(999, request))
                 .thenThrow(new RuntimeException("Product not found with id: 999"));
 
-        RuntimeException ex = org.junit.jupiter.api.Assertions.assertThrows(
+        RuntimeException exception = assertThrows(
                 RuntimeException.class,
                 () -> productController.update(999, request));
 
-        assertEquals("Product not found with id: 999", ex.getMessage());
+        assertEquals("Product not found with id: 999", exception.getMessage());
     }
 
-    // ========== TOGGLE STATUS TESTS ==========
+    // ================= TOGGLE STATUS =================
     @Test
-    void toggleStatus_shouldReturnOk() {
+    void toggleStatus_shouldToggleProductStatus() {
+
         ResponseEntity<String> response = productController.toggleStatus(5);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Product status toggled", response.getBody());
+
         verify(productService).toggleStatus(5);
     }
 
-    // ========== DELETE TESTS ==========
+    // ================= DELETE =================
     @Test
-    void delete_shouldReturnOk_whenValid() {
+    void delete_shouldDeleteProductSuccessfully() {
+
         ResponseEntity<String> response = productController.delete(10);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Product deleted", response.getBody());
+
         verify(productService).delete(10);
     }
 
     @Test
-    void delete_shouldThrow_whenProductNotFound() {
-        // Kiểm tra khi sản phẩm không tồn tại
-        when(productService.delete(999))
-                .thenThrow(new RuntimeException("Product not found with id: 999"));
+    void delete_shouldThrowException_whenProductNotFound() {
 
-        RuntimeException ex = org.junit.jupiter.api.Assertions.assertThrows(
+        doThrow(new RuntimeException("Product not found with id: 999"))
+                .when(productService).delete(999);
+
+        RuntimeException exception = assertThrows(
                 RuntimeException.class,
                 () -> productController.delete(999));
 
-        assertEquals("Product not found with id: 999", ex.getMessage());
+        assertEquals("Product not found with id: 999", exception.getMessage());
     }
 
     @Test
-    void delete_shouldThrow_whenProductTooOld() {
-        // Kiểm tra khi sản phẩm được tạo quá 2 phút
-        when(productService.delete(5))
-                .thenThrow(new RuntimeException("Sản phẩm đã tạo quá 2 phút, bạn không thể xoá sản phẩm này nữa!"));
+    void delete_shouldThrowException_whenProductTooOld() {
 
-        RuntimeException ex = org.junit.jupiter.api.Assertions.assertThrows(
+        doThrow(new RuntimeException("Sản phẩm đã tạo quá 2 phút, bạn không thể xoá sản phẩm này nữa!"))
+                .when(productService).delete(5);
+
+        RuntimeException exception = assertThrows(
                 RuntimeException.class,
                 () -> productController.delete(5));
 
-        assertEquals("Sản phẩm đã tạo quá 2 phút, bạn không thể xoá sản phẩm này nữa!", ex.getMessage());
+        assertEquals("Sản phẩm đã tạo quá 2 phút, bạn không thể xoá sản phẩm này nữa!", exception.getMessage());
     }
 }

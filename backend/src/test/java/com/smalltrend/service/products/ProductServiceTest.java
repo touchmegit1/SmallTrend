@@ -357,11 +357,11 @@ class ProductServiceTest {
                 .build();
     }
 
-    private ProductVariant buildVariant(Integer id, String name, Boolean isActive) {
+    private ProductVariant buildVariant(Integer id, String sku, Boolean isActive) {
         return ProductVariant.builder()
                 .id(id)
-                .name(name)
-                .active(isActive)
+                .sku(sku)
+                .isActive(isActive)
                 .build();
     }
 }
