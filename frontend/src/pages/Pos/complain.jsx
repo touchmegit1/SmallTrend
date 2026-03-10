@@ -85,6 +85,7 @@ export default function CustomerComplaintSystem() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [loadingCustomer, setLoadingCustomer] = useState(false);
+  const [customerNotFound, setCustomerNotFound] = useState(false);
 
   const [form, setForm] = useState({
     ticketType: 'REFUND',
@@ -176,6 +177,7 @@ export default function CustomerComplaintSystem() {
     setSelectedVariant(null);
     setCustomerPhone('');
     setCustomerName('');
+    setCustomerNotFound(false);
   };
 
   const openCreate = () => {
@@ -185,10 +187,23 @@ export default function CustomerComplaintSystem() {
 
   const openEdit = (ticket) => {
     setEditingTicket(ticket);
+
+    // Extract customer info from description
+    let cleanDesc = ticket.description || '';
+    let extractedPhone = '';
+    let extractedName = '';
+
+    const match = cleanDesc.match(/\[Khách hàng: (.*?) - SĐT: (.*?)\]\n?/);
+    if (match) {
+      extractedName = match[1] === '—' ? '' : match[1];
+      extractedPhone = match[2] === '—' ? '' : match[2];
+      cleanDesc = cleanDesc.replace(match[0], '');
+    }
+
     setForm({
       ticketType: ticket.ticketType || 'ORDER',
       title: ticket.title || '',
-      description: ticket.description || '',
+      description: cleanDesc,
       priority: ticket.priority || 'NORMAL',
       relatedEntityType: ticket.relatedEntityType || '',
       relatedEntityId: ticket.relatedEntityId || '',
@@ -203,18 +218,29 @@ export default function CustomerComplaintSystem() {
     setSkuInput('');
     setSkuVariants([]);
     setSelectedVariant(null);
-    setCustomerPhone(ticket.customerPhone || '');
-    setCustomerName(ticket.customerName || '');
+    setCustomerPhone(extractedPhone);
+    setCustomerName(extractedName);
+    setCustomerNotFound(false);
     setShowModal(true);
   };
 
   const handleSave = async () => {
     try {
+      if (customerPhone && !/^\d{10,11}$/.test(customerPhone.trim())) {
+        alert('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).');
+        return;
+      }
       setSaving(true);
-      if (editingTicket) {
-        if (request.resolution) {
-          ticket.resolution = request.resolution;
+
+      if (customerPhone && customerNotFound && customerName) {
+        try {
+          await customerService.createCustomer(customerName, customerPhone.trim());
+        } catch (e) {
+          console.error('Lỗi khi lưu khách hàng mới:', e);
         }
+      }
+
+      if (editingTicket) {
 
         // Add customer details to description if provided
         let desc = form.description;
@@ -472,7 +498,7 @@ export default function CustomerComplaintSystem() {
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Tiêu đề</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Ưu tiên</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Trạng thái</th>
-                      <th className="text-left px-5 py-3 font-semibold text-gray-600">Ngày tạo</th>
+                      <th className="text-left px-5 py-3 font-semibold text-gray-600">Ngày tạo đơn</th>
                       <th className="text-center px-5 py-3 font-semibold text-gray-600">Hành động</th>
                     </tr>
                   </thead>
@@ -627,27 +653,37 @@ export default function CustomerComplaintSystem() {
                   <input
                     type="text"
                     value={customerPhone}
-                    onChange={e => setCustomerPhone(e.target.value)}
-                    placeholder="Nhập số điện thoại..."
+                    onChange={e => {
+                      setCustomerPhone(e.target.value);
+                      if (customerNotFound) setCustomerNotFound(false);
+                    }}
+                    placeholder="Nhập số điện thoại (10-11 số)..."
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
                     type="button"
-                    title="Tính năng này cần backend cập nhật"
                     className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50"
                     onClick={async () => {
                       if (!customerPhone.trim()) return;
+                      const phone = customerPhone.trim();
+                      if (!/^\d{10,11}$/.test(phone)) {
+                        alert('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).');
+                        return;
+                      }
                       try {
                         setLoadingCustomer(true);
-                        const customer = await customerService.searchByPhone(customerPhone.trim());
+                        setCustomerNotFound(false);
+                        const customer = await customerService.searchByPhone(phone);
                         if (customer && customer.name) {
                           setCustomerName(customer.name);
                         } else {
-                          setCustomerName('Khách lạ');
+                          setCustomerName('');
+                          setCustomerNotFound(true);
                         }
                       } catch (err) {
                         console.error(err);
-                        setCustomerName('Khách lạ');
+                        setCustomerName('');
+                        setCustomerNotFound(true);
                       } finally {
                         setLoadingCustomer(false);
                       }
@@ -656,10 +692,22 @@ export default function CustomerComplaintSystem() {
                     {loadingCustomer ? 'Đang tải...' : 'Tìm khách'}
                   </button>
                 </div>
-                {customerName && (
+                {customerName && !customerNotFound && (
                   <p className="mt-1.5 text-sm text-blue-700 bg-blue-50 p-2 rounded-lg border border-blue-100 flex items-center gap-2">
                     <UserCircle size={16} /> <b>{customerName}</b>
                   </p>
+                )}
+                {customerNotFound && (
+                  <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <p className="font-medium mb-1.5">Chưa có thông tin. Tạo khách hàng mới?</p>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={e => setCustomerName(e.target.value)}
+                      placeholder="Nhập tên khách hàng mới..."
+                      className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                    />
+                  </div>
                 )}
               </div>
 
