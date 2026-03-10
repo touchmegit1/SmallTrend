@@ -97,23 +97,28 @@ export function usePurchaseOrder(initialId = null) {
           setOrder(mappedOrder);
 
           if (existingOrder.items) {
-            const mappedItems = existingOrder.items.map((item) => ({
-              ...item,
-              _key: Math.random().toString(36).substr(2, 9),
-              product_id: item.productId || item.product_id,
-              unit_price: item.unitCost || item.unit_cost,
-              total: item.totalCost || item.total_cost,
-              quantity: item.quantity,
-              received_quantity:
-                item.receivedQuantity ?? item.received_quantity ?? 0,
-              expiry_date: item.expiryDate || item.expiry_date || "",
-              name:
-                item.name ||
-                results[0].find(
-                  (p) => p.id === (item.productId || item.product_id),
-                )?.name ||
-                "Sản phẩm",
-            }));
+            const mappedItems = existingOrder.items.map((item) => {
+              const variantId = item.variantId || item.variant_id;
+              const productId = item.productId || item.product_id;
+              const foundProduct = results[0].find((p) => {
+                const pVariantId = p.variantId || p.variant_id || p.id;
+                const pProductId = p.productId || p.product_id;
+                return (variantId && pVariantId === variantId) || (productId && pProductId === productId) || (p.id === productId);
+              });
+              return {
+                ...item,
+                _key: Math.random().toString(36).substr(2, 9),
+                product_id: productId,
+                variant_id: variantId,
+                unit_price: item.unitCost || item.unit_cost,
+                total: item.totalCost || item.total_cost,
+                quantity: item.quantity,
+                received_quantity: item.receivedQuantity ?? item.received_quantity ?? 0,
+                expiry_date: item.expiryDate || item.expiry_date || "",
+                name: item.name || foundProduct?.name || "Sản phẩm",
+                unit: item.unit || foundProduct?.unit || "—",
+              };
+            });
             setItems(mappedItems);
 
             // Khởi tạo receiptItems cho kiểm kê
