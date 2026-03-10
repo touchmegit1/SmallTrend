@@ -1,0 +1,20 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="100" fill="#4F46E5"/>
+  
+  <!-- Store/Shopping bag shape -->
+  <g transform="translate(100, 100)">
+    <!-- Bag body -->
+    <path d="M -45 -20 L -45 35 Q -45 45 -35 45 L 35 45 Q 45 45 45 35 L 45 -20 Z" fill="white" stroke="none"/>
+    
+    <!-- Bag handles -->
+    <path d="M -30 -20 Q -30 -40 0 -40 Q 30 -40 30 -20" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/>
+    
+    <!-- Decorative lines (shelves/store concept) -->
+    <line x1="-35" y1="0" x2="35" y2="0" stroke="#4F46E5" stroke-width="3"/>
+    <line x1="-35" y1="18" x2="35" y2="18" stroke="#4F46E5" stroke-width="3"/>
+  </g>
+  
+  <!-- ST text overlay (subtle) -->
+  <text x="100" y="130" font-size="32" font-weight="bold" text-anchor="middle" fill="#4F46E5" font-family="Arial, sans-serif">ST</text>
+</svg>
