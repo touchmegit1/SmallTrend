@@ -493,7 +493,7 @@ export default function POS() {
           customerName: transaction.customer?.name || null,
           paymentMethod: transaction.payment,
           items: transaction.cart.map(item => ({
-            productId: item.productId || item.id,
+            productId: (typeof (item.productId || item.id) === 'string' && String(item.productId || item.id).startsWith('combo_')) ? null : (item.productId || item.id),
             productName: item.name,
             quantity: item.qty,
             price: item.price,
@@ -501,6 +501,9 @@ export default function POS() {
           }))
         };
         await api.post('/pos/purchase-history', request);
+
+        // Đồng bộ lại danh sách sản phẩm để cập nhật tồn kho
+        loadProducts();
       } catch (error) {
         console.error('Error saving purchase history:', error);
       }
