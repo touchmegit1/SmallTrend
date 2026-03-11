@@ -67,11 +67,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       path: "/products",
       children: [
         { label: "Danh sách sản phẩm", path: "/products" },
-<<<<<<< HEAD
-=======
         { label: "Thêm sản phẩm", path: "/products/addproduct" },
         { label: "Danh mục & Brand", path: "/products/categories" },
->>>>>>> dev
         { label: "Thiết lập giá", path: "/products/price" },
         { label: "Combo sản phẩm", path: "/products/combo" },
       ],
