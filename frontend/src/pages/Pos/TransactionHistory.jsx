@@ -72,22 +72,30 @@ function TransactionHistory() {
     let orders = JSON.parse(localStorage.getItem('posOrders') || '[{ "id": 1, "cart": [], "customer": null, "usePoints": false }]');
     let activeId = parseInt(localStorage.getItem('activeOrderId') || '1');
 
-    // Xem đơn hàng hiện tại có đang trống không
-    const activeOrderIndex = orders.findIndex(o => o.id === activeId);
-    const isActiveEmpty = activeOrderIndex !== -1 && (!orders[activeOrderIndex].cart || orders[activeOrderIndex].cart.length === 0);
-
     // Chuẩn bị dữ liệu giỏ hàng và khách hàng từ transaction
     const cartToRestore = transaction.cart || transaction.items || [];
     const customerToRestore = transaction.customer || null;
     const usePointsToRestore = transaction.usePoints || false;
 
-    if (isActiveEmpty) {
+    // Xem tab gốc của đơn treo còn tồn tại không
+    const transactionOrderId = transaction.orderId ? parseInt(transaction.orderId.replace('ORDER_', '')) : null;
+    const targetOrderIndex = transactionOrderId ? orders.findIndex(o => o.id === transactionOrderId) : -1;
+
+    // Xem đơn hàng hiện tại có đang trống không
+    const activeOrderIndex = orders.findIndex(o => o.id === activeId);
+    const isActiveEmpty = activeOrderIndex !== -1 && (!orders[activeOrderIndex].cart || orders[activeOrderIndex].cart.length === 0);
+
+    if (targetOrderIndex !== -1) {
+      // Tab gốc vẫn còn, update vào tab đó
+      orders[targetOrderIndex].cart = cartToRestore;
+      orders[targetOrderIndex].customer = customerToRestore;
+      orders[targetOrderIndex].usePoints = usePointsToRestore;
+      activeId = transactionOrderId;
+    } else if (isActiveEmpty) {
       // Ghi đè lên đơn hiện tại đang trống
       orders[activeOrderIndex].cart = cartToRestore;
       orders[activeOrderIndex].customer = customerToRestore;
       orders[activeOrderIndex].usePoints = usePointsToRestore;
-
-      // Không thay đổi activeId vì đang dùng đơn hiện tại
     } else {
       // Tạo một tab đơn hàng mới
       const newId = Math.max(...orders.map(o => o.id), 0) + 1;
@@ -409,16 +417,21 @@ function TransactionHistory() {
                 setSortBy("time_desc");
               }}
               style={{
-                padding: "8px 14px",
+                padding: "8px",
                 borderRadius: "8px",
                 border: "1px solid #dc3545",
-                background: "#dc3545",
-                color: "white",
+                background: "#fff",
+                color: "#dc3545",
                 cursor: "pointer",
-                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "36px",
+                height: "36px"
               }}
+              title="Xóa lọc"
             >
-              Xóa lọc
+              <span style={{ fontSize: "16px", fontWeight: "bold" }}>✕</span>
             </button>
           )}
 

@@ -519,11 +519,15 @@ export default function POS() {
     setSelectedTransaction(transaction);
     setShowInvoice(true);
 
-    setOrders(orders.map(order =>
-      order.id === activeOrderId
-        ? { ...order, cart: [], customer: null, usePoints: false }
-        : order
-    ));
+    if (orders.length > 1) {
+      const newOrders = orders.filter(order => order.id !== activeOrderId).sort((a, b) => a.id - b.id);
+      setOrders(newOrders);
+      setActiveOrderId(newOrders[0].id);
+    } else {
+      const newId = activeOrderId + 1;
+      setOrders([{ id: newId, cart: [], customer: null, usePoints: false }]);
+      setActiveOrderId(newId);
+    }
   };
 
   const handlePrintCurrentInvoice = () => {
