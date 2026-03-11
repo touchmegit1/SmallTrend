@@ -8,20 +8,27 @@ import PublicRoute from "./components/common/PublicRoute";
 import UserManagement from "./pages/HR/UserManagement";
 import WorkforceManagement from "./pages/HR/WorkforceManagement";
 import ShiftManagement from "./pages/HR/ShiftManagement";
+import ShiftCalendarPage from "./pages/HR/ShiftCalendarPage";
 import MyPayrollSummary from "./pages/HR/MyPayrollSummary";
 import ShiftTicketCenter from "./pages/HR/ShiftTicketCenter";
-import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
-import InventoryCountList from "./pages/Inventory/InventoryCountList";
-import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
-import LocationManagement from "./pages/Inventory/LocationManagement";
-import DisposalList from "./pages/Inventory/DisposalList";
-import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import InventoryDashboard from "./pages/Inventory/Dashboard/InventoryDashboard";
+import InventoryCountList from "./pages/Inventory/Count/InventoryCountList";
+import InventoryCountDetail from "./pages/Inventory/Count/InventoryCountDetail";
+import LocationManagement from "./pages/Inventory/Location/LocationManagement";
 import PosComplain from "./pages/Pos/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
 import ProductList from "./pages/Products/ProductManager/ProductList";
+import CRMreport from "./pages/CRM/report";
+import AttendanceManagement from "./pages/HR/AttendanceManagement";
+import EmployeeList from "./pages/HR/EmployeeList";
+import PayrollManagement from "./pages/HR/PayrollManagement";
+import DisposalDetail from "./pages/Inventory/Disposal/DisposalDetail";
+import DisposalList from "./pages/Inventory/Disposal/DisposalList";
+import ReportforCashier from "./pages/Pos/ReportforCashier";
+import TransactionHistory from "./pages/Pos/TransactionHistory";
 import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
@@ -30,13 +37,9 @@ import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
 import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
 import { useAuth } from "./context/AuthContext";
-import TransactionHistory from "./pages/Pos/TransactionHistory";
-import ReportforCashier from "./pages/Pos/ReportforCashier";
 import ReportCenterPage from "./pages/Admin/ReportCenterPage";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
-import CRMreport from "./pages/CRM/report";
-import AdsManagement from "./pages/CRM/ads";
 import NotFoundPage from "./pages/Common/NotFoundPage";
 import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
 import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
@@ -65,11 +68,6 @@ function RootRedirect() {
     );
   }
 
-  return isAuthenticated ? (
-    <Navigate to="/dashboard" replace />
-  ) : (
-    <Navigate to="/crm/homepage" replace />
-  );
   return isAuthenticated ? (
     <Navigate to="/dashboard" replace />
   ) : (
@@ -193,15 +191,23 @@ function App() {
           path="hr/schedule"
           element={
             <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <ShiftManagement viewMode="calendar-only" />
+              <ShiftCalendarPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/my-attendance"
+          element={
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <AttendanceManagement selfOnly={true} />
             </ProtectedRoute>
           }
         />
         <Route
           path="hr/attendance"
           element={
-            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
-              <WorkforceManagement defaultTab="attendance" />
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <MyPayrollSummary defaultTab="attendance" />
             </ProtectedRoute>
           }
         />

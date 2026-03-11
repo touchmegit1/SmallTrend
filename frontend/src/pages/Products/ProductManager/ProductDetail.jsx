@@ -421,7 +421,7 @@ function ProductDetail() {
           <div className="aspect-square bg-white flex items-center justify-center p-4 relative group">
             {product.image_url ? (
               <img
-                src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8081${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`}
+                src={product.image_url}
                 alt={product.name}
                 className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
               />
@@ -546,7 +546,7 @@ function ProductDetail() {
                         <div className="w-9 h-9 mx-auto bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
                           {variant.image_url ? (
                             <img
-                              src={variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`}
+                              src={variant.image_url}
                               alt={variant.name}
                               className="w-full h-full object-cover"
                             />

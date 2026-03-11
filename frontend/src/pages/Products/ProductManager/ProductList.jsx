@@ -729,7 +729,7 @@ export function ProductListScreen() {
                         <div className="flex items-center gap-2">
                           {v.image_url ? (
                             <img
-                              src={v.image_url.startsWith('http') ? v.image_url : `http://localhost:8081${v.image_url.startsWith('/') ? '' : '/'}${v.image_url}`}
+                              src={v.image_url}
                               alt={v.name}
                               className="w-9 h-9 rounded-lg object-cover shadow-sm border border-gray-100"
                             />
@@ -836,7 +836,7 @@ export function ProductListScreen() {
                         <div className="flex items-center gap-2">
                           {product.image_url ? (
                             <img
-                              src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8081${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`}
+                              src={product.image_url}
                               alt={product.name}
                               className="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100 bg-white"
                             />

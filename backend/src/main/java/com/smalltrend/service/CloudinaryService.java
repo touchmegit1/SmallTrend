@@ -25,18 +25,19 @@ public class CloudinaryService {
     private final Cloudinary cloudinary;
 
     /**
-     * Upload a MultipartFile (e.g. images) to Cloudinary.
-     * Uses resource_type=auto so Cloudinary detects the type.
+     * Upload a MultipartFile (e.g. images) to Cloudinary. Uses
+     * resource_type=auto so Cloudinary detects the type.
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> uploadFile(MultipartFile file, String folder) {
         try {
             Map<String, Object> uploadResult = cloudinary.uploader().upload(
-                file.getBytes(),
-                ObjectUtils.asMap(
-                    "folder", "smalltrend/" + folder,
-                    "resource_type", "auto"
-                )
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "smalltrend/" + folder,
+                            "resource_type", "auto",
+                            "type", "upload"
+                    )
             );
             log.info("File uploaded successfully: {}", uploadResult.get("secure_url"));
             return uploadResult;
@@ -47,8 +48,8 @@ public class CloudinaryService {
     }
 
     /**
-     * Upload raw byte[] content (PDF, XLSX, CSV) to Cloudinary.
-     * Uses resource_type=raw so non-image files are accepted.
+     * Upload raw byte[] content (PDF, XLSX, CSV) to Cloudinary. Uses
+     * resource_type=raw so non-image files are accepted.
      *
      * @return the Cloudinary secure_url saved in the DB for direct downloads
      */
@@ -58,11 +59,11 @@ public class CloudinaryService {
         try {
             Map<String, Object> result = cloudinary.uploader().upload(content,
                     ObjectUtils.asMap(
-                            "public_id",     publicId,
-                            "resource_type", "raw",    // required for PDF / XLSX / CSV
-                            "type",          "upload", // force public delivery (overrides account default)
-                            "use_filename",  false,
-                            "overwrite",     true
+                            "public_id", publicId,
+                            "resource_type", "raw", // required for PDF / XLSX / CSV
+                            "type", "upload", // force public delivery (overrides account default)
+                            "use_filename", false,
+                            "overwrite", true
                     ));
 
             String secureUrl = (String) result.get("secure_url");
@@ -77,8 +78,9 @@ public class CloudinaryService {
 
     /**
      * Download file bytes via Cloudinary's private download API endpoint.
-     * Endpoint: https://api.cloudinary.com/v1_1/{cloud}/raw/download
-     * Signature: SHA-1 of sorted params string (excl. api_key, resource_type, signature) + api_secret
+     * Endpoint: https://api.cloudinary.com/v1_1/{cloud}/raw/download Signature:
+     * SHA-1 of sorted params string (excl. api_key, resource_type, signature) +
+     * api_secret
      */
     public byte[] downloadFileBytes(String storedUrl) {
         try {
@@ -89,7 +91,9 @@ public class CloudinaryService {
             // Extract public_id from stored URL
             String marker = cloudName + "/raw/upload/";
             int idx = storedUrl.indexOf(marker);
-            if (idx == -1) throw new RuntimeException("Unrecognised Cloudinary URL: " + storedUrl);
+            if (idx == -1) {
+                throw new RuntimeException("Unrecognised Cloudinary URL: " + storedUrl);
+            }
             String publicId = storedUrl.substring(idx + marker.length()).replaceFirst("^v\\d+/", "");
 
             // Extract filename from public_id for Content-Disposition / target_filename
@@ -109,7 +113,9 @@ public class CloudinaryService {
             MessageDigest digest = MessageDigest.getInstance("SHA-1");
             byte[] hash = digest.digest(toSign.getBytes(StandardCharsets.UTF_8));
             StringBuilder sig = new StringBuilder();
-            for (byte b : hash) sig.append(String.format("%02x", b));
+            for (byte b : hash) {
+                sig.append(String.format("%02x", b));
+            }
 
             String downloadUrl = "https://api.cloudinary.com/v1_1/" + cloudName + "/raw/download"
                     + "?api_key=" + apiKey

@@ -12,8 +12,6 @@ import {
   ChevronRight,
   Shield,
   Menu,
-  User,
-  Settings,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -22,6 +20,10 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const role = user?.role;
+  const isAdmin = role === "ADMIN" || role === "ROLE_ADMIN";
+  const isManager = role === "MANAGER" || role === "ROLE_MANAGER";
+  const canManageWorkforce = isAdmin || isManager;
 
   const toggleMenu = (label) => {
     setOpenMenus((prev) => ({
@@ -87,12 +89,21 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       icon: Clock,
       label: "Nhân sự & Ca",
       path: "/hr",
-      children: [
-        { label: "Danh sách nhân viên", path: "/hr" },
-        { label: "Phân ca làm việc", path: "/hr/shifts" },
-        { label: "Chấm công", path: "/hr/attendance" },
-        { label: "Tính lương", path: "/hr/payroll" },
-      ],
+      children: canManageWorkforce
+        ? [
+          { label: "Danh sách nhân viên", path: "/hr/workforce" },
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Phân ca làm việc", path: "/hr/shifts" },
+          { label: "Chấm công", path: "/hr/attendance" },
+          { label: "Tính lương", path: "/hr/payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ]
+        : [
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Chấm công", path: "/hr/my-attendance" },
+          { label: "Tính lương", path: "/hr/my-payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ],
     },
     {
       icon: BarChart3,
@@ -109,9 +120,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       ],
     },
   ];
-
-  // Admin menu - compatible with new DB role naming
-  const isAdmin = user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
 
   return (
     <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>
@@ -205,7 +213,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   Quản lý người dùng
                 </NavLink>
                 <NavLink
-                  to="/admin/ticket-center"
+                  to="/admin/report-center"
                   className={({ isActive }) =>
                     `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
                       ? "bg-indigo-100 text-indigo-700 font-medium"
@@ -214,6 +222,17 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   }
                 >
                   Trung tâm Báo cáo
+                </NavLink>
+                <NavLink
+                  to="/hr/shift-tickets"
+                  className={({ isActive }) =>
+                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                      ? "bg-indigo-100 text-indigo-700 font-medium"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    }`
+                  }
+                >
+                  Ticket đổi ca
                 </NavLink>
                 <NavLink
                   to="/admin/audit-logs"

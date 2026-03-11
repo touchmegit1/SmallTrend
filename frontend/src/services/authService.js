@@ -78,7 +78,10 @@ const getMe = async () => {
 
 const updateStoredUser = (updates = {}) => {
     const currentUser = getCurrentUser() || {};
-    const nextUser = { ...currentUser, ...updates };
+    const sanitizedUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
+    const nextUser = { ...currentUser, ...sanitizedUpdates };
     localStorage.setItem('user', JSON.stringify(nextUser));
     return nextUser;
 };

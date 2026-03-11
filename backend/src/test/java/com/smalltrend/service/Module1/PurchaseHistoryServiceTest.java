@@ -1,13 +1,12 @@
 package com.smalltrend.service.Module1;
 
-
 import com.smalltrend.dto.pos.SavePurchaseHistoryRequest;
 import com.smalltrend.entity.PurchaseHistory;
 import com.smalltrend.repository.PurchaseHistoryRepository;
 import com.smalltrend.service.PurchaseHistoryService;
 
 import com.smalltrend.repository.ProductVariantRepository;
-import com.smalltrend.service.inventory.InventoryStockService;
+import com.smalltrend.service.inventory.stock.InventoryStockService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

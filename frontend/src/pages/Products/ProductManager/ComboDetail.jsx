@@ -142,7 +142,7 @@ const ComboDetail = () => {
           <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mb-3 overflow-hidden">
             {combo.imageUrl ? (
               <img
-                src={combo.imageUrl.startsWith('http') ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith('/') ? '' : '/'}${combo.imageUrl}`}
+                src={combo.imageUrl}
                 alt={combo.comboName}
                 className="w-full h-full object-cover"
               />
