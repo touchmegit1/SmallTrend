@@ -196,7 +196,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
   const [usePoints, setUsePoints] = useState(false);
   const [voucher, setVoucher] = useState("");
-  const [discount, setDiscount] = useState(0);
+  const [voucherError, setVoucherError] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null); // { type: 'PERCENT' | 'FIXED', value: number, max: number, code: string }
+  const [discount, setDiscount] = useState(0); // Giảm giá thủ công
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
@@ -217,7 +219,20 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
     usePoints && selectedCustomer
       ? Math.min(currentLoyaltyPoints * 100, subtotal)
       : 0;
-  const totalDiscount = pointsDiscount + discount;
+
+  let voucherDiscountAmt = 0;
+  if (appliedVoucher) {
+    if (appliedVoucher.type === 'PERCENTAGE') {
+      voucherDiscountAmt = subtotal * (appliedVoucher.value / 100);
+      if (appliedVoucher.max > 0 && voucherDiscountAmt > appliedVoucher.max) {
+        voucherDiscountAmt = appliedVoucher.max;
+      }
+    } else {
+      voucherDiscountAmt = appliedVoucher.value;
+    }
+  }
+
+  const totalDiscount = pointsDiscount + discount + voucherDiscountAmt;
   const finalTotal = subtotal - totalDiscount;
   const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
 
@@ -382,21 +397,24 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
         const earnedPoints = Math.floor(finalTotal / 10000); // 1 điểm/10,000đ
         const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
         const currentPoints = selectedCustomer.loyaltyPoints || 0;
-
+        const currentSpent = selectedCustomer.spentAmount || 0;
 
         // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
         const newPoints = currentPoints - pointsUsed + earnedPoints;
+        const newSpent = currentSpent + finalTotal;
 
-        // Lưu vào cột loyalty_points trong bảng customers
+        // Lưu vào cột loyalty_points và spent_amount trong bảng customers
         await api.put(`/crm/customers/${selectedCustomer.id}`, {
           name: selectedCustomer.name,
           phone: selectedCustomer.phone,
           loyaltyPoints: newPoints,
+          spentAmount: newSpent,
         });
 
         customerToUpdate = {
           ...selectedCustomer,
           loyaltyPoints: newPoints,
+          spentAmount: newSpent,
         };
       } catch (error) {
         console.error('Error updating customer loyalty points:', error);
@@ -411,10 +429,55 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
       customerMoney: receivedAmt,
       change: changeAmt,
       pointsDiscount,
-      discount,
+      discount: discount + voucherDiscountAmt, // Gộp cả giảm giá định dạng này qua `onComplete` nếu cần
       notes,
       paymentMethod: method === "cash" ? "Tiền mặt" : "Chuyển khoản"
     });
+  };
+
+  const handleApplyVoucher = async () => {
+    if (!voucher || !voucher.trim()) return;
+    setVoucherError("");
+    setAppliedVoucher(null);
+    try {
+      const response = await api.get('/crm/coupons');
+      const coupons = response.data;
+      const validCoupon = coupons.find(c => c.couponCode.toUpperCase() === voucher.trim().toUpperCase() && c.status === 'ACTIVE');
+
+      if (!validCoupon) {
+        setVoucherError("Mã voucher không hợp lệ hoặc đã hết hạn/chưa kích hoạt!");
+        setDiscount(0);
+        return;
+      }
+
+      if (validCoupon.minPurchaseAmount && subtotal < validCoupon.minPurchaseAmount) {
+        setVoucherError(`Đơn hàng tối thiểu ${validCoupon.minPurchaseAmount.toLocaleString()}đ để áp mã này!`);
+        setDiscount(0);
+        return;
+      }
+
+      if (validCoupon.couponType === 'PERCENTAGE') {
+        setAppliedVoucher({
+          type: 'PERCENTAGE',
+          value: validCoupon.discountPercent || 0,
+          max: validCoupon.maxDiscountAmount || 0,
+          code: validCoupon.couponCode
+        });
+      } else {
+        setAppliedVoucher({
+          type: 'FIXED_AMOUNT',
+          value: validCoupon.discountAmount || 0,
+          max: 0,
+          code: validCoupon.couponCode
+        });
+      }
+
+      setFocusedField("notes");
+      notesRef.current?.focus();
+    } catch (error) {
+      console.error('Error applying voucher:', error);
+      setVoucherError("Lỗi kết nối máy chủ để kiểm tra mã voucher.");
+    }
   };
 
   const initiatePayment = () => {
@@ -562,6 +625,21 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   <span>-{pointsDiscount.toLocaleString()}đ</span>
                 </div>
               )}
+              {appliedVoucher && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "#17a2b8",
+                  }}
+                >
+                  <span>
+                    Voucher ({appliedVoucher.code}):
+                  </span>
+                  <span>-{voucherDiscountAmt.toLocaleString()}đ</span>
+                </div>
+              )}
               {discount > 0 && (
                 <div
                   style={{
@@ -650,7 +728,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   type="text"
                   placeholder="Nhập mã voucher"
                   value={voucher}
-                  onChange={(e) => setVoucher(e.target.value)}
+                  onChange={(e) => {
+                    setVoucher(e.target.value);
+                    setVoucherError("");
+                    setAppliedVoucher(null); // Xóa voucher cũ khi người dùng gõ thay đổi
+                  }}
                   onFocus={() => setFocusedField("voucher")}
                   style={{
                     flex: 1,
@@ -662,46 +744,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 />
                 <button
                   ref={voucherButtonRef}
-                  onClick={async () => {
-                    if (!voucher.trim()) {
-                      alert("Vui lòng nhập mã voucher");
-                      return;
-                    }
-                    try {
-                      // Gọi API validate
-                      const res = await api.get(`/crm/coupons/validate`, {
-                        params: {
-                          code: voucher.trim(),
-                          customerId: selectedCustomer?.id || ""
-                        }
-                      });
-                      const validCoupon = res.data;
-
-                      // Tính toán tiền giảm
-                      let calculatedDiscount = 0;
-                      if (validCoupon.couponType === "PERCENTAGE") {
-                        calculatedDiscount = (subtotal * validCoupon.discountPercent) / 100;
-                        if (validCoupon.maxDiscountAmount) {
-                          calculatedDiscount = Math.min(calculatedDiscount, validCoupon.maxDiscountAmount);
-                        }
-                      } else {
-                        calculatedDiscount = validCoupon.discountAmount || 0;
-                      }
-
-                      // Kiểm tra đơn tối thiểu
-                      if (validCoupon.minPurchaseAmount && subtotal < validCoupon.minPurchaseAmount) {
-                        alert(`Đơn hàng chưa đạt mức tối thiểu ${validCoupon.minPurchaseAmount.toLocaleString()}đ để áp dụng mã này.`);
-                        return;
-                      }
-
-                      setDiscount(calculatedDiscount);
-                      alert("Áp dụng mã giảm giá thành công!");
-                    } catch (error) {
-                      setDiscount(0);
-                      const msg = error.response?.data?.message || "Mã giảm giá không hợp lệ hoặc đã hết lượt dùng";
-                      alert(`Lỗi: ${msg}`);
-                    }
-                  }}
+                  onClick={handleApplyVoucher}
                   style={{
                     padding: "8px 16px",
                     background: "#007bff",
@@ -715,6 +758,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   Áp dụng
                 </button>
               </div>
+              {voucherError && (
+                <div style={{ color: "#dc3545", fontSize: "12px", marginTop: "5px" }}>
+                  {voucherError}
+                </div>
+              )}
             </div>
 
             {/* Giảm giá thủ công */}
@@ -727,7 +775,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   fontWeight: "500",
                 }}
               >
-                Giảm giá:
+                Giảm giá thủ công (VNĐ):
               </label>
               <input
                 type="number"

@@ -32,27 +32,31 @@ public class CustomerService {
     }
 
     public CustomerResponse createCustomer(String name, String phone) {
-        // Validate nghiệp vụ (ném CrmException nếu không hợp lệ)
         customerValidator.validateCreate(name, phone);
 
         Customer customer = Customer.builder()
                 .name(name.trim())
                 .phone(CustomerValidator.normalize(phone))
                 .build();
+
         return mapToResponse(customerRepository.save(customer));
     }
 
-    public CustomerResponse updateCustomer(Integer id, String name, String phone, Integer loyaltyPoints) {
+    public CustomerResponse updateCustomer(Integer id, String name, String phone, Integer loyaltyPoints, Long spentAmount) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> CrmException.customerNotFound(id));
 
-        // Validate nghiệp vụ (bỏ qua trùng SĐT với chính record này)
         customerValidator.validateUpdate(name, phone, id, loyaltyPoints);
 
         customer.setName(name.trim());
         customer.setPhone(CustomerValidator.normalize(phone));
+
         if (loyaltyPoints != null) {
             customer.setLoyaltyPoints(loyaltyPoints);
+        }
+
+        if (spentAmount != null) {
+            customer.setSpentAmount(spentAmount);
         }
 
         return mapToResponse(customerRepository.save(customer));

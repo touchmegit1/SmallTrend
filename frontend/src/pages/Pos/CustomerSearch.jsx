@@ -45,6 +45,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, r
         phone: customer.phone,
         name: customer.name,
         loyaltyPoints: customer.loyaltyPoints || 0,
+        spentAmount: customer.spentAmount || 0,
         tier: customer.tier || customer.rank || customer.memberTier,
         isNew: false
       });
@@ -80,6 +81,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, r
         phone: savedCustomer.phone,
         name: savedCustomer.name,
         loyaltyPoints: savedCustomer.loyaltyPoints || 0,
+        spentAmount: savedCustomer.spentAmount || 0,
         isNew: false
       });
 

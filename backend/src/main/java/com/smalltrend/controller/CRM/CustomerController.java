@@ -63,7 +63,8 @@ public class CustomerController {
                 id,
                 request.getName(),
                 request.getPhone(),
-                request.getLoyaltyPoints());
+                request.getLoyaltyPoints(),
+                request.getSpentAmount());
         return ResponseEntity.ok(customer);
     }
 
