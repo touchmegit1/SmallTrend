@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src",
+    "lint:ci": "eslint src --quiet",
+    "lint:fix": "eslint src --fix",
     "server": "json-server --watch db.json --port 3001"
   },
   "dependencies": {
@@ -45,6 +47,7 @@
     "cspell": "^9.7.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^17.4.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
