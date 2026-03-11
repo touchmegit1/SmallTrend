@@ -4,7 +4,6 @@ import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
 import PaymentPanel from "./PaymentPanel";
 import PaymentModal from "./PaymentModal";
-import QRScanner from "./QRScanner";
 import Invoice from "./Invoice";
 import posService from "../../services/posService";
 import api from "../../config/axiosConfig";
@@ -24,7 +23,6 @@ export default function POS() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProductIndex, setSelectedProductIndex] = useState(-1);
-  const [showQRScanner, setShowQRScanner] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
@@ -32,11 +30,13 @@ export default function POS() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [shortcuts, setShortcuts] = useState(() => {
     const saved = localStorage.getItem('posShortcuts');
-    return saved ? JSON.parse(saved) : {
-      payment1: 'F9',
-      payment2: 'F10',
-      newOrder: 'F8',
-      deleteOrder: 'Delete'
+    const parsed = saved ? JSON.parse(saved) : null;
+    return {
+      payment1: parsed?.payment1 === 'F9' ? 'F10' : (parsed?.payment1 || 'F10'),
+      printInvoice: parsed?.printInvoice || 'F9',
+      comboFocus: parsed?.comboFocus || 'F11',
+      newOrder: parsed?.newOrder || 'F8',
+      deleteOrder: parsed?.deleteOrder || 'Delete'
     };
   });
 
@@ -74,7 +74,13 @@ export default function POS() {
           (p.barcode && p.barcode.toLowerCase() === searchTerm.toLowerCase()) ||
           (p.sku && p.sku.toLowerCase() === searchTerm.toLowerCase())
         );
-        setSelectedProductIndex(exactMatchIndex >= 0 ? exactMatchIndex : 0);
+        if (exactMatchIndex >= 0) {
+          addToCart(filtered[exactMatchIndex]);
+          setSearchTerm('');
+          setSelectedProductIndex(-1);
+        } else {
+          setSelectedProductIndex(0);
+        }
       } else {
         setSelectedProductIndex(-1);
       }
@@ -85,10 +91,10 @@ export default function POS() {
 
   // Re-focus when switching orders or closing modals
   useEffect(() => {
-    if (searchInputRef.current && !showPaymentModal && !showQRScanner && !showInvoice && !showShortcuts) {
+    if (searchInputRef.current && !showPaymentModal && !showInvoice && !showShortcuts) {
       searchInputRef.current.focus();
     }
-  }, [activeOrderId, showPaymentModal, showQRScanner, showInvoice, showShortcuts]);
+  }, [activeOrderId, showPaymentModal, showInvoice, showShortcuts]);
 
   // Keyboard navigation handler
   const handleKeyDown = (e) => {
@@ -160,15 +166,23 @@ export default function POS() {
     }
   };
 
-  // F9/F10 shortcut for payment
   useEffect(() => {
     const handleKeyPress = (e) => {
       // Bỏ qua phím tắt nếu đang mở modal (ngoại trừ F9/F10 trong payment modal thì đã xử lý bên trong modal)
-      if (showPaymentModal || showQRScanner || showInvoice || showShortcuts) return;
+      if (showPaymentModal || showInvoice || showShortcuts) return;
 
-      if ((e.key === shortcuts.payment1 || e.key === shortcuts.payment2) && activeOrder.cart.length > 0) {
+      if (e.key === shortcuts.payment1 && activeOrder.cart.length > 0) {
         e.preventDefault();
         setShowPaymentModal(true);
+      } else if (e.key === shortcuts.printInvoice) {
+        e.preventDefault();
+        handlePrintCurrentInvoice();
+      } else if (e.key === shortcuts.comboFocus) {
+        e.preventDefault();
+        const comboBtn = document.querySelector('.combo-suggest-btn');
+        if (comboBtn) {
+          comboBtn.focus();
+        }
       } else if (e.key === shortcuts.newOrder) {
         e.preventDefault();
         addNewOrder();
@@ -176,7 +190,7 @@ export default function POS() {
     };
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [activeOrder.cart, showPaymentModal, showQRScanner, showInvoice, showShortcuts, orders, activeOrderId, shortcuts]);
+  }, [activeOrder.cart, showPaymentModal, showInvoice, showShortcuts, orders, activeOrderId, shortcuts]);
 
   const loadProducts = async () => {
     try {
@@ -443,21 +457,7 @@ export default function POS() {
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const filteredTransactions = transactions.filter(t => t.status !== "Chờ thanh toán");
 
-    // Cập nhật điểm khách hàng trong localStorage (đã được cập nhật từ PaymentModal)
-    if (orderData.customer && orderData.customer.loyaltyPoints !== undefined) {
-      const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-      const updatedCustomers = customers.map(c =>
-        c.id === orderData.customer.id
-          ? {
-            ...c,
-            loyaltyPoints: orderData.customer.loyaltyPoints,
-            points: orderData.customer.loyaltyPoints,
-            existingPoints: orderData.customer.loyaltyPoints
-          }
-          : c
-      );
-      localStorage.setItem('customers', JSON.stringify(updatedCustomers));
-    }
+    // Đã xóa đồng bộ điểm khách hàng qua localStorage, chỉ sử dụng database qua PaymentModal
 
     const transaction = {
       id: `#HD${Date.now().toString().slice(-6)}`,
@@ -489,14 +489,14 @@ export default function POS() {
     localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
 
     // Lưu ngay vào database
-    if (transaction.customer && transaction.cart) {
+    if (transaction.cart && transaction.cart.length > 0) {
       try {
         const request = {
-          customerId: transaction.customer.id,
-          customerName: transaction.customer.name,
+          customerId: transaction.customer?.id || null,
+          customerName: transaction.customer?.name || null,
           paymentMethod: transaction.payment,
           items: transaction.cart.map(item => ({
-            productId: item.productId || item.id,
+            productId: (typeof (item.productId || item.id) === 'string' && String(item.productId || item.id).startsWith('combo_')) ? null : (item.productId || item.id),
             productName: item.name,
             quantity: item.qty,
             price: item.price,
@@ -504,6 +504,9 @@ export default function POS() {
           }))
         };
         await api.post('/pos/purchase-history', request);
+
+        // Đồng bộ lại danh sách sản phẩm để cập nhật tồn kho
+        loadProducts();
       } catch (error) {
         console.error('Error saving purchase history:', error);
       }
@@ -523,14 +526,49 @@ export default function POS() {
     ));
   };
 
-  const handlePrintLastInvoice = () => {
-    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    if (transactions.length > 0) {
-      setSelectedTransaction(transactions[0]);
+  const handlePrintCurrentInvoice = () => {
+    const currentOrder = activeOrder;
+    if (currentOrder.cart.length === 0) {
+      const emptyTransaction = {
+        id: `#HD${Date.now().toString().slice(-6)}`,
+        time: new Date().toLocaleString('vi-VN'),
+        quantity: `0 món`,
+        payment: "Chưa thanh toán",
+        total: `0 đ`,
+        status: "Không có sản phẩm",
+        cart: [],
+        items: [],
+        customer: null,
+        customerMoney: 0,
+        change: 0,
+        pointsDiscount: 0,
+        discount: 0,
+        notes: ""
+      };
+      setSelectedTransaction(emptyTransaction);
       setShowInvoice(true);
-    } else {
-      alert("Chưa có hóa đơn nào!");
+      return;
     }
+
+    const subtotal = currentOrder.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const pendingTransaction = {
+      id: `#HD${Date.now().toString().slice(-6)}`,
+      time: new Date().toLocaleString('vi-VN'),
+      quantity: `${currentOrder.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
+      payment: "Chưa thanh toán",
+      total: `${subtotal.toLocaleString()} đ`,
+      status: "Chờ thanh toán",
+      cart: currentOrder.cart,
+      items: currentOrder.cart,
+      customer: currentOrder.customer,
+      customerMoney: 0,
+      change: 0,
+      pointsDiscount: 0,
+      discount: 0,
+      notes: ""
+    };
+    setSelectedTransaction(pendingTransaction);
+    setShowInvoice(true);
   };
 
   return (
@@ -554,9 +592,8 @@ export default function POS() {
           orders={orders}
           activeOrderId={activeOrderId}
           setActiveOrderId={setActiveOrderId}
-          setShowQRScanner={setShowQRScanner}
           deleteOrder={deleteOrder}
-          onPrintInvoice={handlePrintLastInvoice}
+          onPrintInvoice={handlePrintCurrentInvoice}
           onKeyDown={handleKeyDown}
           selectedProductIndex={selectedProductIndex}
           setShowShortcuts={setShowShortcuts}
@@ -588,7 +625,15 @@ export default function POS() {
             </h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span>Thanh toán (Phím 1)</span>
+                <span>In hóa đơn hiện tại</span>
+                <input
+                  value={shortcuts.printInvoice}
+                  onChange={(e) => setShortcuts({ ...shortcuts, printInvoice: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Thanh toán</span>
                 <input
                   value={shortcuts.payment1}
                   onChange={(e) => setShortcuts({ ...shortcuts, payment1: e.target.value.toUpperCase() })}
@@ -596,10 +641,10 @@ export default function POS() {
                 />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span>Thanh toán (Phím 2)</span>
+                <span>Trỏ xuống gợi ý Combo</span>
                 <input
-                  value={shortcuts.payment2}
-                  onChange={(e) => setShortcuts({ ...shortcuts, payment2: e.target.value.toUpperCase() })}
+                  value={shortcuts.comboFocus}
+                  onChange={(e) => setShortcuts({ ...shortcuts, comboFocus: e.target.value.toUpperCase() })}
                   style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
                 />
               </div>
@@ -669,34 +714,6 @@ export default function POS() {
             shortcuts={shortcuts}
           />
         </div>
-      )}
-
-      {showQRScanner && (
-        <QRScanner
-          onScan={async (barcode) => {
-            try {
-              const data = await posService.getProductByBarcode(barcode);
-              if (data && data.length > 0) {
-                const product = {
-                  id: data[0].id,
-                  name: data[0].name,
-                  price: Number(data[0].sellPrice),
-                  barcode: data[0].barcode || data[0].sku,
-                  sku: data[0].sku,
-                  stock: data[0].stockQuantity || 0
-                };
-                addToCart(product);
-              } else {
-                alert('Không tìm thấy sản phẩm với mã vạch này!');
-              }
-            } catch (error) {
-              console.error('Error scanning barcode:', error);
-              alert('Lỗi khi quét mã vạch!');
-            }
-            setShowQRScanner(false);
-          }}
-          onClose={() => setShowQRScanner(false)}
-        />
       )}
 
       {showInvoice && (

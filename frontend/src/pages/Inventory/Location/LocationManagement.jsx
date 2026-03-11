@@ -339,9 +339,8 @@ function LocationManagement() {
                 return (
                   <React.Fragment key={loc.id}>
                     <tr
-                      className={`hover:bg-slate-50 transition-colors group cursor-pointer ${
-                        isExpanded ? "bg-indigo-50/30" : ""
-                      }`}
+                      className={`hover:bg-slate-50 transition-colors group cursor-pointer ${isExpanded ? "bg-indigo-50/30" : ""
+                        }`}
                       onClick={() => toggleExpand(loc.id)}
                     >
                       <td className="px-3 py-4 text-center">
@@ -414,11 +413,10 @@ function LocationManagement() {
                       </td>
                       <td className="px-4 py-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            loc.status === "ACTIVE"
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${loc.status === "ACTIVE"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : "bg-red-50 text-red-600 border border-red-200"
-                          }`}
+                            }`}
                         >
                           {loc.status === "ACTIVE"
                             ? "Đang hoạt động"
@@ -462,11 +460,10 @@ function LocationManagement() {
                               e.stopPropagation();
                               handleToggleStatus(loc);
                             }}
-                            className={`p-1.5 rounded-lg transition-all ${
-                              loc.status === "ACTIVE"
+                            className={`p-1.5 rounded-lg transition-all ${loc.status === "ACTIVE"
                                 ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
                                 : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                            }`}
+                              }`}
                             title={
                               loc.status === "ACTIVE"
                                 ? "Chuyển sang Ngừng hoạt động"
@@ -927,7 +924,7 @@ function LocationManagement() {
                       (item, idx) => {
                         const isSelected =
                           transferData.selectedItem?.variantId ===
-                            item.variant_id &&
+                          item.variant_id &&
                           transferData.selectedItem?.batchId === item.batch_id;
                         return (
                           <button
@@ -947,17 +944,15 @@ function LocationManagement() {
                                 quantity: 1,
                               }))
                             }
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all ${
-                              isSelected
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all ${isSelected
                                 ? "border-violet-500 bg-violet-50 shadow-sm"
                                 : "border-slate-200 hover:border-violet-300 hover:bg-violet-50/50"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-3">
                               <div
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                  isSelected ? "bg-violet-100" : "bg-slate-100"
-                                }`}
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-violet-100" : "bg-slate-100"
+                                  }`}
                               >
                                 <Package
                                   size={15}
@@ -970,11 +965,10 @@ function LocationManagement() {
                               </div>
                               <div>
                                 <p
-                                  className={`text-sm font-semibold ${
-                                    isSelected
+                                  className={`text-sm font-semibold ${isSelected
                                       ? "text-violet-900"
                                       : "text-slate-800"
-                                  }`}
+                                    }`}
                                 >
                                   {item.product_name}
                                 </p>
@@ -987,11 +981,10 @@ function LocationManagement() {
                               </div>
                             </div>
                             <span
-                              className={`text-sm font-bold px-2.5 py-1 rounded-lg ${
-                                isSelected
+                              className={`text-sm font-bold px-2.5 py-1 rounded-lg ${isSelected
                                   ? "bg-violet-100 text-violet-700"
                                   : "bg-slate-100 text-slate-600"
-                              }`}
+                                }`}
                             >
                               {item.quantity} {item.variant_unit || ""}
                             </span>

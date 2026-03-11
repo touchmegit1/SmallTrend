@@ -23,9 +23,4 @@ public class PurchaseHistoryController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<PurchaseHistory>> getCustomerHistory(@PathVariable Long customerId) {
-        List<PurchaseHistory> history = purchaseHistoryService.getCustomerHistory(customerId);
-        return ResponseEntity.ok(history);
-    }
 }

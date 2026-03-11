@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useActiveCampaigns, useDiscountedVariants, useAllVariants } from '../../hooks/useEventData';
-import SideAds from "./Component/SideAds";
+import SideAds from './Component/SideAds';
 
 // ─── PLACEHOLDER IMAGE ────────────────────────────────────────────────────────
 const PLACEHOLDER = "https://placehold.co/400x300?text=No+Image";
@@ -111,7 +111,9 @@ export default function EcommerceUI() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <SideAds />
+      {/* ── SIDE ADVERTISEMENTS ── */}
+      {/* <SideAds /> */}
+
       {/* ── NAVBAR ── */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">

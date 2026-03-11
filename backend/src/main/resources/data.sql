@@ -173,18 +173,18 @@ working_hours_per_month = VALUES(working_hours_per_month),
 updated_at = NOW();
 
 -- 6. CUSTOMER TIERS
-INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_points, max_points, min_spending, points_multiplier, discount_rate, color, is_active, priority) VALUES
-('BRONZE', 'Đồng', 0, 499, 0.00, 1.0, 0.00, '#CD7F32', TRUE, 1),
-('SILVER', 'Bạc', 500, 1499, 5000000.00, 1.5, 2.00, '#C0C0C0', TRUE, 2),
-('GOLD', 'Vàng', 1500, 4999, 15000000.00, 2.0, 5.00, '#FFD700', TRUE, 3),
-('PLATINUM', 'Bạch Kim', 5000, NULL, 50000000.00, 3.0, 10.00, '#E5E4E2', TRUE, 4);
+INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_spending, points_multiplier, discount_rate, color, is_active, priority) VALUES
+('BRONZE', 'Đồng', 0.00, 1.0, 0.00, '#CD7F32', TRUE, 1),
+('SILVER', 'Bạc', 5000000.00, 1.5, 2.00, '#C0C0C0', TRUE, 2),
+('GOLD', 'Vàng', 15000000.00, 2.0, 5.00, '#FFD700', TRUE, 3),
+('PLATINUM', 'Bạch Kim', 50000000.00, 3.0, 10.00, '#E5E4E2', TRUE, 4);
 
 -- 7. CUSTOMERS
-INSERT IGNORE INTO customers (name, phone, loyalty_points) VALUES
-('Nguyen Van A', '0987654321', 150),
-('Tran Thi B', '0976543210', 800),
-('Le Van C', '0965432109', 2000),
-('Pham Thi D', '0954321098', 6500);
+INSERT IGNORE INTO customers (name, phone, loyalty_points, tier_code, spent_amount) VALUES
+('Nguyen Van A', '0987654321', 150, 'BRONZE', 150000),
+('Tran Thi B', '0976543210', 800, 'SILVER', 6000000),
+('Le Van C', '0965432109', 2000, 'GOLD', 16000000),
+('Pham Thi D', '0954321098', 6500, 'PLATINUM', 55000000);
 
 -- 8. PRODUCTS
 INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_id, is_active, created_at, updated_at) VALUES
