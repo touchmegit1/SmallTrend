@@ -4,63 +4,75 @@ import java.util.List;
 
 import com.smalltrend.dto.CRM.CustomerResponse;
 import com.smalltrend.entity.Customer;
+import com.smalltrend.exception.CrmException;
 import com.smalltrend.repository.CustomerRepository;
+import com.smalltrend.validation.CustomerValidator;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
-    
+
     private final CustomerRepository customerRepository;
+    private final CustomerValidator customerValidator;
+
     private static final long LOYALTY_RATE = 10000L; // 10000 VNĐ = 1 điểm loyalty
 
     public List<CustomerResponse> getAllCustomers() {
-        List<CustomerResponse> customers = customerRepository.findAll().stream()
-            .map(this::mapToResponse).toList();
-        return customers;
+        return customerRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     public CustomerResponse getCustomerById(Integer id) {
         Customer customer = customerRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> CrmException.customerNotFound(id));
         return mapToResponse(customer);
     }
 
     public CustomerResponse createCustomer(String name, String phone) {
+        customerValidator.validateCreate(name, phone);
+
         Customer customer = Customer.builder()
-            .name(name)
-            .phone(phone)
-            .build();
-        Customer savedCustomer = customerRepository.save(customer);
-        return mapToResponse(savedCustomer);
+                .name(name.trim())
+                .phone(CustomerValidator.normalize(phone))
+                .build();
+
+        return mapToResponse(customerRepository.save(customer));
     }
 
-    public CustomerResponse updateCustomer(Integer id, String name, String phone, Integer loyaltyPoints) {
+    public CustomerResponse updateCustomer(Integer id, String name, String phone, Integer loyaltyPoints, Long spentAmount) {
         Customer customer = customerRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Customer not found"));
-        
-        customer.setName(name);
-        customer.setPhone(phone);
+                .orElseThrow(() -> CrmException.customerNotFound(id));
+
+        customerValidator.validateUpdate(name, phone, id, loyaltyPoints);
+
+        customer.setName(name.trim());
+        customer.setPhone(CustomerValidator.normalize(phone));
+
         if (loyaltyPoints != null) {
             customer.setLoyaltyPoints(loyaltyPoints);
         }
-        
-        Customer updatedCustomer = customerRepository.save(customer);
-        return mapToResponse(updatedCustomer);
+
+        if (spentAmount != null) {
+            customer.setSpentAmount(spentAmount);
+        }
+
+        return mapToResponse(customerRepository.save(customer));
     }
 
     public void deleteCustomer(Integer id) {
         if (!customerRepository.existsById(id)) {
-            throw new RuntimeException("Customer not found");
+            throw CrmException.customerNotFound(id);
         }
         customerRepository.deleteById(id);
     }
 
     public CustomerResponse getCustomerByPhone(String phone) {
-        String cleanPhone = phone != null ? phone.replaceAll("\\s+", "") : "";
+        String cleanPhone = CustomerValidator.normalize(phone);
         Customer customer = customerRepository.findByPhoneIgnoreSpaces(cleanPhone)
-            .orElseThrow(() -> new RuntimeException("Customer not found with phone: " + phone));
+                .orElseThrow(() -> CrmException.customerNotFoundByPhone(phone));
         return mapToResponse(customer);
     }
 

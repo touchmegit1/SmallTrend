@@ -1,6 +1,7 @@
 package com.smalltrend.exception;
 
 import com.smalltrend.dto.common.MessageResponse;
+import com.smalltrend.exception.CrmException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,17 @@ public class GlobalExceptionHandler {
             status = HttpStatus.CONFLICT;
         }
 
+        return ResponseEntity.status(status)
+                .body(new MessageResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(CrmException.class)
+    public ResponseEntity<?> handleCrmException(CrmException ex) {
+        HttpStatus status = switch (ex.getCode()) {
+            case NOT_FOUND      -> HttpStatus.NOT_FOUND;           // 404
+            case DUPLICATE_PHONE -> HttpStatus.CONFLICT;           // 409
+            case INVALID_INPUT  -> HttpStatus.BAD_REQUEST;         // 400
+        };
         return ResponseEntity.status(status)
                 .body(new MessageResponse(ex.getMessage()));
     }

@@ -9,7 +9,9 @@ import java.math.BigDecimal;
  * Xếp hạng khách hàng dựa trên tổng chi tiêu (spent_amount)
  */
 @Entity
-@Table(name = "customer_tiers")
+@Table(name = "customer_tiers", uniqueConstraints = {
+    @UniqueConstraint(columnNames = "tier_code", name = "uk_tier_code")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,7 +22,7 @@ public class CustomerTier {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "tier_code", nullable = false, length = 50, unique = true)
     private String tierCode; // BRONZE, SILVER, GOLD, PLATINUM, DIAMOND
 
     @Column(nullable = false, length = 100)

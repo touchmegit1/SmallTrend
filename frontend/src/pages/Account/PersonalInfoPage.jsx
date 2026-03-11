@@ -1,12 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import api from '../../config/axiosConfig';
 import { userService } from '../../services/userService';
+import { useAuth } from '../../context/AuthContext';
 
 const PersonalInfoPage = () => {
+    const { updateAuthUser } = useAuth();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showAvatarModal, setShowAvatarModal] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -22,6 +27,27 @@ const PersonalInfoPage = () => {
 
         fetchProfile();
     }, []);
+
+    const handleAvatarUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            setUploadError('Vui lòng chọn file hình ảnh');
+            return;
+        }
+        setUploadError('');
+        setUploading(true);
+        try {
+            const result = await userService.uploadMyAvatar(file);
+            setProfile((prev) => ({ ...prev, avatarUrl: result.avatarUrl }));
+            updateAuthUser({ avatarUrl: result.avatarUrl });
+        } catch (err) {
+            setUploadError(err.response?.data?.message || 'Không thể tải ảnh lên');
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     const backendOrigin = (api.defaults.baseURL || '').replace(/\/api\/?$/, '');
     const avatarUrl = profile?.avatarUrl
@@ -42,23 +68,42 @@ const PersonalInfoPage = () => {
 
             <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
                 <div className="flex items-center gap-4">
-                    {avatarUrl ? (
+                    <div className="relative group">
+                        {avatarUrl ? (
+                            <button
+                                type="button"
+                                onClick={() => setShowAvatarModal(true)}
+                                className="rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                title="Phóng to ảnh đại diện"
+                            >
+                                <img src={avatarUrl} alt={profile?.fullName || 'Avatar'} className="w-16 h-16 rounded-full object-cover border border-slate-200" />
+                            </button>
+                        ) : (
+                            <div className="w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xl font-semibold">
+                                {(profile?.fullName || 'U').slice(0, 1).toUpperCase()}
+                            </div>
+                        )}
                         <button
                             type="button"
-                            onClick={() => setShowAvatarModal(true)}
-                            className="rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            title="Phóng to ảnh đại diện"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="absolute inset-0 rounded-full bg-black/50 text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center disabled:cursor-wait"
+                            title="Đổi ảnh đại diện"
                         >
-                            <img src={avatarUrl} alt={profile?.fullName || 'Avatar'} className="w-16 h-16 rounded-full object-cover border border-slate-200" />
+                            {uploading ? '...' : 'Đổi ảnh'}
                         </button>
-                    ) : (
-                        <div className="w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xl font-semibold">
-                            {(profile?.fullName || 'U').slice(0, 1).toUpperCase()}
-                        </div>
-                    )}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleAvatarUpload}
+                        />
+                    </div>
                     <div>
                         <p className="text-lg font-semibold text-slate-900">{profile?.fullName || '-'}</p>
                         <p className="text-sm text-slate-500">{profile?.role || '-'}</p>
+                        {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
                     </div>
                 </div>
 

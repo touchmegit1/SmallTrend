@@ -1,15 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-    Users, Gift, Megaphone, Tag, TrendingUp, ShoppingBag,
-    ChevronRight, X, Calendar, Search, BarChart2, Award
+    Users, Gift, Megaphone, Tag, TrendingUp, Building2,
+    ChevronRight, X, Calendar, Search, BarChart2, Award, Clock, FileImage
 } from 'lucide-react';
 import { useFetchCustomers } from '../../hooks/Customers';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useCoupons } from '../../hooks/useCoupons';
 import { useGifts } from '../../hooks/useGifts';
-import { useDiscountedVariants } from '../../hooks/useEventData';
 
-// ─── STAT CARD (clickable) ────────────────────────────────────────────────────
+// ─── Date filter helpers ───────────────────────────────────────────────────────
+const DATE_FILTERS = [
+    { key: 'all', label: 'Tất cả' },
+    { key: 'today', label: 'Hôm nay' },
+    { key: 'week', label: 'Tuần này' },
+    { key: 'month', label: 'Tháng này' },
+];
+
+function isInRange(dateStr, key) {
+    if (!dateStr || key === 'all') return true;
+    const d = new Date(dateStr);
+    if (isNaN(d)) return key === 'all';
+    const now = new Date();
+    if (key === 'today') {
+        return d.toDateString() === now.toDateString();
+    }
+    if (key === 'week') {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        return d >= startOfWeek;
+    }
+    if (key === 'month') {
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }
+    return true;
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
 const ReportCard = ({ icon: Icon, label, value, sub, color, onClick }) => (
     <button
         onClick={onClick}
@@ -27,7 +54,6 @@ const ReportCard = ({ icon: Icon, label, value, sub, color, onClick }) => (
     </button>
 );
 
-// ─── MODAL WRAPPER ────────────────────────────────────────────────────────────
 const Modal = ({ title, subtitle, onClose, children }) => (
     <div
         className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
@@ -48,7 +74,6 @@ const Modal = ({ title, subtitle, onClose, children }) => (
     </div>
 );
 
-// ─── SEARCH INPUT ─────────────────────────────────────────────────────────────
 const SearchInput = ({ value, onChange, placeholder }) => (
     <div className="relative mb-4">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -62,7 +87,6 @@ const SearchInput = ({ value, onChange, placeholder }) => (
     </div>
 );
 
-// ─── EMPTY STATE ──────────────────────────────────────────────────────────────
 const Empty = ({ text }) => (
     <div className="text-center py-10 text-slate-400">
         <BarChart2 size={36} className="mx-auto mb-2 opacity-30" />
@@ -70,7 +94,6 @@ const Empty = ({ text }) => (
     </div>
 );
 
-// ─── STATUS BADGE ─────────────────────────────────────────────────────────────
 const Badge = ({ text, color }) => (
     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>{text}</span>
 );
@@ -83,43 +106,83 @@ const statusColor = s => ({
     EXPIRED: 'bg-orange-100 text-orange-700',
 }[s] || 'bg-slate-100 text-slate-500');
 
+// ─── Date Filter Bar ─────────────────────────────────────────────────────────
+function DateFilterBar({ value, onChange }) {
+    const today = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' });
+    return (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-slate-500 text-sm">
+                <Clock size={15} className="text-indigo-400" />
+                <span>Báo cáo cho: <strong className="text-slate-700">{today}</strong></span>
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+                {DATE_FILTERS.map(f => (
+                    <button
+                        key={f.key}
+                        onClick={() => onChange(f.key)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${value === f.key
+                            ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                    >
+                        {f.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function CRMReport() {
     const { customers, loading: loadingCustomers } = useFetchCustomers();
     const { campaigns, loading: loadingCampaigns } = useCampaigns();
     const { coupons, loading: loadingCoupons } = useCoupons();
     const { gifts, loading: loadingGifts } = useGifts();
-    const { variants, loading: loadingVariants } = useDiscountedVariants();
 
-    const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'discounted'
+    // Load ads từ localStorage
+    const ads = useMemo(() => {
+        try {
+            const saved = localStorage.getItem('smalltrend_side_ads');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    }, []);
+
+    const [dateFilter, setDateFilter] = useState('all');
+    const [activeModal, setActiveModal] = useState(null);
     const [search, setSearch] = useState('');
 
     const openModal = (key) => { setActiveModal(key); setSearch(''); };
     const closeModal = () => { setActiveModal(null); setSearch(''); };
 
-    // Filtered data for modals
+    // Apply date filter to campaigns & coupons
+    const filteredCampaignsByDate = useMemo(() =>
+        campaigns.filter(c => isInRange(c.startDate, dateFilter) || isInRange(c.endDate, dateFilter)),
+        [campaigns, dateFilter]
+    );
+    const filteredCouponsByDate = useMemo(() =>
+        coupons.filter(c => isInRange(c.startDate, dateFilter) || isInRange(c.endDate, dateFilter)),
+        [coupons, dateFilter]
+    );
+
+    // Bỏ filter hợp đồng theo ngày, ad không có ngày cụ thể
+
     const kw = search.toLowerCase().trim();
-    const filteredCustomers = customers.filter(c =>
-        c.name?.toLowerCase().includes(kw) || c.phone?.includes(kw)
-    );
-    const filteredCampaigns = campaigns.filter(c =>
-        c.campaignName?.toLowerCase().includes(kw) || c.campaignCode?.toLowerCase().includes(kw)
-    );
-    const filteredCoupons = coupons.filter(c =>
-        c.couponName?.toLowerCase().includes(kw) || c.couponCode?.toLowerCase().includes(kw)
-    );
+    const filteredCustomers = customers.filter(c => c.name?.toLowerCase().includes(kw) || c.phone?.includes(kw));
+    const filteredCampaigns = filteredCampaignsByDate.filter(c =>
+        c.campaignName?.toLowerCase().includes(kw) || c.campaignCode?.toLowerCase().includes(kw));
+    const filteredCoupons = filteredCouponsByDate.filter(c =>
+        c.couponName?.toLowerCase().includes(kw) || c.couponCode?.toLowerCase().includes(kw));
     const filteredGifts = gifts.filter(g => g.name?.toLowerCase().includes(kw));
-    const filteredVariants = variants.filter(v =>
-        v.name?.toLowerCase().includes(kw) || v.sku?.toLowerCase().includes(kw)
-    );
+    const filteredAds = ads.filter(a => a.title?.toLowerCase().includes(kw));
 
-    // Summary stats
-    const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
-    const activeCoupons = coupons.filter(c => c.status === 'ACTIVE').length;
+    const activeCampaigns = filteredCampaignsByDate.filter(c => c.status === 'ACTIVE').length;
+    const activeCoupons = filteredCouponsByDate.filter(c => c.status === 'ACTIVE').length;
     const totalLoyaltyPts = customers.reduce((s, c) => s + (c.loyaltyPoints || 0), 0);
-    const discountedCount = variants.length;
-
+    const activeAdsCount = ads.filter(a => a.isActive).length;
     const fmt = v => v != null ? Number(v).toLocaleString('vi-VN') + 'đ' : '-';
+
+    const dateLabel = DATE_FILTERS.find(f => f.key === dateFilter)?.label || '';
 
     return (
         <div className="space-y-6">
@@ -129,13 +192,16 @@ export default function CRMReport() {
                 <p className="text-slate-500 mt-1">Tổng quan toàn bộ hệ thống CRM. Nhấn vào thẻ để xem chi tiết.</p>
             </div>
 
+            {/* DATE FILTER */}
+            <DateFilterBar value={dateFilter} onChange={setDateFilter} />
+
             {/* SUMMARY ROW */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
                     { label: 'KH đăng ký', value: customers.length, color: 'bg-indigo-500' },
-                    { label: 'Campaign ACTIVE', value: activeCampaigns, color: 'bg-emerald-500' },
-                    { label: 'Coupon ACTIVE', value: activeCoupons, color: 'bg-purple-500' },
-                    { label: 'SP đang KM', value: discountedCount, color: 'bg-rose-500' },
+                    { label: `Campaign ACTIVE${dateFilter !== 'all' ? ` (${dateLabel})` : ''}`, value: activeCampaigns, color: 'bg-emerald-500' },
+                    { label: `Voucher ACTIVE${dateFilter !== 'all' ? ` (${dateLabel})` : ''}`, value: activeCoupons, color: 'bg-purple-500' },
+                    { label: 'Q/C đang BẬT', value: activeAdsCount, color: 'bg-orange-500' },
                 ].map(s => (
                     <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center">
                         <div className={`w-2 h-2 rounded-full ${s.color} mx-auto mb-2`} />
@@ -147,67 +213,34 @@ export default function CRMReport() {
 
             {/* REPORT CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <ReportCard
-                    icon={Users}
-                    label="Khách hàng"
-                    value={loadingCustomers ? '...' : customers.length}
-                    sub={`Tổng điểm tích lũy: ${totalLoyaltyPts.toLocaleString()} pts`}
-                    color="bg-indigo-500"
-                    onClick={() => openModal('customers')}
-                />
-                <ReportCard
-                    icon={Megaphone}
-                    label="Sự kiện / Campaign"
-                    value={loadingCampaigns ? '...' : campaigns.length}
-                    sub={`${activeCampaigns} đang ACTIVE`}
-                    color="bg-blue-500"
-                    onClick={() => openModal('campaigns')}
-                />
-                <ReportCard
-                    icon={Tag}
-                    label="Coupon"
-                    value={loadingCoupons ? '...' : coupons.length}
-                    sub={`${activeCoupons} đang ACTIVE`}
-                    color="bg-purple-500"
-                    onClick={() => openModal('coupons')}
-                />
-                <ReportCard
-                    icon={Gift}
-                    label="Kho quà tặng Loyalty"
-                    value={loadingGifts ? '...' : gifts.length}
-                    sub={`Tổng tồn: ${gifts.reduce((s, g) => s + (g.stock || 0), 0)} sản phẩm`}
-                    color="bg-amber-500"
-                    onClick={() => openModal('gifts')}
-                />
-                <ReportCard
-                    icon={ShoppingBag}
-                    label="Sản phẩm đang khuyến mãi"
-                    value={loadingVariants ? '...' : discountedCount}
-                    sub="Đang được áp dụng coupon"
-                    color="bg-rose-500"
-                    onClick={() => openModal('discounted')}
-                />
-                <ReportCard
-                    icon={Award}
-                    label="Top Loyalty khách hàng"
+                <ReportCard icon={Users} label="Khách hàng" value={loadingCustomers ? '...' : customers.length}
+                    sub={`Tổng điểm tích lũy: ${totalLoyaltyPts.toLocaleString()} pts`} color="bg-indigo-500"
+                    onClick={() => openModal('customers')} />
+                <ReportCard icon={Megaphone} label={`Sự kiện / Campaign${dateFilter !== 'all' ? ` (${dateLabel})` : ''}`}
+                    value={loadingCampaigns ? '...' : filteredCampaignsByDate.length}
+                    sub={`${activeCampaigns} đang ACTIVE`} color="bg-blue-500" onClick={() => openModal('campaigns')} />
+                <ReportCard icon={Tag} label={`Voucher${dateFilter !== 'all' ? ` (${dateLabel})` : ''}`}
+                    value={loadingCoupons ? '...' : filteredCouponsByDate.length}
+                    sub={`${activeCoupons} đang ACTIVE`} color="bg-purple-500" onClick={() => openModal('coupons')} />
+                <ReportCard icon={Gift} label="Kho quà tặng Loyalty" value={loadingGifts ? '...' : gifts.length}
+                    sub={`Tổng tồn: ${gifts.reduce((s, g) => s + (g.stock || 0), 0)} sản phẩm`} color="bg-amber-500"
+                    onClick={() => openModal('gifts')} />
+                <ReportCard icon={Building2} label="Quảng cáo Trang chủ"
+                    value={ads.length}
+                    sub={`${activeAdsCount} quảng cáo đang hiển thị`} color="bg-orange-500"
+                    onClick={() => openModal('ads')} />
+                <ReportCard icon={Award} label="Top Loyalty khách hàng"
                     value={customers.length > 0 ? `${Math.max(...customers.map(c => c.loyaltyPoints || 0)).toLocaleString()} pts` : '0'}
                     sub={(() => {
                         if (customers.length === 0) return 'Chưa có dữ liệu';
                         const top = [...customers].sort((a, b) => (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0))[0];
                         return top ? top.name : '';
-                    })()}
-                    color="bg-emerald-500"
-                    onClick={() => openModal('customers')}
-                />
+                    })()} color="bg-emerald-500" onClick={() => openModal('customers')} />
             </div>
 
             {/* ── MODAL: CUSTOMERS ── */}
             {activeModal === 'customers' && (
-                <Modal
-                    title="Danh sách Khách hàng"
-                    subtitle={`${customers.length} khách hàng đăng ký`}
-                    onClose={closeModal}
-                >
+                <Modal title="Danh sách Khách hàng" subtitle={`${customers.length} khách hàng đăng ký`} onClose={closeModal}>
                     <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên hoặc SĐT..." />
                     {filteredCustomers.length === 0 ? <Empty text="Không tìm thấy khách hàng." /> : (
                         <table className="w-full text-sm">
@@ -219,22 +252,20 @@ export default function CRMReport() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {[...filteredCustomers]
-                                    .sort((a, b) => (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0))
-                                    .map((c, i) => (
-                                        <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                            <td className="px-4 py-3 font-medium text-slate-800 flex items-center gap-2">
-                                                {i < 3 && <span className="text-amber-500 font-bold text-xs">#{i + 1}</span>}
-                                                {c.name}
-                                            </td>
-                                            <td className="px-4 py-3 text-slate-500">{c.phone}</td>
-                                            <td className="px-4 py-3 text-right">
-                                                <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold">
-                                                    {(c.loyaltyPoints || 0).toLocaleString()} pts
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                {[...filteredCustomers].sort((a, b) => (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0)).map((c, i) => (
+                                    <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                        <td className="px-4 py-3 font-medium text-slate-800 flex items-center gap-2">
+                                            {i < 3 && <span className="text-amber-500 font-bold text-xs">#{i + 1}</span>}
+                                            {c.name}
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-500">{c.phone}</td>
+                                        <td className="px-4 py-3 text-right">
+                                            <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold">
+                                                {(c.loyaltyPoints || 0).toLocaleString()} pts
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     )}
@@ -243,11 +274,8 @@ export default function CRMReport() {
 
             {/* ── MODAL: CAMPAIGNS ── */}
             {activeModal === 'campaigns' && (
-                <Modal
-                    title="Danh sách Campaign / Sự kiện"
-                    subtitle={`${campaigns.length} sự kiện · ${activeCampaigns} đang ACTIVE`}
-                    onClose={closeModal}
-                >
+                <Modal title={`Campaign / Sự kiện${dateFilter !== 'all' ? ` — ${dateLabel}` : ''}`}
+                    subtitle={`${filteredCampaignsByDate.length} sự kiện · ${activeCampaigns} đang ACTIVE`} onClose={closeModal}>
                     <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên hoặc mã..." />
                     {filteredCampaigns.length === 0 ? <Empty text="Không tìm thấy sự kiện." /> : (
                         <div className="space-y-3">
@@ -286,11 +314,8 @@ export default function CRMReport() {
 
             {/* ── MODAL: COUPONS ── */}
             {activeModal === 'coupons' && (
-                <Modal
-                    title="Danh sách Coupon"
-                    subtitle={`${coupons.length} coupon · ${activeCoupons} đang ACTIVE`}
-                    onClose={closeModal}
-                >
+                <Modal title={`Coupon${dateFilter !== 'all' ? ` — ${dateLabel}` : ''}`}
+                    subtitle={`${filteredCouponsByDate.length} coupon · ${activeCoupons} đang ACTIVE`} onClose={closeModal}>
                     <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên hoặc mã coupon..." />
                     {filteredCoupons.length === 0 ? <Empty text="Không tìm thấy coupon." /> : (
                         <table className="w-full text-sm">
@@ -314,12 +339,8 @@ export default function CRMReport() {
                                             {c.couponType === 'PERCENTAGE' ? `-${c.discountPercent}%` :
                                                 c.couponType === 'FIXED_AMOUNT' ? `-${fmt(c.discountAmount)}` : '-'}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500 text-sm">
-                                            {c.currentUsageCount ?? 0} / {c.totalUsageLimit ?? '∞'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Badge text={c.status} color={statusColor(c.status)} />
-                                        </td>
+                                        <td className="px-4 py-3 text-slate-500 text-sm">{c.currentUsageCount ?? 0} / {c.totalUsageLimit ?? '∞'}</td>
+                                        <td className="px-4 py-3"><Badge text={c.status} color={statusColor(c.status)} /></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -330,36 +351,25 @@ export default function CRMReport() {
 
             {/* ── MODAL: GIFTS ── */}
             {activeModal === 'gifts' && (
-                <Modal
-                    title="Kho quà tặng Loyalty"
-                    subtitle={`${gifts.length} loại quà · ${gifts.reduce((s, g) => s + (g.stock || 0), 0)} tổng tồn kho`}
-                    onClose={closeModal}
-                >
+                <Modal title="Kho quà tặng Loyalty" subtitle={`${gifts.length} loại quà · ${gifts.reduce((s, g) => s + (g.stock || 0), 0)} tổng tồn kho`} onClose={closeModal}>
                     <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên quà..." />
                     {filteredGifts.length === 0 ? <Empty text="Kho quà đang trống." /> : (
                         <div className="space-y-3">
                             {filteredGifts.map(g => (
                                 <div key={g.id} className="flex items-center gap-4 p-4 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
-                                    <img
-                                        src={g.image || 'https://placehold.co/60x60?text=Gift'}
-                                        alt={g.name}
-                                        className="w-14 h-14 rounded-xl object-cover border border-slate-100 flex-shrink-0"
-                                    />
+                                    <img src={g.image || 'https://placehold.co/60x60?text=Gift'} alt={g.name}
+                                        className="w-14 h-14 rounded-xl object-cover border border-slate-100 flex-shrink-0" />
                                     <div className="flex-1">
                                         <p className="font-semibold text-slate-800 text-sm">{g.name}</p>
                                         <p className="text-xs text-slate-400 font-mono">{g.sku}</p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs text-slate-400">Yêu cầu</p>
-                                        <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-bold">
-                                            {g.requiredPoints} pts
-                                        </span>
+                                        <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-bold">{g.requiredPoints} pts</span>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs text-slate-400">Tồn kho</p>
-                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${g.stock > 10 ? 'bg-emerald-50 text-emerald-700' : g.stock > 0 ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
-                                            {g.stock}
-                                        </span>
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${g.stock > 10 ? 'bg-emerald-50 text-emerald-700' : g.stock > 0 ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>{g.stock}</span>
                                     </div>
                                 </div>
                             ))}
@@ -368,46 +378,33 @@ export default function CRMReport() {
                 </Modal>
             )}
 
-            {/* ── MODAL: DISCOUNTED PRODUCTS ── */}
-            {activeModal === 'discounted' && (
-                <Modal
-                    title="Sản phẩm đang được khuyến mãi"
-                    subtitle={`${variants.length} sản phẩm đang áp dụng coupon`}
-                    onClose={closeModal}
-                >
-                    <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên hoặc SKU..." />
-                    {filteredVariants.length === 0 ? <Empty text="Chưa có sản phẩm nào đang khuyến mãi." /> : (
+            {/* ── MODAL: ADS ── */}
+            {activeModal === 'ads' && (
+                <Modal title="Quảng cáo Trang chủ" subtitle={`${ads.length} quảng cáo · ${activeAdsCount} đang BẬT`} onClose={closeModal}>
+                    <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên quảng cáo..." />
+                    {filteredAds.length === 0 ? <Empty text="Chưa có quảng cáo nào." /> : (
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 border-b border-slate-100">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Sản phẩm</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Giá gốc</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Giá KM</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Coupon</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Quảng cáo</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Vị trí</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredVariants.map(v => (
-                                    <tr key={v.sku} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                <img
-                                                    src={v.imageUrl || 'https://placehold.co/40x40?text=?'}
-                                                    alt={v.name}
-                                                    className="w-9 h-9 rounded-lg object-cover border border-slate-100 flex-shrink-0"
-                                                    onError={e => { e.target.src = 'https://placehold.co/40x40?text=?'; }}
-                                                />
-                                                <div>
-                                                    <p className="font-medium text-slate-800 text-sm">{v.name}</p>
-                                                    <p className="text-xs text-slate-400 font-mono">{v.sku}</p>
-                                                </div>
-                                            </div>
+                                {filteredAds.map(a => (
+                                    <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                        <td className="px-4 py-3 font-medium text-slate-800 flex items-center gap-2">
+                                            {a.imageUrl && <img src={a.imageUrl} alt={a.title} className="w-8 h-8 rounded border object-cover" />}
+                                            {a.title}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-400 line-through text-sm">{fmt(v.sellPrice)}</td>
-                                        <td className="px-4 py-3 font-bold text-rose-500 text-sm">{fmt(v.discountedPrice ?? v.sellPrice)}</td>
                                         <td className="px-4 py-3">
-                                            <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded font-mono text-xs font-bold">
-                                                {v.couponCode}
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${a.slot === 'left' ? 'bg-indigo-50 text-indigo-700' : 'bg-purple-50 text-purple-700'
+                                                }`}>{a.slot === 'left' ? 'TRÁI' : 'PHẢI'}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${a.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                {a.isActive ? 'ĐANG BẬT' : 'ĐÃ TẮT'}
                                             </span>
                                         </td>
                                     </tr>

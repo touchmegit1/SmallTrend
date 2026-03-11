@@ -27,5 +27,4 @@ public class ProductResponse {
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
     private Integer variant_count;
-    private String supplier_name;
 }

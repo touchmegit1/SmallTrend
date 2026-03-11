@@ -1,57 +1,58 @@
 import { useState, useEffect } from "react";
-import adService from "../../../services/adService";
+import useAdvertisements from "../../../hooks/useAdvertisements";
+
+const DEFAULT_ADS = [
+  {
+    slot: "left",
+    isActive: true,
+    imageUrl: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80",
+    linkUrl: "",
+  },
+  {
+    slot: "right",
+    isActive: true,
+    imageUrl: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80",
+    linkUrl: "",
+  },
+];
 
 function AdPanel({ ad }) {
   if (!ad || !ad.isActive) return null;
 
-  const content = (
-    <div
-      className="w-52 h-full shadow-xl overflow-hidden border flex flex-col rounded-2xl transition-transform hover:scale-[1.01]"
-      style={{ backgroundColor: ad.bgColor || "#ffffff" }}
-    >
+  const img = (
+    <div className="w-52 h-full overflow-hidden rounded-2xl shadow-xl border border-white/20 transition-transform hover:scale-[1.015]">
       {ad.imageUrl ? (
-        <img src={ad.imageUrl} alt={ad.title} className="h-2/3 w-full object-cover"
-          onError={(e) => { e.target.style.display = "none"; }} />
+        <img
+          src={ad.imageUrl}
+          alt="Advertisement"
+          className="w-full h-full object-cover"
+          onError={(e) => { e.target.style.display = "none"; }}
+        />
       ) : (
-        <div className="h-2/3 w-full bg-slate-100" />
+        <div className="w-full h-full bg-slate-100" />
       )}
-      <div className="flex-1 p-4 flex flex-col justify-center text-center gap-2">
-        {ad.sponsorName && (
-          <p className="text-[10px] text-slate-400">{ad.sponsorName}</p>
-        )}
-        <p className="font-bold text-slate-800 leading-tight">{ad.title}</p>
-        {ad.subtitle && <p className="text-xs text-slate-500">{ad.subtitle}</p>}
-        <button
-          className="mt-2 text-white text-sm px-4 py-2 rounded-full font-semibold"
-          style={{ backgroundColor: ad.ctaColor || "#4f46e5" }}
-        >
-          {ad.ctaText || "Xem ngay"}
-        </button>
-      </div>
     </div>
   );
 
-  return ad.linkUrl ? (
-    <a href={ad.linkUrl} target="_blank" rel="noreferrer" className="h-full flex">
-      {content}
-    </a>
-  ) : (
-    <div className="h-full flex">{content}</div>
-  );
+  return <div className="h-full flex">{img}</div>;
 }
 
 export default function SideAds() {
-  const [leftAd, setLeftAd] = useState(null);
-  const [rightAd, setRightAd] = useState(null);
+  const [displayAds, setDisplayAds] = useState([]);
 
   useEffect(() => {
-    adService.getActive()
-      .then((data) => {
-        setLeftAd(data.LEFT || null);
-        setRightAd(data.RIGHT || null);
-      })
-      .catch(() => {/* silently fail — no ads shown */ });
+    try {
+      const saved = localStorage.getItem("smalltrend_side_ads");
+      if (saved) {
+        setDisplayAds(JSON.parse(saved));
+      }
+    } catch {
+      //
+    }
   }, []);
+
+  const leftAd = displayAds.find((a) => a.slot === "left" && a.isActive);
+  const rightAd = displayAds.find((a) => a.slot === "right" && a.isActive);
 
   return (
     <>
@@ -64,5 +65,3 @@ export default function SideAds() {
     </>
   );
 }
-
-

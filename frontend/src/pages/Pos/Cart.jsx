@@ -1,39 +1,7 @@
 import EmptyCart from "./EmptyCart";
 import { useState } from "react";
-import CartItemModal from "./CartItemModal";
-
-const InfoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#17a2b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"></circle>
-    <line x1="12" y1="16" x2="12" y2="12"></line>
-    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-  </svg>
-);
 
 export default function Cart({ cart, setCart, combos = [], products = [], addToCart, addComboToCart }) {
-  const [expandedItemId, setExpandedItemId] = useState(null);
-
-  const toggleExpand = (id) => {
-    setExpandedItemId(id);
-  };
-
-  const handleModalConfirm = (updatedItem) => {
-    let newCart = [...cart];
-    const oldIdx = newCart.findIndex(i => i.id === expandedItemId);
-    if (oldIdx >= 0) {
-      const newIdx = newCart.findIndex(i => i.id === updatedItem.id);
-      if (newIdx >= 0 && newIdx !== oldIdx) {
-        newCart[newIdx].qty += updatedItem.qty;
-        newCart[newIdx].price = updatedItem.price;
-        newCart[newIdx].note = updatedItem.note;
-        newCart.splice(oldIdx, 1);
-      } else {
-        newCart[oldIdx] = updatedItem;
-      }
-    }
-    setCart(newCart);
-    setExpandedItemId(null);
-  };
   const updateQuantity = (id, newQty) => {
     if (newQty <= 0) {
       setCart(cart.filter(item => item.id !== id));
@@ -129,13 +97,6 @@ export default function Cart({ cart, setCart, combos = [], products = [], addToC
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: "600", marginBottom: "2px", fontSize: "12px", display: "flex", alignItems: "center", gap: "5px" }}>
                   {item.name}
-                  <button
-                    onClick={() => toggleExpand(item.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', outline: 'none' }}
-                    title="Cập nhật sản phẩm"
-                  >
-                    <InfoIcon />
-                  </button>
                 </div>
                 <div style={{ color: "#e74c3c", fontWeight: "bold", fontSize: "12px" }}>
                   {item.price.toLocaleString()}đ
@@ -204,15 +165,6 @@ export default function Cart({ cart, setCart, combos = [], products = [], addToC
         </div>
       )}
 
-      {expandedItemId && cart.find(i => i.id === expandedItemId) && (
-        <CartItemModal
-          item={cart.find(i => i.id === expandedItemId)}
-          products={products}
-          onClose={() => setExpandedItemId(null)}
-          onConfirm={handleModalConfirm}
-        />
-      )}
-
       {/* Đề xuất combo */}
       {suggestions.length > 0 && (
         <div style={{
@@ -248,6 +200,7 @@ export default function Cart({ cart, setCart, combos = [], products = [], addToC
                   </div>
                 </div>
                 <button
+                  className="combo-suggest-btn"
                   onClick={() => addComboToCart && addComboToCart(suggestion.combo)}
                   style={{
                     padding: "4px 10px",

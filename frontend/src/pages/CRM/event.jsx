@@ -5,6 +5,7 @@ import eventService from '../../services/eventService';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useVouchers } from '../../hooks/useVouchers';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { uploadImage } from '../../services/uploadService';
 
 // ─── ICONS ────────────────────────────────────────────────────────────────────
 const IconEdit = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
@@ -56,6 +57,8 @@ const EventManagement = () => {
   };
   const [campaignForm, setCampaignForm] = useState(initialCampaignForm);
   const [savingCampaign, setSavingCampaign] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = React.useRef(null);
 
   // ── Vouchers ──
   const { vouchers, loading: loadingVouchers, refetch: refetchVouchers } = useVouchers();
@@ -111,12 +114,42 @@ const EventManagement = () => {
         await eventService.createCampaign(payload);
         showToast('Tạo sự kiện mới thành công');
       }
+
+      // Logic "Chỉ 1 banner hiển thị tại 1 thời điểm"
+      if (campaignForm.isPublic) {
+        const others = campaigns.filter(c => c.isPublic && c.id !== editingCampaign);
+        for (const c of others) {
+          try {
+            await eventService.updateCampaign(c.id, { ...c, isPublic: false });
+          } catch (e) {
+            console.error('Failed to disable previous banner:', e);
+          }
+        }
+      }
+
       setIsCampaignModalOpen(false);
       await refetchCampaigns();
     } catch (err) {
       showToast('Lỗi: ' + (err?.response?.data?.message || err.message), 'error');
     } finally {
       setSavingCampaign(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const url = await uploadImage(file);
+      setCampaignForm(prev => ({ ...prev, bannerImageUrl: url }));
+      showToast('Tải ảnh banner thành công');
+    } catch (err) {
+      showToast('Lỗi tải ảnh. Vui lòng thử lại.', 'error');
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
     }
   };
 
@@ -503,13 +536,30 @@ const EventManagement = () => {
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">URL Banner</label>
-                  <input type="url" value={campaignForm.bannerImageUrl}
-                    onChange={e => setCampaignForm({ ...campaignForm, bannerImageUrl: e.target.value })}
-                    placeholder="https://..."
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Ảnh / Banner chiến dịch</label>
+                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center gap-3 bg-slate-50">
+                    {campaignForm.bannerImageUrl ? (
+                      <div className="relative group w-full max-w-sm rounded-lg overflow-hidden shadow-sm">
+                        <img src={campaignForm.bannerImageUrl} alt="Banner" className="w-full h-auto object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          <button type="button" onClick={() => setCampaignForm(prev => ({ ...prev, bannerImageUrl: "" }))}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium">Gỡ ảnh</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+                        <button type="button" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage}
+                          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                          {uploadingImage ? "Đang tải ảnh..." : "Chọn File Ảnh (Cloudinary)"}
+                        </button>
+                        <p className="text-xs text-slate-400">Hỗ trợ JPG, PNG. Khuyên dùng tỉ lệ ngang (16:9)</p>
+                      </>
+                    )}
+                  </div>
                   {campaignForm.bannerImageUrl && (
-                    <img src={campaignForm.bannerImageUrl} alt="Preview" className="mt-2 h-24 rounded-lg object-cover w-full" onError={e => e.target.style.display = 'none'} />
+                    <input type="url" value={campaignForm.bannerImageUrl} onChange={e => setCampaignForm(prev => ({ ...prev, bannerImageUrl: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-500 mt-2 bg-slate-50 focus:outline-none" placeholder="Hoặc dán link ảnh thủ công..." />
                   )}
                 </div>
                 <div className="col-span-2">
@@ -518,11 +568,14 @@ const EventManagement = () => {
                     onChange={e => setCampaignForm({ ...campaignForm, description: e.target.value })}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none" />
                 </div>
-                <div className="col-span-2 flex items-center gap-2">
+                <div className="col-span-2 flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <input type="checkbox" id="isPublic" checked={campaignForm.isPublic}
                     onChange={e => setCampaignForm({ ...campaignForm, isPublic: e.target.checked })}
                     className="w-4 h-4 text-indigo-600 rounded border-slate-300" />
-                  <label htmlFor="isPublic" className="text-sm font-medium text-slate-700">Hiển thị công khai</label>
+                  <label htmlFor="isPublic" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                    Hiển thị lên homepage (Active Banner)
+                    <p className="text-xs text-slate-500 font-normal mt-0.5">Chỉ 1 banner được hiển thị tại 1 thời điểm. Nếu bật, banner cũ sẽ tự động tắt.</p>
+                  </label>
                 </div>
               </div>
 
