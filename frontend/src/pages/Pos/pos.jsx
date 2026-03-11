@@ -424,8 +424,9 @@ export default function POS() {
 
 
   const updateCustomer = (customer) => {
+    // Luôn giữ lại spentAmount nếu có khi update khách
     setOrders(orders.map(order =>
-      order.id === activeOrderId ? { ...order, customer } : order
+      order.id === activeOrderId ? { ...order, customer: { ...customer, spentAmount: customer?.spentAmount || 0 } } : order
     ));
   };
 

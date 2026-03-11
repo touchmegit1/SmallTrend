@@ -397,21 +397,24 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
         const earnedPoints = Math.floor(finalTotal / 10000); // 1 điểm/10,000đ
         const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
         const currentPoints = selectedCustomer.loyaltyPoints || 0;
-
+        const currentSpent = selectedCustomer.spentAmount || 0;
 
         // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
         const newPoints = currentPoints - pointsUsed + earnedPoints;
+        const newSpent = currentSpent + finalTotal;
 
-        // Lưu vào cột loyalty_points trong bảng customers
+        // Lưu vào cột loyalty_points và spent_amount trong bảng customers
         await api.put(`/crm/customers/${selectedCustomer.id}`, {
           name: selectedCustomer.name,
           phone: selectedCustomer.phone,
           loyaltyPoints: newPoints,
+          spentAmount: newSpent,
         });
 
         customerToUpdate = {
           ...selectedCustomer,
           loyaltyPoints: newPoints,
+          spentAmount: newSpent,
         };
       } catch (error) {
         console.error('Error updating customer loyalty points:', error);

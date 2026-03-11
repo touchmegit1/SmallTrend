@@ -83,18 +83,19 @@ class CustomerServiceTest {
 
     @Test
     void updateCustomer_shouldReturnUpdatedCustomer_whenValid() {
-        Customer existingCustomer = Customer.builder().id(1).name("Old Name").phone("0000").loyaltyPoints(50).build();
+        Customer existingCustomer = Customer.builder().id(1).name("Old Name").phone("0000").loyaltyPoints(50).spentAmount(0L).build();
         when(customerRepository.findById(1)).thenReturn(Optional.of(existingCustomer));
 
-        Customer updatedCustomer = Customer.builder().id(1).name("New Name").phone("1111").loyaltyPoints(200).build();
+        Customer updatedCustomer = Customer.builder().id(1).name("New Name").phone("1111").loyaltyPoints(200).spentAmount(500000L).build();
         when(customerRepository.save(any(Customer.class))).thenReturn(updatedCustomer);
 
-        CustomerResponse response = customerService.updateCustomer(1, "New Name", "1111", 200);
+        CustomerResponse response = customerService.updateCustomer(1, "New Name", "1111", 200, 500000L);
 
         assertNotNull(response);
         assertEquals("New Name", response.getName());
         assertEquals("1111", response.getPhone());
         assertEquals(200, response.getLoyaltyPoints());
+        assertEquals(500000L, response.getSpentAmount());
     }
 
     @Test
@@ -102,7 +103,7 @@ class CustomerServiceTest {
         when(customerRepository.findById(99)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, 
-            () -> customerService.updateCustomer(99, "Name", "Phone", 100));
+            () -> customerService.updateCustomer(99, "Name", "Phone", 100, 0L));
         assertEquals("Customer not found", exception.getMessage());
         verify(customerRepository, never()).save(any());
     }
