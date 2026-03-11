@@ -662,9 +662,45 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 />
                 <button
                   ref={voucherButtonRef}
-                  onClick={() => {
-                    if (voucher === "GIAM10") setDiscount(subtotal * 0.1);
-                    else alert("Mã không hợp lệ");
+                  onClick={async () => {
+                    if (!voucher.trim()) {
+                      alert("Vui lòng nhập mã voucher");
+                      return;
+                    }
+                    try {
+                      // Gọi API validate
+                      const res = await api.get(`/crm/coupons/validate`, {
+                        params: {
+                          code: voucher.trim(),
+                          customerId: selectedCustomer?.id || ""
+                        }
+                      });
+                      const validCoupon = res.data;
+
+                      // Tính toán tiền giảm
+                      let calculatedDiscount = 0;
+                      if (validCoupon.couponType === "PERCENTAGE") {
+                        calculatedDiscount = (subtotal * validCoupon.discountPercent) / 100;
+                        if (validCoupon.maxDiscountAmount) {
+                          calculatedDiscount = Math.min(calculatedDiscount, validCoupon.maxDiscountAmount);
+                        }
+                      } else {
+                        calculatedDiscount = validCoupon.discountAmount || 0;
+                      }
+
+                      // Kiểm tra đơn tối thiểu
+                      if (validCoupon.minPurchaseAmount && subtotal < validCoupon.minPurchaseAmount) {
+                        alert(`Đơn hàng chưa đạt mức tối thiểu ${validCoupon.minPurchaseAmount.toLocaleString()}đ để áp dụng mã này.`);
+                        return;
+                      }
+
+                      setDiscount(calculatedDiscount);
+                      alert("Áp dụng mã giảm giá thành công!");
+                    } catch (error) {
+                      setDiscount(0);
+                      const msg = error.response?.data?.message || "Mã giảm giá không hợp lệ hoặc đã hết lượt dùng";
+                      alert(`Lỗi: ${msg}`);
+                    }
                   }}
                   style={{
                     padding: "8px 16px",

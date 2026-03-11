@@ -8,7 +8,6 @@ public class UpdateCustomerTierRequest {
     private String tierName;
     private BigDecimal minSpending;
     private BigDecimal pointsMultiplier;
-    private BigDecimal discountRate;
     private String color;
     private String description;
     private Boolean isActive;

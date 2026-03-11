@@ -79,6 +79,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         { label: "Danh sách khách hàng", path: "/crm/customer" },
         { label: "Khuyến Mãi", path: "/crm/event" },
         { label: "Kho quà tặng", path: "/crm/loyalty" },
+        { label: "Quảng cáo & Tài trợ", path: "/crm/ads" },
         { label: "Báo Cáo Thống Kê", path: "/crm/report" },
       ],
     },
@@ -118,11 +119,9 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         <div
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
           onClick={() => {
-            const isAdminRole =
-              user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
-            navigate(isAdminRole ? "/dashboard" : "/pos");
+            navigate("/crm/homepage");
           }}
-          title="Về trang chính"
+          title="Về trang chủ"
         >
           <div className="bg-indigo-600 p-2 rounded-lg">
             <Store className="text-white" size={24} />
@@ -133,7 +132,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
             </h1>
           )}
         </div>
-        
+
         {/* Collapse Button */}
         <button
           type="button"
