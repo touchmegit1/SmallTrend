@@ -10,10 +10,10 @@ const MainLayout = () => {
         <div className="min-h-screen bg-slate-50">
             <Sidebar
                 collapsed={isSidebarCollapsed}
+                onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
             />
             <Header
                 sidebarCollapsed={isSidebarCollapsed}
-                onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
             />
             <main className={`${isSidebarCollapsed ? 'pl-20' : 'pl-64'} pt-16 min-h-screen transition-all duration-300`}>
                 <div className="p-8">

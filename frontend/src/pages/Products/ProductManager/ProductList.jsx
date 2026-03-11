@@ -670,7 +670,7 @@ export function ProductListScreen() {
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Tồn kho</p>
-                    <p className="font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg w-fit border border-indigo-100">{variant.stock_quantity || 0}</p>
+                    <p className="font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg w-fit border border-indigo-100">{variant.stockQuantity || 0}</p>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Trạng thái</p>
@@ -746,7 +746,7 @@ export function ProductListScreen() {
                         {v.sell_price ? Number(v.sell_price).toLocaleString('vi-VN') + ' ₫' : 'N/A'}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{v.stock_quantity || 0}</span>
+                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{v.stockQuantity || 0}</span>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">{v.unit_name || 'N/A'}</TableCell>
                       <TableCell>
@@ -847,15 +847,7 @@ export function ProductListScreen() {
                           )}
                           <div>
                             <p className="text-sm font-semibold text-gray-900 line-clamp-1 max-w-[200px]">{product.name}</p>
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <span className="line-clamp-1">{getBrandName(product.brand_id)}</span>
-                              {product.supplier_name && (
-                                <>
-                                  <span className="text-gray-300">•</span>
-                                  <span className="text-blue-500 font-medium line-clamp-1">{product.supplier_name}</span>
-                                </>
-                              )}
-                            </div>
+                            <p className="text-xs text-gray-500 line-clamp-1">{getBrandName(product.brand_id)}</p>
                           </div>
                         </div>
                       </TableCell>

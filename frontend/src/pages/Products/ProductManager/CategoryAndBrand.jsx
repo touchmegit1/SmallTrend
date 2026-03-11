@@ -9,7 +9,6 @@ import { Label } from "../ProductComponents/label";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchProducts } from "../../../hooks/products";
-import { useFetchSuppliers } from "../../../hooks/useSuppliers";
 
 const Category_Brand = () => {
   // Trạng thái quản lý điều hướng và modal
@@ -34,15 +33,13 @@ const Category_Brand = () => {
     name: '',
     description: '',
     country: '',
-    category: null,
-    supplier: null
+    category: null
   });
 
   // Gọi Hook Fetch Data từ server
-  const { categories, loading: catLoading, error: catError, createCategory, updateCategory, deleteCategory, fetchCategories } = useFetchCategories();
-  const { brands, loading: brandLoading, error: brandError, createBrand, updateBrand, deleteBrand, fetchBrands } = useFetchBrands();
+  const { categories, loading: catLoading, error: catError, createCategory, updateCategory, deleteCategory } = useFetchCategories();
+  const { brands, loading: brandLoading, error: brandError, createBrand, updateBrand, deleteBrand } = useFetchBrands();
   const { products } = useFetchProducts();
-  const { suppliers } = useFetchSuppliers();
 
   // Đếm nhanh số lượng sản phẩm được quy chiếu trong cùng 1 danh mục/thương hiệu 
   const productCountMap = useMemo(() => {
@@ -81,8 +78,7 @@ const Category_Brand = () => {
       name: '',
       description: '',
       country: '',
-      category: null,
-      supplier: null
+      category: null
     });
 
     setSelectedItem(null);
@@ -98,8 +94,7 @@ const Category_Brand = () => {
       name: item.name,
       description: item.description || '',
       country: item.country || '',
-      category: item.category ? { id: item.category.id } : null,
-      supplier: item.supplier ? { id: item.supplier.id } : null
+      category: item.category ? { id: item.category.id } : null
     });
 
     setShowModal(true);
@@ -179,7 +174,7 @@ const Category_Brand = () => {
   // Bộ tổng hợp Filter: Chỉ hiện các từ khoá trùng, quốc gia khớp và sắp xếp theo ngày sinh
   const filteredData = useMemo(() => {
     let filtered = data.filter(item =>
-      item.name?.toLowerCase()?.includes(searchQuery.toLowerCase())
+      item.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     if (activeTab === 'brands' && countryFilter) {
@@ -187,22 +182,15 @@ const Category_Brand = () => {
     }
 
     return filtered.sort((a, b) => {
-      const dateA = new Date(a.createdAt || a.created_at || a.created_date || 0);
-      const dateB = new Date(b.createdAt || b.created_at || b.created_date || 0);
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
       return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
   }, [data, searchQuery, countryFilter, sortOrder, activeTab]);
 
-  // Chỉ block loading khi cả hai đang tải lần đầu, không block vĩnh viễn khi lỗi
-  const isLoading = catLoading && brandLoading;
-
-  // Full page loading spinner only on very first load
-  if (isLoading) return (
-    <div className="flex items-center justify-center py-24 text-gray-400">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mr-4" />
-      <span>Đang tải dữ liệu...</span>
-    </div>
-  );
+  // Render trạng thái chờ khi đang gọi request về backend
+  if (catLoading || brandLoading) return <p>Đang tải...</p>;
+  if (catError || brandError) return <p className="text-red-500">{catError || brandError}</p>;
 
   return (
     <div className="space-y-6">
@@ -223,54 +211,20 @@ const Category_Brand = () => {
         </div>
       )}
 
-      {/* Banner lỗi inline cho từng tab */}
-      {activeTab === 'categories' && catError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-          <span>⚠️ Lỗi tải danh mục: {catError}</span>
-          <button onClick={fetchCategories} className="ml-4 underline hover:text-red-900">Thử lại</button>
-        </div>
-      )}
-      {activeTab === 'brands' && brandError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-          <span>⚠️ Lỗi tải thương hiệu: {brandError}</span>
-          <button onClick={fetchBrands} className="ml-4 underline hover:text-red-900">Thử lại</button>
-        </div>
-      )}
-      {activeTab === 'brands' && brandLoading && (
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500" />
-          Đang tải thương hiệu...
-        </div>
-      )}
-
       {/* KHỐI HIỂN THỊ: Header trang */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Quản lý Danh mục & Thương hiệu</h1>
           <p className="text-gray-600 mt-2 flex items-center gap-2">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
-              {filteredData.length} / {data.length} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
+              {filteredData.length} {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}
             </span>
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              fetchCategories();
-              fetchBrands();
-              setSearchQuery("");
-              setCountryFilter("");
-            }}
-            className="border-blue-200 text-blue-600 hover:bg-blue-50"
-          >
-            Làm mới
-          </Button>
-          <Button onClick={handleAdd} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md">
-            <Plus className="w-4 h-4 mr-2" />
-            Thêm mới
-          </Button>
-        </div>
+        <Button onClick={handleAdd} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md">
+          <Plus className="w-4 h-4 mr-2" />
+          Thêm mới
+        </Button>
       </div>
 
       {/* KHỐI HIỂN THỊ: Vùng Tabs điều hướng và bộ Search/Filters */}
@@ -363,9 +317,6 @@ const Category_Brand = () => {
                 {activeTab === "brands" && (
                   <TableHead className="font-bold text-gray-700">Quốc gia</TableHead>
                 )}
-                {activeTab === "brands" && (
-                  <TableHead className="font-bold text-gray-700">Nhà cung cấp</TableHead>
-                )}
                 <TableHead className="font-bold text-gray-700">Số sản phẩm</TableHead>
                 {activeTab === "categories" && (
                   <TableHead className="font-bold text-gray-700">Số thương hiệu</TableHead>
@@ -376,8 +327,8 @@ const Category_Brand = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.length > 0 ? (
-                filteredData.map((item) => (
+              {filteredData.map((item) => (
+                <>
                   <TableRow key={item.id} className="hover:bg-blue-50 transition-colors border-b border-gray-100">
                     {activeTab === "categories" && (
                       <TableCell>
@@ -424,14 +375,7 @@ const Category_Brand = () => {
                     )}
                     {activeTab === "brands" && (
                       <TableCell>
-                        <span className="text-gray-600">{item.country || '—'}</span>
-                      </TableCell>
-                    )}
-                    {activeTab === "brands" && (
-                      <TableCell>
-                        <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50/50">
-                          {item.supplier?.name || 'Chưa gán'}
-                        </Badge>
+                        <span className="text-gray-600">{item.country}</span>
                       </TableCell>
                     )}
 
@@ -476,18 +420,8 @@ const Category_Brand = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={activeTab === "categories" ? 7 : 8} className="text-center py-12">
-                    <div className="flex flex-col items-center justify-center text-gray-400">
-                      <Tag className="w-12 h-12 mb-2 opacity-20" />
-                      <p className="text-lg font-medium">Không tìm thấy dữ liệu nào</p>
-                      <p className="text-sm">Vui lòng kiểm tra lại bộ lọc hoặc thêm mới {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
+                </>
+              ))}
             </TableBody>
           </Table>
         </CardContent>
@@ -568,28 +502,6 @@ const Category_Brand = () => {
                     }
                     placeholder="VD: Việt Nam, Mỹ, Thái Lan..."
                   />
-                </div>
-              )}
-
-              {/* Box chọn nhà cung cấp cho Thương Hiệu */}
-              {activeTab === 'brands' && (
-                <div>
-                  <Label className="text-sm font-semibold text-gray-700">Nhà cung cấp</Label>
-                  <select
-                    className="w-full mt-2 h-11 px-4 text-base bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-                    value={formData.supplier?.id || ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        supplier: e.target.value ? { id: parseInt(e.target.value) } : null
-                      })
-                    }
-                  >
-                    <option value="">-- Chọn nhà cung cấp (Không bắt buộc) --</option>
-                    {suppliers?.map((sup) => (
-                      <option key={sup.id} value={sup.id}>{sup.name}</option>
-                    ))}
-                  </select>
                 </div>
               )}
 

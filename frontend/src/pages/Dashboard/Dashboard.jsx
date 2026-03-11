@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Users, DollarSign, ShoppingBag, History, Bot, Clock3, Warehouse } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, ShoppingBag, History, Bot, Clock3, Warehouse, MessageSquare } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import api from '../../config/axiosConfig';
 import * as XLSX from 'xlsx';
@@ -11,10 +11,45 @@ const Dashboard = () => {
     React.useEffect(() => {
         const fetchSaleOrders = async () => {
             try {
-                const response = await api.get('/sale-orders');
-                setOrders(Array.isArray(response.data) ? response.data : []);
+                // Lấy dữ liệu từ localStorage (giống ReportforCashier.jsx)
+                const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+                const localOrders = savedTransactions
+                    .filter(t => t.status !== "Chờ thanh toán")
+                    .map(t => {
+                        let orderDate = new Date();
+                        if (t.time) {
+                            const parts = t.time.split(/[\s,]+/);
+                            if (parts.length >= 2) {
+                                const dateParts = parts[0].split('/');
+                                if (dateParts.length === 3) {
+                                    const [day, month, year] = dateParts;
+                                    const timeParts = parts[1].split(':');
+                                    const hour = timeParts[0] || '0';
+                                    const min = timeParts[1] || '0';
+                                    const sec = timeParts[2] || '0';
+                                    orderDate = new Date(year, month - 1, day, hour, min, sec);
+                                }
+                            } else {
+                                orderDate = new Date(t.time) || new Date();
+                            }
+                        }
+                        return {
+                            orderCode: t.id || '',
+                            orderDate: orderDate.toISOString(),
+                            cashierName: 'Thu ngân',
+                            customerName: (t.customer && t.customer.name) ? t.customer.name : 'Khách lẻ',
+                            paymentMethod: t.payment || '',
+                            status: t.status || '',
+                            subtotal: parseInt((t.total || "0").toString().replace(/[^0-9]/g, '')),
+                            taxAmount: 0,
+                            discountAmount: t.pointsDiscount || 0,
+                            totalAmount: parseInt((t.total || "0").toString().replace(/[^0-9]/g, '')),
+                        };
+                    });
+
+                setOrders(localOrders);
             } catch (error) {
-                console.error('Không thể tải dữ liệu sale-orders cho dashboard:', error);
+                console.error('Không thể tải dữ liệu cho dashboard:', error);
                 setOrders([]);
             } finally {
                 setIsLoading(false);
@@ -93,14 +128,14 @@ const Dashboard = () => {
     const stats = [
         { label: 'Tổng doanh số', value: formatCurrency(totalRevenueRaw), trend: `${totalOrders} đơn`, icon: DollarSign, color: 'bg-green-500' },
         { label: 'Tổng đơn hàng', value: totalOrders.toLocaleString('vi-VN'), trend: 'Đơn đã ghi nhận', icon: ShoppingBag, color: 'bg-blue-500' },
-        { label: 'Giá trị trung bình/đơn', value: formatCurrency(averageOrderRaw), trend: 'Theo sale-orders', icon: Users, color: 'bg-purple-500' },
+        { label: 'Giá trị trung bình/đơn', value: formatCurrency(averageOrderRaw), trend: 'Theo giao dịch POS', icon: Users, color: 'bg-purple-500' },
         { label: 'Doanh thu tháng này', value: formatCurrency(revenueThisMonthRaw), trend: 'Cập nhật realtime', icon: TrendingUp, color: 'bg-orange-500' },
     ];
 
     const quickWidgets = [
         { label: 'Lịch sử đơn hàng', path: '/pos/history', icon: History, tone: 'bg-blue-50 text-blue-700 border-blue-100' },
         { label: 'AI dự báo', path: '/reports/ai', icon: Bot, tone: 'bg-purple-50 text-purple-700 border-purple-100' },
-        { label: 'Ca làm việc', path: '/hr/shifts', icon: Clock3, tone: 'bg-amber-50 text-amber-700 border-amber-100' },
+        { label: 'Khiếu nại', path: '/pos/complain', icon: MessageSquare, tone: 'bg-amber-50 text-amber-700 border-amber-100' },
         { label: 'Kho hàng', path: '/inventory', icon: Warehouse, tone: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
     ];
 

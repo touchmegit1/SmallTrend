@@ -1,10 +1,9 @@
 import React from "react";
-import { RefreshCw, Download, Plus } from "lucide-react";
+import { RefreshCw, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInventoryDashboard } from "../../hooks/useInventoryData";
 import StatsCards from "../../components/inventory/StatsCards";
-import BatchManagementPanel from "../../components/inventory/BatchManagementPanel";
-import RecentActivities from "../../components/inventory/RecentActivities";
+import StockByProductChart from "../../components/inventory/StockByProductChart";
 
 function InventoryDashboard() {
   const navigate = useNavigate();
@@ -83,10 +82,7 @@ function InventoryDashboard() {
             <RefreshCw size={16} />
             Làm mới
           </button>
-          <button className="inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">
-            <Download size={16} />
-            Xuất báo cáo
-          </button>
+
           <button
             onClick={() => navigate("/inventory/purchase-orders/create")}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition"
@@ -98,21 +94,14 @@ function InventoryDashboard() {
       </div>
 
       {/* ─── Stats Cards ─────────────────────────────────────── */}
-      <StatsCards stats={stats} />
+      <StatsCards
+        stats={stats}
+        allProducts={allProducts}
+        allBatches={allBatches}
+      />
 
-      {/* ─── Batch Management & Recent Activities ────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
-          <BatchManagementPanel
-            batches={batchTab === "all" ? allBatches : batches}
-            batchTab={batchTab}
-            setBatchTab={setBatchTab}
-          />
-        </div>
-        <div>
-          <RecentActivities stockMovements={stockMovements} />
-        </div>
-      </div>
+      {/* ─── Stock By Product Chart ────────────────────────────── */}
+      <StockByProductChart products={allProducts} />
     </div>
   );
 }
