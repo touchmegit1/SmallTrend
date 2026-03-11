@@ -7,22 +7,22 @@ import {
   validateForConfirm,
   DEFAULT_VOUCHER,
 } from "../utils/disposalVoucher";
-import { getProductBatches, getDashboardProducts, getActiveLocations } from "../services/inventoryService";
-import { 
-  getDisposalVoucherById, 
+import { getActiveLocations } from "../services/inventoryService";
+import {
+  getDisposalVoucherById,
   getNextDisposalCode,
-  saveDisposalDraft,
-  submitDisposalVoucher,
+  getExpiredBatches,
+  createDisposalVoucher,
   approveDisposalVoucher,
-  rejectDisposalVoucher
+  rejectDisposalVoucher,
 } from "../services/disposalService";
 
 export function useDisposalVoucher(voucherId = null) {
   const toast = useToast();
   const [voucher, setVoucher] = useState({ ...DEFAULT_VOUCHER });
   const [items, setItems] = useState([]);
-  const [batches, setBatches] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [expiredBatches, setExpiredBatches] = useState([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,22 +33,20 @@ export function useDisposalVoucher(voucherId = null) {
     let cancelled = false;
     const init = async () => {
       try {
-        const [batchesData, productsData, locsData] = await Promise.all([
-          getProductBatches(),
-          getDashboardProducts(),
-          getActiveLocations(),
-        ]);
-
+        const locsData = await getActiveLocations();
         if (cancelled) return;
-
-        setBatches(batchesData);
-        setProducts(productsData);
         setLocations(locsData);
 
         if (voucherId) {
           const voucherData = await getDisposalVoucherById(voucherId);
           setVoucher(voucherData);
           setItems(voucherData.items || []);
+
+          // If voucher has a location, load expired batches for that location
+          if (voucherData.location_id) {
+            const batches = await getExpiredBatches(voucherData.location_id);
+            setExpiredBatches(batches);
+          }
         } else {
           const code = await getNextDisposalCode();
           setVoucher((prev) => ({
@@ -64,30 +62,35 @@ export function useDisposalVoucher(voucherId = null) {
       }
     };
     init();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [voucherId]);
-
-  // ─── Expired batches detection ─────────────────────────
-  const expiredBatches = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return batches.filter((b) => {
-      if (!b.expiry_date || b.quantity <= 0) return false;
-      return new Date(b.expiry_date) < today;
-    }).map((b) => {
-      const product = products.find((p) => p.id === b.product_id);
-      return {
-        ...b,
-        product_name: product?.name || "Không rõ",
-        product_sku: product?.sku || "",
-        unit: product?.unit || "",
-        unit_cost: product?.purchase_price || 0,
-      };
-    });
-  }, [batches, products]);
 
   const isEditable =
     voucher.status === DV_STATUS.DRAFT || voucher.status === DV_STATUS.REJECTED;
+
+  // ─── Change location → fetch expired batches for that location ─
+  const changeLocation = useCallback(
+    async (locationId) => {
+      updateVoucher("location_id", locationId);
+      setItems([]); // reset selected items when changing location
+      setExpiredBatches([]);
+
+      if (!locationId) return;
+
+      setLoadingBatches(true);
+      try {
+        const batches = await getExpiredBatches(locationId);
+        setExpiredBatches(batches);
+      } catch (err) {
+        toast.error("Lỗi tải lô hết hạn: " + err.message);
+      } finally {
+        setLoadingBatches(false);
+      }
+    },
+    [],
+  );
 
   // ─── Update voucher fields ─────────────────────────────
   const updateVoucher = useCallback((field, value) => {
@@ -107,14 +110,14 @@ export function useDisposalVoucher(voucherId = null) {
         product_name: batch.product_name,
         batch_code: batch.batch_code,
         quantity: batch.quantity, // default to full batch qty
-        unit_cost: batch.unit_cost,
-        total_cost: batch.quantity * batch.unit_cost,
+        unit_cost: batch.unit_cost || 0,
+        total_cost: batch.quantity * (batch.unit_cost || 0),
         expiry_date: batch.expiry_date,
-        unit: batch.unit,
+        unit: batch.unit || "",
       };
       setItems((prev) => [...prev, newItem]);
     },
-    [items]
+    [items],
   );
 
   // ─── Remove item ───────────────────────────────────────
@@ -123,19 +126,16 @@ export function useDisposalVoucher(voucherId = null) {
   }, []);
 
   // ─── Update item quantity ──────────────────────────────
-  const updateItemQty = useCallback(
-    (batchId, qty) => {
-      const numQty = parseInt(qty, 10) || 0;
-      setItems((prev) =>
-        prev.map((i) =>
-          i.batch_id === batchId
-            ? { ...i, quantity: numQty, total_cost: numQty * i.unit_cost }
-            : i
-        )
-      );
-    },
-    []
-  );
+  const updateItemQty = useCallback((batchId, qty) => {
+    const numQty = parseInt(qty, 10) || 0;
+    setItems((prev) =>
+      prev.map((i) =>
+        i.batch_id === batchId
+          ? { ...i, quantity: numQty, total_cost: numQty * i.unit_cost }
+          : i,
+      ),
+    );
+  }, []);
 
   // ─── Totals ────────────────────────────────────────────
   const totals = useMemo(() => {
@@ -153,7 +153,7 @@ export function useDisposalVoucher(voucherId = null) {
         items: items,
       };
 
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user.id || 1;
 
       const savedVoucher = await saveDisposalDraft(voucherData, userId);
@@ -170,24 +170,28 @@ export function useDisposalVoucher(voucherId = null) {
   // ─── Submit for approval ───────────────────────────────
   const submitVoucherAction = useCallback(async () => {
     // Validate
-    const validationErrors = validateForConfirm(voucher, items, batches);
+    const validationErrors = validateForConfirm(voucher, items, expiredBatches);
     if (validationErrors.length > 0) {
-      toast.warning(validationErrors.join(", "), { title: "Không thể gửi duyệt", duration: 5000 });
+      toast.warning(validationErrors.join(", "), {
+        title: "Không thể gửi duyệt",
+        duration: 5000,
+      });
       return false;
     }
 
-    if (!window.confirm("Gửi phiếu này cho quản lý để chờ duyệt?")) return false;
-
     setSaving(true);
     try {
-      let currentVoucherId = voucherId || voucher.id;
-      if (!currentVoucherId) {
-        const saved = await saveDraft();
-        currentVoucherId = saved.id;
-      }
-      const submittedVoucher = await submitDisposalVoucher(currentVoucherId);
+      const voucherData = {
+        ...voucher,
+        items: items,
+      };
+
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = user.id || 1;
+
+      const submittedVoucher = await createDisposalVoucher(voucherData, userId);
       setVoucher(submittedVoucher);
-      return true;
+      return submittedVoucher;
     } catch (err) {
       setError(err.message);
       toast.error("Lỗi khi gửi duyệt: " + err.message);
@@ -195,21 +199,20 @@ export function useDisposalVoucher(voucherId = null) {
     } finally {
       setSaving(false);
     }
-  }, [voucher, items, batches, voucherId, saveDraft]);
+  }, [voucher, items, expiredBatches, voucherId]);
 
   // ─── Approve (stock deduction) ─────────────────────────
   const approveVoucherAction = useCallback(async () => {
-    if (!window.confirm("Xác nhận duyệt phiếu xử lý? Tồn kho sẽ bị trừ ngay lập tức.")) {
-      return false;
-    }
-
     setSaving(true);
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user.id || 1;
 
       const currentVoucherId = voucherId || voucher.id;
-      const approvedVoucher = await approveDisposalVoucher(currentVoucherId, userId);
+      const approvedVoucher = await approveDisposalVoucher(
+        currentVoucherId,
+        userId,
+      );
 
       setVoucher(approvedVoucher);
       return true;
@@ -223,36 +226,38 @@ export function useDisposalVoucher(voucherId = null) {
   }, [voucherId, voucher.id]);
 
   // ─── Reject ────────────────────────────────────────────
-  const rejectVoucherAction = useCallback(async (reason) => {
-    if (!reason || reason.trim() === "") {
-      toast.warning("Vui lòng nhập lý do từ chối");
-      return false;
-    }
+  const rejectVoucherAction = useCallback(
+    async (reason) => {
+      if (!reason || reason.trim() === "") {
+        toast.warning("Vui lòng nhập lý do từ chối");
+        return false;
+      }
 
-    if (!window.confirm("Xác nhận từ chối phiếu xử lý này?")) return false;
+      setSaving(true);
+      try {
+        const currentVoucherId = voucherId || voucher.id;
+        const rejectedVoucher = await rejectDisposalVoucher(
+          currentVoucherId,
+          reason,
+        );
 
-    setSaving(true);
-    try {
-      const currentVoucherId = voucherId || voucher.id;
-      const rejectedVoucher = await rejectDisposalVoucher(currentVoucherId, reason);
-
-      setVoucher(rejectedVoucher);
-      return true;
-    } catch (err) {
-      // alert("Lỗi khi từ chối: " + err.message);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  }, [voucherId, voucher.id]);
+        setVoucher(rejectedVoucher);
+        return true;
+      } catch (err) {
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [voucherId, voucher.id],
+  );
 
   return {
     voucher,
     items,
-    batches,
-    products,
     locations,
     expiredBatches,
+    loadingBatches,
     loading,
     saving,
     error,
@@ -260,6 +265,7 @@ export function useDisposalVoucher(voucherId = null) {
     totals,
 
     updateVoucher,
+    changeLocation,
     addItem,
     removeItem,
     updateItemQty,

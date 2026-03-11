@@ -6,7 +6,7 @@ import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.UnitConversion;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.UnitConversionRepository;
-import com.smalltrend.service.inventory.InventoryStockService;
+import com.smalltrend.service.inventory.stock.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

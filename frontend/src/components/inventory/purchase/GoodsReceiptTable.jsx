@@ -51,8 +51,11 @@ export default function GoodsReceiptTable({
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
               Sản phẩm
             </th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-28">
+            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-36">
               Hạn SD
+            </th>
+            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-32">
+              Giá nhập
             </th>
             <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-24">
               SL đặt hàng
@@ -105,15 +108,41 @@ export default function GoodsReceiptTable({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  {item.expiry_date || item.expiryDate ? (
-                    <span className="text-sm text-slate-600">
-                      {new Date(
-                        item.expiry_date || item.expiryDate,
-                      ).toLocaleDateString("vi-VN")}
+                  <input
+                    type="date"
+                    value={ri.expiryDate || ""}
+                    onChange={(e) =>
+                      onUpdateReceiptItem(item.id, "expiryDate", e.target.value)
+                    }
+                    className="w-full text-center px-1 py-1.5 text-[11px] font-medium border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={
+                        (ri.importPrice ?? item.unit_price ?? item.unitCost)
+                          ? (ri.importPrice ??
+                              item.unit_price ??
+                              item.unitCost) / 1000
+                          : ""
+                      }
+                      onChange={(e) =>
+                        onUpdateReceiptItem(
+                          item.id,
+                          "importPrice",
+                          (parseFloat(e.target.value) || 0) * 1000,
+                        )
+                      }
+                      className="w-full text-right py-1.5 px-2 pr-8 text-xs font-semibold border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-400 pointer-events-none select-none">
+                      .000
                     </span>
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">—</span>
-                  )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className="text-sm font-semibold text-slate-700">
