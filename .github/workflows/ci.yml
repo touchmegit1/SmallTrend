@@ -6,6 +6,11 @@ on:
 	pull_request:
 		branches: [main, dev]
 
+# Cancel redundant runs when a new push is made to the same branch
+concurrency:
+	group: ${{ github.workflow }}-${{ github.ref }}
+	cancel-in-progress: true
+
 jobs:
 	frontend:
 		name: Frontend (Lint & Build)
@@ -101,4 +106,12 @@ jobs:
 				with:
 					name: jacoco-report
 					path: backend/target/site/jacoco
+					retention-days: 7
+
+			- name: Upload JUnit test results
+				if: always()
+				uses: actions/upload-artifact@v4
+				with:
+					name: junit-test-results
+					path: backend/target/surefire-reports
 					retention-days: 7

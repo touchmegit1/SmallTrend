@@ -2,9 +2,8 @@
 
 Hệ thống POS (Point of Sale) hiện đại giúp quản lý toàn diện các hoạt động của cửa hàng tạp hóa/siêu thị mini, từ bán hàng, quản lý kho, nhân sự, khách hàng đến báo cáo thống kê.
 
----
+-  **CI Status**: [![CI Workflow](https://github.com/touchmegit1/SmallTrend/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/touchmegit1/SmallTrend/actions/workflows/ci.yml?query=branch%3Adev)
 
----
 
 ## 🚀 Quick Start - Chạy Dự Án Nhanh Chóng
 
@@ -27,6 +26,12 @@ Hệ thống POS (Point of Sale) hiện đại giúp quản lý toàn diện cá
 - `.mvn/wrapper/` - Chứa cấu hình Maven Wrapper
 
 ### 📦 Setup Backend (3 bước đơn giản)
+
+---
+
+## 📋 CI/CD Pipeline
+
+Dự án sử dụng **GitHub Actions** để tự động test & build. Xem chi tiết tại: [CI_CD_SETUP.md](./CI_CD_SETUP.md)
 
 #### Bước 1: Tạo Database
 ```sql
