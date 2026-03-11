@@ -22,10 +22,12 @@ import {
   AlertCircle,
   CircleDot,
   ArrowUpCircle,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Crown
 } from 'lucide-react';
 import ticketService from '../../services/ticketService';
 import customerService from '../../services/customerService';
+import { useCustomerTiers } from '../../hooks/useCustomerTiers';
 
 const PAGE_SIZE = 5;
 
@@ -84,8 +86,22 @@ export default function CustomerComplaintSystem() {
   // Customer states
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [customerTier, setCustomerTier] = useState(null);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const [customerNotFound, setCustomerNotFound] = useState(false);
+
+  const { tiers } = useCustomerTiers();
+
+  const getTier = (spentAmount) => {
+    if (!tiers || tiers.length === 0) return null;
+    let matched = null;
+    for (const tier of tiers) {
+      if (spentAmount >= Number(tier.minSpending)) {
+        matched = tier;
+      }
+    }
+    return matched;
+  };
 
   const [form, setForm] = useState({
     ticketType: 'REFUND',
@@ -177,6 +193,7 @@ export default function CustomerComplaintSystem() {
     setSelectedVariant(null);
     setCustomerPhone('');
     setCustomerName('');
+    setCustomerTier(null);
     setCustomerNotFound(false);
   };
 
@@ -220,6 +237,7 @@ export default function CustomerComplaintSystem() {
     setSelectedVariant(null);
     setCustomerPhone(extractedPhone);
     setCustomerName(extractedName);
+    setCustomerTier(null);
     setCustomerNotFound(false);
     setShowModal(true);
   };
@@ -240,6 +258,18 @@ export default function CustomerComplaintSystem() {
         }
       }
 
+      // Lấy thông tin user đăng nhập chung cho cả Create và Update
+      const userStr = localStorage.getItem('user');
+      let currentUserId = null;
+      let currentUserName = null;
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          currentUserId = user.userId || user.id;
+          currentUserName = user.fullName || user.username;
+        } catch (e) { }
+      }
+
       if (editingTicket) {
 
         // Add customer details to description if provided
@@ -253,22 +283,10 @@ export default function CustomerComplaintSystem() {
           description: desc,
           priority: form.priority,
           status: form.status,
-          assignedToUserId: form.assignedToUserId ? Number(form.assignedToUserId) : null,
+          assignedToUserId: currentUserId,
           resolution: form.resolution
         });
       } else {
-        // Lấy thông tin user đăng nhập
-        const userStr = localStorage.getItem('user');
-        let currentUserId = null;
-        let currentUserName = null;
-        if (userStr) {
-          try {
-            const user = JSON.parse(userStr);
-            currentUserId = user.id;
-            currentUserName = user.fullName || user.username;
-          } catch (e) { }
-        }
-
         // Add customer details to description if provided
         let desc = form.description;
         if (customerPhone || customerName) {
@@ -670,36 +688,67 @@ export default function CustomerComplaintSystem() {
                         alert('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).');
                         return;
                       }
+                      if (customerNotFound) {
+                        if (!customerName.trim()) {
+                          alert("Vui lòng nhập tên khách hàng mới");
+                          return;
+                        }
+                        try {
+                          setLoadingCustomer(true);
+                          await customerService.createCustomer(customerName, phone);
+                          setCustomerNotFound(false);
+                          setCustomerTier(null);
+                          alert("Tạo khách hàng mới thành công!");
+                        } catch (err) {
+                          console.error(err);
+                          alert("Lỗi khi tạo khách hàng.");
+                        } finally {
+                          setLoadingCustomer(false);
+                        }
+                        return;
+                      }
+
                       try {
                         setLoadingCustomer(true);
                         setCustomerNotFound(false);
                         const customer = await customerService.searchByPhone(phone);
                         if (customer && customer.name) {
                           setCustomerName(customer.name);
+                          const t = getTier(customer.spentAmount || 0);
+                          setCustomerTier(t ? t.tierName : 'Thường');
                         } else {
                           setCustomerName('');
+                          setCustomerTier(null);
                           setCustomerNotFound(true);
                         }
                       } catch (err) {
                         console.error(err);
                         setCustomerName('');
+                        setCustomerTier(null);
                         setCustomerNotFound(true);
                       } finally {
                         setLoadingCustomer(false);
                       }
                     }}
                   >
-                    {loadingCustomer ? 'Đang tải...' : 'Tìm khách'}
+                    {loadingCustomer ? 'Đang...' : customerNotFound ? 'Lưu khách' : 'Tìm khách'}
                   </button>
                 </div>
                 {customerName && !customerNotFound && (
-                  <p className="mt-1.5 text-sm text-blue-700 bg-blue-50 p-2 rounded-lg border border-blue-100 flex items-center gap-2">
-                    <UserCircle size={16} /> <b>{customerName}</b>
-                  </p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <p className="text-sm text-blue-700 bg-blue-50 p-2 rounded-lg border border-blue-100 flex items-center gap-2">
+                      <UserCircle size={16} /> <b>{customerName}</b>
+                    </p>
+                    {customerTier && (
+                      <p className="text-sm text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100 flex items-center gap-1">
+                        <Crown size={14} /> <span className="font-semibold">{customerTier}</span>
+                      </p>
+                    )}
+                  </div>
                 )}
                 {customerNotFound && (
                   <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
-                    <p className="font-medium mb-1.5">Chưa có thông tin. Tạo khách hàng mới?</p>
+                    <p className="font-medium mb-1.5">Chưa có thông tin. Nhập tên và bấm "Lưu khách"</p>
                     <input
                       type="text"
                       value={customerName}
@@ -761,6 +810,45 @@ export default function CustomerComplaintSystem() {
                   </div>
                 )}
               </div>
+
+              {/* Assignee section */}
+              {/* Assignee section */}
+              {editingTicket && (() => {
+                const userStr = localStorage.getItem('user');
+                let currentUserName = '';
+                if (userStr) {
+                  try {
+                    const user = JSON.parse(userStr);
+                    currentUserName = user.fullName || user.username;
+                  } catch (e) { }
+                }
+                return (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5"><UserCircle size={14} className="text-gray-500" />Người tạo</label>
+                        <input
+                          type="text"
+                          disabled
+                          value={editingTicket.createdByName || '—'}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5"><UserCircle size={14} className="text-gray-500" />Người cập nhật</label>
+                        <input
+                          type="text"
+                          disabled
+                          value={currentUserName || '—'}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-blue-50 text-blue-700 cursor-not-allowed border-blue-200"
+                          title="Tự động gán cho tài khoản đang truy cập"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
 
               {!editingTicket && (
                 <div className="grid grid-cols-2 gap-4">

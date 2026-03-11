@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice, onKeyDown, selectedProductIndex, setShowShortcuts }) {
+export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, deleteOrder, onPrintInvoice, onKeyDown, selectedProductIndex, setShowShortcuts }) {
   const scrollContainerRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
@@ -255,20 +255,6 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
       </div>
 
       <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <button
-          onClick={() => setShowQRScanner(true)}
-          style={{
-            padding: "6px 12px",
-            background: "rgba(255,255,255,0.2)",
-            color: "white",
-            border: "none",
-            borderRadius: "15px",
-            cursor: "pointer",
-            fontSize: "12px"
-          }}
-        >
-          Quét QR
-        </button>
         <button
           onClick={onPrintInvoice}
           style={{

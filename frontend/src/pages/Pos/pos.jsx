@@ -4,7 +4,6 @@ import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
 import PaymentPanel from "./PaymentPanel";
 import PaymentModal from "./PaymentModal";
-import QRScanner from "./QRScanner";
 import Invoice from "./Invoice";
 import posService from "../../services/posService";
 import api from "../../config/axiosConfig";
@@ -24,7 +23,6 @@ export default function POS() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProductIndex, setSelectedProductIndex] = useState(-1);
-  const [showQRScanner, setShowQRScanner] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
@@ -76,7 +74,13 @@ export default function POS() {
           (p.barcode && p.barcode.toLowerCase() === searchTerm.toLowerCase()) ||
           (p.sku && p.sku.toLowerCase() === searchTerm.toLowerCase())
         );
-        setSelectedProductIndex(exactMatchIndex >= 0 ? exactMatchIndex : 0);
+        if (exactMatchIndex >= 0) {
+          addToCart(filtered[exactMatchIndex]);
+          setSearchTerm('');
+          setSelectedProductIndex(-1);
+        } else {
+          setSelectedProductIndex(0);
+        }
       } else {
         setSelectedProductIndex(-1);
       }
@@ -87,10 +91,10 @@ export default function POS() {
 
   // Re-focus when switching orders or closing modals
   useEffect(() => {
-    if (searchInputRef.current && !showPaymentModal && !showQRScanner && !showInvoice && !showShortcuts) {
+    if (searchInputRef.current && !showPaymentModal && !showInvoice && !showShortcuts) {
       searchInputRef.current.focus();
     }
-  }, [activeOrderId, showPaymentModal, showQRScanner, showInvoice, showShortcuts]);
+  }, [activeOrderId, showPaymentModal, showInvoice, showShortcuts]);
 
   // Keyboard navigation handler
   const handleKeyDown = (e) => {
@@ -162,11 +166,10 @@ export default function POS() {
     }
   };
 
-  // F9/F10 shortcut for payment
   useEffect(() => {
     const handleKeyPress = (e) => {
       // Bỏ qua phím tắt nếu đang mở modal (ngoại trừ F9/F10 trong payment modal thì đã xử lý bên trong modal)
-      if (showPaymentModal || showQRScanner || showInvoice || showShortcuts) return;
+      if (showPaymentModal || showInvoice || showShortcuts) return;
 
       if (e.key === shortcuts.payment1 && activeOrder.cart.length > 0) {
         e.preventDefault();
@@ -187,7 +190,7 @@ export default function POS() {
     };
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [activeOrder.cart, showPaymentModal, showQRScanner, showInvoice, showShortcuts, orders, activeOrderId, shortcuts]);
+  }, [activeOrder.cart, showPaymentModal, showInvoice, showShortcuts, orders, activeOrderId, shortcuts]);
 
   const loadProducts = async () => {
     try {
@@ -589,7 +592,6 @@ export default function POS() {
           orders={orders}
           activeOrderId={activeOrderId}
           setActiveOrderId={setActiveOrderId}
-          setShowQRScanner={setShowQRScanner}
           deleteOrder={deleteOrder}
           onPrintInvoice={handlePrintCurrentInvoice}
           onKeyDown={handleKeyDown}
@@ -712,34 +714,6 @@ export default function POS() {
             shortcuts={shortcuts}
           />
         </div>
-      )}
-
-      {showQRScanner && (
-        <QRScanner
-          onScan={async (barcode) => {
-            try {
-              const data = await posService.getProductByBarcode(barcode);
-              if (data && data.length > 0) {
-                const product = {
-                  id: data[0].id,
-                  name: data[0].name,
-                  price: Number(data[0].sellPrice),
-                  barcode: data[0].barcode || data[0].sku,
-                  sku: data[0].sku,
-                  stock: data[0].stockQuantity || 0
-                };
-                addToCart(product);
-              } else {
-                alert('Không tìm thấy sản phẩm với mã vạch này!');
-              }
-            } catch (error) {
-              console.error('Error scanning barcode:', error);
-              alert('Lỗi khi quét mã vạch!');
-            }
-            setShowQRScanner(false);
-          }}
-          onClose={() => setShowQRScanner(false)}
-        />
       )}
 
       {showInvoice && (
