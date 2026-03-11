@@ -15,6 +15,7 @@ import BatchEditorModal from "../../components/inventory/purchase/BatchEditorMod
 import SummaryPanel from "../../components/inventory/purchase/SummaryPanel";
 import ActionButtons from "../../components/inventory/purchase/ActionButtons";
 import RejectionModal from "../../components/ui/RejectionModal";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import GoodsReceiptTable from "../../components/inventory/purchase/GoodsReceiptTable";
 import {
   Package,
@@ -35,7 +36,27 @@ function CreatePurchaseOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    variant: "warning",
+  });
   const { user } = useAuth();
+
+  const openConfirm = (title, message, onConfirm, variant = "warning") => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: async () => {
+        await onConfirm();
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      variant,
+    });
+  };
 
   const {
     products,
@@ -67,6 +88,7 @@ function CreatePurchaseOrder() {
     submitForApproval,
     confirmOrder,
     startChecking,
+    validateReceiveGoodsConfig,
     receiveGoods,
     rejectOrder,
     deleteOrder,
@@ -229,7 +251,14 @@ function CreatePurchaseOrder() {
                     <div className="flex items-center gap-2.5">
                       {!!id && (
                         <button
-                          onClick={() => deleteOrder(navigate)}
+                          onClick={() =>
+                            openConfirm(
+                              "Xóa phiếu",
+                              "Bạn có chắc chắn muốn xóa phiếu nhập tạm này không?",
+                              () => deleteOrder(navigate),
+                              "danger",
+                            )
+                          }
                           disabled={saving}
                           className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
@@ -375,7 +404,14 @@ function CreatePurchaseOrder() {
                             Từ chối
                           </button>
                           <button
-                            onClick={() => confirmOrder(navigate)}
+                            onClick={() =>
+                              openConfirm(
+                                "Duyệt phiếu nhập",
+                                "Xác nhận duyệt phiếu nhập? Phiếu sẽ chuyển cho NV kho kiểm kê.",
+                                () => confirmOrder(navigate),
+                                "info",
+                              )
+                            }
                             disabled={saving}
                             className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-200"
                           >
@@ -392,7 +428,14 @@ function CreatePurchaseOrder() {
                       {/* CONFIRMED → Start Checking */}
                       {isConfirmed && canCheckAndReceive && (
                         <button
-                          onClick={() => startChecking()}
+                          onClick={() =>
+                            openConfirm(
+                              "Bắt đầu kiểm kê",
+                              "Bắt đầu kiểm kê hàng hóa?",
+                              startChecking,
+                              "info",
+                            )
+                          }
                           disabled={saving}
                           className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-purple-200"
                         >
@@ -457,11 +500,41 @@ function CreatePurchaseOrder() {
             isEditMode={!!id}
             onSaveDraft={() => saveDraft(navigate)}
             onSubmitForApproval={() => submitForApproval(navigate)}
-            onConfirm={() => confirmOrder(navigate)}
+            onConfirm={() =>
+              openConfirm(
+                "Duyệt phiếu nhập",
+                "Xác nhận duyệt phiếu nhập? Phiếu sẽ chuyển cho NV kho kiểm kê.",
+                () => confirmOrder(navigate),
+                "info",
+              )
+            }
             onReject={handleRejectClick}
-            onDelete={() => deleteOrder(navigate)}
-            onStartChecking={() => startChecking()}
-            onReceiveGoods={() => receiveGoods(navigate)}
+            onDelete={() =>
+              openConfirm(
+                "Xóa phiếu",
+                "Bạn có chắc chắn muốn xóa phiếu nhập tạm này không?",
+                () => deleteOrder(navigate),
+                "danger",
+              )
+            }
+            onStartChecking={() =>
+              openConfirm(
+                "Bắt đầu kiểm kê",
+                "Bắt đầu kiểm kê hàng hóa?",
+                startChecking,
+                "info",
+              )
+            }
+            onReceiveGoods={() => {
+              if (validateReceiveGoodsConfig()) {
+                openConfirm(
+                  "Xác nhận nhập kho",
+                  "Xác nhận nhập kho? Tồn kho sẽ được cập nhật và không thể hoàn tác.",
+                  () => receiveGoods(navigate),
+                  "warning",
+                );
+              }
+            }}
           />
         </div>
       )}
@@ -479,6 +552,16 @@ function CreatePurchaseOrder() {
         onClose={() => setShowRejectionModal(false)}
         onSubmit={handleRejectSubmit}
         isLoading={saving}
+      />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        variant={confirmModal.variant}
+        loading={saving}
       />
     </div>
   );

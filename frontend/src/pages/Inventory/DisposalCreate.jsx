@@ -1,20 +1,19 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getExpiredBatches,
   getNextDisposalCode,
-  saveDisposalDraft,
-  confirmDisposalVoucher,
+  createDisposalVoucher,
 } from "../../services/disposalService";
 import { getActiveLocations } from "../../services/inventoryService";
 import { formatCurrency } from "../../utils/inventory";
 
 const REASON_OPTIONS = [
-  { value: "EXPIRED", label: "Háº¿t háº¡n" },
-  { value: "DAMAGED", label: "HÆ° há»ng" },
-  { value: "LOST", label: "Tháº¥t thoĂ¡t" },
-  { value: "OBSOLETE", label: "Lá»—i thá»i" },
-  { value: "OTHER", label: "KhĂ¡c" },
+  { value: "EXPIRED", label: "Hết hạn" },
+  { value: "DAMAGED", label: "Hư hỏng" },
+  { value: "LOST", label: "Thất thoát" },
+  { value: "OBSOLETE", label: "Lỗi thời" },
+  { value: "OTHER", label: "Khác" },
 ];
 
 export default function DisposalCreate() {
@@ -48,7 +47,7 @@ export default function DisposalCreate() {
         setVoucherCode(code);
         setLocations(locs);
       } catch (err) {
-        toast.error("Lá»—i táº£i dá»¯ liá»‡u: " + err.message);
+        toast.error("Lỗi tải dữ liệu: " + err.message);
       } finally {
         setLoading(false);
       }
@@ -68,7 +67,7 @@ export default function DisposalCreate() {
         const batches = await getExpiredBatches(locationId);
         setExpiredBatches(batches);
       } catch (err) {
-        toast.error("Lá»—i táº£i lĂ´ háº¿t háº¡n: " + err.message);
+        toast.error("Lỗi tải lô hết hạn: " + err.message);
       }
     };
     loadBatches();
@@ -77,7 +76,7 @@ export default function DisposalCreate() {
   // Add batch to disposal items
   const addItem = (batch) => {
     if (selectedItems.some((item) => item.batchId === batch.batchId)) {
-      toast.warning("LĂ´ hĂ ng Ä‘Ă£ Ä‘Æ°á»£c thĂªm");
+      toast.warning("Lô hàng đã được thêm");
       return;
     }
 
@@ -129,57 +128,27 @@ export default function DisposalCreate() {
   // Validate form
   const validate = () => {
     const errs = {};
-    if (!locationId) errs.locationId = "Vui lĂ²ng chá»n kho";
-    if (!reasonType) errs.reasonType = "Vui lĂ²ng chá»n lĂ½ do";
+    if (!locationId) errs.locationId = "Vui lòng chọn kho";
+    if (!reasonType) errs.reasonType = "Vui lòng chọn lý do";
     if (selectedItems.length === 0)
-      errs.items = "Vui lĂ²ng thĂªm Ă­t nháº¥t 1 sáº£n pháº©m";
+      errs.items = "Vui lòng thêm ít nhất 1 sản phẩm";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  // Save draft
-  const handleSaveDraft = async () => {
-    if (!validate()) return;
-
-    setSaving(true);
-    try {
-      const userId = JSON.parse(localStorage.getItem("user"))?.id || 1;
-      await saveDisposalDraft(
-        {
-          locationId: parseInt(locationId),
-          reasonType,
-          notes,
-          items: selectedItems.map((item) => ({
-            batchId: item.batchId,
-            productId: item.productId,
-            quantity: item.quantity,
-          })),
-        },
-        userId,
-      );
-
-      toast.success("LÆ°u nhĂ¡p thĂ nh cĂ´ng");
-      navigate("/inventory/disposal");
-    } catch (err) {
-      toast.error("Lá»—i lÆ°u nhĂ¡p: " + err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Confirm and deduct stock
+  // Submit for approval
   const handleConfirm = async () => {
     if (!validate()) return;
     setShowConfirmModal(true);
   };
 
-  const confirmDeduction = async () => {
+  const confirmSubmit = async () => {
     setSaving(true);
     try {
       const userId = JSON.parse(localStorage.getItem("user"))?.id || 1;
 
-      // Save draft first
-      const draft = await saveDisposalDraft(
+      // Create new voucher directly (gets status PENDING)
+      await createDisposalVoucher(
         {
           locationId: parseInt(locationId),
           reasonType,
@@ -193,13 +162,10 @@ export default function DisposalCreate() {
         userId,
       );
 
-      // Then confirm
-      await confirmDisposalVoucher(draft.id, userId);
-
-      toast.success("XĂ¡c nháº­n thĂ nh cĂ´ng! Tá»“n kho Ä‘Ă£ Ä‘Æ°á»£c trá»«.");
+      toast.success("Đã gửi phiếu đi chờ duyệt!");
       navigate("/inventory/disposal");
     } catch (err) {
-      toast.error("Lá»—i xĂ¡c nháº­n: " + err.message);
+      toast.error("Lỗi xác nhận: " + err.message);
     } finally {
       setSaving(false);
       setShowConfirmModal(false);
@@ -219,9 +185,9 @@ export default function DisposalCreate() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Táº¡o phiáº¿u xá»­ lĂ½</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Tạo phiếu xử lý</h1>
           <p className="text-sm text-slate-500 mt-1">
-            MĂ£ phiáº¿u:{" "}
+            Mã phiếu:{" "}
             <span className="font-mono font-semibold text-red-600">
               {voucherCode}
             </span>
@@ -231,7 +197,7 @@ export default function DisposalCreate() {
           onClick={() => navigate("/inventory/disposal")}
           className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
         >
-          â† Quay láº¡i
+          â† Quay lại
         </button>
       </div>
 
@@ -240,7 +206,7 @@ export default function DisposalCreate() {
         <div className="col-span-2 space-y-6">
           {/* Warehouse & Reason */}
           <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-            <h3 className="font-semibold text-slate-900">ThĂ´ng tin cÆ¡ báº£n</h3>
+            <h3 className="font-semibold text-slate-900">Thông tin cơ bản</h3>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -257,7 +223,7 @@ export default function DisposalCreate() {
                     errors.locationId ? "border-red-500" : "border-slate-200"
                   }`}
                 >
-                  <option value="">-- Chá»n kho --</option>
+                  <option value="">-- Chọn kho --</option>
                   {locations.map((loc) => (
                     <option key={loc.id} value={loc.id}>
                       {loc.name || loc.location_name}
@@ -273,7 +239,7 @@ export default function DisposalCreate() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  LĂ½ do <span className="text-red-500">*</span>
+                  Lý do <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={reasonType}
@@ -291,14 +257,14 @@ export default function DisposalCreate() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Ghi chĂº
+                Ghi chú
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                placeholder="Nháº­p ghi chĂº..."
+                placeholder="Nhập ghi chú..."
               />
             </div>
           </div>
@@ -306,16 +272,16 @@ export default function DisposalCreate() {
           {/* Expired Batches */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h3 className="font-semibold text-slate-900 mb-4">
-              LĂ´ hĂ ng háº¿t háº¡n
+              Lô hàng hết hạn
             </h3>
 
             {!locationId ? (
               <div className="text-center py-12 text-slate-500 text-sm">
-                Vui lĂ²ng chá»n kho Ä‘á»ƒ táº£i danh sĂ¡ch lĂ´ háº¿t háº¡n
+                Vui lòng chọn kho để tải danh sách lô hết hạn
               </div>
             ) : expiredBatches.length === 0 ? (
               <div className="text-center py-12 text-slate-500 text-sm">
-                KhĂ´ng cĂ³ lĂ´ hĂ ng háº¿t háº¡n
+                Không có lô hàng hết hạn
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -323,10 +289,10 @@ export default function DisposalCreate() {
                   <thead className="bg-slate-50 border-b">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
-                        Sáº£n pháº©m
+                        Sản phẩm
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
-                        MĂ£ lĂ´
+                        Mã lô
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
                         HSD
@@ -335,10 +301,10 @@ export default function DisposalCreate() {
                         SL
                       </th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">
-                        GiĂ¡ trá»‹
+                        Giá trị
                       </th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-slate-500">
-                        Thao tĂ¡c
+                        Thao tác
                       </th>
                     </tr>
                   </thead>
@@ -368,7 +334,7 @@ export default function DisposalCreate() {
                             )}
                             className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            ThĂªm
+                            Thêm
                           </button>
                         </td>
                       </tr>
@@ -382,7 +348,7 @@ export default function DisposalCreate() {
           {/* Selected Items */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h3 className="font-semibold text-slate-900 mb-4">
-              Danh sĂ¡ch xá»­ lĂ½ ({selectedItems.length})
+              Danh sách xử lý ({selectedItems.length})
             </h3>
 
             {errors.items && (
@@ -391,7 +357,7 @@ export default function DisposalCreate() {
 
             {selectedItems.length === 0 ? (
               <div className="text-center py-12 text-slate-500 text-sm">
-                ChÆ°a cĂ³ sáº£n pháº©m nĂ o Ä‘Æ°á»£c chá»n
+                Chưa có sản phẩm nào được chọn
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -399,22 +365,22 @@ export default function DisposalCreate() {
                   <thead className="bg-slate-50 border-b">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
-                        Sáº£n pháº©m
+                        Sản phẩm
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
-                        MĂ£ lĂ´
+                        Mã lô
                       </th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">
-                        SL kháº£ dá»¥ng
+                        SL khả dụng
                       </th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">
-                        SL xá»­ lĂ½
+                        SL xử lý
                       </th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">
-                        GiĂ¡ trá»‹
+                        Giá trị
                       </th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-slate-500">
-                        XĂ³a
+                        Xóa
                       </th>
                     </tr>
                   </thead>
@@ -448,7 +414,7 @@ export default function DisposalCreate() {
                             onClick={() => removeItem(item.batchId)}
                             className="text-red-600 hover:text-red-800"
                           >
-                            âœ•
+                            •
                           </button>
                         </td>
                       </tr>
@@ -464,19 +430,19 @@ export default function DisposalCreate() {
         <div className="space-y-6">
           {/* Summary */}
           <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-            <h3 className="font-semibold text-slate-900">Tá»•ng quan</h3>
+            <h3 className="font-semibold text-slate-900">Tổng quan</h3>
 
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Tá»•ng sáº£n pháº©m:</span>
+                <span className="text-slate-600">Tổng sản phẩm:</span>
                 <span className="font-semibold">{totals.items}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Tá»•ng sá»‘ lÆ°á»£ng:</span>
+                <span className="text-slate-600">Tổng số lượng:</span>
                 <span className="font-semibold">{totals.quantity}</span>
               </div>
               <div className="flex justify-between text-sm pt-3 border-t">
-                <span className="text-slate-600">Tá»•ng giĂ¡ trá»‹:</span>
+                <span className="text-slate-600">Tổng giá trị:</span>
                 <span className="font-semibold text-red-600 text-lg">
                   {formatCurrency(totals.value)}
                 </span>
@@ -489,24 +455,16 @@ export default function DisposalCreate() {
             <button
               onClick={handleConfirm}
               disabled={saving || selectedItems.length === 0}
-              className="w-full px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              {saving ? "Äang xá»­ lĂ½..." : "XĂ¡c nháº­n & Trá»« kho"}
-            </button>
-
-            <button
-              onClick={handleSaveDraft}
-              disabled={saving || selectedItems.length === 0}
-              className="w-full px-4 py-2.5 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              LÆ°u nhĂ¡p
+              {saving ? "Đang xử lý..." : "Gửi duyệt quản lý"}
             </button>
 
             <button
               onClick={() => navigate("/inventory/disposal")}
               className="w-full px-4 py-2.5 text-slate-600 hover:text-slate-900"
             >
-              Há»§y
+              Hủy
             </button>
           </div>
         </div>
@@ -517,30 +475,25 @@ export default function DisposalCreate() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">
-              XĂ¡c nháº­n xá»­ lĂ½
+              Xác nhận gửi duyệt
             </h3>
             <p className="text-sm text-slate-600 mb-6">
-              Báº¡n cĂ³ cháº¯c cháº¯n muá»‘n xĂ¡c nháº­n phiáº¿u xá»­ lĂ½ nĂ y?
-              <br />
-              <br />
-              <strong className="text-red-600">
-                Tá»“n kho sáº½ bá»‹ trá»« ngay láº­p tá»©c vĂ  khĂ´ng thá»ƒ hoĂ n tĂ¡c!
-              </strong>
+              Bạn có chắc chắn muốn gửi phiếu xử lý này cho quản lý để chờ duyệt?
             </p>
             <div className="flex gap-3">
               <button
-                onClick={confirmDeduction}
+                onClick={confirmSubmit}
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
               >
-                {saving ? "Äang xá»­ lĂ½..." : "XĂ¡c nháº­n"}
+                {saving ? "Đang xử lý..." : "Xác nhận"}
               </button>
               <button
                 onClick={() => setShowConfirmModal(false)}
                 disabled={saving}
                 className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50"
               >
-                Há»§y
+                Hủy
               </button>
             </div>
           </div>
@@ -549,4 +502,3 @@ export default function DisposalCreate() {
     </div>
   );
 }
-

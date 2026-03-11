@@ -85,9 +85,9 @@ public class DisposalVoucherService {
                 .collect(Collectors.toList());
     }
 
-    // Save draft
+    // Create pending voucher
     @Transactional
-    public DisposalVoucherResponse saveDraft(DisposalVoucherRequest request, Long userId) {
+    public DisposalVoucherResponse createDisposalVoucher(DisposalVoucherRequest request, Long userId) {
         User user = userRepository.findById(userId.intValue())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Location location = locationRepository.findById(request.getLocationId().intValue())
@@ -96,7 +96,7 @@ public class DisposalVoucherService {
         DisposalVoucher voucher = DisposalVoucher.builder()
                 .code(generateNextCode())
                 .location(location)
-                .status(DisposalStatus.DRAFT)
+                .status(DisposalStatus.PENDING)
                 .reasonType(DisposalReason.valueOf(request.getReasonType()))
                 .notes(request.getNotes())
                 .createdBy(user)
@@ -107,12 +107,15 @@ public class DisposalVoucherService {
             ProductBatch batch = productBatchRepository.findById(itemReq.getBatchId().intValue())
                     .orElseThrow(() -> new RuntimeException("Batch not found"));
             
+            BigDecimal unitCost = batch.getCostPrice() != null ? batch.getCostPrice() : BigDecimal.ZERO;
+            int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 0;
             DisposalVoucherItem item = DisposalVoucherItem.builder()
                     .batch(batch)
                     .product(batch.getVariant().getProduct())
                     .batchCode(batch.getBatchNumber())
-                    .quantity(itemReq.getQuantity())
-                    .unitCost(batch.getCostPrice())
+                    .quantity(qty)
+                    .unitCost(unitCost)
+                    .totalCost(unitCost.multiply(BigDecimal.valueOf(qty)))
                     .expiryDate(batch.getExpiryDate())
                     .build();
             
@@ -124,25 +127,7 @@ public class DisposalVoucherService {
         return toResponse(saved);
     }
 
-    // Submit for approval
-    @Transactional
-    public DisposalVoucherResponse submitForApproval(Long id) {
-        DisposalVoucher voucher = disposalVoucherRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Disposal voucher not found"));
 
-        if (voucher.getStatus() != DisposalStatus.DRAFT && voucher.getStatus() != DisposalStatus.REJECTED) {
-            throw new RuntimeException("Only DRAFT or REJECTED vouchers can be submitted for approval");
-        }
-
-        if (voucher.getItems().isEmpty()) {
-            throw new RuntimeException("Cannot submit voucher without items");
-        }
-
-        voucher.setStatus(DisposalStatus.PENDING);
-        voucher.setRejectionReason(null);
-        DisposalVoucher saved = disposalVoucherRepository.save(voucher);
-        return toResponse(saved);
-    }
 
     // Approve voucher (deduct stock)
     @Transactional

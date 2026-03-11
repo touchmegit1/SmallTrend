@@ -12,7 +12,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/inventory/disposal-vouchers")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000" })
 public class DisposalVoucherController {
 
     private final DisposalVoucherService disposalVoucherService;
@@ -38,16 +38,11 @@ public class DisposalVoucherController {
         return ResponseEntity.ok(disposalVoucherService.getExpiredBatches(locationId));
     }
 
-    @PostMapping("/draft")
-    public ResponseEntity<DisposalVoucherResponse> saveDraft(
+    @PostMapping
+    public ResponseEntity<DisposalVoucherResponse> createDisposalVoucher(
             @RequestBody DisposalVoucherRequest request,
             @RequestParam Long userId) {
-        return ResponseEntity.ok(disposalVoucherService.saveDraft(request, userId));
-    }
-
-    @PutMapping("/{id}/submit")
-    public ResponseEntity<DisposalVoucherResponse> submitForApproval(@PathVariable Long id) {
-        return ResponseEntity.ok(disposalVoucherService.submitForApproval(id));
+        return ResponseEntity.ok(disposalVoucherService.createDisposalVoucher(request, userId));
     }
 
     @PutMapping("/{id}/approve")

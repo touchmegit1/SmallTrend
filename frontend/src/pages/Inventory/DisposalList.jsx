@@ -6,13 +6,7 @@ import { formatCurrency } from "../../utils/inventory";
 import CustomSelect from "../../components/common/CustomSelect";
 
 const STATUS_CONFIG = {
-  DRAFT: {
-    label: "Nháp",
-    bg: "bg-yellow-50",
-    text: "text-yellow-700",
-    dot: "bg-yellow-400",
-    border: "border-yellow-200",
-  },
+
   CONFIRMED: {
     label: "Đã xác nhận",
     bg: "bg-green-50",
@@ -34,14 +28,6 @@ const STATUS_CONFIG = {
     dot: "bg-red-500",
     border: "border-red-200",
   },
-};
-
-const REASON_CONFIG = {
-  EXPIRED: { label: "Hết hạn" },
-  DAMAGED: { label: "Hư hỏng" },
-  LOST: { label: "Thất thoát" },
-  OBSOLETE: { label: "Lỗi thời" },
-  OTHER: { label: "Khác" },
 };
 
 const SortIcon = ({ field, sortField, sortDir }) => (
@@ -105,7 +91,7 @@ export default function DisposalList() {
 
   const statusOptions = [
     { value: "ALL", label: `Tất cả (${statusCounts["ALL"] || 0})` },
-    { value: "DRAFT", label: `Nháp (${statusCounts["DRAFT"] || 0})` },
+
     { value: "PENDING", label: `Chờ duyệt (${statusCounts["PENDING"] || 0})` },
     {
       value: "CONFIRMED",
@@ -217,9 +203,7 @@ export default function DisposalList() {
                         sortDir={sortDir}
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                      Lý do
-                    </th>
+
                     <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                       Kho
                     </th>
@@ -250,9 +234,7 @@ export default function DisposalList() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {vouchers.map((v) => {
-                    const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
-                    const reason =
-                      REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
+                    const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.PENDING;
                     return (
                       <tr
                         key={v.id}
@@ -264,9 +246,7 @@ export default function DisposalList() {
                             {v.code}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-700">
-                          {reason.label}
-                        </td>
+
                         <td className="px-4 py-3 text-sm text-slate-600">
                           {v.locationName || "—"}
                         </td>

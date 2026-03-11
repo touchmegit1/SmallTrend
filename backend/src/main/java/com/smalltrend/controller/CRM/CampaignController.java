@@ -15,7 +15,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/crm/campaigns")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000" })
 public class CampaignController {
 
     private final CampaignService campaignService;

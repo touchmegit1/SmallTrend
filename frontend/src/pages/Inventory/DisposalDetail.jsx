@@ -1,14 +1,25 @@
-﻿import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { useDisposalVoucher } from "../../hooks/useDisposalVoucher";
-import { useToast } from "../../components/ui/Toast";
 import {
-  DV_STATUS,
-  DV_STATUS_CONFIG,
-  REASON_TYPE,
-  REASON_CONFIG,
-} from "../../utils/disposalVoucher";
+  ArrowLeft,
+  Trash2,
+  Save,
+  CheckCircle,
+  Loader2,
+  XCircle,
+  ShieldCheck,
+  Eye,
+  Clock,
+  Package,
+  AlertTriangle,
+} from "lucide-react";
+import { useDisposalVoucher } from "../../hooks/useDisposalVoucher";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../components/ui/Toast";
+import ConfirmModal from "../../components/ui/ConfirmModal";
+import RejectionModal from "../../components/ui/RejectionModal";
+import CustomSelect from "../../components/common/CustomSelect";
+import { DV_STATUS, DV_STATUS_CONFIG } from "../../utils/disposalVoucher";
 import {
   formatDate,
   formatDateTime,
@@ -22,21 +33,46 @@ export default function DisposalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    variant: "warning",
+  });
+
+  const openConfirm = (title, message, onConfirm, variant = "warning") => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: async () => {
+        await onConfirm();
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      variant,
+    });
+  };
+
   const {
     voucher,
     items,
     locations,
     expiredBatches,
+    loadingBatches,
     loading,
     saving,
     error,
     isEditable,
     totals,
     updateVoucher,
+    changeLocation,
     addItem,
     removeItem,
     updateItemQty,
-    saveDraft,
     submitVoucher,
     approveVoucher,
     rejectVoucher,
@@ -59,21 +95,21 @@ export default function DisposalDetail() {
     return result;
   }, [expiredBatches, items, batchSearch]);
 
-  const handleSaveDraft = async () => {
-    try {
-      const saved = await saveDraft();
-      toast.success("Đã lưu nháp thành công!");
-      if (!id) navigate(`/inventory/disposal/${saved.id}`, { replace: true });
-    } catch {
-      toast.error("Lỗi khi lưu nháp!");
-    }
-  };
+  // ─── Role checks (matching purchase order pattern) ──────
+  const userRole = (user?.role || "").toUpperCase();
+  const isManagerOrAdmin = [
+    "MANAGER",
+    "ROLE_MANAGER",
+    "ADMIN",
+    "ROLE_ADMIN",
+  ].includes(userRole);
 
+  // ─── Handlers ───────────────────────────────────────────
   const handleSubmit = async () => {
-    const success = await submitVoucher();
-    if (success) {
+    const result = await submitVoucher();
+    if (result) {
       toast.success("Đã gửi phiếu đi chờ duyệt!");
-      if (!id) navigate(`/inventory/disposal/${voucher.id}`, { replace: true });
+      if (!id) navigate(`/inventory/disposal/${result.id || voucher.id}`, { replace: true });
     }
   };
 
@@ -84,61 +120,96 @@ export default function DisposalDetail() {
     }
   };
 
-  const handleReject = async () => {
-    const reason = window.prompt("Nhập lý do từ chối:");
-    if (reason !== null) {
-      const success = await rejectVoucher(reason);
-      if (success) {
-        toast.success("Đã từ chối phiếu xử lý!");
-      }
+  const handleRejectClick = () => {
+    setShowRejectionModal(true);
+  };
+
+  const handleRejectSubmit = async (reason) => {
+    const result = await rejectVoucher(reason);
+    if (result) {
+      toast.success("Đã từ chối phiếu xử lý!");
+      setShowRejectionModal(false);
     }
   };
 
+  // ─── Loading state (matching purchase order pattern) ────
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-4 border-slate-100"></div>
+            <div className="w-12 h-12 rounded-full border-4 border-red-600 border-t-transparent animate-spin absolute inset-0"></div>
+          </div>
+          <p className="text-sm text-slate-500 font-medium">Đang tải...</p>
+        </div>
       </div>
     );
   }
 
+  // ─── Error state (matching purchase order pattern) ──────
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
-          Lỗi: {error}
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="text-center">
+          <p className="text-red-500 font-medium mb-2">Lỗi tải dữ liệu</p>
+          <p className="text-sm text-slate-500 mb-3">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition"
+          >
+            Thử lại
+          </button>
         </div>
       </div>
     );
   }
 
   const statusCfg = DV_STATUS_CONFIG[voucher.status] || DV_STATUS_CONFIG.DRAFT;
+  const isPending = voucher.status === DV_STATUS.PENDING;
+  const isConfirmed = voucher.status === DV_STATUS.CONFIRMED;
+  const isRejected = voucher.status === DV_STATUS.REJECTED;
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate("/inventory/disposal")}
-          className="p-1.5 rounded-lg hover:bg-slate-100 transition text-slate-500"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-bold text-slate-900 tracking-tight">
-              {id ? "Chi tiết phiếu xử lý" : "Tạo phiếu xử lý"}
-            </h1>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full border ${statusCfg.badgeBg} ${statusCfg.text}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-              {statusCfg.label}
-            </span>
+      {/* ─── Header (matching purchase order pattern) ─────── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/inventory/disposal")}
+            className="p-1.5 rounded-lg hover:bg-slate-100 transition text-slate-500"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-base font-bold text-slate-900 tracking-tight">
+                {id ? "Chi tiết phiếu xử lý" : "Tạo phiếu xử lý"}
+              </h1>
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full border ${statusCfg.badgeBg} ${statusCfg.text}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                {statusCfg.label}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5 font-mono">
+              {voucher.code || "Đang tạo..."}
+            </p>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5 font-mono">
-            {voucher.code || "Đang tạo..."}
-          </p>
+        </div>
+
+        {/* Info strip */}
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          <span className="flex items-center gap-1">
+            <Clock size={11} />
+            {voucher.created_at
+              ? new Date(voucher.created_at).toLocaleDateString("vi-VN")
+              : "---"}
+          </span>
+          <span className="inline-flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full text-xs font-medium text-slate-600">
+            {items.length} sản phẩm
+          </span>
         </div>
       </div>
 
@@ -150,14 +221,28 @@ export default function DisposalDetail() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 bg-red-50">
                 <h2 className="text-sm font-semibold text-red-800">
-                  Lô hàng hết hạn có thể xử lý ({expiredBatches.length} lô)
+                  Lô hàng hết hạn có thể xử lý
+                  {voucher.location_id ? ` (${expiredBatches.length} lô)` : ""}
                 </h2>
               </div>
 
-              {expiredBatches.length === 0 ? (
+              {!voucher.location_id ? (
                 <div className="p-8 text-center">
                   <p className="text-slate-500 text-sm">
-                    Không có lô hàng hết hạn
+                    Vui lòng chọn kho để xem danh sách lô hết hạn
+                  </p>
+                </div>
+              ) : loadingBatches ? (
+                <div className="p-8 flex flex-col items-center gap-2">
+                  <Loader2 size={20} className="animate-spin text-red-500" />
+                  <p className="text-slate-500 text-sm">
+                    Đang tải lô hết hạn...
+                  </p>
+                </div>
+              ) : expiredBatches.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-slate-500 text-sm">
+                    Không có lô hàng hết hạn tại kho này
                   </p>
                 </div>
               ) : (
@@ -321,7 +406,7 @@ export default function DisposalDetail() {
                               className="text-red-500 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
                               title="Xóa"
                             >
-                              Xóa
+                              <Trash2 size={14} />
                             </button>
                           </td>
                         )}
@@ -349,6 +434,113 @@ export default function DisposalDetail() {
                 </table>
               </div>
             )}
+
+            {/* ─── Action Footer (matching purchase order pattern) ── */}
+            <div className="px-6 py-4 border-t border-slate-200 bg-white">
+              <div className="flex items-center justify-between gap-3">
+                {/* Left: Status context message */}
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  {isEditable && (
+                    <>
+                      <Package size={14} className="text-slate-400" />
+                      <span>
+                        {items.length > 0
+                          ? `${items.length} sản phẩm · Tổng SL: ${totals.totalQty}`
+                          : "Thêm sản phẩm để bắt đầu"}
+                      </span>
+                    </>
+                  )}
+                  {isPending && (
+                    <>
+                      <Eye size={14} className="text-amber-500" />
+                      <span>Phiếu đang chờ duyệt</span>
+                    </>
+                  )}
+                  {isConfirmed && (
+                    <>
+                      <ShieldCheck size={14} className="text-emerald-500" />
+                      <span>Đã duyệt · Tồn kho đã bị trừ</span>
+                    </>
+                  )}
+                  {isRejected && !isEditable && (
+                    <>
+                      <XCircle size={14} className="text-red-500" />
+                      <span>Phiếu đã bị từ chối</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Right: Action buttons */}
+                <div className="flex items-center gap-2.5">
+                  {/* DRAFT/REJECTED → Submit */}
+                  {isEditable && (
+                    <>
+
+                      <button
+                        onClick={() =>
+                          openConfirm(
+                            "Gửi duyệt phiếu xử lý",
+                            "Gửi phiếu này cho quản lý để chờ duyệt?",
+                            handleSubmit,
+                            "info",
+                          )
+                        }
+                        disabled={saving || items.length === 0}
+                        className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-indigo-200"
+                      >
+                        {saving ? (
+                          <Loader2 size={15} className="animate-spin" />
+                        ) : (
+                          <CheckCircle size={15} />
+                        )}
+                        Gửi duyệt quản lý
+                      </button>
+                    </>
+                  )}
+
+                  {/* PENDING → Manager Approve / Reject */}
+                  {isPending && isManagerOrAdmin && (
+                    <>
+                      <button
+                        onClick={handleRejectClick}
+                        disabled={saving}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        <XCircle size={14} />
+                        Từ chối
+                      </button>
+                      <button
+                        onClick={() =>
+                          openConfirm(
+                            "Duyệt phiếu xử lý",
+                            "Xác nhận duyệt phiếu xử lý? Tồn kho sẽ bị trừ ngay lập tức và không thể hoàn tác!",
+                            handleApprove,
+                            "warning",
+                          )
+                        }
+                        disabled={saving}
+                        className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-200"
+                      >
+                        {saving ? (
+                          <Loader2 size={15} className="animate-spin" />
+                        ) : (
+                          <CheckCircle size={15} />
+                        )}
+                        Duyệt & Trừ kho
+                      </button>
+                    </>
+                  )}
+
+                  {/* CONFIRMED → Done indicator */}
+                  {isConfirmed && (
+                    <div className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-400 bg-slate-100 rounded-xl">
+                      <CheckCircle size={14} />
+                      Đã xử lý xong
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -373,23 +565,20 @@ export default function DisposalDetail() {
             {/* Location */}
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">
-                Kho
+                Kho <span className="text-red-500">*</span>
               </label>
               {isEditable ? (
-                <select
+                <CustomSelect
                   value={voucher.location_id || ""}
-                  onChange={(e) =>
-                    updateVoucher("location_id", Number(e.target.value) || null)
-                  }
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                >
-                  <option value="">-- Chọn kho --</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.location_name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => changeLocation(val ? Number(val) : null)}
+                  options={[
+                    { value: "", label: "-- Chọn kho --" },
+                    ...locations.map((loc) => ({
+                      value: loc.id,
+                      label: loc.location_name,
+                    })),
+                  ]}
+                />
               ) : (
                 <p className="text-sm text-slate-700">
                   {locations.find((l) => l.id === voucher.location_id)
@@ -398,29 +587,14 @@ export default function DisposalDetail() {
               )}
             </div>
 
-            {/* Reason type */}
+            {/* Reason type — fixed to EXPIRED */}
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">
                 Lý do xử lý
               </label>
-              {isEditable ? (
-                <select
-                  value={voucher.reason_type || REASON_TYPE.EXPIRED}
-                  onChange={(e) => updateVoucher("reason_type", e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                >
-                  {Object.entries(REASON_CONFIG).map(([key, cfg]) => (
-                    <option key={key} value={key}>
-                      {cfg.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-sm text-slate-700">
-                  {REASON_CONFIG[voucher.reason_type]?.label ||
-                    voucher.reason_type}
-                </p>
-              )}
+              <p className="text-sm text-slate-700 font-medium">
+                Hết hạn sử dụng
+              </p>
             </div>
 
             {/* Notes */}
@@ -485,58 +659,26 @@ export default function DisposalDetail() {
             </div>
           </div>
 
-          {/* Actions */}
-          {isEditable && (
-            <div className="space-y-3">
-              <button
-                onClick={handleSaveDraft}
-                disabled={saving}
-                className="w-full px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm disabled:opacity-50"
-              >
-                {saving ? "Đang lưu..." : "Lưu nháp"}
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={saving || items.length === 0}
-                className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? "Đang gửi..." : "Gửi duyệt quản lý"}
-              </button>
-            </div>
-          )}
-
-          {voucher.status === DV_STATUS.PENDING && (
-            <div className="space-y-3">
-              <button
-                onClick={handleApprove}
-                disabled={saving}
-                className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50"
-              >
-                {saving ? "Đang xử lý..." : "Duyệt & Trừ kho"}
-              </button>
-              <button
-                onClick={handleReject}
-                disabled={saving}
-                className="w-full px-4 py-2.5 text-red-600 border border-red-200 bg-white rounded-lg hover:bg-red-50 transition-colors font-medium text-sm disabled:opacity-50"
-              >
-                {saving ? "Đang xử lý..." : "Từ chối phiếu"}
-              </button>
-            </div>
-          )}
-
-          {voucher.status === DV_STATUS.CONFIRMED && (
+          {/* Status indicators */}
+          {isConfirmed && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-              <p className="text-sm text-emerald-800 font-medium">
-                Phiếu đã được xác nhận. Tồn kho đã bị trừ.
-              </p>
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={16} className="text-emerald-600" />
+                <p className="text-sm text-emerald-800 font-medium">
+                  Phiếu đã được xác nhận. Tồn kho đã bị trừ.
+                </p>
+              </div>
             </div>
           )}
 
-          {voucher.status === DV_STATUS.REJECTED && (
+          {isRejected && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
-              <p className="text-sm text-red-600 font-medium">
-                Phiếu đã bị từ chối.
-              </p>
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} className="text-red-600" />
+                <p className="text-sm text-red-600 font-medium">
+                  Phiếu đã bị từ chối.
+                </p>
+              </div>
               {voucher.rejection_reason && (
                 <div className="bg-white/60 p-3 rounded-lg border border-red-100">
                   <span className="block text-xs font-semibold text-red-800 mb-1">
@@ -551,6 +693,24 @@ export default function DisposalDetail() {
           )}
         </div>
       </div>
+
+      {/* ─── Modals (matching purchase order pattern) ──────── */}
+      <RejectionModal
+        isOpen={showRejectionModal}
+        onClose={() => setShowRejectionModal(false)}
+        onSubmit={handleRejectSubmit}
+        isLoading={saving}
+      />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        variant={confirmModal.variant}
+        loading={saving}
+      />
     </div>
   );
 }

@@ -198,6 +198,15 @@ public class PurchaseOrderService {
                     if (receiptItem.getNotes() != null) {
                         orderItem.setNotes(receiptItem.getNotes());
                     }
+                    if (receiptItem.getExpiryDate() != null) {
+                        orderItem.setExpiryDate(receiptItem.getExpiryDate());
+                    }
+                    if (receiptItem.getImportPrice() != null) {
+                        orderItem.setUnitCost(receiptItem.getImportPrice());
+                        if (orderItem.getReceivedQuantity() != null) {
+                            orderItem.setTotalCost(receiptItem.getImportPrice().multiply(BigDecimal.valueOf(orderItem.getReceivedQuantity())));
+                        }
+                    }
                     purchaseOrderItemRepository.save(orderItem);
                 }
             }
@@ -208,6 +217,19 @@ public class PurchaseOrderService {
         if (receiptRequest.getNotes() != null) {
             order.setNotes(receiptRequest.getNotes());
         }
+        if (receiptRequest.getSupplierId() != null) {
+            Supplier supplier = supplierRepository.findById(receiptRequest.getSupplierId())
+                    .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
+            order.setSupplier(supplier);
+        }
+        if (receiptRequest.getLocationId() != null) order.setLocationId(receiptRequest.getLocationId());
+        if (receiptRequest.getDiscountAmount() != null) order.setDiscountAmount(receiptRequest.getDiscountAmount());
+        if (receiptRequest.getTaxAmount() != null) order.setTaxAmount(receiptRequest.getTaxAmount());
+        if (receiptRequest.getTaxPercent() != null) order.setTaxPercent(receiptRequest.getTaxPercent());
+        if (receiptRequest.getSubtotal() != null) order.setSubtotal(receiptRequest.getSubtotal());
+        if (receiptRequest.getTotalAmount() != null) order.setTotalAmount(receiptRequest.getTotalAmount());
+        if (receiptRequest.getShippingFee() != null) order.setShippingFee(receiptRequest.getShippingFee());
+        if (receiptRequest.getPaidAmount() != null) order.setPaidAmount(receiptRequest.getPaidAmount());
         purchaseOrderRepository.save(order);
 
         // Cập nhật stock dựa trên receivedQuantity
