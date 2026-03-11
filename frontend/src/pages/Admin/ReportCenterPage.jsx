@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container } from 'react-bootstrap';
 import {
     FileText,
@@ -10,7 +10,9 @@ import {
     Clock,
     CheckCircle,
     AlertCircle,
-    Loader
+    Loader,
+    Eye,
+    X
 } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,6 +60,10 @@ const ReportCenterPage = () => {
     const [generating, setGenerating] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+
+    // Preview modal state
+    const [previewModal, setPreviewModal] = useState({ open: false, report: null, blobUrl: null, loading: false });
+    const previewBlobRef = useRef(null);
 
     // Polling interval for status updates
     const [pollingInterval, setPollingInterval] = useState(null);
@@ -182,6 +188,26 @@ const ReportCenterPage = () => {
         }
     };
 
+    const handlePreview = async (report) => {
+        setPreviewModal({ open: true, report, blobUrl: null, loading: true });
+        try {
+            const url = await reportService.getPreviewBlobUrl(report.id, report.format);
+            previewBlobRef.current = url;
+            setPreviewModal(prev => ({ ...prev, blobUrl: url, loading: false }));
+        } catch (err) {
+            setPreviewModal(prev => ({ ...prev, loading: false }));
+            setError('Không thể tải bản xem trước');
+        }
+    };
+
+    const closePreview = () => {
+        if (previewBlobRef.current) {
+            URL.revokeObjectURL(previewBlobRef.current);
+            previewBlobRef.current = null;
+        }
+        setPreviewModal({ open: false, report: null, blobUrl: null, loading: false });
+    };
+
     const handleQuickReport = async (reportType) => {
         const today = new Date();
         const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
@@ -250,6 +276,7 @@ const ReportCenterPage = () => {
     const [showFilter, setShowFilter] = useState(true);
 
     return (
+        <>
         <Container fluid className="bg-slate-50 min-h-screen py-4">
             {/* Page Header */}
             <div className="flex justify-between items-start mb-4">
@@ -454,15 +481,28 @@ const ReportCenterPage = () => {
                                                 <TableCell className="py-4">{getStatusBadge(report.status)}</TableCell>
                                                 <TableCell className="py-4">
                                                     {report.status === 'COMPLETED' ? (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleDownload(report)}
-                                                            className="border-slate-300 text-slate-700 hover:bg-slate-50"
-                                                        >
-                                                            <Download size={14} className="mr-1" />
-                                                            ↓ Tải
-                                                        </Button>
+                                                        <div className="flex items-center gap-2">
+                                                            {report.format === 'PDF' && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handlePreview(report)}
+                                                                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                                                                >
+                                                                    <Eye size={14} className="mr-1" />
+                                                                    Xem
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleDownload(report)}
+                                                                className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                                                            >
+                                                                <Download size={14} className="mr-1" />
+                                                                Tải
+                                                            </Button>
+                                                        </div>
                                                     ) : report.status === 'PROCESSING' || report.status === 'PENDING' ? (
                                                         <Button variant="secondary" size="sm" disabled>
                                                             <Loader size={14} className="mr-1" />
@@ -529,6 +569,123 @@ const ReportCenterPage = () => {
                 </Card>
             </div>
         </Container>
+
+        {/* ── PDF Preview Modal ── */}
+        {previewModal.open && (
+            <div
+                style={{
+                    position: 'fixed', inset: 0, zIndex: 1000,
+                    background: 'rgba(15,23,42,0.7)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                onClick={(e) => { if (e.target === e.currentTarget) closePreview(); }}
+            >
+                <div style={{
+                    background: '#fff', borderRadius: 14,
+                    width: 'min(900px, 94vw)', height: '90vh',
+                    display: 'flex', flexDirection: 'column',
+                    overflow: 'hidden',
+                    boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+                }}>
+                    {/* Modal header */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '14px 20px',
+                        borderBottom: '1px solid #e2e8f0',
+                        background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+                        borderRadius: '14px 14px 0 0',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <FileText size={18} color="#bfdbfe" />
+                            <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>
+                                {previewModal.report?.reportName || 'Report Preview'}
+                            </span>
+                            <span style={{ color: '#93c5fd', fontSize: 13 }}>
+                                {previewModal.report?.dateRange || ''}
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                                onClick={() => handleDownload(previewModal.report)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    padding: '6px 16px', borderRadius: 7, fontSize: 13, fontWeight: 600,
+                                    background: '#fff', color: '#1e40af',
+                                    border: '2px solid #bfdbfe', cursor: 'pointer',
+                                }}
+                            >
+                                <Download size={14} />
+                                Tải xuống
+                            </button>
+                            <button
+                                onClick={closePreview}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 32, height: 32, borderRadius: 8,
+                                    background: 'rgba(255,255,255,0.15)', border: 'none',
+                                    cursor: 'pointer', color: '#fff',
+                                }}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Modal body */}
+                    <div style={{ flex: 1, position: 'relative', background: '#f8fafc' }}>
+                        {previewModal.loading ? (
+                            <div style={{
+                                position: 'absolute', inset: 0,
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center', gap: 16,
+                            }}>
+                                <div style={{
+                                    width: 48, height: 48,
+                                    border: '4px solid #e2e8f0',
+                                    borderTopColor: '#3b82f6',
+                                    borderRadius: '50%',
+                                    animation: 'spin 0.8s linear infinite',
+                                }} />
+                                <span style={{ color: '#64748b', fontSize: 14 }}>Đang tải bản xem trước…</span>
+                            </div>
+                        ) : previewModal.blobUrl ? (
+                            previewModal.report?.format === 'PDF' ? (
+                                <iframe
+                                    src={previewModal.blobUrl}
+                                    title="Report Preview"
+                                    style={{ width: '100%', height: '100%', border: 'none' }}
+                                />
+                            ) : (
+                                <div style={{
+                                    display: 'flex', flexDirection: 'column',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    height: '100%', gap: 16,
+                                }}>
+                                    <FileText size={48} color="#94a3b8" />
+                                    <p style={{ color: '#64748b', fontSize: 14 }}>
+                                        Xem trước chỉ hỗ trợ PDF. Nhấn "Tải xuống" để mở file.
+                                    </p>
+                                    <button
+                                        onClick={() => handleDownload(previewModal.report)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            padding: '8px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600,
+                                            background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer',
+                                        }}
+                                    >
+                                        <Download size={16} /> Tải xuống
+                                    </button>
+                                </div>
+                            )
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Spinner keyframes */}
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </>
     );
 };
 
