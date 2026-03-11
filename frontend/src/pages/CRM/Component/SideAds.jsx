@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import useAdvertisements from "../../../hooks/useAdvertisements";
 
 const STORAGE_KEY = "smalltrend_side_ads";
 
 const DEFAULT_ADS = [
   {
     slot: "left",
-    active: true,
+    isActive: true,
     imageUrl: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80",
     title: "Mega Sale 50% OFF",
     subtitle: "Ưu đãi cuối tuần",
@@ -16,7 +17,7 @@ const DEFAULT_ADS = [
   },
   {
     slot: "right",
-    active: true,
+    isActive: true,
     imageUrl: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80",
     title: "Free Shipping",
     subtitle: "Đơn từ 200.000đ",
@@ -27,17 +28,8 @@ const DEFAULT_ADS = [
   },
 ];
 
-function loadAds() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_ADS;
-  } catch {
-    return DEFAULT_ADS;
-  }
-}
-
 function AdPanel({ ad }) {
-  if (!ad || !ad.active) return null;
+  if (!ad || !ad.isActive) return null;
 
   const content = (
     <div
@@ -81,19 +73,51 @@ function AdPanel({ ad }) {
 }
 
 export default function SideAds() {
-  const [ads, setAds] = useState(loadAds);
+  const { ads: adsFromAPI, loading } = useAdvertisements();
+  const [displayAds, setDisplayAds] = useState(DEFAULT_ADS);
 
-  // Sync mỗi khi storage thay đổi (khi trang quản lý lưu)
+  useEffect(() => {
+    if (adsFromAPI && (adsFromAPI.LEFT || adsFromAPI.RIGHT)) {
+      // Convert API response to local format
+      const leftAd = adsFromAPI.LEFT ? {
+        ...adsFromAPI.LEFT,
+        slot: "left",
+      } : null;
+      const rightAd = adsFromAPI.RIGHT ? {
+        ...adsFromAPI.RIGHT,
+        slot: "right",
+      } : null;
+
+      const ads = [];
+      if (leftAd) ads.push(leftAd);
+      if (rightAd) ads.push(rightAd);
+
+      if (ads.length > 0) {
+        setDisplayAds(ads);
+      }
+    }
+  }, [adsFromAPI]);
+
+  // Sync with storage for backward compatibility
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === STORAGE_KEY) setAds(loadAds());
+      if (e.key === STORAGE_KEY) {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (saved && Array.isArray(saved)) {
+            setDisplayAds(saved);
+          }
+        } catch (err) {
+          console.error("Failed to load ads from storage:", err);
+        }
+      }
     };
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
   }, []);
 
-  const leftAd = ads.find((a) => a.slot === "left");
-  const rightAd = ads.find((a) => a.slot === "right");
+  const leftAd = displayAds.find((a) => a.slot === "left");
+  const rightAd = displayAds.find((a) => a.slot === "right");
 
   return (
     <>
