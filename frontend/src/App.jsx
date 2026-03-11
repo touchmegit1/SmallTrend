@@ -8,6 +8,7 @@ import PublicRoute from "./components/common/PublicRoute";
 import UserManagement from "./pages/HR/UserManagement";
 import WorkforceManagement from "./pages/HR/WorkforceManagement";
 import ShiftManagement from "./pages/HR/ShiftManagement";
+import ShiftCalendarPage from "./pages/HR/ShiftCalendarPage";
 import MyPayrollSummary from "./pages/HR/MyPayrollSummary";
 import ShiftTicketCenter from "./pages/HR/ShiftTicketCenter";
 import InventoryDashboard from "./pages/Inventory/Dashboard/InventoryDashboard";
@@ -189,15 +190,23 @@ function App() {
           path="hr/schedule"
           element={
             <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <ShiftManagement viewMode="calendar-only" />
+              <ShiftCalendarPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/my-attendance"
+          element={
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <AttendanceManagement selfOnly={true} />
             </ProtectedRoute>
           }
         />
         <Route
           path="hr/attendance"
           element={
-            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
-              <WorkforceManagement defaultTab="attendance" />
+            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
+              <MyPayrollSummary defaultTab="attendance" />
             </ProtectedRoute>
           }
         />

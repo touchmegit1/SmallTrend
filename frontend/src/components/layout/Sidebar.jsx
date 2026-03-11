@@ -95,12 +95,13 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
           { label: "Phân ca làm việc", path: "/hr/shifts" },
           { label: "Chấm công", path: "/hr/attendance" },
           { label: "Tính lương", path: "/hr/payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
         ]
         : [
           { label: "Lịch làm việc", path: "/hr/schedule" },
-          { label: "Chấm công", path: "/hr/schedule" },
+          { label: "Chấm công", path: "/hr/my-attendance" },
           { label: "Tính lương", path: "/hr/my-payroll" },
-          { label: "Phiếu ca làm việc", path: "/hr/shift-tickets" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
         ],
     },
     {
@@ -213,7 +214,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   Quản lý người dùng
                 </NavLink>
                 <NavLink
-                  to="/admin/ticket-center"
+                  to="/admin/report-center"
                   className={({ isActive }) =>
                     `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
                       ? "bg-indigo-100 text-indigo-700 font-medium"
@@ -222,6 +223,17 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   }
                 >
                   Trung tâm Báo cáo
+                </NavLink>
+                <NavLink
+                  to="/hr/shift-tickets"
+                  className={({ isActive }) =>
+                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                      ? "bg-indigo-100 text-indigo-700 font-medium"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    }`
+                  }
+                >
+                  Ticket đổi ca
                 </NavLink>
                 <NavLink
                   to="/admin/audit-logs"

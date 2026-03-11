@@ -3,8 +3,11 @@ import { shiftService } from '../../services/shiftService';
 import { userService } from '../../services/userService';
 import { ClipboardCheck, CalendarDays, Users, Clock3, TriangleAlert, RotateCcw } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
+import { useAuth } from '../../context/AuthContext';
 
-const AttendanceManagement = ({ viewMode = 'full' }) => {
+const AttendanceManagement = ({ viewMode = 'full', selfOnly = false }) => {
+    const { user } = useAuth();
+    const currentUserId = user?.id || user?.userId || '';
     const isSummaryOnly = viewMode === 'summary';
     const isDetailOnly = viewMode === 'detail';
     const showHeader = !isDetailOnly;
@@ -20,9 +23,14 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
 
     const [filters, setFilters] = useState({
         date: toDateInput(new Date()),
-        userId: '',
+        userId: selfOnly && currentUserId ? String(currentUserId) : '',
         status: 'ALL',
     });
+
+    useEffect(() => {
+        if (!selfOnly || !currentUserId) return;
+        setFilters((prev) => ({ ...prev, userId: String(currentUserId) }));
+    }, [selfOnly, currentUserId]);
 
     useEffect(() => {
         loadUsers();
@@ -30,14 +38,14 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
 
     useEffect(() => {
         loadAttendance();
-    }, [filters.date, filters.userId, filters.status]);
+    }, [filters.date, filters.userId, filters.status, currentUserId, selfOnly]);
 
     const loadUsers = async () => {
         try {
             const userRes = await userService.getAll();
             const usersPayload = userRes?.content ? userRes.content : userRes;
             setUsers(Array.isArray(usersPayload) ? usersPayload : []);
-        } catch (err) {
+        } catch {
             setUsers([]);
         }
     };
@@ -54,22 +62,26 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
 
         try {
             setLoading(true);
-            const params = {
-                date: filters.date,
-                status: filters.status,
-            };
-            if (filters.userId) {
+            const params = { date: filters.date, status: filters.status };
+            if (selfOnly && currentUserId) {
+                params.userId = currentUserId;
+            } else if (filters.userId) {
                 params.userId = filters.userId;
             }
+
             const data = await shiftService.getAttendance(params);
-            setRecords(Array.isArray(data) ? data.map((item) => ({
-                ...item,
-                key: `${item.userId}-${item.date}`,
-                checkIn: item.timeIn ? item.timeIn.slice(0, 5) : '',
-                checkOut: item.timeOut ? item.timeOut.slice(0, 5) : '',
-                note: item.notes || '',
-                shiftTime: `${formatTime(item.shiftStartTime)} - ${formatTime(item.shiftEndTime)}`,
-            })) : []);
+            setRecords(
+                Array.isArray(data)
+                    ? data.map((item) => ({
+                        ...item,
+                        key: `${item.userId}-${item.date}`,
+                        checkIn: item.timeIn ? item.timeIn.slice(0, 5) : '',
+                        checkOut: item.timeOut ? item.timeOut.slice(0, 5) : '',
+                        note: item.notes || '',
+                        shiftTime: `${formatTime(item.shiftStartTime)} - ${formatTime(item.shiftEndTime)}`,
+                    }))
+                    : []
+            );
             setError('');
         } catch (err) {
             setError(err.response?.data?.message || 'Không thể tải dữ liệu chấm công');
@@ -81,9 +93,9 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
 
     const summary = useMemo(() => {
         const total = records.length;
-        const present = records.filter((r) => r.status === 'PRESENT').length;
-        const late = records.filter((r) => r.status === 'LATE').length;
-        const absent = records.filter((r) => r.status === 'ABSENT').length;
+        const present = records.filter((item) => item.status === 'PRESENT').length;
+        const late = records.filter((item) => item.status === 'LATE').length;
+        const absent = records.filter((item) => item.status === 'ABSENT').length;
         return { total, present, late, absent };
     }, [records]);
 
@@ -103,11 +115,7 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
         });
 
         try {
-            const next = {
-                ...record,
-                ...patch,
-            };
-
+            const next = { ...record, ...patch };
             await shiftService.upsertAttendance({
                 userId: record.userId,
                 date: record.date,
@@ -115,8 +123,7 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
                 timeOut: next.checkOut || null,
                 status: next.status,
             });
-
-            setRecords((prev) => prev.map((item) => item.key === record.key ? next : item));
+            setRecords((prev) => prev.map((item) => (item.key === record.key ? next : item)));
         } catch (err) {
             setError(err.response?.data?.message || 'Không thể cập nhật chấm công');
         }
@@ -129,22 +136,18 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
     return (
         <div className="space-y-5">
             {showHeader && (
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
-                            <ClipboardCheck size={24} className="text-indigo-600" />
-                            Chấm công
-                        </h1>
-                        <p className="text-sm text-slate-500 mt-1">Theo dõi trạng thái đi làm theo phân ca.</p>
-                    </div>
+                <div>
+                    <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+                        <ClipboardCheck size={24} className="text-indigo-600" />
+                        {selfOnly ? 'Chấm công cá nhân' : 'Chấm công'}
+                    </h1>
+                    <p className="text-sm text-slate-500 mt-1">
+                        {selfOnly ? 'Theo dõi trạng thái đi làm của riêng bạn theo phân ca.' : 'Theo dõi trạng thái đi làm theo phân ca.'}
+                    </p>
                 </div>
             )}
 
-            {error && (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {error}
-                </div>
-            )}
+            {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
             {showSummary && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -155,10 +158,8 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
                 </div>
             )}
 
-            {!showDetailTable && <div className="hidden" />}
-
             {showDetailTable && (
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
                     <div className="grid gap-3 md:grid-cols-4">
                         <div className="space-y-1">
                             <label className="text-xs font-medium text-slate-600">Ngày chấm công</label>
@@ -168,21 +169,28 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
                                 onChange={(event) => setFilters((prev) => ({ ...prev, date: event.target.value }))}
                                 className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.date ? 'border-rose-400' : 'border-slate-200'}`}
                             />
-                            {filterErrors.date && <p className="text-xs text-rose-600">{filterErrors.date}</p>}
                         </div>
                         <div className="space-y-1">
                             <label className="text-xs font-medium text-slate-600">Nhân viên</label>
-                            <CustomSelect
-                                value={filters.userId}
-                                onChange={(value) => setFilters((prev) => ({ ...prev, userId: value }))}
-                                options={[
-                                    { value: '', label: 'Tất cả nhân viên' },
-                                    ...users.map((user) => ({ value: String(user.id), label: user.fullName || user.email }))
-                                ]}
-                            />
+                            {selfOnly ? (
+                                <input
+                                    value={user?.fullName || user?.username || user?.email || '-'}
+                                    disabled
+                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+                                />
+                            ) : (
+                                <CustomSelect
+                                    value={filters.userId}
+                                    onChange={(value) => setFilters((prev) => ({ ...prev, userId: value }))}
+                                    options={[
+                                        { value: '', label: 'Tất cả nhân viên' },
+                                        ...users.map((item) => ({ value: String(item.id), label: item.fullName || item.email })),
+                                    ]}
+                                />
+                            )}
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-600">Trạng thái chấm công</label>
+                            <label className="text-xs font-medium text-slate-600">Trạng thái</label>
                             <CustomSelect
                                 value={filters.status}
                                 onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
@@ -197,80 +205,105 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
                             />
                         </div>
                         <button
-                            onClick={() => setFilters({ date: toDateInput(new Date()), userId: '', status: 'ALL' })}
+                            onClick={() =>
+                                setFilters({
+                                    date: toDateInput(new Date()),
+                                    userId: selfOnly && currentUserId ? String(currentUserId) : '',
+                                    status: 'ALL',
+                                })
+                            }
                             className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
-                            <RotateCcw size={14} />
-                            Đặt lại bộ lọc
+                            <RotateCcw size={14} /> Đặt lại bộ lọc
                         </button>
                     </div>
-                </div>
-            )}
 
-            {showDetailTable && (
-                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                    <div className="grid grid-cols-12 gap-2 border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        <div className="col-span-2">Ngày</div>
-                        <div className="col-span-2">Nhân viên</div>
-                        <div className="col-span-2">Ca làm</div>
-                        <div className="col-span-2">Giờ vào/ra</div>
-                        <div className="col-span-2">Trạng thái</div>
-                        <div className="col-span-2">Ghi chú</div>
-                    </div>
-
-                    {records.map((record) => (
-                        <div key={record.key} className="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-slate-100">
-                            <div className="col-span-2 text-slate-700">{formatDate(record.date)}</div>
-                            <div className="col-span-2 text-slate-900 font-medium">{record.userName}</div>
-                            <div className="col-span-2">
-                                <div className="text-slate-900">{record.shiftName || 'N/A'}</div>
-                                <div className="text-xs text-slate-500">{record.shiftTime}</div>
-                            </div>
-                            <div className="col-span-2 flex gap-2">
-                                <input
-                                    type="time"
-                                    value={record.checkIn}
-                                    onChange={(event) => updateAttendance(record, { checkIn: event.target.value })}
-                                    className={`w-full rounded-md border px-2 py-1 text-xs ${rowErrors[record.key] ? 'border-rose-400' : 'border-slate-200'}`}
-                                />
-                                <input
-                                    type="time"
-                                    value={record.checkOut}
-                                    onChange={(event) => updateAttendance(record, { checkOut: event.target.value })}
-                                    className={`w-full rounded-md border px-2 py-1 text-xs ${rowErrors[record.key] ? 'border-rose-400' : 'border-slate-200'}`}
-                                />
-                            </div>
-                            <div className="col-span-2">
-                                <CustomSelect
-                                    value={record.status}
-                                    onChange={(value) => updateAttendance(record, { status: value })}
-                                    className="w-full"
-                                    variant="status"
-                                    options={[
-                                        { value: 'PENDING', label: 'Chưa chấm' },
-                                        { value: 'PRESENT', label: 'Có mặt' },
-                                        { value: 'LATE', label: 'Đi muộn' },
-                                        { value: 'ABSENT', label: 'Vắng' },
-                                    ]}
-                                />
-                            </div>
-                            <div className="col-span-2">
-                                <input
-                                    value={record.note}
-                                    onChange={(event) => updateAttendance(record, { note: event.target.value })}
-                                    placeholder="Ghi chú"
-                                    className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
-                                />
-                            </div>
-                            {rowErrors[record.key] && (
-                                <div className="col-span-12 text-xs text-rose-600">{rowErrors[record.key]}</div>
-                            )}
+                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                        <div className="grid grid-cols-12 gap-2 border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            <div className="col-span-2">Ngày</div>
+                            <div className="col-span-2">Nhân viên</div>
+                            <div className="col-span-2">Ca làm</div>
+                            <div className="col-span-2">Giờ vào/ra</div>
+                            <div className="col-span-2">Trạng thái</div>
+                            <div className="col-span-2">Ghi chú</div>
                         </div>
-                    ))}
 
-                    {records.length === 0 && (
-                        <div className="px-4 py-6 text-sm text-slate-500">Không có dữ liệu chấm công theo bộ lọc hiện tại.</div>
-                    )}
+                        {records.map((record) => (
+                            <div key={record.key} className="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-slate-100">
+                                <div className="col-span-2 text-slate-700">{formatDate(record.date)}</div>
+                                <div className="col-span-2 text-slate-900 font-medium">{record.userName}</div>
+                                <div className="col-span-2">
+                                    <div className="text-slate-900">{record.shiftName || 'N/A'}</div>
+                                    <div className="text-xs text-slate-500">{record.shiftTime}</div>
+                                </div>
+
+                                <div className="col-span-2 flex gap-2">
+                                    {selfOnly ? (
+                                        <div className="text-xs text-slate-600 flex items-center">
+                                            {record.checkIn || '--:--'} / {record.checkOut || '--:--'}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <input
+                                                type="time"
+                                                value={record.checkIn}
+                                                onChange={(event) => updateAttendance(record, { checkIn: event.target.value })}
+                                                className={`w-full rounded-md border px-2 py-1 text-xs ${rowErrors[record.key] ? 'border-rose-400' : 'border-slate-200'}`}
+                                            />
+                                            <input
+                                                type="time"
+                                                value={record.checkOut}
+                                                onChange={(event) => updateAttendance(record, { checkOut: event.target.value })}
+                                                className={`w-full rounded-md border px-2 py-1 text-xs ${rowErrors[record.key] ? 'border-rose-400' : 'border-slate-200'}`}
+                                            />
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="col-span-2">
+                                    {selfOnly ? (
+                                        <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-slate-100 text-slate-700">
+                                            {record.status}
+                                        </span>
+                                    ) : (
+                                        <CustomSelect
+                                            value={record.status}
+                                            onChange={(value) => updateAttendance(record, { status: value })}
+                                            className="w-full"
+                                            variant="status"
+                                            options={[
+                                                { value: 'PENDING', label: 'Chưa chấm' },
+                                                { value: 'PRESENT', label: 'Có mặt' },
+                                                { value: 'LATE', label: 'Đi muộn' },
+                                                { value: 'ABSENT', label: 'Vắng' },
+                                            ]}
+                                        />
+                                    )}
+                                </div>
+
+                                <div className="col-span-2">
+                                    {selfOnly ? (
+                                        <div className="text-xs text-slate-500">{record.note || '-'}</div>
+                                    ) : (
+                                        <input
+                                            value={record.note}
+                                            onChange={(event) => updateAttendance(record, { note: event.target.value })}
+                                            className={`w-full rounded-md border px-2 py-1 text-xs ${rowErrors[record.key] ? 'border-rose-400' : 'border-slate-200'}`}
+                                            placeholder="Ghi chú"
+                                        />
+                                    )}
+                                </div>
+
+                                {rowErrors[record.key] && (
+                                    <div className="col-span-12 text-xs text-rose-600">{rowErrors[record.key]}</div>
+                                )}
+                            </div>
+                        ))}
+
+                        {records.length === 0 && (
+                            <div className="px-4 py-6 text-sm text-slate-500">Không có dữ liệu chấm công theo bộ lọc hiện tại.</div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

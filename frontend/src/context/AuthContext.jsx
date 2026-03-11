@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import authService from '../services/authService';
 import { shiftService } from '../services/shiftService';
+import { userService } from '../services/userService';
 
 const AuthContext = createContext(null);
 const ATTENDANCE_HEARTBEAT_MS = 60 * 1000;
@@ -161,9 +162,11 @@ export const AuthProvider = ({ children }) => {
                 if (token && currentUser) {
                     const isValid = await authService.validateToken();
                     if (isValid) {
-                        const latestUser = await authService.getMe().catch(() => currentUser);
-                        authService.updateStoredUser(latestUser);
-                        setUser(latestUser);
+                        const meData = await authService.getMe().catch(() => ({}));
+                        const profileData = await userService.getMyProfile().catch(() => ({}));
+                        const latestUser = { ...currentUser, ...meData, ...profileData };
+                        const mergedUser = authService.updateStoredUser(latestUser);
+                        setUser(mergedUser);
                         setIsAuthenticated(true);
                     } else {
                         authService.clearAuthData();
@@ -190,7 +193,10 @@ export const AuthProvider = ({ children }) => {
     const login = async (username, password) => {
         try {
             const data = await authService.login(username, password);
-            setUser(data);
+            const meData = await authService.getMe().catch(() => ({}));
+            const profileData = await userService.getMyProfile().catch(() => ({}));
+            const merged = authService.updateStoredUser({ ...data, ...meData, ...profileData });
+            setUser(merged);
             setIsAuthenticated(true);
 
             clearAttendanceTimer();
