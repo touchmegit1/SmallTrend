@@ -18,7 +18,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,6 +33,7 @@ import java.util.stream.Collectors;
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
+    private final ReportGeneratorService reportGeneratorService;
 
     /**
      * Save an audit log entry.
@@ -118,5 +124,77 @@ public class AuditLogService {
     public long getAuditLogCount(AuditLogFilterRequest filter) {
         Specification<AuditLog> spec = AuditLogSpecification.filterBy(filter);
         return auditLogRepository.count(spec);
+    }
+
+    /**
+     * Export ALL audit logs matching the filter as a styled PDF (no pagination limit).
+     *
+     * @param filter Filter criteria (page/size fields are ignored – all records are exported)
+     * @return PDF bytes
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportAuditLogsPdf(AuditLogFilterRequest filter) {
+        Specification<AuditLog> spec = AuditLogSpecification.filterBy(filter);
+
+        Sort sort = Sort.by(
+            filter.getSortDirection() != null && filter.getSortDirection().equalsIgnoreCase("ASC")
+                ? Sort.Direction.ASC : Sort.Direction.DESC,
+            filter.getSortBy() != null ? filter.getSortBy() : "createdAt"
+        );
+
+        // Fetch all matching records (max 10,000 to protect server)
+        Pageable all = PageRequest.of(0, 10_000, sort);
+        List<AuditLog> logs = auditLogRepository.findAll(spec, all).getContent();
+
+        // Build subtitle from filter dates
+        String tz = filter.getTimezone() != null ? filter.getTimezone() : "Asia/Bangkok";
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm").withZone(ZoneId.of(tz));
+        String subtitle;
+        if (filter.getFromDateTime() != null && filter.getToDateTime() != null) {
+            subtitle = fmt.format(filter.getFromDateTime()) + "  →  " + fmt.format(filter.getToDateTime()) + "  " + tz;
+        } else {
+            subtitle = "All records  •  " + tz;
+        }
+
+        // KPI summary cards
+        long total  = logs.size();
+        long okCnt  = logs.stream().filter(l -> "OK".equalsIgnoreCase(l.getResult())).count();
+        long failCnt= logs.stream().filter(l -> "FAIL".equalsIgnoreCase(l.getResult())).count();
+        long deniedCnt = logs.stream().filter(l -> "DENIED".equalsIgnoreCase(l.getResult())).count();
+
+        Map<String, String> kpis = new LinkedHashMap<>();
+        kpis.put("Total Events", String.valueOf(total));
+        kpis.put("Successful (OK)", String.valueOf(okCnt));
+        kpis.put("Failed", String.valueOf(failCnt));
+        kpis.put("Denied", String.valueOf(deniedCnt));
+
+        // Column headers
+        List<String> headers = List.of("Time", "Actor", "Action", "Target", "Result", "IP Address", "Source", "Trace ID");
+
+        // Rows
+        DateTimeFormatter rowFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        List<List<String>> rows = new ArrayList<>();
+        for (AuditLog log : logs) {
+            String time = log.getCreatedAt() != null ? log.getCreatedAt().format(rowFmt) : "—";
+            String actor = log.getUser() != null
+                ? (log.getUser().getFullName() != null ? log.getUser().getFullName() : "")
+                  + (log.getUser().getEmail() != null ? " (" + log.getUser().getEmail() + ")" : "")
+                : "System";
+            String target = (log.getEntityName() != null ? log.getEntityName() : "")
+                + (log.getEntityId() != null ? "#" + log.getEntityId() : "");
+
+            rows.add(List.of(
+                time,
+                actor,
+                log.getAction() != null ? log.getAction() : "—",
+                !target.isEmpty() ? target : "—",
+                log.getResult() != null ? log.getResult() : "—",
+                log.getIpAddress() != null ? log.getIpAddress() : "—",
+                log.getSource() != null ? log.getSource() : "—",
+                log.getTraceId() != null ? log.getTraceId().substring(0, Math.min(16, log.getTraceId().length())) : "—"
+            ));
+        }
+
+        return reportGeneratorService.generatePdf("Audit Log Report", subtitle, headers, rows, kpis, -1);
     }
 }

@@ -5,11 +5,14 @@ import com.smalltrend.dto.auditlog.AuditLogPageResponse;
 import com.smalltrend.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/audit-logs")
@@ -119,5 +122,49 @@ public class AuditLogController {
 
         long count = auditLogService.getAuditLogCount(filter);
         return ResponseEntity.ok(count);
+    }
+
+    /**
+     * Export audit logs as a styled PDF file.
+     * All records matching the filter are included (no pagination limit).
+     */
+    @GetMapping("/export/pdf")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> exportPdf(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDateTime,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDateTime,
+            @RequestParam(required = false, defaultValue = "Asia/Bangkok") String timezone,
+            @RequestParam(required = false, defaultValue = "ALL") String result,
+            @RequestParam(required = false) String userSearch,
+            @RequestParam(required = false, defaultValue = "ALL") String action,
+            @RequestParam(required = false) String target,
+            @RequestParam(required = false) String ipAddress,
+            @RequestParam(required = false) String traceId,
+            @RequestParam(required = false, defaultValue = "ALL") String source,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection
+    ) {
+        AuditLogFilterRequest filter = AuditLogFilterRequest.builder()
+                .fromDateTime(fromDateTime)
+                .toDateTime(toDateTime)
+                .timezone(timezone)
+                .result(result)
+                .userSearch(userSearch)
+                .action(action)
+                .target(target)
+                .ipAddress(ipAddress)
+                .traceId(traceId)
+                .source(source)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
+                .build();
+
+        byte[] pdf = auditLogService.exportAuditLogsPdf(filter);
+        String filename = "audit_logs_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".pdf";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }
