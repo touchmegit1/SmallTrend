@@ -67,194 +67,188 @@ const ComboDetail = () => {
     : 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Toast Message */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50">
-          <div className="bg-green-50 border border-green-200 rounded-xl px-8 py-5 shadow-lg">
-            <span className="text-base font-semibold text-gray-800">{toastMessage}</span>
+          <div className="bg-green-50 z-50 border border-green-200 rounded-xl px-6 py-4 shadow-lg flex items-center gap-3 transform transition-all animate-bounce">
+            <span className="text-sm font-medium text-green-800">{toastMessage}</span>
           </div>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" onClick={() => navigate("/products/combo")}>
-            <ArrowLeft className="w-5 h-5" />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl border border-gray-200 shadow-sm gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" className="h-10 w-10 p-0 rounded-full border-gray-200 hover:bg-gray-100 transition-colors" onClick={() => navigate("/products/combo")}>
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Button>
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900">{combo.comboName}</h1>
-            <p className="text-md text-gray-500 font-semibold">Mã Combo: {combo.comboCode || `#${combo.id}`}</p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{combo.comboName}</h1>
+              {combo.isActive ? (
+                <Badge className="bg-emerald-100 text-emerald-700 border-none px-2.5 py-0.5 font-medium shadow-sm">Đang bán</Badge>
+              ) : (
+                <Badge className="bg-rose-100 text-rose-700 border-none px-2.5 py-0.5 font-medium shadow-sm">Ngưng bán</Badge>
+              )}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Mã Combo: <span className="font-semibold text-gray-800">{combo.comboCode || `#${combo.id}`}</span></p>
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 w-full sm:w-auto">
+          <Button
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all rounded-lg"
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Chỉnh sửa
+          </Button>
           <Button
             variant="danger"
             onClick={handleDeleteCombo}
           >
             <Trash2 className="w-4 h-4 mr-2" />
-            Xóa Combo
+            Xóa
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Package2 className="w-6 h-6 text-blue-600" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <Card className="border border-gray-200 rounded-2xl bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 bg-blue-50 text-blue-600 rounded-xl">
+              <Package2 className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Sản phẩm trong combo</p>
-              <p className="text-2xl font-bold text-gray-900">{combo.items?.length || 0}</p>
+              <p className="text-sm font-medium text-gray-500">Sản phẩm trong combo</p>
+              <p className="text-2xl font-bold text-gray-900 mt-0.5">{combo.items?.length || 0}</p>
             </div>
           </div>
         </Card>
-        <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+        <Card className="border border-gray-200 rounded-2xl bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 bg-purple-50 text-purple-600 rounded-xl">
+              <Calendar className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Đã bán (30 ngày)</p>
-              <p className="text-2xl font-bold text-gray-900">45</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Ngày tạo: {combo.createdAt ? new Date(combo.createdAt).toLocaleDateString("vi-VN") : "-"}</p>
-              <p className="text-xs text-gray-500">Cập nhật: {combo.updatedAt ? new Date(combo.updatedAt).toLocaleDateString("vi-VN") : "-"}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Tạo: <span className="text-gray-900">{combo.createdAt ? new Date(combo.createdAt).toLocaleDateString("vi-VN") : "-"}</span></p>
+              <p className="text-xs font-medium text-gray-500">Cập nhật: <span className="text-gray-900">{combo.updatedAt ? new Date(combo.updatedAt).toLocaleDateString("vi-VN") : "-"}</span></p>
             </div>
           </div>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left - Combo Image */}
-        <Card className="border border-gray-300 rounded-lg bg-white p-4">
-          <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mb-3 overflow-hidden">
-            {combo.imageUrl ? (
-              <img
-                src={combo.imageUrl.startsWith('http') ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith('/') ? '' : '/'}${combo.imageUrl}`}
-                alt={combo.comboName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Package2 className="w-16 h-16 text-blue-600" />
-            )}
+        <Card className="lg:col-span-1 border border-gray-200 rounded-2xl bg-white overflow-hidden shadow-sm h-full flex flex-col">
+          <div className="p-5 border-b border-gray-100 flex-none">
+            <h2 className="text-lg font-bold text-gray-900">Hình ảnh</h2>
           </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-500">Hình ảnh combo</p>
+          <div className="p-5 flex-1 flex flex-col items-center justify-center">
+            <div className="w-full aspect-square max-h-64 bg-gray-50 rounded-xl flex items-center justify-center mb-4 overflow-hidden border border-gray-100 shadow-inner group">
+              {combo.imageUrl ? (
+                <img
+                  src={combo.imageUrl.startsWith('http') ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith('/') ? '' : '/'}${combo.imageUrl}`}
+                  alt={combo.comboName}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : (
+                <Package2 className="w-20 h-20 text-gray-300" />
+              )}
+            </div>
           </div>
         </Card>
 
         {/* Right - Combo Info */}
-        <Card className="border border-gray-300 rounded-lg bg-white">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-bold">Thông tin Combo</h2>
+        <Card className="lg:col-span-2 border border-gray-200 rounded-2xl bg-white shadow-sm h-full flex flex-col">
+          <div className="p-5 border-b border-gray-100 flex-none">
+            <h2 className="text-lg font-bold text-gray-900">Chi tiết Combo</h2>
           </div>
-          <div className="p-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="p-6 flex-1 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-gray-50 p-5 rounded-xl border border-gray-100">
               <div>
-                <Label className="text-sm font-medium text-gray-500">Tên Combo</Label>
-                <p className="text-sm font-semibold text-gray-900 mt-1">{combo.comboName}</p>
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên Combo</Label>
+                <p className="text-base font-semibold text-gray-900 mt-1.5">{combo.comboName}</p>
+              </div>
+              <div className="sm:text-right">
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Giảm giá</Label>
+                <Badge className="bg-rose-100 text-rose-700 border-none px-2.5 py-1 text-sm mt-1.5 inline-flex shadow-sm">
+                  Cấp độ giảm {discountPercent}%
+                </Badge>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-500">Trạng thái</Label>
-                <div className="mt-1">
-                  {combo.isActive ? (
-                    <Badge className="bg-green-100 text-green-700">Đang bán</Badge>
-                  ) : (
-                    <Badge className="bg-red-100 text-red-700">Ngưng bán</Badge>
-                  )}
-                </div>
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Giá gốc</Label>
+                <p className="text-base text-gray-400 line-through mt-1.5 font-medium">{combo.originalPrice?.toLocaleString()} đ</p>
               </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Giá gốc</Label>
-                <p className="text-sm text-gray-500 line-through mt-1">{combo.originalPrice?.toLocaleString()}đ</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Giá Combo</Label>
-                <p className="text-sm font-bold text-green-600 mt-1">{combo.comboPrice?.toLocaleString()}đ</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Giảm giá</Label>
-                <div className="mt-1">
-                  <Badge className="bg-red-100 text-red-700">-{discountPercent}%</Badge>
-                </div>
+              <div className="sm:text-right">
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Giá bán Combo</Label>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">{combo.comboPrice?.toLocaleString()} đ</p>
               </div>
             </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-500">Mô tả</Label>
-              <p className="text-sm text-gray-900 mt-1">{combo.description}</p>
+
+            <div className="px-1">
+              <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Mô tả</Label>
+              <div className="text-sm text-gray-700 bg-white p-4 rounded-xl border border-gray-100 leading-relaxed shadow-sm min-h-[4rem]">
+                {combo.description ? combo.description : <span className="text-gray-400 italic">Không có mô tả cho combo này.</span>}
+              </div>
             </div>
-          </div>
-          <div className="p-4 border-t border-gray-200">
-            <Button
-              onClick={() => setIsEditModalOpen(true)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
-            >
-              <Edit className="w-4 h-4" />
-              Chỉnh sửa Combo
-            </Button>
           </div>
         </Card>
       </div>
 
       {/* Products in Combo */}
-      <Card className="border border-gray-300 rounded-lg bg-white">
-        <div className="p-5 border-b border-gray-200">
-          <h2 className="text-xl font-bold">Sản phẩm trong Combo</h2>
+      <Card className="border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 bg-white">
+          <h2 className="text-lg font-bold text-gray-900">Thành phần Combo</h2>
         </div>
-        <div className="p-6">
-          <Table>
+        <div className="p-0">
+          <Table className="w-full">
             <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="w-16">STT</TableHead>
-                <TableHead>Tên sản phẩm</TableHead>
-                <TableHead>Số lượng</TableHead>
-                <TableHead>Đơn giá</TableHead>
-                <TableHead>Thành tiền</TableHead>
+              <TableRow className="bg-gray-50/80 border-b border-gray-200 hover:bg-gray-50 cursor-default">
+                <TableHead className="w-16 font-semibold text-gray-600 text-center">STT</TableHead>
+                <TableHead className="font-semibold text-gray-600">Sản phẩm chi tiết</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-center w-32">Số lượng</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-right">Đơn giá chia đều</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-right pr-6">Thành tiền</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {combo.items?.map((item, index) => {
                 const totalItems = combo.items.reduce((sum, v) => sum + v.quantity, 0);
                 const averagePricePerUnit = totalItems > 0 ? combo.comboPrice / totalItems : 0;
+                const isLast = index === combo.items.length - 1;
 
                 return (
-                  <TableRow key={item.id} className="hover:bg-gray-100">
-                    <TableCell className="font-medium">{index + 1}</TableCell>
+                  <TableRow key={item.id} className={`hover:bg-blue-50/30 transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}>
+                    <TableCell className="font-medium text-gray-500 text-center">{index + 1}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="flex items-center gap-3 py-1">
+                        <div className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center shadow-sm">
                           <Package2 className="w-5 h-5 text-gray-400" />
                         </div>
-                        <span className="font-medium">{item.productVariantName}</span>
+                        <span className="font-semibold text-gray-800">{item.productVariantName}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge className="bg-blue-100 text-blue-700">x{item.quantity}</Badge>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100 shadow-sm">
+                        {item.quantity}
+                      </span>
                     </TableCell>
-                    <TableCell className="text-gray-600">
-                      {averagePricePerUnit.toFixed(0).toLocaleString()}đ
+                    <TableCell className="text-gray-500 font-medium text-right">
+                      {averagePricePerUnit.toFixed(0).toLocaleString()} ₫
                     </TableCell>
-                    <TableCell className="font-semibold">
-                      {(averagePricePerUnit * item.quantity).toFixed(0).toLocaleString()}đ
+                    <TableCell className="font-bold text-gray-900 text-right pr-6">
+                      {(averagePricePerUnit * item.quantity).toFixed(0).toLocaleString()} ₫
                     </TableCell>
                   </TableRow>
                 );
               })}
-              <TableRow className="bg-gray-50 font-bold">
-                <TableCell colSpan={4} className="text-right">Tổng cộng:</TableCell>
-                <TableCell className="text-green-600">{combo.comboPrice?.toLocaleString()}đ</TableCell>
+              <TableRow className="bg-gray-50/80 border-t border-gray-200">
+                <TableCell colSpan={4} className="text-right font-semibold text-gray-700 py-4 uppercase text-xs tracking-wider">Tổng cộng giá trị Combo:</TableCell>
+                <TableCell className="text-emerald-600 font-black text-lg text-right pr-6 py-4 tracking-tight">
+                  {combo.comboPrice?.toLocaleString()} ₫
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>

@@ -22,6 +22,7 @@ const AddNewProductVariant = () => {
     barcode: "",
     plu_code: "",
     unit_id: "",
+    cost_price: "",
     sell_price: "",
     is_active: product?.is_active === false ? false : true,
   });
@@ -232,7 +233,10 @@ const AddNewProductVariant = () => {
         barcode: formData.barcode || null,
         pluCode: formData.plu_code || null,
         unitId: parseInt(formData.unit_id),
-        sellPrice: parseFloat(formData.sell_price),
+        costPrice: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        sellPrice: product?.tax_rate_value
+          ? Math.round(parseFloat(formData.sell_price) * (1 + product.tax_rate_value / 100))
+          : parseFloat(formData.sell_price),
         imageUrl: imageUrl,
         isActive: formData.is_active,
         attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
@@ -423,7 +427,9 @@ const AddNewProductVariant = () => {
 
                   <div className="border-t border-gray-100 pt-4" />
 
-                  <div className="grid grid-cols-2 gap-5">
+                  <div className="border-t border-gray-100 pt-4" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     <div>
                       <Label className="text-sm font-semibold text-gray-700">
                         Đơn vị <span className="text-red-500">*</span>
@@ -445,18 +451,43 @@ const AddNewProductVariant = () => {
                     </div>
                     <div>
                       <Label className="text-sm font-semibold text-gray-700">
+                        Giá nhập
+                      </Label>
+                      <Input
+                        type="text"
+                        className="mt-2 h-11 border-gray-200 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+                        placeholder="0"
+                        name="cost_price"
+                        value={formData.cost_price || "0"}
+                        readOnly
+                        disabled
+                      />
+                      <p className="text-[11px] text-gray-400 mt-1 italic">Sẽ tự động cập nhật từ phiếu nhập kho</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-semibold text-gray-700">
                         Giá bán <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         type="number"
                         step="any"
-                        className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="VD: 93000"
+                        className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold"
+                        placeholder="VD: 85000"
                         name="sell_price"
                         value={formData.sell_price}
                         onChange={handleChange}
                         required
                       />
+                      {formData.sell_price && !isNaN(formData.sell_price) && product?.tax_rate_value != null && product.tax_rate_value > 0 ? (
+                        <p className="text-xs text-emerald-700 mt-1.5 font-medium ml-1 flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1.5 rounded-lg w-max border border-emerald-100">
+                          Giá bán cho khách (+ thuế {product.tax_rate_value}%):
+                          <span className="font-bold text-sm">
+                            {Math.round(parseFloat(formData.sell_price) * (1 + product.tax_rate_value / 100)).toLocaleString('vi-VN')} đ
+                          </span>
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 mt-1 ml-1">Nhập giá bán trước thuế, hệ thống sẽ tự cộng thuế</p>
+                      )}
                     </div>
                   </div>
 

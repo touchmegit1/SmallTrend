@@ -112,6 +112,17 @@ public class ProductVariantService {
                 .build();
 
         ProductVariant saved = productVariantRepository.save(variant);
+
+        // Tạo ProductBatch mặc định để lưu giá nhập
+        if (request.getCostPrice() != null) {
+            ProductBatch batch = ProductBatch.builder()
+                    .variant(saved)
+                    .batchNumber("INITIAL-" + saved.getSku())
+                    .costPrice(request.getCostPrice())
+                    .build();
+            productBatchRepository.save(batch);
+        }
+
         return mapToResponse(saved);
     }
 
@@ -166,6 +177,24 @@ public class ProductVariantService {
         }
 
         ProductVariant saved = productVariantRepository.save(variant);
+
+        // Cập nhật giá nhập cho batch mới nhất
+        if (request.getCostPrice() != null) {
+            List<ProductBatch> batches = productBatchRepository.findByVariantId(variantId);
+            if (batches != null && !batches.isEmpty()) {
+                ProductBatch latestBatch = batches.get(batches.size() - 1);
+                latestBatch.setCostPrice(request.getCostPrice());
+                productBatchRepository.save(latestBatch);
+            } else {
+                ProductBatch batch = ProductBatch.builder()
+                        .variant(saved)
+                        .batchNumber("UPDATE-" + saved.getSku())
+                        .costPrice(request.getCostPrice())
+                        .build();
+                productBatchRepository.save(batch);
+            }
+        }
+
         return mapToResponse(saved);
     }
 
@@ -331,6 +360,7 @@ public class ProductVariantService {
         productVariantRepository.save(variant);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void deleteVariant(Integer variantId) {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new RuntimeException("Variant not found with id: " + variantId));
@@ -343,6 +373,32 @@ public class ProductVariantService {
             }
         }
 
+        // 1. Delete associated inventory stock to avoid FK constraints
+        List<com.smalltrend.entity.InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
+        if (stocks != null && !stocks.isEmpty()) {
+            inventoryStockRepository.deleteAll(stocks);
+        }
+
+        // 2. Delete associated product batches
+        List<ProductBatch> batches = productBatchRepository.findByVariantId(variantId);
+        if (batches != null && !batches.isEmpty()) {
+            productBatchRepository.deleteAll(batches);
+        }
+
+        // 3. Delete any unit conversions pointing FROM this variant
+        unitConversionRepository.deleteByVariantId(variantId);
+
+        // 3.5 Delete any incoming conversions (if this variant was auto-generated for a
+        // packaging unit)
+        if (variant.getProduct() != null && variant.getUnit() != null) {
+            List<UnitConversion> incomingConversions = unitConversionRepository.findByProductIdAndToUnitId(
+                    variant.getProduct().getId(), variant.getUnit().getId());
+            if (incomingConversions != null && !incomingConversions.isEmpty()) {
+                unitConversionRepository.deleteAll(incomingConversions);
+            }
+        }
+
+        // 4. Finally delete the variant
         productVariantRepository.deleteById(variantId);
     }
 
