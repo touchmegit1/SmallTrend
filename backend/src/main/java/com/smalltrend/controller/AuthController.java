@@ -2,8 +2,11 @@ package com.smalltrend.controller;
 
 import com.smalltrend.dto.auth.AuthRequest;
 import com.smalltrend.dto.auth.AuthResponse;
+import com.smalltrend.dto.auth.ForgotPasswordOtpRequest;
+import com.smalltrend.dto.auth.ForgotPasswordResetRequest;
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.entity.User;
+import com.smalltrend.service.PasswordResetService;
 import com.smalltrend.service.UserService;
 import com.smalltrend.validation.UserManagementValidator;
 import jakarta.validation.Valid;
@@ -33,6 +36,7 @@ public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final UserManagementValidator validator;
+    private final PasswordResetService passwordResetService;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {
@@ -142,6 +146,38 @@ public class AuthController {
             log.error("Token validation error: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Token không hợp lệ"));
+        }
+    }
+
+    @PostMapping("/forgot-password/request-otp")
+    public ResponseEntity<?> requestForgotPasswordOtp(@Valid @RequestBody ForgotPasswordOtpRequest request) {
+        try {
+            passwordResetService.requestOtp(request.getEmail());
+            return ResponseEntity.ok(new MessageResponse("OTP đã được gửi tới email của bạn"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
+        } catch (Exception ex) {
+            log.error("Request forgot-password OTP failed for email {}: {}", request.getEmail(), ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Không thể gửi OTP, vui lòng thử lại sau"));
+        }
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<?> resetPasswordWithOtp(@Valid @RequestBody ForgotPasswordResetRequest request) {
+        try {
+            passwordResetService.resetPassword(
+                    request.getEmail(),
+                    request.getOtp(),
+                    request.getNewPassword(),
+                    request.getConfirmPassword());
+            return ResponseEntity.ok(new MessageResponse("Đặt lại mật khẩu thành công"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
+        } catch (Exception ex) {
+            log.error("Reset password with OTP failed for email {}: {}", request.getEmail(), ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Không thể đặt lại mật khẩu, vui lòng thử lại"));
         }
     }
 }

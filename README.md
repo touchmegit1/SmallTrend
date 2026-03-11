@@ -827,6 +827,16 @@ cp .env.example .env
 
 Mở `.env` và điền thông tin (xem hướng dẫn trong `.env.example`)
 
+Nếu dùng chức năng **Quên mật khẩu (OTP qua email)** cho tài khoản hệ thống, cần cấu hình thêm SMTP trong `backend/.env`:
+
+```env
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_app_password
+MAIL_FROM=your_email@gmail.com
+```
+
 #### Bước 2.3: Chạy Frontend
 
 ```bash

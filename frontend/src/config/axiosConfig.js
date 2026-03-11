@@ -11,7 +11,9 @@ const isAuthEndpoint = (url = '') => {
     return url.includes('/auth/login')
         || url.includes('/auth/logout')
         || url.includes('/auth/validate')
-        || url.includes('/auth/me');
+        || url.includes('/auth/me')
+        || url.includes('/auth/forgot-password/request-otp')
+        || url.includes('/auth/forgot-password/reset');
 };
 
 // Request interceptor - add JWT token to every request
