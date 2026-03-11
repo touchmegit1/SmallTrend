@@ -48,13 +48,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
             : (variant.is_active ?? true),
       });
       setImageFile(null);
-      setImagePreview(
-        variant.image_url
-          ? variant.image_url.startsWith("http")
-            ? variant.image_url
-            : `http://localhost:8081${variant.image_url.startsWith("/") ? "" : "/"}${variant.image_url}`
-          : null,
-      );
+      setImagePreview(variant.image_url || null);
       setErrorMsg("");
 
       const attrsObj = variant.attributes || {};
@@ -218,8 +212,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       let imageUrl = null;
       if (imageFile) {
         imageUrl = await uploadImage();
-        // Return full path without localhost URL to save on DB
-        if (imageUrl) imageUrl = imageUrl.replace("http://localhost:8081", "");
       } else if (imagePreview) {
         // Keep the old image
         imageUrl = variant.image_url;

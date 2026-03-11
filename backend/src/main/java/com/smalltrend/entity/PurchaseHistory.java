@@ -22,7 +22,7 @@ public class PurchaseHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "customer_id", nullable = false)
+    @Column(name = "customer_id", nullable = true)
     private Long customerId;
 
     @Column(name = "customer_name")

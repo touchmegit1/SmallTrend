@@ -45,8 +45,7 @@ public class TicketService {
             TicketType.ISSUE, "TCK-ISS",
             TicketType.SUPPLIER, "TCK-SUP",
             TicketType.SHIFT_CHANGE, "TCK-SHF",
-            TicketType.AI_SUGGESTION, "TCK-AIS"
-    );
+            TicketType.AI_SUGGESTION, "TCK-AIS");
 
     /**
      * Generate categorized ticket code like TCK-REF-001, TCK-ORD-002, etc.
@@ -63,11 +62,13 @@ public class TicketService {
         return code;
     }
 
+    @Transactional(readOnly = true)
     public List<TicketResponse> getAllTickets() {
         return ticketRepository.findAll().stream()
                 .map(this::mapToResponse).toList();
     }
 
+    @Transactional(readOnly = true)
     public TicketResponse getTicketById(Long id) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
@@ -98,7 +99,8 @@ public class TicketService {
             }
 
             if (request.getSwapTargetAssignmentId() != null) {
-                targetAssignment = workShiftAssignmentRepository.findByIdAndDeletedFalse(request.getSwapTargetAssignmentId())
+                targetAssignment = workShiftAssignmentRepository
+                        .findByIdAndDeletedFalse(request.getSwapTargetAssignmentId())
                         .orElseThrow(() -> new RuntimeException("Không tìm thấy ca phía nhân viên còn lại"));
             }
         }
@@ -120,6 +122,10 @@ public class TicketService {
 
         if (requesterUser != null) {
             ticket.setCreatedBy(requesterUser);
+        } else if (request.getCreatedById() != null) {
+            User createdBy = userRepository.findById(request.getCreatedById())
+                    .orElseThrow(() -> new RuntimeException("Creator user not found"));
+            ticket.setCreatedBy(createdBy);
         }
 
         if (targetSwapUser != null) {
@@ -152,7 +158,8 @@ public class TicketService {
             throw new RuntimeException("Thiếu ca làm của người yêu cầu để tạo ticket đổi ca");
         }
 
-        WorkShiftAssignment requesterAssignment = workShiftAssignmentRepository.findByIdAndDeletedFalse(requesterAssignmentId)
+        WorkShiftAssignment requesterAssignment = workShiftAssignmentRepository
+                .findByIdAndDeletedFalse(requesterAssignmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người yêu cầu"));
 
         if (!requesterAssignment.getUser().getId().equals(request.getRequesterUserId())) {
@@ -180,7 +187,8 @@ public class TicketService {
         }
 
         if (request.getSwapTargetAssignmentId() != null) {
-            WorkShiftAssignment targetAssignment = workShiftAssignmentRepository.findByIdAndDeletedFalse(request.getSwapTargetAssignmentId())
+            WorkShiftAssignment targetAssignment = workShiftAssignmentRepository
+                    .findByIdAndDeletedFalse(request.getSwapTargetAssignmentId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của nhân viên được đổi"));
 
             if (!targetAssignment.getUser().getId().equals(targetUserId)) {
@@ -304,6 +312,7 @@ public class TicketService {
         }).toList();
     }
 
+    @Transactional
     public TicketResponse updateTicket(Long id, UpdateTicketRequest request) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));

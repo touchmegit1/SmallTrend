@@ -1,8 +1,10 @@
 package com.smalltrend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -16,8 +18,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = { "brands", "purchaseOrders" })
-@EqualsAndHashCode(exclude = { "brands", "purchaseOrders" })
 public class Supplier {
 
     @Id
@@ -55,12 +55,7 @@ public class Supplier {
     private String notes;
 
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL)
-    @JsonIgnore
     private List<PurchaseOrder> purchaseOrders;
-
-    @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL)
-    @JsonIgnore
-    private List<Brand> brands;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

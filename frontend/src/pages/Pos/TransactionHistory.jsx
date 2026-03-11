@@ -15,15 +15,17 @@ function TransactionHistory() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const loadAndSaveTransactions = async () => {
       const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       setTransactions(savedTransactions);
 
-      // Lưu tất cả transactions có customer vào database
+      // Lưu tất cả transactions hoàn thành vào database
       for (const transaction of savedTransactions) {
-        if (!transaction.savedToDb && transaction.customer && transaction.status === "Hoàn thành") {
+        if (!transaction.savedToDb && transaction.status === "Hoàn thành") {
           await savePurchaseHistory(transaction);
         }
       }
@@ -33,15 +35,13 @@ function TransactionHistory() {
   }, []);
 
   const savePurchaseHistory = async (transaction) => {
-    if (!transaction.customer) return;
-
     const items = transaction.cart || transaction.items || [];
     if (items.length === 0) return;
 
     try {
       const request = {
-        customerId: transaction.customer.id,
-        customerName: transaction.customer.name,
+        customerId: transaction.customer?.id || null,
+        customerName: transaction.customer?.name || null,
         paymentMethod: transaction.payment,
         items: items.map(item => ({
           productId: item.productId || item.id || 0,
@@ -72,22 +72,30 @@ function TransactionHistory() {
     let orders = JSON.parse(localStorage.getItem('posOrders') || '[{ "id": 1, "cart": [], "customer": null, "usePoints": false }]');
     let activeId = parseInt(localStorage.getItem('activeOrderId') || '1');
 
-    // Xem đơn hàng hiện tại có đang trống không
-    const activeOrderIndex = orders.findIndex(o => o.id === activeId);
-    const isActiveEmpty = activeOrderIndex !== -1 && (!orders[activeOrderIndex].cart || orders[activeOrderIndex].cart.length === 0);
-
     // Chuẩn bị dữ liệu giỏ hàng và khách hàng từ transaction
     const cartToRestore = transaction.cart || transaction.items || [];
     const customerToRestore = transaction.customer || null;
     const usePointsToRestore = transaction.usePoints || false;
 
-    if (isActiveEmpty) {
+    // Xem tab gốc của đơn treo còn tồn tại không
+    const transactionOrderId = transaction.orderId ? parseInt(transaction.orderId.replace('ORDER_', '')) : null;
+    const targetOrderIndex = transactionOrderId ? orders.findIndex(o => o.id === transactionOrderId) : -1;
+
+    // Xem đơn hàng hiện tại có đang trống không
+    const activeOrderIndex = orders.findIndex(o => o.id === activeId);
+    const isActiveEmpty = activeOrderIndex !== -1 && (!orders[activeOrderIndex].cart || orders[activeOrderIndex].cart.length === 0);
+
+    if (targetOrderIndex !== -1) {
+      // Tab gốc vẫn còn, update vào tab đó
+      orders[targetOrderIndex].cart = cartToRestore;
+      orders[targetOrderIndex].customer = customerToRestore;
+      orders[targetOrderIndex].usePoints = usePointsToRestore;
+      activeId = transactionOrderId;
+    } else if (isActiveEmpty) {
       // Ghi đè lên đơn hiện tại đang trống
       orders[activeOrderIndex].cart = cartToRestore;
       orders[activeOrderIndex].customer = customerToRestore;
       orders[activeOrderIndex].usePoints = usePointsToRestore;
-
-      // Không thay đổi activeId vì đang dùng đơn hiện tại
     } else {
       // Tạo một tab đơn hàng mới
       const newId = Math.max(...orders.map(o => o.id), 0) + 1;
@@ -135,6 +143,34 @@ function TransactionHistory() {
 
     setShowActionMenu(null);
     setDeleteConfirm(null);
+    setSelectedIds(prev => prev.filter(id => id !== transactionId));
+  };
+
+  const bulkDeleteTransactions = () => {
+    const updatedTransactions = transactions.filter(t => !selectedIds.includes(t.id));
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+
+    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+    const updatedPendingOrders = pendingOrders.filter(o => !selectedIds.includes(o.id));
+    localStorage.setItem('pendingOrders', JSON.stringify(updatedPendingOrders));
+
+    setSelectedIds([]);
+    setBulkDeleteConfirm(false);
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredTransactions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredTransactions.map(t => t.id));
+    }
   };
 
   const parseDateTime = (timeStr) => {
@@ -194,6 +230,20 @@ function TransactionHistory() {
     });
 
   const uniquePayments = [...new Set(transactions.map(t => t.payment).filter(Boolean))];
+
+  // Logic phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const paginatedTransactions = filteredTransactions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset trang về 1 khi có thay đổi bộ lọc
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedDate, statusFilter, paymentFilter, sortBy]);
 
   // Tính toán thống kê
   const totalTransactions = filteredTransactions.length;
@@ -367,16 +417,42 @@ function TransactionHistory() {
                 setSortBy("time_desc");
               }}
               style={{
-                padding: "8px 14px",
+                padding: "8px",
                 borderRadius: "8px",
                 border: "1px solid #dc3545",
+                background: "#fff",
+                color: "#dc3545",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "36px",
+                height: "36px"
+              }}
+              title="Xóa lọc"
+            >
+              <span style={{ fontSize: "16px", fontWeight: "bold" }}>✕</span>
+            </button>
+          )}
+
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => setBulkDeleteConfirm(true)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "8px",
+                border: "none",
                 background: "#dc3545",
                 color: "white",
                 cursor: "pointer",
                 whiteSpace: "nowrap",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
               }}
             >
-              Xóa lọc
+              🗑 Xóa ({selectedIds.length}) đơn
             </button>
           )}
         </div>
@@ -392,6 +468,23 @@ function TransactionHistory() {
       >
         <thead>
           <tr style={{ background: "#f8f9fa" }}>
+            <th style={{ padding: "12px", textAlign: "center", width: "40px" }}>
+              <input
+                type="checkbox"
+                checked={paginatedTransactions.length > 0 && paginatedTransactions.every(t => selectedIds.includes(t.id))}
+                onChange={() => {
+                  const currentIds = paginatedTransactions.map(t => t.id);
+                  const allSelected = currentIds.every(id => selectedIds.includes(id));
+                  if (allSelected) {
+                    setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+                  } else {
+                    const newIds = currentIds.filter(id => !selectedIds.includes(id));
+                    setSelectedIds(prev => [...prev, ...newIds]);
+                  }
+                }}
+                style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#0d6efd" }}
+              />
+            </th>
             <th style={{ padding: "12px", textAlign: "left" }}>Mã đơn</th>
             <th style={{ padding: "12px", textAlign: "left" }}>Thời gian</th>
             <th style={{ padding: "12px", textAlign: "left" }}>Số lượng</th>
@@ -403,15 +496,29 @@ function TransactionHistory() {
         </thead>
 
         <tbody>
-          {filteredTransactions.length === 0 ? (
+          {paginatedTransactions.length === 0 ? (
             <tr>
-              <td colSpan="7" style={{ padding: "20px", textAlign: "center", color: "gray" }}>
+              <td colSpan="8" style={{ padding: "20px", textAlign: "center", color: "gray" }}>
                 {transactions.length === 0 ? "Chưa có giao dịch nào" : "Không tìm thấy giao dịch phù hợp"}
               </td>
             </tr>
           ) : (
-            filteredTransactions.map((item, index) => (
-              <tr key={index} style={{ borderBottom: "1px solid #eee" }}>
+            paginatedTransactions.map((item, index) => (
+              <tr
+                key={index}
+                style={{
+                  borderBottom: "1px solid #eee",
+                  background: selectedIds.includes(item.id) ? "#e8f0fe" : "transparent",
+                }}
+              >
+                <td style={{ padding: "12px", textAlign: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#0d6efd" }}
+                  />
+                </td>
                 <td
                   style={{
                     padding: "12px",
@@ -498,7 +605,7 @@ function TransactionHistory() {
                             onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
                             onMouseLeave={(e) => e.target.style.background = "white"}
                           >
-                            ↩ Quay lại POS
+                            💳 Tiếp tục thanh toán
                           </button>
                         )}
                         <button
@@ -551,6 +658,87 @@ function TransactionHistory() {
           )}
         </tbody>
       </table>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: "20px",
+          padding: "10px 0",
+          borderTop: "1px solid #eee"
+        }}>
+          <div style={{ color: "gray", fontSize: "14px" }}>
+            Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} trong tổng số {filteredTransactions.length} giao dịch
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #ddd",
+                background: currentPage === 1 ? "#f5f5f5" : "white",
+                color: currentPage === 1 ? "#aaa" : "#333",
+                borderRadius: "6px",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer"
+              }}
+            >
+              &laquo; Trước
+            </button>
+            <div style={{ display: "flex", gap: "5px" }}>
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const pageNum = i + 1;
+                // Chỉ hiển thị vài trang xung quanh trang hiện tại
+                if (
+                  pageNum === 1 ||
+                  pageNum === totalPages ||
+                  (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      style={{
+                        padding: "8px 12px",
+                        border: "1px solid",
+                        borderColor: currentPage === pageNum ? "#0d6efd" : "#ddd",
+                        background: currentPage === pageNum ? "#0d6efd" : "white",
+                        color: currentPage === pageNum ? "white" : "#333",
+                        borderRadius: "6px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                } else if (
+                  pageNum === currentPage - 2 ||
+                  pageNum === currentPage + 2
+                ) {
+                  return <span key={pageNum} style={{ padding: "8px 4px", color: "gray" }}>...</span>;
+                }
+                return null;
+              })}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #ddd",
+                background: currentPage === totalPages ? "#f5f5f5" : "white",
+                color: currentPage === totalPages ? "#aaa" : "#333",
+                borderRadius: "6px",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer"
+              }}
+            >
+              Sau &raquo;
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal xác nhận xóa */}
       {deleteConfirm && (
@@ -624,6 +812,84 @@ function TransactionHistory() {
                 }}
               >
                 Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xác nhận xóa hàng loạt */}
+      {bulkDeleteConfirm && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: "white",
+            borderRadius: "12px",
+            padding: "30px",
+            width: "400px",
+            maxWidth: "90%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            textAlign: "center"
+          }}>
+            <div style={{
+              width: "50px",
+              height: "50px",
+              borderRadius: "50%",
+              background: "#fff3f3",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 15px",
+              fontSize: "24px"
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ margin: "0 0 10px", fontSize: "18px", color: "#333" }}>
+              Xác nhận xóa {selectedIds.length} giao dịch
+            </h3>
+            <p style={{ color: "#666", fontSize: "14px", margin: "0 0 20px" }}>
+              Bạn có chắc chắn muốn xóa <strong style={{ color: "#dc3545" }}>{selectedIds.length} đơn hàng</strong> đã chọn không?<br />
+              Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                onClick={() => setBulkDeleteConfirm(false)}
+                style={{
+                  padding: "10px 25px",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd",
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}
+              >
+                Không
+              </button>
+              <button
+                onClick={bulkDeleteTransactions}
+                style={{
+                  padding: "10px 25px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "#dc3545",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}
+              >
+                Xóa tất cả
               </button>
             </div>
           </div>

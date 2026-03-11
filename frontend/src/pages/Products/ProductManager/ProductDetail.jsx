@@ -421,7 +421,7 @@ function ProductDetail() {
           <div className="aspect-square bg-white flex items-center justify-center p-4 relative group">
             {product.image_url ? (
               <img
-                src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8081${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`}
+                src={product.image_url}
                 alt={product.name}
                 className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
               />
@@ -455,14 +455,7 @@ function ProductDetail() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-bold text-gray-400 uppercase tracking-wide">Thương hiệu đại diện (Brand)</Label>
-                <p className="text-base font-medium text-gray-800 flex items-center gap-2">
-                  {product.brand_name || "—"}
-                  {product.supplier_name && (
-                    <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 border-blue-100 px-1.5 py-0">
-                      Cung cấp bởi: {product.supplier_name}
-                    </Badge>
-                  )}
-                </p>
+                <p className="text-base font-medium text-gray-800">{product.brand_name || "—"}</p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-bold text-gray-400 uppercase tracking-wide">Nhóm mặt hàng (Category)</Label>
@@ -553,7 +546,7 @@ function ProductDetail() {
                         <div className="w-9 h-9 mx-auto bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
                           {variant.image_url ? (
                             <img
-                              src={variant.image_url.startsWith('http') ? variant.image_url : `http://localhost:8081${variant.image_url.startsWith('/') ? '' : '/'}${variant.image_url}`}
+                              src={variant.image_url}
                               alt={variant.name}
                               className="w-full h-full object-cover"
                             />
@@ -612,7 +605,7 @@ function ProductDetail() {
                       </TableCell>
 
                       <TableCell className="text-center">
-                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{variant.stock_quantity || 0}</span>
+                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{variant.stockQuantity || 0}</span>
                       </TableCell>
 
                       <TableCell className="text-center">
