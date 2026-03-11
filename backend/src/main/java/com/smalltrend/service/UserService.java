@@ -391,9 +391,23 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
+    public UserDTO updateUserAvatarUrl(Integer userId, String avatarUrl) {
+        User user = getUserById(userId);
+        user.setAvatarUrl(normalizeAvatarUrl(avatarUrl));
+        return UserDTO.fromEntity(userRepository.save(user));
+    }
+
+    @Transactional
     public UserProfileDTO updateCurrentUserAvatar(String username, MultipartFile file) {
         User user = getCurrentUser(username);
         user.setAvatarUrl(storeAvatarFile(file));
+        return UserProfileDTO.fromEntity(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserProfileDTO updateCurrentUserAvatarUrl(String username, String avatarUrl) {
+        User user = getCurrentUser(username);
+        user.setAvatarUrl(normalizeAvatarUrl(avatarUrl));
         return UserProfileDTO.fromEntity(userRepository.save(user));
     }
 
@@ -413,6 +427,23 @@ public class UserService implements UserDetailsService {
             throw new RuntimeException("Không thể lưu ảnh đại diện");
         }
         return String.valueOf(secureUrl);
+    }
+
+    private String normalizeAvatarUrl(String avatarUrl) {
+        if (avatarUrl == null || avatarUrl.isBlank()) {
+            throw new IllegalArgumentException("Avatar URL không được để trống");
+        }
+
+        String normalized = avatarUrl.trim();
+        if (!normalized.startsWith("https://")) {
+            throw new IllegalArgumentException("Avatar URL phải là HTTPS hợp lệ");
+        }
+
+        if (!normalized.contains("res.cloudinary.com")) {
+            throw new IllegalArgumentException("Avatar URL phải là secure_url từ Cloudinary");
+        }
+
+        return normalized;
     }
 
     private void applySalaryFields(User user,

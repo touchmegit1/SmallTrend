@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext .js,.jsx",
-    "lint:fix": "eslint src --ext .js,.jsx --fix",
+    "lint": "eslint src",
     "server": "json-server --watch db.json --port 3001"
   },
   "dependencies": {
@@ -41,9 +40,12 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@vitejs/plugin-react": "^4.2.0",
-    "eslint": "^8.54.0",
-    "eslint-plugin-react": "^7.33.0",
+    "cspell": "^9.7.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^17.4.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "vite": "^5.0.0"

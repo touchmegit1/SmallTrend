@@ -2,6 +2,7 @@ package com.smalltrend.controller;
 
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.user.ChangePasswordRequest;
+import com.smalltrend.dto.user.AvatarUrlUpdateRequest;
 import com.smalltrend.dto.user.UserProfileDTO;
 import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserStatusRequest;
@@ -152,6 +153,28 @@ public class UserController {
     public ResponseEntity<?> uploadMyAvatar(Authentication authentication, @RequestPart("file") MultipartFile file) {
         try {
             UserProfileDTO profile = userService.updateCurrentUserAvatar(authentication.getName(), file);
+            return ResponseEntity.ok(profile);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());
+        }
+    }
+
+    @PatchMapping("/{id}/avatar-url")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserAvatarUrl(@PathVariable Integer id, @Valid @RequestBody AvatarUrlUpdateRequest request) {
+        try {
+            UserDTO updatedUser = userService.updateUserAvatarUrl(id, request.getAvatarUrl());
+            return ResponseEntity.ok(updatedUser);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());
+        }
+    }
+
+    @PatchMapping("/me/avatar-url")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> updateMyAvatarUrl(Authentication authentication, @Valid @RequestBody AvatarUrlUpdateRequest request) {
+        try {
+            UserProfileDTO profile = userService.updateCurrentUserAvatarUrl(authentication.getName(), request.getAvatarUrl());
             return ResponseEntity.ok(profile);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());

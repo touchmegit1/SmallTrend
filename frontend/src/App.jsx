@@ -17,6 +17,7 @@ import InventoryCountDetail from "./pages/Inventory/Count/InventoryCountDetail";
 import LocationManagement from "./pages/Inventory/Location/LocationManagement";
 import PosComplain from "./pages/Pos/complain";
 import CRMcustomer from "./pages/CRM/customer";
+import AdsManagement from "./pages/CRM/ads";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";

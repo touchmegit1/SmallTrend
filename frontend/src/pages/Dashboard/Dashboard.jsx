@@ -7,50 +7,28 @@ import * as XLSX from 'xlsx';
 const Dashboard = () => {
     const [orders, setOrders] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [dataSource, setDataSource] = React.useState('backend');
 
     React.useEffect(() => {
         const fetchSaleOrders = async () => {
             try {
-                // Lấy dữ liệu từ localStorage (giống ReportforCashier.jsx)
+                const response = await api.get('/sale-orders');
+                const payload = Array.isArray(response.data) ? response.data : [];
+                const backendOrders = payload
+                    .map(mapBackendOrder)
+                    .filter((order) => !isPendingOrCancelled(order.status));
+
+                setOrders(backendOrders);
+                setDataSource('backend');
+            } catch (error) {
+                console.error('Không thể tải dữ liệu backend cho dashboard, chuyển sang dữ liệu local:', error);
                 const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
                 const localOrders = savedTransactions
-                    .filter(t => t.status !== "Chờ thanh toán")
-                    .map(t => {
-                        let orderDate = new Date();
-                        if (t.time) {
-                            const parts = t.time.split(/[\s,]+/);
-                            if (parts.length >= 2) {
-                                const dateParts = parts[0].split('/');
-                                if (dateParts.length === 3) {
-                                    const [day, month, year] = dateParts;
-                                    const timeParts = parts[1].split(':');
-                                    const hour = timeParts[0] || '0';
-                                    const min = timeParts[1] || '0';
-                                    const sec = timeParts[2] || '0';
-                                    orderDate = new Date(year, month - 1, day, hour, min, sec);
-                                }
-                            } else {
-                                orderDate = new Date(t.time) || new Date();
-                            }
-                        }
-                        return {
-                            orderCode: t.id || '',
-                            orderDate: orderDate.toISOString(),
-                            cashierName: 'Thu ngân',
-                            customerName: (t.customer && t.customer.name) ? t.customer.name : 'Khách lẻ',
-                            paymentMethod: t.payment || '',
-                            status: t.status || '',
-                            subtotal: parseInt((t.total || "0").toString().replace(/[^0-9]/g, '')),
-                            taxAmount: 0,
-                            discountAmount: t.pointsDiscount || 0,
-                            totalAmount: parseInt((t.total || "0").toString().replace(/[^0-9]/g, '')),
-                        };
-                    });
+                    .map(mapLocalTransaction)
+                    .filter((order) => !isPendingOrCancelled(order.status));
 
                 setOrders(localOrders);
-            } catch (error) {
-                console.error('Không thể tải dữ liệu cho dashboard:', error);
-                setOrders([]);
+                setDataSource('local');
             } finally {
                 setIsLoading(false);
             }
@@ -216,7 +194,7 @@ const Dashboard = () => {
                         </div>
                         <div className="mt-4 flex items-center text-sm">
                             <span className="text-green-500 font-medium bg-green-50 px-2 py-0.5 rounded-full">{stat.trend}</span>
-                            <span className="text-slate-400 ml-2">{isLoading ? 'đang tải...' : 'từ dữ liệu thực tế'}</span>
+                            <span className="text-slate-400 ml-2">{isLoading ? 'đang tải...' : dataSource === 'backend' ? 'từ backend' : 'fallback local'}</span>
                         </div>
                     </div>
                 ))}
@@ -229,7 +207,7 @@ const Dashboard = () => {
                             <h3 className="text-lg font-bold text-slate-800">Tổng quan doanh số</h3>
                             <p className="text-xs text-slate-500 mt-1">Doanh thu 6 tháng gần nhất (triệu VNĐ)</p>
                         </div>
-                        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">{isLoading ? 'Đang đồng bộ' : 'Dữ liệu live'}</span>
+                        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">{isLoading ? 'Đang đồng bộ' : dataSource === 'backend' ? 'Dữ liệu backend' : 'Fallback local'}</span>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3 mb-4">
@@ -283,6 +261,82 @@ const Dashboard = () => {
             </div>
         </div>
     );
+};
+
+const mapBackendOrder = (order) => ({
+    orderCode: order?.orderCode || order?.id || '',
+    orderDate: order?.orderDate || null,
+    cashierName: order?.cashierName || 'Thu ngân',
+    customerName: order?.customerName || 'Khách lẻ',
+    paymentMethod: order?.paymentMethod || '',
+    status: String(order?.status || '').toUpperCase(),
+    subtotal: toAmount(order?.subtotal),
+    taxAmount: toAmount(order?.taxAmount),
+    discountAmount: toAmount(order?.discountAmount),
+    totalAmount: toAmount(order?.totalAmount),
+});
+
+const mapLocalTransaction = (transaction) => {
+    let orderDate = new Date();
+    if (transaction?.time) {
+        const parts = transaction.time.split(/[\s,]+/);
+        if (parts.length >= 2) {
+            const dateParts = parts[0].split('/');
+            if (dateParts.length === 3) {
+                const [day, month, year] = dateParts;
+                const timeParts = parts[1].split(':');
+                const hour = timeParts[0] || '0';
+                const minute = timeParts[1] || '0';
+                const second = timeParts[2] || '0';
+                orderDate = new Date(year, month - 1, day, hour, minute, second);
+            }
+        } else {
+            orderDate = new Date(transaction.time) || new Date();
+        }
+    }
+
+    return {
+        orderCode: transaction?.id || transaction?.orderId || '',
+        orderDate: Number.isNaN(orderDate.getTime()) ? null : orderDate.toISOString(),
+        cashierName: 'Thu ngân',
+        customerName: transaction?.customer?.name || 'Khách lẻ',
+        paymentMethod: transaction?.payment || '',
+        status: normalizeLocalStatus(transaction?.status),
+        subtotal: toAmount(transaction?.subtotal ?? transaction?.total),
+        taxAmount: 0,
+        discountAmount: toAmount(transaction?.pointsDiscount),
+        totalAmount: toAmount(transaction?.total),
+    };
+};
+
+const normalizeLocalStatus = (status) => {
+    const normalized = String(status || '').trim().toUpperCase();
+    if (normalized === 'CHỜ THANH TOÁN') return 'PENDING';
+    if (normalized === 'HOÀN THÀNH') return 'COMPLETED';
+    return normalized;
+};
+
+const isPendingOrCancelled = (status) => {
+    const normalized = String(status || '').trim().toUpperCase();
+    return normalized === 'PENDING' || normalized === 'CANCELLED' || normalized === 'VOIDED';
+};
+
+const toAmount = (value) => {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+    }
+
+    if (typeof value === 'string') {
+        const compact = value.trim();
+        if (!compact) return 0;
+        if (/^-?\d+(\.\d+)?$/.test(compact)) {
+            return Number(compact);
+        }
+        const digits = compact.replace(/[^0-9-]/g, '');
+        return digits ? Number(digits) : 0;
+    }
+
+    return Number(value) || 0;
 };
 
 export default Dashboard;
