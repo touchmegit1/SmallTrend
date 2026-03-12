@@ -25,6 +25,20 @@ public class CouponController {
         return ResponseEntity.ok(couponService.getAllCoupons());
     }
 
+    @GetMapping("/validate")
+    public ResponseEntity<?> validateCoupon(
+            @RequestParam String code, 
+            @RequestParam(required = false) Integer customerId) {
+        try {
+            CouponResponse coupon = couponService.validateCoupon(code, customerId);
+            return ResponseEntity.ok(coupon);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
     @PostMapping
     public ResponseEntity<?> createCoupon(@RequestBody CreateCouponRequest request) {
         try {

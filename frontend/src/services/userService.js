@@ -49,4 +49,12 @@ export const userService = {
     });
     return res.data;
   },
+  async updateAvatarUrl(userId, avatarUrl) {
+    const res = await api.patch(`/users/${userId}/avatar-url`, { avatarUrl });
+    return res.data;
+  },
+  async updateMyAvatarUrl(avatarUrl) {
+    const res = await api.patch('/users/me/avatar-url', { avatarUrl });
+    return res.data;
+  },
 };

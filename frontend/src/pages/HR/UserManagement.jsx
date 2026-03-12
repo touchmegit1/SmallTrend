@@ -106,14 +106,21 @@ const UserManagement = () => {
 
   const validateForm = () => {
     const errors = {};
+    const normalizedUsername = String(formData.username || "").trim();
+    const normalizedFullName = String(formData.fullName || "").trim();
+    const normalizedEmail = String(formData.email || "").trim();
+    const normalizedPhone = String(formData.phone || "").trim();
+    const normalizedAddress = String(formData.address || "").trim();
+    const normalizedStatus = String(formData.status || "").toLowerCase();
+    const normalizedRoleId = Number(formData.roleId);
 
     if (isCreate) {
       const usernameRegex = /^[a-zA-Z0-9_]+$/;
       if (
-        !formData.username ||
-        formData.username.length < 3 ||
-        formData.username.length > 50 ||
-        !usernameRegex.test(formData.username)
+        !normalizedUsername ||
+        normalizedUsername.length < 3 ||
+        normalizedUsername.length > 50 ||
+        !usernameRegex.test(normalizedUsername)
       ) {
         errors.username = "Username 3-50 ký tự, chỉ a-z, 0-9, _";
       }
@@ -125,17 +132,33 @@ const UserManagement = () => {
       }
     }
 
-    if (!formData.fullName || formData.fullName.trim().length < 2) {
+    if (!normalizedFullName || normalizedFullName.length < 2) {
       errors.fullName = "Họ tên phải có ít nhất 2 ký tự";
+    } else if (normalizedFullName.length > 255) {
+      errors.fullName = "Họ tên không được vượt quá 255 ký tự";
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email || !emailRegex.test(formData.email)) {
+    if (!normalizedEmail || !emailRegex.test(normalizedEmail)) {
       errors.email = "Email không hợp lệ";
+    } else if (normalizedEmail.length > 100) {
+      errors.email = "Email không được vượt quá 100 ký tự";
     }
 
-    if (formData.phone && !/^[0-9]{10,11}$/.test(formData.phone)) {
+    if (normalizedPhone && !/^[0-9]{10,11}$/.test(normalizedPhone)) {
       errors.phone = "Số điện thoại phải có 10-11 chữ số";
+    }
+
+    if (normalizedAddress.length > 255) {
+      errors.address = "Địa chỉ không được vượt quá 255 ký tự";
+    }
+
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId < 1 || normalizedRoleId > 5) {
+      errors.roleId = "Vai trò không hợp lệ";
+    }
+
+    if (!["active", "inactive", "pending", "locked"].includes(normalizedStatus)) {
+      errors.status = "Trạng thái không hợp lệ";
     }
 
     setValidationErrors(errors);
@@ -272,12 +295,12 @@ const UserManagement = () => {
     try {
       if (isCreate) {
         const payload = {
-          username: formData.username,
+          username: String(formData.username || "").trim(),
           password: formData.password,
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || undefined,
-          address: formData.address || undefined,
+          fullName: String(formData.fullName || "").trim(),
+          email: String(formData.email || "").trim(),
+          phone: String(formData.phone || "").trim() || undefined,
+          address: String(formData.address || "").trim() || undefined,
           roleId: formData.roleId,
           status: (formData.status || "active").toUpperCase(),
         };
@@ -290,10 +313,10 @@ const UserManagement = () => {
         }
       } else {
         const updatePayload = {
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || undefined,
-          address: formData.address || undefined,
+          fullName: String(formData.fullName || "").trim(),
+          email: String(formData.email || "").trim(),
+          phone: String(formData.phone || "").trim() || undefined,
+          address: String(formData.address || "").trim() || undefined,
           roleId: formData.roleId,
           status: (formData.status || "active").toUpperCase(),
         };

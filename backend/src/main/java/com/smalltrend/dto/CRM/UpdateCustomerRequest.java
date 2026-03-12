@@ -7,4 +7,5 @@ public class UpdateCustomerRequest {
     private String name;
     private String phone;
     private Integer loyaltyPoints;
+    private Long spentAmount;
 }

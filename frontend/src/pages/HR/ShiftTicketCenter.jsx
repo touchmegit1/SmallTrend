@@ -262,10 +262,10 @@ const ShiftTicketCenter = () => {
     }, [acceptSwapAssignmentOptions, myAssignments, todayIso, attendanceDoneDateSet, acceptSwapRequesterAssignment]);
 
     const ticketSummary = useMemo(() => {
-        const pending = tickets.filter((item) => item.status === 'OPEN' || item.status === 'IN_PROGRESS').length;
-        const approved = tickets.filter((item) => item.status === 'RESOLVED').length;
-        const rejected = tickets.filter((item) => item.status === 'CLOSED' || item.status === 'CANCELLED').length;
-        const waitingMyApproval = tickets.filter((item) => {
+        const pending = filteredTickets.filter((item) => item.status === 'OPEN' || item.status === 'IN_PROGRESS').length;
+        const approved = filteredTickets.filter((item) => item.status === 'RESOLVED').length;
+        const rejected = filteredTickets.filter((item) => item.status === 'CLOSED' || item.status === 'CANCELLED').length;
+        const waitingMyApproval = filteredTickets.filter((item) => {
             if (item.status !== 'OPEN') {
                 return false;
             }
@@ -275,7 +275,7 @@ const ShiftTicketCenter = () => {
             return Number(item.assignedToUserId) === Number(currentUserId);
         }).length;
         return { pending, approved, rejected, waitingMyApproval };
-    }, [tickets, currentUserId, isAdmin, isManager]);
+    }, [filteredTickets, currentUserId, isAdmin, isManager]);
 
     const monthlyShiftSummary = useMemo(() => {
         const totalAssigned = myAssignments.length;
@@ -334,7 +334,23 @@ const ShiftTicketCenter = () => {
     };
 
     const filterTickets = () => {
-        let filtered = tickets;
+        const visibleTickets = tickets.filter((ticket) => {
+            if (isAdmin) {
+                return true;
+            }
+
+            const assignedToCurrentUser = Number(ticket.assignedToUserId) === Number(currentUserId);
+            const createdByCurrentUser = Number(ticket.createdById || ticket.requesterUserId) === Number(currentUserId);
+            const sharedForReview = !ticket.assignedToUserId;
+
+            if (isManager) {
+                return sharedForReview || assignedToCurrentUser || createdByCurrentUser;
+            }
+
+            return assignedToCurrentUser || createdByCurrentUser;
+        });
+
+        let filtered = visibleTickets;
 
         // Filter by tab (status)
         if (activeTab === 'pending') {

@@ -2,9 +2,8 @@
 
 Hệ thống POS (Point of Sale) hiện đại giúp quản lý toàn diện các hoạt động của cửa hàng tạp hóa/siêu thị mini, từ bán hàng, quản lý kho, nhân sự, khách hàng đến báo cáo thống kê.
 
----
+-  **CI Status**: [![CI Workflow](https://github.com/touchmegit1/SmallTrend/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/touchmegit1/SmallTrend/actions/workflows/ci.yml?query=branch%3Adev)
 
----
 
 ## 🚀 Quick Start - Chạy Dự Án Nhanh Chóng
 
@@ -27,6 +26,12 @@ Hệ thống POS (Point of Sale) hiện đại giúp quản lý toàn diện cá
 - `.mvn/wrapper/` - Chứa cấu hình Maven Wrapper
 
 ### 📦 Setup Backend (3 bước đơn giản)
+
+---
+
+## 📋 CI/CD Pipeline
+
+Dự án sử dụng **GitHub Actions** để tự động test & build. Xem chi tiết tại: [CI_CD_SETUP.md](./CI_CD_SETUP.md)
 
 #### Bước 1: Tạo Database
 ```sql
@@ -821,6 +826,16 @@ cp .env.example .env
 ```
 
 Mở `.env` và điền thông tin (xem hướng dẫn trong `.env.example`)
+
+Nếu dùng chức năng **Quên mật khẩu (OTP qua email)** cho tài khoản hệ thống, cần cấu hình thêm SMTP trong `backend/.env`:
+
+```env
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_app_password
+MAIL_FROM=your_email@gmail.com
+```
 
 #### Bước 2.3: Chạy Frontend
 

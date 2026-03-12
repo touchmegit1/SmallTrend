@@ -29,4 +29,11 @@ public class Customer {
     @Builder.Default
     @Column(name = "spent_amount")
     private Long spentAmount = 0L;
+
+    @Column(name = "tier_code", length = 50)
+    private String tierCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tier_code", referencedColumnName = "tier_code", insertable = false, updatable = false)
+    private CustomerTier tier;
 }

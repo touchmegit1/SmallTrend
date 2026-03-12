@@ -76,9 +76,43 @@ const getMe = async () => {
     return response.data;
 };
 
+const requestPasswordOtp = async (email) => {
+    try {
+        const response = await api.post('/auth/forgot-password/request-otp', { email });
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.message
+            || error.response?.data?.error
+            || error.message
+            || 'Không thể gửi OTP';
+        throw new Error(errorMessage);
+    }
+};
+
+const resetPasswordWithOtp = async ({ email, otp, newPassword, confirmPassword }) => {
+    try {
+        const response = await api.post('/auth/forgot-password/reset', {
+            email,
+            otp,
+            newPassword,
+            confirmPassword,
+        });
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.message
+            || error.response?.data?.error
+            || error.message
+            || 'Không thể đặt lại mật khẩu';
+        throw new Error(errorMessage);
+    }
+};
+
 const updateStoredUser = (updates = {}) => {
     const currentUser = getCurrentUser() || {};
-    const nextUser = { ...currentUser, ...updates };
+    const sanitizedUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
+    const nextUser = { ...currentUser, ...sanitizedUpdates };
     localStorage.setItem('user', JSON.stringify(nextUser));
     return nextUser;
 };
@@ -92,7 +126,9 @@ const authService = {
     getToken,
     validateToken,
     getMe,
-    updateStoredUser
+    updateStoredUser,
+    requestPasswordOtp,
+    resetPasswordWithOtp
 };
 
 export default authService;

@@ -1,20 +1,17 @@
 package com.smalltrend.service;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.smalltrend.entity.AiSettings;
 import com.smalltrend.repository.CouponRepository;
 import com.smalltrend.repository.CustomerRepository;
 import com.smalltrend.repository.InventoryStockRepository;
@@ -26,6 +23,9 @@ public class AiChatServiceTest {
 
     @Mock
     private GeminiService geminiService;
+
+    @Mock
+    private AiSettingsService aiSettingsService;
 
     @Mock
     private OrderRepository orderRepository;
@@ -47,39 +47,38 @@ public class AiChatServiceTest {
 
     @Test
     public void testChat() {
-        // Mock OrderRepository
-        when(orderRepository.sumTotalRevenue(any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(new BigDecimal("1000.00"));
-        when(orderRepository.countOrders(any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(10L);
-        when(orderRepository.revenueByPaymentMethod(any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(new ArrayList<>());
-        when(orderRepository.countByStatus(anyString()))
-                .thenReturn(0L);
+        AiSettings settings = AiSettings.builder()
+                .aiEnabled(true)
+                .systemPrompt("Test prompt")
+                .responseLanguage("vi")
+                .includeSalesData(false)
+                .includeInventoryData(false)
+                .includeCustomerData(false)
+                .includeCouponData(false)
+                .build();
 
-        // Mock OrderItemRepository
-        when(orderItemRepository.findTopSellingProducts(any(LocalDateTime.class), any(LocalDateTime.class), anyInt()))
-                .thenReturn(new ArrayList<>());
-        when(orderItemRepository.findBottomSellingProducts(any(LocalDateTime.class), any(LocalDateTime.class), anyInt()))
-                .thenReturn(new ArrayList<>());
-
-        // Mock InventoryStockRepository
-        when(inventoryStockRepository.findLowStockSummary(anyInt()))
-                .thenReturn(new ArrayList<>());
-
-        // Mock CustomerRepository
-        when(customerRepository.countTotalCustomers())
-                .thenReturn(0L);
-        when(customerRepository.findTopCustomers(anyInt()))
-                .thenReturn(new ArrayList<>());
-
-        // Mock Gemini Service
-        when(geminiService.generateContent(anyString())).thenReturn("This is a mock response from Gemini.");
+        when(aiSettingsService.getSettingsEntity()).thenReturn(settings);
+        when(geminiService.generateContent(anyString(), any(AiSettings.class)))
+                .thenReturn("This is a mock response from Gemini.");
 
         // Execute
         String response = aiChatService.chat("How is business?");
 
         // Verify
         assertEquals("This is a mock response from Gemini.", response);
+    }
+
+    @Test
+    public void testChatWhenAiDisabled() {
+        AiSettings settings = AiSettings.builder()
+                .aiEnabled(false)
+                .build();
+
+        when(aiSettingsService.getSettingsEntity()).thenReturn(settings);
+
+        String response = aiChatService.chat("How is business?");
+
+        assertEquals("AI hiện đang tắt. Vui lòng liên hệ quản trị viên để bật tính năng này.", response);
+        verifyNoInteractions(geminiService);
     }
 }

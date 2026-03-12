@@ -47,9 +47,6 @@ public class ProductServiceImpl implements ProductService {
                 .created_at(product.getCreatedAt())
                 .updated_at(product.getUpdatedAt())
                 .variant_count(product.getVariants() != null ? product.getVariants().size() : 0)
-                .supplier_name(product.getBrand() != null && product.getBrand().getSupplier() != null
-                        ? product.getBrand().getSupplier().getName()
-                        : null)
                 .build();
     }
 

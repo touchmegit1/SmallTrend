@@ -2,6 +2,7 @@ package com.smalltrend.controller;
 
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.user.ChangePasswordRequest;
+import com.smalltrend.dto.user.AvatarUrlUpdateRequest;
 import com.smalltrend.dto.user.UserProfileDTO;
 import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserStatusRequest;
@@ -9,8 +10,11 @@ import com.smalltrend.dto.user.UserUpdateRequest;
 import com.smalltrend.dto.auth.RegisterRequest;
 import com.smalltrend.entity.User;
 import com.smalltrend.exception.UserException;
+import com.smalltrend.repository.UserRepository;
+import com.smalltrend.service.AuditLogService;
 import com.smalltrend.service.UserService;
 import com.smalltrend.validation.UserManagementValidator;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,13 +36,32 @@ public class UserController {
 
     private final UserService userService;
     private final UserManagementValidator validator;
+    private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
+
+    private String getClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    private User getActor(Authentication authentication) {
+        if (authentication == null) return null;
+        return userRepository.findByUsername(authentication.getName()).orElse(null);
+    }
 
     /**
      * Admin tạo tài khoản cho nhân viên - không có đăng ký tự do
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> createEmployeeAccount(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<?> createEmployeeAccount(@Valid @RequestBody RegisterRequest request,
+                                                   Authentication authentication,
+                                                   HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
+        User actor = getActor(authentication);
         try {
             // Validate using UserManagementValidator
             List<String> errors = validator.validateUser(
@@ -60,12 +83,18 @@ public class UserController {
             }
 
             UserDTO newUser = userService.createEmployee(request);
+            auditLogService.logAction(actor, "CREATE_USER", "User", newUser.getId(), "OK", ip,
+                    String.format("{\"username\":\"%s\",\"roleId\":%s}", request.getUsername(), request.getRoleId()),
+                    "Created employee account");
             return ResponseEntity.ok(newUser);
         } catch (UserException ex) {
-            // Handle constraint violations (duplicate username, email, phone)
+            auditLogService.logAction(actor, "CREATE_USER", "User", null, "FAIL", ip,
+                    String.format("{\"username\":\"%s\"}", request.getUsername()), ex.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(MessageResponse.builder().message(ex.getMessage()).build());
         } catch (Exception ex) {
+            auditLogService.logAction(actor, "CREATE_USER", "User", null, "FAIL", ip,
+                    String.format("{\"username\":\"%s\"}", request.getUsername()), ex.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(MessageResponse.builder().message("Có lỗi xảy ra khi tạo tài khoản. Vui lòng thử lại.")
                             .build());
@@ -123,15 +152,22 @@ public class UserController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> changeMyPassword(
             Authentication authentication,
-            @Valid @RequestBody ChangePasswordRequest request) {
+            @Valid @RequestBody ChangePasswordRequest request,
+            HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
+        User actor = getActor(authentication);
         try {
             userService.changeCurrentUserPassword(
                     authentication.getName(),
                     request.getCurrentPassword(),
                     request.getNewPassword(),
                     request.getConfirmPassword());
+            auditLogService.logAction(actor, "CHANGE_PASSWORD", "User",
+                    actor != null ? actor.getId() : null, "OK", ip, null, "Password changed successfully");
             return ResponseEntity.ok(MessageResponse.builder().message("Đổi mật khẩu thành công").build());
         } catch (IllegalArgumentException ex) {
+            auditLogService.logAction(actor, "CHANGE_PASSWORD", "User",
+                    actor != null ? actor.getId() : null, "FAIL", ip, null, ex.getMessage());
             return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());
         }
     }
@@ -158,12 +194,37 @@ public class UserController {
         }
     }
 
+    @PatchMapping("/{id}/avatar-url")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserAvatarUrl(@PathVariable Integer id, @Valid @RequestBody AvatarUrlUpdateRequest request) {
+        try {
+            UserDTO updatedUser = userService.updateUserAvatarUrl(id, request.getAvatarUrl());
+            return ResponseEntity.ok(updatedUser);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());
+        }
+    }
+
+    @PatchMapping("/me/avatar-url")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> updateMyAvatarUrl(Authentication authentication, @Valid @RequestBody AvatarUrlUpdateRequest request) {
+        try {
+            UserProfileDTO profile = userService.updateCurrentUserAvatarUrl(authentication.getName(), request.getAvatarUrl());
+            return ResponseEntity.ok(profile);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(MessageResponse.builder().message(ex.getMessage()).build());
+        }
+    }
+
     /**
      * Cập nhật thông tin user
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<?> updateUser(@PathVariable Integer id, @Valid @RequestBody UserUpdateRequest request) {
+    public ResponseEntity<?> updateUser(@PathVariable Integer id, @Valid @RequestBody UserUpdateRequest request,
+                                        Authentication authentication, HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
+        User actor = getActor(authentication);
         try {
             // Validate ID
             List<String> errors = validator.validateId(id, "ID người dùng");
@@ -184,12 +245,17 @@ public class UserController {
             }
 
             User updatedUser = userService.updateUser(id, request);
+            auditLogService.logAction(actor, "UPDATE_USER", "User", id, "OK", ip,
+                    String.format("{\"fullName\":\"%s\",\"email\":\"%s\",\"status\":\"%s\"}",
+                            request.getFullName(), request.getEmail(), request.getStatus()),
+                    "Updated user account");
             return ResponseEntity.ok(UserDTO.fromEntity(updatedUser));
         } catch (UserException ex) {
-            // Handle constraint violations
+            auditLogService.logAction(actor, "UPDATE_USER", "User", id, "FAIL", ip, null, ex.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(MessageResponse.builder().message(ex.getMessage()).build());
         } catch (Exception ex) {
+            auditLogService.logAction(actor, "UPDATE_USER", "User", id, "FAIL", ip, null, ex.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(MessageResponse.builder().message("Có lỗi xảy ra khi cập nhật tài khoản. Vui lòng thử lại.")
                             .build());
@@ -201,7 +267,10 @@ public class UserController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteUser(@PathVariable Integer id,
+                                        Authentication authentication, HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
+        User actor = getActor(authentication);
         // Validate ID
         List<String> errors = validator.validateId(id, "ID người dùng");
         if (validator.hasErrors(errors)) {
@@ -211,6 +280,8 @@ public class UserController {
         }
 
         userService.deleteUser(id);
+        auditLogService.logAction(actor, "DELETE_USER", "User", id, "OK", ip,
+                String.format("{\"deletedUserId\":%d}", id), "Deleted user account");
         return ResponseEntity.ok(MessageResponse.builder().message("Xóa người dùng thành công").build());
     }
 
@@ -219,7 +290,10 @@ public class UserController {
      */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateUserStatus(@PathVariable Integer id, @Valid @RequestBody UserStatusRequest request) {
+    public ResponseEntity<?> updateUserStatus(@PathVariable Integer id, @Valid @RequestBody UserStatusRequest request,
+                                              Authentication authentication, HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
+        User actor = getActor(authentication);
         // Validate ID
         List<String> errors = validator.validateId(id, "ID người dùng");
         if (validator.hasErrors(errors)) {
@@ -235,6 +309,9 @@ public class UserController {
         }
 
         User user = userService.updateUserStatus(id, request.getStatus());
+        auditLogService.logAction(actor, "UPDATE_USER_STATUS", "User", id, "OK", ip,
+                String.format("{\"userId\":%d,\"newStatus\":\"%s\"}", id, request.getStatus()),
+                "Updated user status");
         return ResponseEntity.ok(UserDTO.fromEntity(user));
     }
 

@@ -79,6 +79,69 @@ const aiChatService = {
             console.error('Error checking AI health:', error);
             throw error;
         }
+    },
+
+    /**
+     * Get AI settings (admin only)
+     * @returns {Promise} Settings data
+     */
+    getSettings: async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(
+                `${API_BASE_URL}/api/ai/settings`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching AI settings:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update AI settings (admin only)
+     * @param {Object} data - Settings to update
+     * @returns {Promise} Updated settings
+     */
+    updateSettings: async (data) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.put(
+                `${API_BASE_URL}/api/ai/settings`,
+                data,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error updating AI settings:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Get public AI settings (for chat page)
+     * @returns {Promise} Public settings data
+     */
+    getPublicSettings: async () => {
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/api/ai/settings/public`
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching public AI settings:', error);
+            throw error;
+        }
     }
 };
 

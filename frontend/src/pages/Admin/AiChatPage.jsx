@@ -22,12 +22,14 @@ const AiChatPage = () => {
         avgResponseTime: null,
         accuracyPercentage: null,
     });
+    const [publicSettings, setPublicSettings] = useState(null);
 
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
     useEffect(() => {
         loadStatistics();
+        loadPublicSettings();
     }, []);
 
     useEffect(() => {
@@ -40,6 +42,15 @@ const AiChatPage = () => {
             setStats(statsData);
         } catch (error) {
             console.error("Error loading statistics:", error);
+        }
+    };
+
+    const loadPublicSettings = async () => {
+        try {
+            const data = await aiChatService.getPublicSettings();
+            setPublicSettings(data);
+        } catch (error) {
+            console.error("Error loading public settings:", error);
         }
     };
 
@@ -110,11 +121,16 @@ const AiChatPage = () => {
         });
     };
 
-    const quickPrompts = [
-        "Doanh thu hôm nay thế nào?",
-        "Sản phẩm nào bán chạy nhất?",
-        "Có đơn hàng nào đang chờ xử lý không?",
-    ];
+    const quickPrompts = publicSettings?.quickPrompts?.length > 0
+        ? publicSettings.quickPrompts
+        : [
+            "Doanh thu hôm nay thế nào?",
+            "Sản phẩm nào bán chạy nhất?",
+            "Có đơn hàng nào đang chờ xử lý không?",
+        ];
+
+    const aiName = publicSettings?.aiName || "SmallTrend AI";
+    const welcomeMessage = publicSettings?.welcomeMessage || "Hỏi tôi về doanh thu, kho hàng, khách hàng hoặc bất kỳ điều gì.";
 
     return (
         <div className="bg-slate-50 min-h-screen py-4 px-4">
@@ -141,7 +157,7 @@ const AiChatPage = () => {
                             </div>
                         </div>
                         <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-                            LocalStore AI
+                            {aiName}
                         </span>
                     </div>
 
@@ -203,11 +219,7 @@ const AiChatPage = () => {
                                     Bắt đầu cuộc trò chuyện
                                 </h2>
                                 <p className="text-sm text-slate-400 mb-6 max-w-xs leading-relaxed">
-                                    Hỏi tôi về{" "}
-                                    <span className="text-indigo-500">doanh thu</span>,{" "}
-                                    <span className="text-red-400">kho hàng</span>,{" "}
-                                    <span className="text-green-500">khách hàng</span>{" "}
-                                    hoặc bất kỳ điều gì.
+                                    {welcomeMessage}
                                 </p>
                                 <div className="flex flex-wrap gap-2 justify-center">
                                     {quickPrompts.map((prompt, idx) => (
@@ -248,7 +260,7 @@ const AiChatPage = () => {
                                         >
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] font-semibold text-slate-500">
-                                                    {message.type === "ai" ? "SmallTrend AI" : "Bạn"}
+                                                    {message.type === "ai" ? aiName : "Bạn"}
                                                 </span>
                                                 <span className="text-[10px] text-slate-400">
                                                     {formatTime(message.timestamp)}

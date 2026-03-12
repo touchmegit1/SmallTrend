@@ -10,6 +10,12 @@ import java.util.List;
 @NoArgsConstructor
 public class GeminiRequest {
     private List<Content> contents;
+    private GenerationConfig generationConfig;
+
+    // Constructor without generationConfig (backwards compatible)
+    public GeminiRequest(List<Content> contents) {
+        this.contents = contents;
+    }
 
     @Data
     @AllArgsConstructor
@@ -23,5 +29,13 @@ public class GeminiRequest {
     @NoArgsConstructor
     public static class Part {
         private String text;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class GenerationConfig {
+        private Double temperature;
+        private Integer maxOutputTokens;
     }
 }
