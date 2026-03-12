@@ -32,6 +32,7 @@ class CategoryControllerTest {
 
     @Test
     void create_shouldReturnCreatedCategory() {
+        // Arrange: Chuẩn bị dữ liệu request và response mock
         CategoriesRequest request = new CategoriesRequest();
         request.setName("Electronics");
 
@@ -41,8 +42,10 @@ class CategoryControllerTest {
 
         when(categoriesService.create(request)).thenReturn(responseData);
 
+        // Act: Gọi API tạo danh mục
         ResponseEntity<CategoriesResponse> response = categoryController.create(request);
 
+        // Assert: Kiểm tra kết quả HTTP và body
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(responseData, response.getBody());
         verify(categoriesService).create(request);
@@ -50,14 +53,17 @@ class CategoryControllerTest {
 
     @Test
     void getAll_shouldReturnCategoryList() {
+        // Arrange: Chuẩn bị danh sách mock
         CategoriesResponse cat = new CategoriesResponse();
         cat.setId(1);
         List<CategoriesResponse> categories = List.of(cat);
 
         when(categoriesService.getAll()).thenReturn(categories);
 
+        // Act: Gọi API lấy tất cả danh mục
         ResponseEntity<List<CategoriesResponse>> response = categoryController.getAll();
 
+        // Assert: Đảm bảo trả về đúng danh sách
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(categories, response.getBody());
         verify(categoriesService).getAll();
@@ -65,6 +71,7 @@ class CategoryControllerTest {
 
     @Test
     void update_shouldReturnUpdatedCategory() {
+        // Arrange: Chuẩn bị object request và response cho hàm test
         CategoriesRequest request = new CategoriesRequest();
         request.setName("Electronics Updated");
 
@@ -74,8 +81,10 @@ class CategoryControllerTest {
 
         when(categoriesService.update(1, request)).thenReturn(responseData);
 
+        // Act: Gọi API cập nhật danh mục
         ResponseEntity<CategoriesResponse> response = categoryController.update(1, request);
 
+        // Assert: Kiểm tra kết quả phản hồi
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(responseData, response.getBody());
         verify(categoriesService).update(1, request);
@@ -83,8 +92,10 @@ class CategoryControllerTest {
 
     @Test
     void delete_shouldCallDeleteAndReturnOk() {
+        // Act: Gọi API xóa danh mục
         ResponseEntity<Void> response = categoryController.delete(1);
 
+        // Assert: Đảm bảo HTTP status 200 OK và service đã được gọi
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(categoriesService).delete(1);
     }

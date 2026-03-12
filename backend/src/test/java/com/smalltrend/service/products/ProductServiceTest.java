@@ -67,12 +67,15 @@ class ProductServiceTest {
     @Test
     @DisplayName("getAll - trả về danh sách sản phẩm")
     void getAll_shouldReturnAllProducts() {
+        // Arrange
         Product product1 = buildProduct(1, "Coca-Cola 330ml", true);
         Product product2 = buildProduct(2, "Sữa Vinamilk 1L", true);
         when(productRepository.findAll()).thenReturn(List.of(product1, product2));
 
+        // Act
         List<ProductResponse> result = productService.getAll();
 
+        // Assert
         assertEquals(2, result.size());
         assertEquals("Coca-Cola 330ml", result.get(0).getName());
         assertEquals("Sữa Vinamilk 1L", result.get(1).getName());
@@ -82,17 +85,20 @@ class ProductServiceTest {
     @Test
     @DisplayName("getAll - trả về danh sách rỗng khi không có sản phẩm")
     void getAll_shouldReturnEmptyList_whenNoProducts() {
+        // Arrange
         when(productRepository.findAll()).thenReturn(List.of());
 
+        // Act
         List<ProductResponse> result = productService.getAll();
 
+        // Assert
         assertEquals(0, result.size());
     }
 
     @Test
     @DisplayName("getAll - mapToResponse với đầy đủ brand, category, taxRate, variants, supplier")
     void getAll_shouldMapAllFields_whenBrandCategoryTaxRateVariantsPresent() {
-        // Cover tất cả nhánh TRUE trong mapToResponse:
+        // Arrange: Cover tất cả nhánh TRUE trong mapToResponse:
         // brand != null → TRUE, category != null → TRUE,
         // taxRate != null → TRUE, variants != null → TRUE,
         // brand.getSupplier() != null → TRUE
@@ -109,8 +115,10 @@ class ProductServiceTest {
 
         when(productRepository.findAll()).thenReturn(List.of(product));
 
+        // Act
         List<ProductResponse> result = productService.getAll();
 
+        // Assert
         assertEquals(1, result.size());
         ProductResponse resp = result.get(0);
         // Verify brand fields
@@ -132,15 +140,17 @@ class ProductServiceTest {
     @Test
     @DisplayName("getAll - mapToResponse khi brand có nhưng supplier null")
     void getAll_shouldMapSupplierNull_whenBrandHasNoSupplier() {
-        // Cover nhánh: brand != null → TRUE, brand.getSupplier() != null → FALSE
+        // Arrange: Cover nhánh: brand != null → TRUE, brand.getSupplier() != null → FALSE
         Brand brand = Brand.builder().id(4).name("Heineken").supplier(null).build();
         Product product = buildProduct(15, "Bia test", true);
         product.setBrand(brand);
 
         when(productRepository.findAll()).thenReturn(List.of(product));
 
+        // Act
         List<ProductResponse> result = productService.getAll();
 
+        // Assert
         assertEquals(1, result.size());
         assertEquals("Heineken", result.get(0).getBrand_name());
         assertNull(result.get(0).getSupplier_name());
@@ -150,11 +160,14 @@ class ProductServiceTest {
     @Test
     @DisplayName("getById - trả về sản phẩm khi tồn tại")
     void getById_shouldReturnProduct_whenExists() {
+        // Arrange
         Product product = buildProduct(5, "Nước cam Minute Maid", true);
         when(productRepository.findById(5)).thenReturn(Optional.of(product));
 
+        // Act
         ProductResponse result = productService.getById(5);
 
+        // Assert
         assertNotNull(result);
         assertEquals(5, result.getId());
         assertEquals("Nước cam Minute Maid", result.getName());
@@ -164,8 +177,10 @@ class ProductServiceTest {
     @Test
     @DisplayName("getById - ném exception khi sản phẩm không tồn tại")
     void getById_shouldThrow_whenProductNotFound() {
+        // Arrange
         when(productRepository.findById(999)).thenReturn(Optional.empty());
 
+        // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.getById(999));
 
         assertEquals("Product not found with id: 999", ex.getMessage());
@@ -175,7 +190,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("create - tạo sản phẩm thành công với đầy đủ category, brand, taxRate")
     void create_shouldSaveProduct_withAllFields() {
-        // Cover: categoryId != null → TRUE, brandId != null → TRUE,
+        // Arrange: Cover: categoryId != null → TRUE, brandId != null → TRUE,
         //        taxRateId != null → TRUE, isActive != null → TRUE
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Bia Heineken 330ml")
@@ -200,8 +215,10 @@ class ProductServiceTest {
         when(taxRateRepository.findById(1)).thenReturn(Optional.of(taxRate));
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
 
+        // Act
         ProductResponse result = productService.create(request);
 
+        // Assert
         assertEquals(15, result.getId());
         assertEquals("Bia Heineken 330ml", result.getName());
         assertEquals("Heineken", result.getBrand_name());
@@ -213,7 +230,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("create - isActive mặc định true khi isActive null")
     void create_shouldSetDefaultActive_whenIsActiveNull() {
-        // Cover nhánh: isActive != null → FALSE → default true
+        // Arrange: Cover nhánh: isActive != null → FALSE → default true
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Sản phẩm test")
                 .isActive(null)
@@ -222,8 +239,10 @@ class ProductServiceTest {
         Product savedProduct = buildProduct(20, "Sản phẩm test", true);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
 
+        // Act
         ProductResponse result = productService.create(request);
 
+        // Assert
         assertEquals(20, result.getId());
         assertTrue(result.getIs_active());
 
@@ -236,7 +255,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("create - categoryId, brandId, taxRateId null → set null")
     void create_shouldSetNulls_whenIdsAreNull() {
-        // Cover nhánh: categoryId != null → FALSE, brandId != null → FALSE,
+        // Arrange: Cover nhánh: categoryId != null → FALSE, brandId != null → FALSE,
         //              taxRateId != null → FALSE
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Sản phẩm không phân loại")
@@ -249,8 +268,10 @@ class ProductServiceTest {
         Product savedProduct = buildProduct(21, "Sản phẩm không phân loại", true);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
 
+        // Act
         ProductResponse result = productService.create(request);
 
+        // Assert
         assertEquals(21, result.getId());
         assertNull(result.getBrand_name());
         assertNull(result.getCategory_name());
@@ -266,12 +287,14 @@ class ProductServiceTest {
     @Test
     @DisplayName("create - ném exception khi category không tồn tại")
     void create_shouldThrow_whenCategoryNotFound() {
+        // Arrange
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Product")
                 .categoryId(999)
                 .build();
         when(categoryRepository.findById(999)).thenReturn(Optional.empty());
 
+        // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.create(request));
 
         assertEquals("Category not found with id: 999", ex.getMessage());
@@ -281,12 +304,14 @@ class ProductServiceTest {
     @Test
     @DisplayName("create - ném exception khi brand không tồn tại")
     void create_shouldThrow_whenBrandNotFound() {
+        // Arrange
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Product")
                 .brandId(999)
                 .build();
         when(brandRepository.findById(999)).thenReturn(Optional.empty());
 
+        // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.create(request));
 
         assertEquals("Brand not found with id: 999", ex.getMessage());
@@ -296,12 +321,14 @@ class ProductServiceTest {
     @Test
     @DisplayName("create - ném exception khi taxRate không tồn tại")
     void create_shouldThrow_whenTaxRateNotFound() {
+        // Arrange
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Product")
                 .taxRateId(999)
                 .build();
         when(taxRateRepository.findById(999)).thenReturn(Optional.empty());
 
+        // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.create(request));
 
         assertEquals("TaxRate not found with id: 999", ex.getMessage());
@@ -312,6 +339,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("update - cập nhật sản phẩm thành công")
     void update_shouldUpdateProduct_whenValid() {
+        // Arrange
         Product existing = buildProduct(7, "Coca-Cola 330ml", true);
         CreateProductRequest request = CreateProductRequest.builder()
                 .name("Coca-Cola 500ml")
@@ -328,8 +356,10 @@ class ProductServiceTest {
         when(categoryRepository.findById(2)).thenReturn(Optional.of(category));
         when(productRepository.save(any(Product.class))).thenReturn(updated);
 
+        // Act
         ProductResponse result = productService.update(7, request);
 
+        // Assert
         assertEquals(7, result.getId());
         assertEquals("Coca-Cola 500ml", result.getName());
         verify(productRepository).save(any(Product.class));
@@ -338,9 +368,11 @@ class ProductServiceTest {
     @Test
     @DisplayName("update - ném exception khi sản phẩm không tồn tại")
     void update_shouldThrow_whenProductNotFound() {
+        // Arrange
         CreateProductRequest request = CreateProductRequest.builder().name("Test").build();
         when(productRepository.findById(999)).thenReturn(Optional.empty());
 
+        // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.update(999, request));
 
         assertEquals("Product not found with id: 999", ex.getMessage());
@@ -349,7 +381,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("update - lan truyền trạng thái xuống variants khi status thay đổi")
     void update_shouldPropagateStatusToVariants_whenStatusChanged() {
-        // Cover: oldStatus != newStatus → TRUE, variants != null → TRUE
+        // Arrange: Cover: oldStatus != newStatus → TRUE, variants != null → TRUE
         ProductVariant variant1 = buildVariant(1, "Variant 1", true);
         ProductVariant variant2 = buildVariant(2, "Variant 2", true);
         Product existing = buildProduct(8, "Product", true);
@@ -366,8 +398,10 @@ class ProductServiceTest {
         when(productRepository.findById(8)).thenReturn(Optional.of(existing));
         when(productRepository.save(any(Product.class))).thenReturn(updated);
 
+        // Act
         productService.update(8, request);
 
+        // Assert
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(captor.capture());
         Product saved = captor.getValue();
@@ -378,7 +412,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("update - không lan truyền khi status không thay đổi")
     void update_shouldNotPropagateToVariants_whenStatusUnchanged() {
-        // Cover: oldStatus != newStatus → FALSE
+        // Arrange: Cover: oldStatus != newStatus → FALSE
         ProductVariant variant = buildVariant(1, "V1", true);
         Product existing = buildProduct(9, "Product", true);
         existing.setVariants(List.of(variant));
@@ -394,9 +428,10 @@ class ProductServiceTest {
         when(productRepository.findById(9)).thenReturn(Optional.of(existing));
         when(productRepository.save(any(Product.class))).thenReturn(updated);
 
+        // Act
         productService.update(9, request);
 
-        // Variant vẫn giữ nguyên trạng thái true
+        // Assert: Variant vẫn giữ nguyên trạng thái true
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(captor.capture());
         Product saved = captor.getValue();
@@ -407,7 +442,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("update - status thay đổi nhưng variants null → không lỗi")
     void update_shouldNotFail_whenStatusChangedButVariantsNull() {
-        // Cover: oldStatus != newStatus → TRUE, variants != null → FALSE (variants == null)
+        // Arrange: Cover: oldStatus != newStatus → TRUE, variants != null → FALSE (variants == null)
         Product existing = buildProduct(10, "Product", true);
         existing.setVariants(null);
 
@@ -421,8 +456,10 @@ class ProductServiceTest {
         when(productRepository.findById(10)).thenReturn(Optional.of(existing));
         when(productRepository.save(any(Product.class))).thenReturn(updated);
 
+        // Act
         ProductResponse result = productService.update(10, request);
 
+        // Assert
         assertEquals(10, result.getId());
         assertFalse(result.getIs_active());
         verify(productRepository).save(any(Product.class));
@@ -431,7 +468,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("update - isActive null trên existing → default true")
     void update_shouldUseDefaultStatus_whenExistingIsActiveNull() {
-        // Cover: existing.getIsActive() != null → FALSE trong dòng oldStatus
+        // Arrange: Cover: existing.getIsActive() != null → FALSE trong dòng oldStatus
         Product existing = buildProduct(11, "Product", null);
         existing.setIsActive(null); // isActive = null
 
@@ -445,8 +482,10 @@ class ProductServiceTest {
         when(productRepository.findById(11)).thenReturn(Optional.of(existing));
         when(productRepository.save(any(Product.class))).thenReturn(updated);
 
+        // Act
         productService.update(11, request);
 
+        // Assert
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(captor.capture());
         assertFalse(captor.getValue().getIsActive());
@@ -456,26 +495,31 @@ class ProductServiceTest {
     @Test
     @DisplayName("delete - xóa thành công khi sản phẩm tạo trong 2 phút")
     void delete_shouldDeleteProduct_whenWithin2Minutes() {
+        // Arrange
         LocalDateTime createdAt = LocalDateTime.now().minusSeconds(30);
         Product product = buildProduct(10, "New Product", true);
         product.setCreatedAt(createdAt);
 
         when(productRepository.findById(10)).thenReturn(Optional.of(product));
 
+        // Act
         productService.delete(10);
 
+        // Assert
         verify(productRepository).deleteById(10);
     }
 
     @Test
     @DisplayName("delete - ném exception khi sản phẩm tạo quá 2 phút")
     void delete_shouldThrow_whenProductOlderThan2Minutes() {
+        // Arrange
         LocalDateTime createdAt = LocalDateTime.now().minusMinutes(3);
         Product product = buildProduct(11, "Old Product", true);
         product.setCreatedAt(createdAt);
 
         when(productRepository.findById(11)).thenReturn(Optional.of(product));
 
+        // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.delete(11));
 
         assertEquals("Sản phẩm đã tạo quá 2 phút, bạn không thể xoá sản phẩm này nữa!", ex.getMessage());
@@ -485,22 +529,26 @@ class ProductServiceTest {
     @Test
     @DisplayName("delete - xóa thành công khi createdAt null")
     void delete_shouldDeleteProduct_whenCreatedAtNull() {
-        // Cover: createdAt != null → FALSE
+        // Arrange: Cover: createdAt != null → FALSE
         Product product = buildProduct(12, "Product No Date", true);
         product.setCreatedAt(null);
 
         when(productRepository.findById(12)).thenReturn(Optional.of(product));
 
+        // Act
         productService.delete(12);
 
+        // Assert
         verify(productRepository).deleteById(12);
     }
 
     @Test
     @DisplayName("delete - ném exception khi sản phẩm không tồn tại")
     void delete_shouldThrow_whenProductNotFound() {
+        // Arrange
         when(productRepository.findById(999)).thenReturn(Optional.empty());
 
+        // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.delete(999));
 
         assertEquals("Product not found with id: 999", ex.getMessage());
@@ -510,7 +558,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("toggleStatus - đảo trạng thái sản phẩm và lan truyền xuống variants")
     void toggleStatus_shouldToggleAndPropagateToVariants() {
-        // Cover: variants != null → TRUE
+        // Arrange: Cover: variants != null → TRUE
         ProductVariant variant1 = buildVariant(1, "V1", true);
         ProductVariant variant2 = buildVariant(2, "V2", true);
         Product product = buildProduct(13, "Product", true);
@@ -519,8 +567,10 @@ class ProductServiceTest {
         when(productRepository.findById(13)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
+        // Act
         productService.toggleStatus(13);
 
+        // Assert
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(captor.capture());
         Product saved = captor.getValue();
@@ -531,15 +581,17 @@ class ProductServiceTest {
     @Test
     @DisplayName("toggleStatus - đảo trạng thái khi variants null → không lỗi")
     void toggleStatus_shouldWork_whenVariantsNull() {
-        // Cover: variants != null → FALSE
+        // Arrange: Cover: variants != null → FALSE
         Product product = buildProduct(14, "Product No Variants", true);
         product.setVariants(null);
 
         when(productRepository.findById(14)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
+        // Act
         productService.toggleStatus(14);
 
+        // Assert
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(captor.capture());
         assertFalse(captor.getValue().getIsActive());
@@ -548,8 +600,10 @@ class ProductServiceTest {
     @Test
     @DisplayName("toggleStatus - ném exception khi sản phẩm không tồn tại")
     void toggleStatus_shouldThrow_whenProductNotFound() {
+        // Arrange
         when(productRepository.findById(999)).thenReturn(Optional.empty());
 
+        // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.toggleStatus(999));
 
         assertEquals("Product not found with id: 999", ex.getMessage());

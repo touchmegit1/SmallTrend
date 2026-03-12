@@ -31,6 +31,7 @@ class BrandControllerTest {
 
     @Test
     void create_shouldReturnCreatedBrand() {
+        // Arrange: Chuẩn bị dữ liệu đầu vào và kết quả mock
         Brand brand = new Brand();
         brand.setName("Sony");
         Brand created = new Brand();
@@ -39,8 +40,10 @@ class BrandControllerTest {
 
         when(brandService.create(brand)).thenReturn(created);
 
+        // Act: Gọi API tạo brand
         ResponseEntity<Brand> response = brandController.create(brand);
 
+        // Assert: Kiểm tra mã trạng thái và dữ liệu trả về
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(created, response.getBody());
         verify(brandService).create(brand);
@@ -48,14 +51,17 @@ class BrandControllerTest {
 
     @Test
     void getAll_shouldReturnBrandList() {
+        // Arrange: Tạo danh sách mock
         Brand brand = new Brand();
         brand.setId(1);
         List<Brand> brands = List.of(brand);
 
         when(brandService.getAll()).thenReturn(brands);
 
+        // Act: Gọi API lấy tất cả brand
         ResponseEntity<List<Brand>> response = brandController.getAll();
 
+        // Assert: Kiểm tra kết quả
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(brands, response.getBody());
         verify(brandService).getAll();
@@ -63,13 +69,16 @@ class BrandControllerTest {
 
     @Test
     void getById_shouldReturnBrand() {
+        // Arrange: Dữ liệu mock
         Brand brand = new Brand();
         brand.setId(5);
 
         when(brandService.getById(5)).thenReturn(brand);
 
+        // Act: Gọi API lấy theo ID
         ResponseEntity<Brand> response = brandController.getById(5);
 
+        // Assert: Kiểm tra kết quả
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(brand, response.getBody());
         verify(brandService).getById(5);
@@ -77,6 +86,7 @@ class BrandControllerTest {
 
     @Test
     void update_shouldReturnUpdatedBrand() {
+        // Arrange: Dữ liệu mock cho update
         Brand updatedData = new Brand();
         updatedData.setName("Sony Updated");
 
@@ -86,8 +96,10 @@ class BrandControllerTest {
 
         when(brandService.update(5, updatedData)).thenReturn(updatedResponse);
 
+        // Act: Gọi API cập nhật
         ResponseEntity<Brand> response = brandController.update(5, updatedData);
 
+        // Assert: Kiểm tra kết quả
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(updatedResponse, response.getBody());
         verify(brandService).update(5, updatedData);
@@ -95,8 +107,10 @@ class BrandControllerTest {
 
     @Test
     void delete_shouldCallDeleteAndReturnOk() {
+        // Act: Gọi API xóa
         ResponseEntity<String> response = brandController.delete(10);
 
+        // Assert: Kiểm tra mã phản hồi
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Brand deactivated", response.getBody());
         verify(brandService).delete(10);

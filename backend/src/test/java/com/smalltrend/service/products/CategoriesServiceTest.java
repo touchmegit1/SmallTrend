@@ -61,12 +61,15 @@ class CategoriesServiceTest {
 
     @Test
     void create_shouldReturnMappedResponse() {
+        // Arrange: Mock các hành vi chuyển đổi và lưu trữ
         when(categoryMapper.toEntity(request)).thenReturn(testCategory);
         when(categoryRepository.save(testCategory)).thenReturn(testCategory);
         when(categoryMapper.toResponse(testCategory)).thenReturn(response);
 
+        // Act: Gọi hàm create
         CategoriesResponse result = categoriesService.create(request);
 
+        // Assert: Kiểm tra dữ liệu trả về hợp lệ và các mock đã được gọi
         assertNotNull(result);
         assertEquals(1, result.getId());
         assertEquals("Electronics", result.getName());
@@ -77,12 +80,15 @@ class CategoriesServiceTest {
 
     @Test
     void getAll_shouldReturnListOfMappedResponses() {
+        // Arrange: Mock dữ liệu lấy từ DB và chuyển đổi
         List<Category> categories = List.of(testCategory);
         when(categoryRepository.findAll()).thenReturn(categories);
         when(categoryMapper.toResponse(testCategory)).thenReturn(response);
 
+        // Act: Gọi hàm getAll
         List<CategoriesResponse> result = categoriesService.getAll();
 
+        // Assert: Đảm bảo danh sách trả đúng số lượng và nội dung
         assertEquals(1, result.size());
         assertEquals("Electronics", result.get(0).getName());
         verify(categoryRepository).findAll();
@@ -91,6 +97,7 @@ class CategoriesServiceTest {
 
     @Test
     void update_shouldReturnUpdatedResponse_whenCategoryExists() {
+        // Arrange: Tạo request cập nhật và mock tìm kiếm, lưu trữ
         CategoriesRequest updateReq = new CategoriesRequest();
         updateReq.setCode("CAT-02");
         updateReq.setName("Computers");
@@ -112,8 +119,10 @@ class CategoriesServiceTest {
         when(categoryRepository.save(testCategory)).thenReturn(savedCategory);
         when(categoryMapper.toResponse(savedCategory)).thenReturn(updatedResp);
 
+        // Act: Cập nhật danh mục
         CategoriesResponse result = categoriesService.update(1, updateReq);
 
+        // Assert: Đảm bảo dữ liệu mới được trả về chính xác
         assertNotNull(result);
         assertEquals("Computers", result.getName());
         verify(categoryRepository).findById(1);
@@ -122,8 +131,10 @@ class CategoriesServiceTest {
 
     @Test
     void update_shouldThrowException_whenCategoryDoesNotExist() {
+        // Arrange: Mock trả về empty khi không tìm thấy danh mục
         when(categoryRepository.findById(99)).thenReturn(Optional.empty());
 
+        // Act & Assert: Phải ném ra lỗi RuntimeException
         RuntimeException exception = assertThrows(RuntimeException.class, () -> categoriesService.update(99, new CategoriesRequest()));
 
         assertEquals("Không tìm thấy danh mục (Category not found)", exception.getMessage());
@@ -133,8 +144,10 @@ class CategoriesServiceTest {
 
     @Test
     void delete_shouldThrowException_whenCategoryHasProducts() {
+        // Arrange: Mock danh mục đang chứa sản phẩm
         when(productRepository.existsByCategoryId(1)).thenReturn(true);
 
+        // Act & Assert: Cố gắng xóa phải ném lỗi
         RuntimeException exception = assertThrows(RuntimeException.class, () -> categoriesService.delete(1));
 
         assertEquals("Không thể xoá danh mục vì đang có sản phẩm thuộc danh mục này", exception.getMessage());
@@ -144,10 +157,13 @@ class CategoriesServiceTest {
 
     @Test
     void delete_shouldDeleteCategory_whenNoProductsLinked() {
+        // Arrange: Mock danh mục rỗng (không chứa sản phẩm)
         when(productRepository.existsByCategoryId(1)).thenReturn(false);
 
+        // Act: Tiến hành xóa
         categoriesService.delete(1);
 
+        // Assert: Đảm bảo lệnh xóa theo id được gọi
         verify(productRepository).existsByCategoryId(1);
         verify(categoryRepository).deleteById(1);
     }

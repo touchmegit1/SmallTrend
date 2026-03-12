@@ -11,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 
-import java.io.IOException;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,15 +50,18 @@ class FileUploadControllerTest {
 
     @Test
     void uploadImage_withEmptyFile_shouldReturnBadRequest() {
+        // Act: Gọi API tải lên nhưng cung cấp file rỗng
         ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(emptyFile);
 
+        // Assert: Yêu cầu trả về lỗi 400 Bad Request
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("File is empty", response.getBody().get("error"));
     }
 
     @Test
-    void uploadImage_withValidFile_shouldReturnOkAndUrl() throws IOException {
+    void uploadImage_withValidFile_shouldReturnOkAndUrl() {
+        // Arrange: Mock kết quả trả về từ Cloudinary khi tải lên thành công
         Map<String, Object> mockUploadResult = Map.of(
                 "secure_url", "https://res.cloudinary.com/demo/image/upload/v123456/test-image.jpg",
                 "public_id", "user-avatars/test-image-123"
@@ -67,8 +69,10 @@ class FileUploadControllerTest {
 
         when(cloudinaryService.uploadFile(validFile, "user-avatars")).thenReturn(mockUploadResult);
 
+        // Act: Gọi API tải hình ảnh
         ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(validFile);
 
+        // Assert: Đảm bảo phản hồi 200 OK cùng với Url hình ảnh
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("https://res.cloudinary.com/demo/image/upload/v123456/test-image.jpg", response.getBody().get("url"));
@@ -77,12 +81,15 @@ class FileUploadControllerTest {
     }
 
     @Test
-    void uploadImage_whenCloudinaryThrowsException_shouldReturnInternalServerError() throws IOException {
+    void uploadImage_whenCloudinaryThrowsException_shouldReturnInternalServerError() {
+        // Arrange: Mock xảy ra lỗi từ phía Cloudinary
         when(cloudinaryService.uploadFile(any(), anyString()))
-                .thenThrow(new IOException("Cloudinary network error"));
+                .thenThrow(new RuntimeException("Cloudinary network error"));
 
+        // Act: Gọi API tải hình ảnh
         ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(validFile);
 
+        // Assert: API phải bắt lỗi và trả về 500 Internal Server Error
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Upload to Cloudinary failed: Cloudinary network error", response.getBody().get("error"));
