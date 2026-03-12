@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft, Package, Edit, Box, Calendar, Power, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, Package, Edit, Box, Calendar, Power, Printer, Trash2, DollarSign, History } from "lucide-react";
 
 // Tái sử dụng components từ Design system UI thư mục chung ProductComponents
 import Button from "../ProductComponents/button";
@@ -46,6 +46,7 @@ function ProductDetail() {
   const [showUnitsManager, setShowUnitsManager] = useState(false); // Trạng thái hiển thị Quản lý Đơn vị
   const [showBarcodeModal, setShowBarcodeModal] = useState(false); // Trạng thái hiển thị modal Barcode
   const [selectedBarcodeVariant, setSelectedBarcodeVariant] = useState(null); // Variant đang chọn để xem barcode
+  
   const [, forceUpdate] = useState(0); // Dùng để re-render khi hết 2 phút
 
   const { units, fetchUnits } = useFetchUnits(); // Tải danh sách đơn vị để truyền cho form quy đổi
@@ -608,7 +609,9 @@ function ProductDetail() {
                       </TableCell>
 
                       <TableCell className="text-right">
-                        <span className="text-base font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded whitespace-nowrap">{variant.sell_price?.toLocaleString('vi-VN') || "0"} ₫</span>
+                        <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded whitespace-nowrap">
+                          {variant.sell_price?.toLocaleString('vi-VN') || "—"} ₫
+                        </span>
                       </TableCell>
 
                       <TableCell className="text-center">

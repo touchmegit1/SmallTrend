@@ -34,6 +34,7 @@ class ProductVariantServiceTest {
     @Mock private InventoryStockRepository inventoryStockRepository;
     @Mock private ProductBatchRepository productBatchRepository;
     @Mock private UnitConversionRepository unitConversionRepository;
+    @Mock private VariantPriceRepository variantPriceRepository;
 
     @InjectMocks
     private ProductVariantService productVariantService;

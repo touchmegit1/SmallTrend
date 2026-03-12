@@ -28,4 +28,10 @@ public class ProductVariantRespone {
     private String taxName;
     private java.time.LocalDateTime createdAt;
     private List<UnitConversionResponse> unitConversions;
+
+    // Active variant price fields
+    private BigDecimal activePurchasePrice;
+    private BigDecimal activeSellingPrice;
+    private BigDecimal activeTaxPercent;
+    private java.time.LocalDate activeEffectiveDate;
 }

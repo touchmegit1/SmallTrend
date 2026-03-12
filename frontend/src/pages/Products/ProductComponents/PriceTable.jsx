@@ -17,10 +17,33 @@ import {
     ArrowDown,
     Search,
     Percent,
+    DollarSign,
+    History
 } from "lucide-react";
 import Button from "./button";
 import { Input } from "./input";
 import { calculateProfit, formatCurrency } from "../../../utils/priceCalculation";
+
+const DateInput = ({ dateValue, onChange }) => {
+    const [focused, setFocused] = React.useState(false);
+    const dateOnly = dateValue ? dateValue.split('T')[0] : '';
+    
+    const displayValue = focused ? dateOnly : (dateOnly ? (() => {
+        const [y, m, d] = dateOnly.split('-');
+        return `${d}/${m}/${y.slice(-2)}`;
+    })() : '');
+
+    return (
+        <input
+            type={focused ? "date" : "text"}
+            value={displayValue}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            className="w-24 text-center text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-white border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
+        />
+    );
+};
 
 export default function PriceTable({
     variants,
@@ -41,7 +64,9 @@ export default function PriceTable({
     sortConfig,
     onSort,
     // Actions
+    onCreatePriceModalOpen,
     onViewHistory,
+    onEffectiveDateChange
 }) {
     const allSelected = variants.length > 0 && selectedIds.length === variants.length;
     const someSelected = selectedIds.length > 0 && !allSelected;
@@ -83,13 +108,16 @@ export default function PriceTable({
                             </th>
                             <SortHeader label="Sản phẩm" sortKey="name" />
                             <SortHeader label="SKU" sortKey="sku" />
-                            <SortHeader label="Giá nhập" sortKey="costPrice" align="right" />
+                            <SortHeader label="Giá nhập" sortKey="activePurchasePrice" align="right" />
                             <th className="px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider text-center whitespace-nowrap">
                                 Thuế %
                             </th>
-                            <SortHeader label="Giá bán (gồm thuế)" sortKey="sellPrice" align="right" />
+                            <SortHeader label="Giá bán" sortKey="activeSellingPrice" align="right" />
                             <SortHeader label="Lợi nhuận" sortKey="profit" align="right" />
-                            <th className="px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider text-center w-28 whitespace-nowrap">
+                            <th className="px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider text-center whitespace-nowrap">
+                                Hiệu lực
+                            </th>
+                            <th className="px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider text-center w-24 whitespace-nowrap shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] sticky right-0 bg-white">
                                 Thao tác
                             </th>
                         </tr>
@@ -118,17 +146,11 @@ export default function PriceTable({
                             variants.map((variant) => {
                                 const isEditing = editingId === variant.id;
                                 const isSelected = selectedIds.includes(variant.id);
-                                const costPrice = Number(variant.costPrice) || 0;
-                                const taxRate = Number(variant.taxRate) || 0;
-                                // sellPrice trong DB đã bao gồm thuế
-                                const sellPrice = isEditing
-                                    ? (Number(editPrice) || 0)
-                                    : (Number(variant.sellPrice) || 0);
-                                // Giá bán cho khách = sellPrice (đã gồm thuế)
-                                const finalPrice = isEditing
-                                    ? (taxRate > 0 ? Math.round(sellPrice * (1 + taxRate / 100)) : sellPrice)
-                                    : sellPrice;
-                                const profit = calculateProfit(costPrice, finalPrice);
+                                const costPrice = Number(variant.activePurchasePrice) || Number(variant.costPrice) || 0;
+                                const taxRate = Number(variant.activeTaxPercent) || Number(variant.taxRate) || 0;
+                                const sellPrice = Number(variant.activeSellingPrice) || Number(variant.sellPrice) || 0;
+                                // Giá bán cho khách = sellPrice
+                                const profit = calculateProfit(costPrice, sellPrice);
                                 const hasNegativeProfit = profit < 0;
 
                                 return (
@@ -196,27 +218,9 @@ export default function PriceTable({
 
                                         {/* Selling Price (sau thuế) — bold black */}
                                         <td className="px-4 py-3.5 text-right">
-                                            {isEditing ? (
-                                                <div>
-                                                    <Input
-                                                        type="number"
-                                                        className="w-32 text-right pr-2 h-9 text-sm font-mono font-bold"
-                                                        value={editPrice}
-                                                        onChange={(e) => onEditPriceChange(e.target.value)}
-                                                        placeholder="0"
-                                                        autoFocus
-                                                    />
-                                                    {editPrice && taxRate > 0 && (
-                                                        <p className="text-[10px] text-emerald-600 mt-1 text-right font-medium">
-                                                            Sau thuế: {Math.round(Number(editPrice) * (1 + taxRate / 100)).toLocaleString('vi-VN')} đ
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-900 font-bold font-mono text-sm">
-                                                    {formatCurrency(finalPrice)}
-                                                </span>
-                                            )}
+                                            <span className="text-gray-900 font-bold font-mono text-sm">
+                                                {formatCurrency(sellPrice)}
+                                            </span>
                                         </td>
 
                                         {/* Profit */}
@@ -239,54 +243,36 @@ export default function PriceTable({
                                             </div>
                                         </td>
 
-                                        {/* Actions */}
+                                        {/* Hiệu lực */}
                                         <td className="px-4 py-3.5 text-center">
-                                            {isEditing ? (
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() => onSavePrice(variant)}
-                                                        className="h-8 w-8 p-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow-sm"
-                                                        disabled={savingId === variant.id}
-                                                        title="Lưu"
-                                                    >
-                                                        {savingId === variant.id
-                                                            ? <RefreshCw className="w-4 h-4 animate-spin" />
-                                                            : <Save className="w-4 h-4" />}
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={onCancelEdit}
-                                                        className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                                        disabled={savingId === variant.id}
-                                                        title="Hủy"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
+                                            {variant.activeEffectiveDate ? (
+                                                <DateInput
+                                                    dateValue={variant.activeEffectiveDate}
+                                                    onChange={(val) => onEffectiveDateChange?.(variant, val)}
+                                                />
                                             ) : (
-                                                <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => onEditClick(variant)}
-                                                        className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
-                                                        title="Chỉnh sửa giá"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => onViewHistory(variant)}
-                                                        className="h-8 w-8 p-0 text-gray-500 hover:bg-gray-100 rounded-lg"
-                                                        title="Lịch sử giá"
-                                                    >
-                                                        <Clock className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
+                                                <span className="text-xs text-gray-400 font-medium">Chưa có giá</span>
                                             )}
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td className="px-4 py-3.5 text-center shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.03)] sticky right-0 bg-white group-hover:bg-blue-50/30 transition-colors">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={() => onCreatePriceModalOpen(variant)}
+                                                    className="w-8 h-8 flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-emerald-100/50 hover:border-emerald-500 transition-all duration-200"
+                                                    title="Tạo giá mới"
+                                                >
+                                                    <DollarSign className="w-[15px] h-[15px]" />
+                                                </button>
+                                                <button
+                                                    onClick={() => onViewHistory(variant)}
+                                                    className="w-8 h-8 flex items-center justify-center text-purple-600 bg-purple-50 hover:bg-purple-500 hover:text-white rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-purple-100/50 hover:border-purple-500 transition-all duration-200"
+                                                    title="Lịch sử giá"
+                                                >
+                                                    <History className="w-[15px] h-[15px]" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );

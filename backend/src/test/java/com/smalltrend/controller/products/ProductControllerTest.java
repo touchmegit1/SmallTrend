@@ -11,6 +11,7 @@ import com.smalltrend.dto.products.UnitResponse;
 import com.smalltrend.service.ProductVariantService;
 import com.smalltrend.service.UnitConversionService;
 import com.smalltrend.service.UnitService;
+import com.smalltrend.service.VariantPriceService;
 import com.smalltrend.service.products.ProductService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,11 +47,14 @@ class ProductControllerTest {
     @Mock
     private UnitService unitService;
 
+    @Mock
+    private VariantPriceService variantPriceService;
+
     private ProductController productController;
 
     @BeforeEach
     void setup() {
-        productController = new ProductController(productService, productVariantService, unitConversionService, unitService);
+        productController = new ProductController(productService, productVariantService, unitConversionService, unitService, variantPriceService);
     }
 
     // ==========================================

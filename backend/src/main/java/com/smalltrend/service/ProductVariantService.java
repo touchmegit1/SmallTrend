@@ -6,6 +6,8 @@ import com.smalltrend.repository.UnitRepository;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.UnitConversionRepository;
+import com.smalltrend.repository.VariantPriceRepository;
+import com.smalltrend.entity.enums.VariantPriceStatus;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.Unit;
@@ -31,6 +33,7 @@ public class ProductVariantService {
     private final InventoryStockRepository inventoryStockRepository;
     private final ProductBatchRepository productBatchRepository;
     private final UnitConversionRepository unitConversionRepository;
+    private final VariantPriceRepository variantPriceRepository;
 
     public List<ProductVariantRespone> getAllProductVariants(String search, String barcode) {
         List<ProductVariant> variants;
@@ -507,6 +510,15 @@ public class ProductVariantService {
                 .map(this::mapConversionToResponse)
                 .collect(Collectors.toList());
         response.setUnitConversions(conversions);
+
+        // Active Variant Price
+        variantPriceRepository.findFirstByVariantIdAndStatus(variant.getId(), VariantPriceStatus.ACTIVE)
+                .ifPresent(activePrice -> {
+                    response.setActivePurchasePrice(activePrice.getPurchasePrice());
+                    response.setActiveSellingPrice(activePrice.getSellingPrice());
+                    response.setActiveTaxPercent(activePrice.getTaxPercent());
+                    response.setActiveEffectiveDate(activePrice.getEffectiveDate());
+                });
 
         return response;
     }

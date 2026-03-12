@@ -16,6 +16,7 @@ import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import TaxRateManagerModal from "./TaxRateManagerModal";
 import PriceHistoryModal from "./PriceHistoryModal";
+import CreatePriceModal from "./CreatePriceModal";
 import PriceTable from "../ProductComponents/PriceTable";
 import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
 import { calculateProfit } from "../../../utils/priceCalculation";
@@ -60,6 +61,7 @@ const PriceSetting = () => {
     // ─── Modals ──────────────────────────────
     const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
     const [historyVariant, setHistoryVariant] = useState(null);
+    const [createPriceVariant, setCreatePriceVariant] = useState(null);
 
     // ═══════════════════════════════════════════
     // FETCH
@@ -129,12 +131,12 @@ const PriceSetting = () => {
                         bV = Number(b.costPrice) || 0;
                         break;
                     case "sellPrice":
-                        aV = Number(a.sellPrice) || 0;
-                        bV = Number(b.sellPrice) || 0;
+                        aV = Number(a.activeSellingPrice) || 0;
+                        bV = Number(b.activeSellingPrice) || 0;
                         break;
                     case "profit":
-                        aV = calculateProfit(a.costPrice, a.sellPrice);
-                        bV = calculateProfit(b.costPrice, b.sellPrice);
+                        aV = calculateProfit(Number(a.activePurchasePrice) || 0, Number(a.activeSellingPrice) || 0);
+                        bV = calculateProfit(Number(b.activePurchasePrice) || 0, Number(b.activeSellingPrice) || 0);
                         break;
                     default:
                         aV = 0; bV = 0;
@@ -174,68 +176,24 @@ const PriceSetting = () => {
     }, []);
 
     // ═══════════════════════════════════════════
-    // INLINE EDIT (only selling price)
+    // NO INLINE EDIT ANYMORE - We use Create Price Modal, EXCEPT for Date
     // ═══════════════════════════════════════════
-    const handleEditClick = useCallback((variant) => {
-        setEditingId(variant.id);
-        setEditPrice(variant.sellPrice || 0);
-        setSuccessMsg("");
-        setErrorMsg("");
-    }, []);
 
-    const handleCancelEdit = useCallback(() => {
-        setEditingId(null);
-        setEditPrice("");
-    }, []);
-
-    const handleSavePrice = async (variant) => {
-        const parsed = parseFloat(editPrice);
-        if (isNaN(parsed) || parsed < 0) {
-            setErrorMsg("Giá bán không hợp lệ.");
-            return;
-        }
-
-        const cost = Number(variant.costPrice) || 0;
-        if (parsed < cost) {
-            const ok = window.confirm(
-                `⚠️ Giá bán (${parsed.toLocaleString()} đ) thấp hơn giá nhập (${cost.toLocaleString()} đ).\n\nBạn có chắc chắn muốn lưu?`
-            );
-            if (!ok) return;
-        }
-
-        setSavingId(variant.id);
-        setErrorMsg("");
-
+    const handleEffectiveDateChange = async (variant, newDateStr) => {
+        if (!newDateStr) return;
         try {
-            // Tính giá sau thuế trước khi lưu
-            const taxRate = Number(variant.taxRate) || 0;
-            const finalPrice = taxRate > 0
-                ? Math.round(parsed * (1 + taxRate / 100))
-                : parsed;
-
-            const payload = {
-                sku: variant.sku,
-                barcode: variant.barcode,
-                unitId: variant.unitId || 1,
-                sellPrice: finalPrice,
-                imageUrl: variant.imageUrl || null,
-                isActive: variant.isActive !== false,
-            };
-
-            await api.put(`/products/variants/${variant.id}`, payload);
-
-            setSuccessMsg(`Cập nhật giá bán cho ${variant.name} thành công!`);
-            setEditingId(null);
-            setEditPrice("");
+            // Update the backend
+            await api.put(`/products/variants/${variant.id}/prices/active/date`, { effectiveDate: newDateStr });
+            setSuccessMsg(`Đã cập nhật ngày hiệu lực cho ${variant.name}`);
+            // Update the UI immediately without refetching all
             setVariants((prev) =>
-                prev.map((v) => (v.id === variant.id ? { ...v, sellPrice: finalPrice } : v))
+                prev.map((v) => (v.id === variant.id ? { ...v, activeEffectiveDate: newDateStr } : v))
             );
             setTimeout(() => setSuccessMsg(""), 4000);
         } catch (err) {
-            console.error("Error updating price:", err);
-            setErrorMsg("Lỗi khi cập nhật giá bán.");
-        } finally {
-            setSavingId(null);
+            console.error("Error updating effective date:", err);
+            setErrorMsg("Lỗi khi cập nhật ngày hiệu lực. Hãy đảm bảo sản phẩm đã có bảng giá ACTIVE.");
+            setTimeout(() => setErrorMsg(""), 4000);
         }
     };
 
@@ -265,13 +223,13 @@ const PriceSetting = () => {
         let ok = 0, fail = 0;
 
         for (const v of toUpdate) {
-            const newPrice = Number(((Number(v.sellPrice) || 0) * (1 + percent / 100)).toFixed(2));
+            const newPrice = Number(((Number(v.activeSellingPrice) || 0) * (1 + percent / 100)).toFixed(2));
             try {
                 await api.put(`/products/variants/${v.id}`, {
                     sku: v.sku, barcode: v.barcode, unitId: v.unitId || 1,
                     sellPrice: newPrice, imageUrl: v.imageUrl || null, isActive: v.isActive !== false,
                 });
-                setVariants((prev) => prev.map((pv) => (pv.id === v.id ? { ...pv, sellPrice: newPrice } : pv)));
+                setVariants((prev) => prev.map((pv) => (pv.id === v.id ? { ...pv, activeSellingPrice: newPrice } : pv)));
                 ok++;
             } catch { fail++; }
         }
@@ -304,7 +262,7 @@ const PriceSetting = () => {
                         const price = parseFloat(row["Selling Price"] || row["sellPrice"] || row["Giá bán"] || 0);
                         if (sku && !isNaN(price) && price >= 0) {
                             const idx = next.findIndex((v) => v.sku === sku);
-                            if (idx !== -1) { next[idx] = { ...next[idx], sellPrice: price }; updated++; }
+                            if (idx !== -1) { next[idx] = { ...next[idx], activeSellingPrice: price }; updated++; }
                         }
                     });
                     return next;
@@ -412,19 +370,14 @@ const PriceSetting = () => {
                 <PriceTable
                     variants={paginatedVariants}
                     loading={loading}
-                    editingId={editingId}
-                    editPrice={editPrice}
-                    savingId={savingId}
-                    onEditClick={handleEditClick}
-                    onCancelEdit={handleCancelEdit}
-                    onSavePrice={handleSavePrice}
-                    onEditPriceChange={setEditPrice}
                     selectedIds={selectedIds}
                     onToggleSelect={handleToggleSelect}
                     onToggleSelectAll={handleToggleSelectAll}
                     sortConfig={sortConfig}
                     onSort={handleSort}
+                    onCreatePriceModalOpen={(v) => setCreatePriceVariant(v)}
                     onViewHistory={(v) => setHistoryVariant(v)}
+                    onEffectiveDateChange={handleEffectiveDateChange}
                 />
 
                 {/* ─── PAGINATION ─── */}
@@ -508,7 +461,22 @@ const PriceSetting = () => {
                 <TaxRateManagerModal onClose={() => setIsTaxModalOpen(false)} onDataChange={fetchVariants} />
             )}
             {historyVariant && (
-                <PriceHistoryModal variant={historyVariant} onClose={() => setHistoryVariant(null)} />
+                <PriceHistoryModal 
+                    isOpen={true} 
+                    variant={historyVariant} 
+                    onClose={() => setHistoryVariant(null)} 
+                    onStatusChanged={fetchVariants}
+                />
+            )}
+            {createPriceVariant && (
+                <CreatePriceModal
+                    isOpen={true}
+                    variant={createPriceVariant}
+                    onClose={(isSuccess) => {
+                        setCreatePriceVariant(null);
+                        if (isSuccess === true) fetchVariants(); // Ensure it fetches when fully success
+                    }}
+                />
             )}
         </div>
     );

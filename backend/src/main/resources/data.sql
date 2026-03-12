@@ -47,6 +47,7 @@ TRUNCATE TABLE disposal_vouchers;
 TRUNCATE TABLE inventory_stock;
 TRUNCATE TABLE product_batches;
 TRUNCATE TABLE locations;
+TRUNCATE TABLE variant_prices;
 TRUNCATE TABLE product_variants;
 TRUNCATE TABLE gift_redemption_history;
 TRUNCATE TABLE loyalty_gifts;
@@ -341,6 +342,34 @@ INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_pri
 (25, 'TA-1L', '8901234567914', 7, 50000.00, TRUE, TRUE, NOW(6), NOW(6)),
 (26, 'OMO-800G', '8901234567915', 4, 40000.00, TRUE, TRUE, NOW(6), NOW(6));
 
+-- 9.1 VARIANT PRICES (Initial active prices for all variants)
+INSERT IGNORE INTO variant_prices (variant_id, purchase_price, selling_price, tax_percent, effective_date, status, created_at) VALUES
+(1,  20000.00, 23000.00, 10.00, '2026-01-15', 'ACTIVE', NOW(6)),
+(2,  12000.00, 15000.00, 10.00, '2026-02-01', 'ACTIVE', NOW(6)),
+(3,  35000.00, 45000.00, 10.00, '2026-01-20', 'ACTIVE', NOW(6)),
+(4,  8000.00,  12000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
+(5,  6000.00,  8000.00,  10.00, '2026-02-01', 'ACTIVE', NOW(6)),
+(6,  10000.00, 13000.00, 10.00, '2026-01-15', 'ACTIVE', NOW(6)),
+(7,  45000.00, 55000.00, 10.00, '2026-02-01', 'ACTIVE', NOW(6)),
+(8,  18000.00, 22000.00, 10.00, '2026-01-20', 'ACTIVE', NOW(6)),
+(9,  32000.00, 40000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
+(10, 1000.00,  2000.00,  5.00,  '2026-02-01', 'ACTIVE', NOW(6)),
+(11, 6000.00,  8000.00,  10.00, '2026-01-15', 'ACTIVE', NOW(6)),
+(12, 3000.00,  4500.00,  10.00, '2026-02-01', 'ACTIVE', NOW(6)),
+(13, 7000.00,  10000.00, 10.00, '2026-01-20', 'ACTIVE', NOW(6)),
+(14, 11000.00, 15000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
+(15, 4000.00,  6000.00,  5.00,  '2026-03-01', 'ACTIVE', NOW(6)),
+(16, 25000.00, 35000.00, 10.00, '2026-03-01', 'ACTIVE', NOW(6)),
+(17, 8000.00,  12000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
+(18, 7000.00,  10000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
+(19, 24000.00, 30000.00, 10.00, '2026-01-20', 'ACTIVE', NOW(6)),
+(20, 20000.00, 25000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
+(21, 16000.00, 20000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
+(22, 14000.00, 18000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
+(23, 28000.00, 35000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
+(24, 20000.00, 25000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
+(25, 40000.00, 50000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
+(26, 32000.00, 40000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6));
 -- 10. LOCATIONS
 INSERT IGNORE INTO locations (id, name, type, zone, grid_row, grid_col, grid_level, location_code, address, capacity, status, created_at) VALUES
 (1, 'Main Warehouse A1', 'STORAGE', 'A', 1, 1, 1, 'WH-A1', 'Kho chính, Dãy A, Hàng 1', 500, 'ACTIVE', NOW()),
