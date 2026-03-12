@@ -16,6 +16,8 @@ import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import LocationManagement from "./pages/Inventory/LocationManagement";
 import DisposalList from "./pages/Inventory/DisposalList";
 import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
 import PosComplain from "./pages/Pos/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -135,6 +137,9 @@ function App() {
         <Route path="inventory/disposal" element={<DisposalList />} />
         <Route path="inventory/disposal/create" element={<DisposalDetail />} />
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
+        <Route path="inventory/purchase-orders" element={<PurchaseOrderList />} />
+        <Route path="inventory/purchase-orders/create" element={<CreatePurchaseOrder />} />
+        <Route path="inventory/purchase-orders/:id" element={<CreatePurchaseOrder />} />
 
         <Route path="products" element={<ProductList />} />
         <Route path="products/addproduct" element={<AddNewProduct />} />

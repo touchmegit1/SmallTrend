@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import CustomerSearch from "./CustomerSearch";
 
 import api from "../../config/axiosConfig";
+import customerTierService from "../../services/customerTierService";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
@@ -191,6 +192,14 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
     </div>
   );
 };
+// Helper: tìm hạng thành viên phù hợp dựa trên spentAmount
+const getCustomerTier = (spentAmount, tiers) => {
+  if (!tiers || tiers.length === 0) return null;
+  return [...tiers]
+    .sort((a, b) => Number(b.minSpending) - Number(a.minSpending))
+    .find(tier => spentAmount >= Number(tier.minSpending)) || null;
+};
+
 export default function PaymentModal({ cart, customer, onClose, onComplete, shortcuts }) {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
@@ -204,6 +213,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
   const [cashAmount, setCashAmount] = useState("");
   const [focusedField, setFocusedField] = useState("customerSearch");
   const [suggestedIndex, setSuggestedIndex] = useState(-1);
+  const [tiers, setTiers] = useState([]); // Danh sách hạng thành viên
 
   const customerSearchRef = useRef(null);
   const voucherInputRef = useRef(null);
@@ -235,6 +245,19 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
   const totalDiscount = pointsDiscount + discount + voucherDiscountAmt;
   const finalTotal = subtotal - totalDiscount;
   const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
+
+  // Fetch danh sách hạng thành viên khi mở modal
+  useEffect(() => {
+    const fetchTiers = async () => {
+      try {
+        const data = await customerTierService.getAllTiers();
+        setTiers(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error fetching tiers in PaymentModal:', err);
+      }
+    };
+    fetchTiers();
+  }, []);
 
   useEffect(() => {
     if (focusedField === "customerSearch" && customerSearchRef.current) {
@@ -390,18 +413,24 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
   const completePaymentProcess = async (method, receivedAmt, changeAmt) => {
     let customerToUpdate = selectedCustomer;
 
-
     // Cập nhật điểm trung thành trong bảng customers
     if (selectedCustomer && selectedCustomer.id) {
       try {
-        const earnedPoints = Math.floor(finalTotal / 10000); // 1 điểm/10,000đ
+        const currentSpent = selectedCustomer.spentAmount || 0;
+        const newSpent = currentSpent + finalTotal;
+
+        // Tìm hạng hiện tại của khách (dựa trên spentAmount TRƯỚC giao dịch này)
+        const customerTier = getCustomerTier(currentSpent, tiers);
+        const multiplier = customerTier?.pointsMultiplier || 1;
+
+        // Tích điểm: (finalTotal / 10,000) * hệ số nhân của hạng
+        const basePoints = finalTotal / 10000;
+        const earnedPoints = Math.floor(basePoints * multiplier);
         const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
         const currentPoints = selectedCustomer.loyaltyPoints || 0;
-        const currentSpent = selectedCustomer.spentAmount || 0;
 
         // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
         const newPoints = currentPoints - pointsUsed + earnedPoints;
-        const newSpent = currentSpent + finalTotal;
 
         // Lưu vào cột loyalty_points và spent_amount trong bảng customers
         await api.put(`/crm/customers/${selectedCustomer.id}`, {
@@ -667,48 +696,78 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
             />
 
             {/* Thông tin khách hàng */}
-            {selectedCustomer && (
-              <div
-                style={{
-                  padding: "12px",
-                  background: "#d1ecf1",
-                  borderRadius: "6px",
-                  marginBottom: "15px",
-                  fontSize: "13px",
-                  border: "1px solid #007bff",
-                }}
-              >
-                <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-                  {selectedCustomer.name} - {selectedCustomer.phone} {selectedCustomer.tier && <span style={{ color: "#d9534f", marginLeft: "5px" }}>(Hạng: {selectedCustomer.tier})</span>}
+            {selectedCustomer && (() => {
+              const currentSpent = selectedCustomer.spentAmount || 0;
+              const customerTier = getCustomerTier(currentSpent, tiers);
+              const multiplier = customerTier?.pointsMultiplier || 1;
+              const earnedPoints = Math.floor((finalTotal / 10000) * multiplier);
+              return (
+                <div
+                  style={{
+                    padding: "12px",
+                    background: "#d1ecf1",
+                    borderRadius: "6px",
+                    marginBottom: "15px",
+                    fontSize: "13px",
+                    border: "1px solid #007bff",
+                  }}
+                >
+                  <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                    {selectedCustomer.name} - {selectedCustomer.phone}
+                    {customerTier ? (
+                      <span style={{
+                        display: "inline-block",
+                        marginLeft: "8px",
+                        padding: "1px 8px",
+                        background: customerTier.color || "#d9534f",
+                        color: "#fff",
+                        borderRadius: "10px",
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                      }}>
+                        👑 {customerTier.tierName}
+                      </span>
+                    ) : selectedCustomer.tier ? (
+                      <span style={{ color: "#d9534f", marginLeft: "5px" }}>(Hạng: {selectedCustomer.tier})</span>
+                    ) : null}
+                  </div>
+                  <div>Điểm hiện tại: <strong>{currentLoyaltyPoints}</strong></div>
+                  <div style={{ color: "#17a2b8", marginTop: "2px" }}>
+                    Sẽ tích: <strong>+{earnedPoints} điểm</strong>
+                    {multiplier !== 1 && (
+                      <span style={{ fontSize: "11px", marginLeft: "4px", color: "#6c757d" }}>
+                        (×{Number(multiplier).toFixed(1)} hệ số {customerTier?.tierName})
+                      </span>
+                    )}
+                  </div>
+                  {currentLoyaltyPoints > 0 && (
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginTop: "8px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={usePoints}
+                        onChange={(e) => setUsePoints(e.target.checked)}
+                      />
+                      <span>
+                        Sử dụng điểm (-
+                        {Math.min(
+                          currentLoyaltyPoints * 100,
+                          subtotal,
+                        ).toLocaleString()}
+                        đ)
+                      </span>
+                    </label>
+                  )}
                 </div>
-                <div>Điểm hiện tại: {currentLoyaltyPoints}</div>
-                {currentLoyaltyPoints > 0 && (
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      marginTop: "8px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={usePoints}
-                      onChange={(e) => setUsePoints(e.target.checked)}
-                    />
-                    <span>
-                      Sử dụng điểm (-
-                      {Math.min(
-                        currentLoyaltyPoints * 100,
-                        subtotal,
-                      ).toLocaleString()}
-                      đ)
-                    </span>
-                  </label>
-                )}
-              </div>
-            )}
+              );
+            })()}
 
             {/* Voucher */}
             <div style={{ marginBottom: "15px" }}>
