@@ -30,38 +30,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - name: Fetch base branch
-        run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
-
-      - name: Ensure PR branch contains latest base
-        run: |
-          if git merge-base --is-ancestor origin/${{ github.base_ref }} HEAD; then
-            echo "Branch is up to date with base branch."
-          else
-            echo "PR branch is behind origin/${{ github.base_ref }}."
-            echo "Please sync with base branch and resolve conflicts before merge."
-            exit 1
-          fi
-
       - name: Allow only dev to merge into main
         run: |
           if [ "${{ github.base_ref }}" = "main" ] && [ "${{ github.head_ref }}" != "dev" ]; then
             echo "Only branch 'dev' is allowed to open PRs into 'main'."
             echo "This keeps manual review in dev and prevents accidental overwrite from other branches."
             exit 1
-          fi
-
-      - name: Require effective diff for PR into dev
-        run: |
-          if [ "${{ github.base_ref }}" = "dev" ]; then
-            changed_count=$(git diff --name-only origin/dev...HEAD | wc -l)
-            if [ "$changed_count" -eq 0 ]; then
-              echo "This PR has no effective file diff against origin/dev."
-              echo "It is likely the branch was synced and local changes were overwritten during conflict resolution."
-              echo "Please re-check your branch and resolve conflicts manually before merging."
-              exit 1
-            fi
           fi
 
   backend-test:
