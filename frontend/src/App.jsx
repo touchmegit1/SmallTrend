@@ -15,6 +15,10 @@ import InventoryDashboard from "./pages/Inventory/Dashboard/InventoryDashboard";
 import InventoryCountList from "./pages/Inventory/Count/InventoryCountList";
 import InventoryCountDetail from "./pages/Inventory/Count/InventoryCountDetail";
 import LocationManagement from "./pages/Inventory/Location/LocationManagement";
+import DisposalList from "./pages/Inventory/Disposal/DisposalList";
+import DisposalDetail from "./pages/Inventory/Disposal/DisposalDetail";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrder/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/PurchaseOrder/CreatePurchaseOrder";
 import PosComplain from "./pages/Pos/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import AdsManagement from "./pages/CRM/ads";
@@ -26,8 +30,6 @@ import CRMreport from "./pages/CRM/report";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import EmployeeList from "./pages/HR/EmployeeList";
 import PayrollManagement from "./pages/HR/PayrollManagement";
-import DisposalDetail from "./pages/Inventory/Disposal/DisposalDetail";
-import DisposalList from "./pages/Inventory/Disposal/DisposalList";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
 import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
@@ -44,6 +46,8 @@ import AiChatPage from "./pages/Admin/AiChatPage";
 import NotFoundPage from "./pages/Common/NotFoundPage";
 import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
 import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
+
+
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
 const CASHIER_ROLES = ["CASHIER", "ROLE_CASHIER"];
@@ -120,21 +124,34 @@ function App() {
 
         <Route path="inventory/export" element={<DisposalList />} />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
-        <Route
-          path="inventory/suppliers"
-          element={<div className="p-4">Quản lý nhà cung cấp (Supplier)</div>}
-        />
+
         <Route
           path="inventory/audit"
           element={<Navigate to="/inventory-counts" replace />}
         />
         <Route path="inventory-counts" element={<InventoryCountList />} />
-        <Route path="inventory-counts/create" element={<InventoryCountDetail />} />
+        <Route
+          path="inventory-counts/create"
+          element={<InventoryCountDetail />}
+        />
         <Route path="inventory-counts/:id" element={<InventoryCountDetail />} />
         <Route path="inventory/locations" element={<LocationManagement />} />
         <Route path="inventory/disposal" element={<DisposalList />} />
         <Route path="inventory/disposal/create" element={<DisposalDetail />} />
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
+        <Route
+          path="inventory/purchase-orders"
+          element={<PurchaseOrderList />}
+        />
+        <Route
+          path="inventory/purchase-orders/create"
+          element={<CreatePurchaseOrder />}
+        />
+        <Route
+          path="inventory/purchase-orders/:id"
+          element={<CreatePurchaseOrder />}
+        />
+
 
         <Route path="products" element={<ProductList />} />
         <Route path="products/addproduct" element={<AddNewProduct />} />
