@@ -52,6 +52,18 @@ jobs:
             exit 1
           fi
 
+      - name: Require effective diff for PR into dev
+        run: |
+          if [ "${{ github.base_ref }}" = "dev" ]; then
+            changed_count=$(git diff --name-only origin/dev...HEAD | wc -l)
+            if [ "$changed_count" -eq 0 ]; then
+              echo "This PR has no effective file diff against origin/dev."
+              echo "It is likely the branch was synced and local changes were overwritten during conflict resolution."
+              echo "Please re-check your branch and resolve conflicts manually before merging."
+              exit 1
+            fi
+          fi
+
   backend-test:
     name: Backend Test
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
