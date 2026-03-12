@@ -34,6 +34,7 @@ import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
 import AddNewProductVariant from "./pages/Products/ProductManager/AddNewProductVariant";
+import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
 import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
@@ -189,7 +190,11 @@ function App() {
         />
         <Route
           path="products/price"
-          element={<div className="p-4"></div>}
+          element={
+            <div className="p-4">
+              <PriceSetting />
+            </div>
+          }
         />
         <Route
           path="products/combo"
