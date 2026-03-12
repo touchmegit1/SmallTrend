@@ -59,6 +59,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         { label: "Kiểm kê kho", path: "/inventory-counts" },
         { label: "Quản lý vị trí", path: "/inventory/locations" },
         { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
+          { label: "Danh sách nhà cung cấp", path: "/inventory/suppliers" },
       ],
     },
     {
@@ -68,7 +69,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       children: [
         { label: "Danh sách sản phẩm", path: "/products" },
         { label: "Thêm sản phẩm", path: "/products/addproduct" },
-        { label: "Danh mục & Brand", path: "/products/categories" },
+          { label: "Danh mục & Thương hiệu", path: "/products/categories" },
         { label: "Thiết lập giá", path: "/products/price" },
         { label: "Combo sản phẩm", path: "/products/combo" },
       ],
