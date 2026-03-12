@@ -36,9 +36,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Test class cho ProductService
- * Kiểm tra business logic của sản phẩm
- * Mục tiêu: 100% statement coverage + decision coverage
+ * Test class cho ProductService Kiểm tra business logic của sản phẩm Mục tiêu:
+ * 100% statement coverage + decision coverage
  */
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
