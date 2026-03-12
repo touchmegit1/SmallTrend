@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-policy-check:
+    name: PR Policy Check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+
+      - name: Ensure PR branch contains latest base
+        run: |
+          if git merge-base --is-ancestor origin/${{ github.base_ref }} HEAD; then
+            echo "Branch is up to date with base branch."
+          else
+            echo "PR branch is behind origin/${{ github.base_ref }}."
+            echo "Please sync with base branch and resolve conflicts before merge."
+            exit 1
+          fi
+
+      - name: Allow only dev to merge into main
+        run: |
+          if [ "${{ github.base_ref }}" = "main" ] && [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "Only branch 'dev' is allowed to open PRs into 'main'."
+            echo "This keeps manual review in dev and prevents accidental overwrite from other branches."
+            exit 1
+          fi
+
+  backend-test:
+    name: Backend Test
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run backend tests
+        run: ./mvnw -B test
+
+  frontend-lint-build:
+    name: Frontend Lint & Build
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: |
+          if [ -f eslint.config.js ] || [ -f eslint.config.mjs ] || [ -f eslint.config.cjs ] || [ -f .eslintrc ] || [ -f .eslintrc.js ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ]; then
+            if npm run | grep -q "lint:ci"; then
+              npm run lint:ci
+            else
+              npm run lint
+            fi
+          else
+            echo "No ESLint configuration file found. Skipping lint step for this branch."
+          fi
+
+      - name: Build frontend
+        run: npm run build
+
+  auto-pr-dev-to-main:
+    name: Auto PR dev -> main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    needs:
+      - backend-test
+      - frontend-lint-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create or reuse PR from dev to main
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr_number=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number')
+
+          if [ -z "$pr_number" ]; then
+            gh pr create \
+              --base main \
+              --head dev \
+              --title "chore: sync dev into main" \
+              --body "Auto-generated PR to sync tested changes from dev into main."
+            pr_number=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number')
+          fi
+
+          echo "number=$pr_number" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge for dev -> main PR
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.pr.outputs.number }}" --auto --merge
