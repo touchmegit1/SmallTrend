@@ -97,13 +97,15 @@ public class UnitConversionService {
                                                 : null) // Kế thừa thuộc tính
                                 .build();
 
-                ProductVariant savedVariant = productVariantRepository.save(packagingVariant);
+                ProductVariant savedVariant = productVariantRepository.saveAndFlush(packagingVariant);
 
                 // ─── 3. Sinh barcode nội bộ (20 + ProductID + VariantID + Random) ──────
                 String autoBarcode = productVariantService.generateInternalBarcodeForPackaging(
                                 product.getId(), savedVariant.getId());
                 savedVariant.setBarcode(autoBarcode);
-                productVariantRepository.save(savedVariant);
+                // JPA dirty checking will automatically update the barcode at the end of the transaction
+                // Removing productVariantRepository.save(savedVariant) prevents duplicate insert errors in @ElementCollection
+
 
                 // ─── 4. Chia sẻ tồn kho từ variant gốc cho variant quy đổi ─────────────
                 // Lấy tất cả inventory stock của variant gốc
