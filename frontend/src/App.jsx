@@ -35,6 +35,7 @@ import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
 import AddNewProductVariant from "./pages/Products/ProductManager/AddNewProductVariant";
 import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
+import { SuppliersScreen } from "./pages/Products/ProductManager/Suppliers";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
 import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
@@ -137,11 +138,7 @@ function App() {
         />
         <Route
           path="inventory/suppliers"
-          element={
-            <div className="p-4">
-              Quản lý nhà cung cấp (Supplier)
-            </div>
-          }
+          element={<SuppliersScreen />}
         />
         <Route
           path="inventory/audit"
