@@ -113,15 +113,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pr_number=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number')
+          pr_number=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number' || true)
 
           if [ -z "$pr_number" ]; then
             gh pr create \
               --base main \
               --head dev \
               --title "chore: sync dev into main" \
-              --body "Auto-generated PR to sync tested changes from dev into main."
-            pr_number=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number')
+              --body "Auto-generated PR to sync tested changes from dev into main." || true
+            pr_number=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number' || true)
           fi
 
           echo "number=$pr_number" >> "$GITHUB_OUTPUT"
@@ -131,4 +131,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge "${{ steps.pr.outputs.number }}" --auto --merge
+          gh pr merge "${{ steps.pr.outputs.number }}" --auto --merge || echo "Auto-merge not available yet for this PR."
