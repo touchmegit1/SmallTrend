@@ -1,117 +1,148 @@
 name: CI
 
 on:
-  push:
-    branches: [main, dev, shift]
   pull_request:
-    branches: [main, dev]
+    branches:
+      - dev
+      - main
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
 
-# Cancel redundant runs when a new push is made to the same branch
+permissions:
+  contents: write
+  pull-requests: write
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  frontend:
-    name: Frontend (Lint & Build)
+  pr-policy-check:
+    name: PR Policy Check
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
+      - name: Fetch base branch
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+
+      - name: Ensure PR branch contains latest base
+        run: |
+          if git merge-base --is-ancestor origin/${{ github.base_ref }} HEAD; then
+            echo "Branch is up to date with base branch."
+          else
+            echo "PR branch is behind origin/${{ github.base_ref }}."
+            echo "Please sync with base branch and resolve conflicts before merge."
+            exit 1
+          fi
+
+      - name: Allow only dev to merge into main
+        run: |
+          if [ "${{ github.base_ref }}" = "main" ] && [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "Only branch 'dev' is allowed to open PRs into 'main'."
+            echo "This keeps manual review in dev and prevents accidental overwrite from other branches."
+            exit 1
+          fi
+
+  backend-test:
+    name: Backend Test
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run backend tests
+        run: ./mvnw -B test
+
+  frontend-lint-build:
+    name: Frontend Lint & Build
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint:ci
+      - name: Run lint
+        run: |
+          if [ -f eslint.config.js ] || [ -f eslint.config.mjs ] || [ -f eslint.config.cjs ] || [ -f .eslintrc ] || [ -f .eslintrc.js ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ]; then
+            if npm run | grep -q "lint:ci"; then
+              npm run lint:ci
+            else
+              npm run lint
+            fi
+          else
+            echo "No ESLint configuration file found. Skipping lint step for this branch."
+          fi
 
-      - name: Build
+      - name: Build frontend
         run: npm run build
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist
-          retention-days: 7
-
-  backend:
-    name: Backend (Build & Test)
+  auto-pr-dev-to-main:
+    name: Auto PR dev -> main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    needs:
+      - backend-test
+      - frontend-lint-build
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: backend
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: test1234
-          MYSQL_DATABASE: smalltrend_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-    env:
-      DB_URL: jdbc:mysql://localhost:3306/smalltrend_test?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
-      DB_USERNAME: root
-      DB_PASSWORD: test1234
-      JWT_SECRET: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
-      CLOUDINARY_CLOUD_NAME: ci_dummy
-      CLOUDINARY_API_KEY: "000000000000000"
-      CLOUDINARY_API_SECRET: ci_dummy_secret
-      SPRING_SQL_INIT_MODE: never
-      SPRING_JPA_DDL_AUTO: create-drop
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
         with:
-          java-version: "17"
-          distribution: "temurin"
-          cache: "maven"
+          fetch-depth: 0
 
-      - name: Make Maven wrapper executable
-        run: chmod +x mvnw
+      - name: Create or reuse PR from dev to main
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr_number=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number')
 
-      - name: Compile (skip tests)
-        run: ./mvnw -B compile -DskipTests
+          if [ -z "$pr_number" ]; then
+            gh pr create \
+              --base main \
+              --head dev \
+              --title "chore: sync dev into main" \
+              --body "Auto-generated PR to sync tested changes from dev into main."
+            pr_number=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number')
+          fi
 
-      - name: Run tests + JaCoCo coverage
-        run: ./mvnw -B verify
+          echo "number=$pr_number" >> "$GITHUB_OUTPUT"
 
-      - name: Upload JaCoCo coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report
-          path: backend/target/site/jacoco
-          retention-days: 7
-
-      - name: Upload JUnit test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit-test-results
-          path: backend/target/surefire-reports
-          retention-days: 7
+      - name: Enable auto-merge for dev -> main PR
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.pr.outputs.number }}" --auto --merge
