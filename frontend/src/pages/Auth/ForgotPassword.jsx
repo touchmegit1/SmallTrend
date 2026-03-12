@@ -26,10 +26,10 @@ const ForgotPassword = () => {
 
         try {
             await authService.requestPasswordOtp(email.trim());
-            setMessage('OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.');
+            setMessage('OTP ─æ├ú ─æ╞░ß╗úc gß╗¡i ─æß║┐n email cß╗ºa bß║ín. Vui l├▓ng kiß╗âm tra hß╗Öp th╞░.');
             setStep(2);
         } catch (err) {
-            setError(err.message || 'Không thể gửi OTP, vui lòng thử lại.');
+            setError(err.message || 'Kh├┤ng thß╗â gß╗¡i OTP, vui l├▓ng thß╗¡ lß║íi.');
         } finally {
             setLoading(false);
         }
@@ -47,10 +47,10 @@ const ForgotPassword = () => {
                 newPassword,
                 confirmPassword,
             });
-            setMessage('Đặt lại mật khẩu thành công. Hệ thống sẽ chuyển bạn về trang đăng nhập.');
+            setMessage('─Éß║╖t lß║íi mß║¡t khß║⌐u th├ánh c├┤ng. Hß╗ç thß╗æng sß║╜ chuyß╗ân bß║ín vß╗ü trang ─æ─âng nhß║¡p.');
             setTimeout(() => navigate('/login'), 1200);
         } catch (err) {
-            setError(err.message || 'Đặt lại mật khẩu thất bại.');
+            setError(err.message || '─Éß║╖t lß║íi mß║¡t khß║⌐u thß║Ñt bß║íi.');
         } finally {
             setLoading(false);
         }
@@ -60,17 +60,17 @@ const ForgotPassword = () => {
         <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-md rounded-2xl bg-white shadow-xl p-8">
                 <div className="flex items-center justify-between mb-5">
-                    <h1 className="text-xl font-bold text-slate-800">Quên mật khẩu</h1>
+                    <h1 className="text-xl font-bold text-slate-800">Qu├¬n mß║¡t khß║⌐u</h1>
                     <Link to="/login" className="text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
                         <ArrowLeft className="w-4 h-4" />
-                        Quay lại
+                        Quay lß║íi
                     </Link>
                 </div>
 
                 <p className="text-sm text-slate-600 mb-5">
                     {step === 1
-                        ? 'Nhập email tài khoản để nhận mã OTP đặt lại mật khẩu.'
-                        : 'Nhập mã OTP đã nhận qua email và tạo mật khẩu mới.'}
+                        ? 'Nhß║¡p email t├ái khoß║ún ─æß╗â nhß║¡n m├ú OTP ─æß║╖t lß║íi mß║¡t khß║⌐u.'
+                        : 'Nhß║¡p m├ú OTP ─æ├ú nhß║¡n qua email v├á tß║ío mß║¡t khß║⌐u mß╗¢i.'}
                 </p>
 
                 {message && (
@@ -87,7 +87,7 @@ const ForgotPassword = () => {
                 {step === 1 ? (
                     <form onSubmit={handleRequestOtp} className="space-y-4">
                         <label className="block text-sm font-medium text-slate-700" htmlFor="forgot-email">
-                            Email tài khoản
+                            Email t├ái khoß║ún
                         </label>
                         <div className="relative">
                             <Mail className="w-4 h-4 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
@@ -107,14 +107,14 @@ const ForgotPassword = () => {
                             disabled={loading}
                             className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2.5 text-sm font-semibold disabled:opacity-60"
                         >
-                            {loading ? 'Đang gửi OTP...' : 'Gửi OTP'}
+                            {loading ? '─Éang gß╗¡i OTP...' : 'Gß╗¡i OTP'}
                         </button>
                     </form>
                 ) : (
                     <form onSubmit={handleResetPassword} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="otp-code">
-                                Mã OTP
+                                M├ú OTP
                             </label>
                             <div className="relative">
                                 <ShieldCheck className="w-4 h-4 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
@@ -122,7 +122,7 @@ const ForgotPassword = () => {
                                     id="otp-code"
                                     value={otp}
                                     onChange={(e) => setOtp(e.target.value)}
-                                    placeholder="Nhập 6 số OTP"
+                                    placeholder="Nhß║¡p 6 sß╗æ OTP"
                                     className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                                     required
                                 />
@@ -131,7 +131,7 @@ const ForgotPassword = () => {
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="new-password">
-                                Mật khẩu mới
+                                Mß║¡t khß║⌐u mß╗¢i
                             </label>
                             <div className="relative">
                                 <KeyRound className="w-4 h-4 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
@@ -140,7 +140,7 @@ const ForgotPassword = () => {
                                     type="password"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    placeholder="Ít nhất 6 ký tự"
+                                    placeholder="├ìt nhß║Ñt 6 k├╜ tß╗▒"
                                     className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                                     required
                                 />
@@ -149,7 +149,7 @@ const ForgotPassword = () => {
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="confirm-password">
-                                Xác nhận mật khẩu mới
+                                X├íc nhß║¡n mß║¡t khß║⌐u mß╗¢i
                             </label>
                             <div className="relative">
                                 <KeyRound className="w-4 h-4 text-slate-400 absolute top-1/2 -translate-y-1/2 left-3" />
@@ -158,7 +158,7 @@ const ForgotPassword = () => {
                                     type="password"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder="Nhập lại mật khẩu mới"
+                                    placeholder="Nhß║¡p lß║íi mß║¡t khß║⌐u mß╗¢i"
                                     className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                                     required
                                 />
@@ -177,14 +177,14 @@ const ForgotPassword = () => {
                                 }}
                                 className="rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
                             >
-                                Gửi lại OTP
+                                Gß╗¡i lß║íi OTP
                             </button>
                             <button
                                 type="submit"
                                 disabled={loading}
                                 className="rounded-lg bg-blue-600 hover:bg-blue-700 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                             >
-                                {loading ? 'Đang cập nhật...' : 'Đặt lại mật khẩu'}
+                                {loading ? '─Éang cß║¡p nhß║¡t...' : '─Éß║╖t lß║íi mß║¡t khß║⌐u'}
                             </button>
                         </div>
                     </form>

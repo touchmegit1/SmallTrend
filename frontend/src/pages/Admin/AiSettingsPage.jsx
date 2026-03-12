@@ -21,7 +21,7 @@ const GEMINI_MODELS = [
 ];
 
 const LANGUAGES = [
-    { value: "vi", label: "Tiếng Việt" },
+    { value: "vi", label: "Tiß║┐ng Viß╗çt" },
     { value: "en", label: "English" },
 ];
 
@@ -43,7 +43,7 @@ const AiSettingsPage = () => {
             setSettings(data);
             setHasChanges(false);
         } catch (error) {
-            showToast("Không thể tải cấu hình AI", "error");
+            showToast("Kh├┤ng thß╗â tß║úi cß║Ñu h├¼nh AI", "error");
         } finally {
             setLoading(false);
         }
@@ -55,9 +55,9 @@ const AiSettingsPage = () => {
             const data = await aiChatService.updateSettings(settings);
             setSettings(data);
             setHasChanges(false);
-            showToast("Đã lưu cấu hình AI thành công!", "success");
+            showToast("─É├ú l╞░u cß║Ñu h├¼nh AI th├ánh c├┤ng!", "success");
         } catch (error) {
-            showToast("Lỗi khi lưu cấu hình", "error");
+            showToast("Lß╗ùi khi l╞░u cß║Ñu h├¼nh", "error");
         } finally {
             setSaving(false);
         }
@@ -78,7 +78,7 @@ const AiSettingsPage = () => {
             <div className="bg-slate-50 min-h-screen flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
                     <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
-                    <p className="text-sm text-slate-500">Đang tải cấu hình AI...</p>
+                    <p className="text-sm text-slate-500">─Éang tß║úi cß║Ñu h├¼nh AI...</p>
                 </div>
             </div>
         );
@@ -89,12 +89,12 @@ const AiSettingsPage = () => {
             <div className="bg-slate-50 min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-                    <p className="text-slate-600">Không thể tải cấu hình AI</p>
+                    <p className="text-slate-600">Kh├┤ng thß╗â tß║úi cß║Ñu h├¼nh AI</p>
                     <button
                         onClick={loadSettings}
                         className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors"
                     >
-                        Thử lại
+                        Thß╗¡ lß║íi
                     </button>
                 </div>
             </div>
@@ -129,16 +129,16 @@ const AiSettingsPage = () => {
                             <Settings size={20} className="text-white" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-slate-800">Cài đặt AI</h1>
+                            <h1 className="text-lg font-bold text-slate-800">C├ái ─æß║╖t AI</h1>
                             <p className="text-xs text-slate-400">
-                                Quản lý cấu hình trợ lý AI SmallTrend
+                                Quß║ún l├╜ cß║Ñu h├¼nh trß╗ú l├╜ AI SmallTrend
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {settings.updatedAt && (
                             <span className="text-xs text-slate-400">
-                                Cập nhật: {new Date(settings.updatedAt).toLocaleString("vi-VN")}
+                                Cß║¡p nhß║¡t: {new Date(settings.updatedAt).toLocaleString("vi-VN")}
                             </span>
                         )}
                         <button
@@ -155,7 +155,7 @@ const AiSettingsPage = () => {
                             ) : (
                                 <Save size={16} />
                             )}
-                            {saving ? "Đang lưu..." : "Lưu thay đổi"}
+                            {saving ? "─Éang l╞░u..." : "L╞░u thay ─æß╗òi"}
                         </button>
                     </div>
                 </div>
@@ -168,16 +168,16 @@ const AiSettingsPage = () => {
                                 <Sliders size={16} className="text-indigo-500" />
                             </div>
                             <div>
-                                <h2 className="text-sm font-bold text-slate-800">Cấu hình Model</h2>
-                                <p className="text-[10px] text-slate-400">Chọn model AI và các thông số</p>
+                                <h2 className="text-sm font-bold text-slate-800">Cß║Ñu h├¼nh Model</h2>
+                                <p className="text-[10px] text-slate-400">Chß╗ìn model AI v├á c├íc th├┤ng sß╗æ</p>
                             </div>
                         </div>
                         <div className="p-5 space-y-4">
                             {/* AI Enabled Toggle */}
                             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                                 <div>
-                                    <p className="text-sm font-semibold text-slate-700">Bật/Tắt AI</p>
-                                    <p className="text-[10px] text-slate-400">Kill-switch để tắt toàn bộ AI</p>
+                                    <p className="text-sm font-semibold text-slate-700">Bß║¡t/Tß║»t AI</p>
+                                    <p className="text-[10px] text-slate-400">Kill-switch ─æß╗â tß║»t to├án bß╗Ö AI</p>
                                 </div>
                                 <button
                                     onClick={() => updateField("aiEnabled", !settings.aiEnabled)}
@@ -229,16 +229,16 @@ const AiSettingsPage = () => {
                                     className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600"
                                 />
                                 <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                                    <span>Chính xác</span>
-                                    <span>Cân bằng</span>
-                                    <span>Sáng tạo</span>
+                                    <span>Ch├¡nh x├íc</span>
+                                    <span>C├ón bß║▒ng</span>
+                                    <span>S├íng tß║ío</span>
                                 </div>
                             </div>
 
                             {/* Max Output Tokens */}
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                                    Giới hạn output (tokens)
+                                    Giß╗¢i hß║ín output (tokens)
                                 </label>
                                 <input
                                     type="number"
@@ -259,16 +259,16 @@ const AiSettingsPage = () => {
                                 <Zap size={16} className="text-amber-500" />
                             </div>
                             <div>
-                                <h2 className="text-sm font-bold text-slate-800">Dữ liệu ngữ cảnh</h2>
-                                <p className="text-[10px] text-slate-400">Chọn dữ liệu AI được phép truy cập</p>
+                                <h2 className="text-sm font-bold text-slate-800">Dß╗» liß╗çu ngß╗» cß║únh</h2>
+                                <p className="text-[10px] text-slate-400">Chß╗ìn dß╗» liß╗çu AI ─æ╞░ß╗úc ph├⌐p truy cß║¡p</p>
                             </div>
                         </div>
                         <div className="p-5 space-y-3">
                             {[
-                                { key: "includeSalesData", label: "Doanh thu & Đơn hàng", desc: "Dữ liệu bán hàng, top sản phẩm" },
-                                { key: "includeInventoryData", label: "Kho hàng", desc: "Tồn kho, cảnh báo hết hàng" },
-                                { key: "includeCustomerData", label: "Khách hàng", desc: "Thông tin, điểm tích lũy" },
-                                { key: "includeCouponData", label: "Mã giảm giá", desc: "Coupon đang hoạt động" },
+                                { key: "includeSalesData", label: "Doanh thu & ─É╞ín h├áng", desc: "Dß╗» liß╗çu b├ín h├áng, top sß║ún phß║⌐m" },
+                                { key: "includeInventoryData", label: "Kho h├áng", desc: "Tß╗ôn kho, cß║únh b├ío hß║┐t h├áng" },
+                                { key: "includeCustomerData", label: "Kh├ích h├áng", desc: "Th├┤ng tin, ─æiß╗âm t├¡ch l┼⌐y" },
+                                { key: "includeCouponData", label: "M├ú giß║úm gi├í", desc: "Coupon ─æang hoß║ít ─æß╗Öng" },
                             ].map((item) => (
                                 <div
                                     key={item.key}
@@ -296,7 +296,7 @@ const AiSettingsPage = () => {
                             {/* Low Stock Threshold */}
                             <div className="pt-2">
                                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                                    Ngưỡng tồn kho thấp
+                                    Ng╞░ß╗íng tß╗ôn kho thß║Ñp
                                 </label>
                                 <div className="flex items-center gap-2">
                                     <input
@@ -307,7 +307,7 @@ const AiSettingsPage = () => {
                                         max="100"
                                         className="w-24 px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-700 text-center focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none transition-all"
                                     />
-                                    <span className="text-xs text-slate-400">sản phẩm (≤ giá trị này = cảnh báo)</span>
+                                    <span className="text-xs text-slate-400">sß║ún phß║⌐m (Γëñ gi├í trß╗ï n├áy = cß║únh b├ío)</span>
                                 </div>
                             </div>
                         </div>
@@ -320,8 +320,8 @@ const AiSettingsPage = () => {
                                 <Bot size={16} className="text-purple-500" />
                             </div>
                             <div>
-                                <h2 className="text-sm font-bold text-slate-800">Hành vi & Tính cách AI</h2>
-                                <p className="text-[10px] text-slate-400">Tùy chỉnh cách AI trả lời</p>
+                                <h2 className="text-sm font-bold text-slate-800">H├ánh vi & T├¡nh c├ích AI</h2>
+                                <p className="text-[10px] text-slate-400">T├╣y chß╗ënh c├ích AI trß║ú lß╗¥i</p>
                             </div>
                         </div>
                         <div className="p-5">
@@ -329,7 +329,7 @@ const AiSettingsPage = () => {
                                 {/* AI Name */}
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                                        Tên hiển thị AI
+                                        T├¬n hiß╗ân thß╗ï AI
                                     </label>
                                     <input
                                         type="text"
@@ -343,7 +343,7 @@ const AiSettingsPage = () => {
                                 {/* Response Language */}
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                                        Ngôn ngữ phản hồi
+                                        Ng├┤n ngß╗» phß║ún hß╗ôi
                                     </label>
                                     <select
                                         value={settings.responseLanguage || "vi"}
@@ -360,7 +360,7 @@ const AiSettingsPage = () => {
                                 <div className="flex items-end">
                                     <div className="flex items-center gap-2 px-3 py-2.5 bg-indigo-50 rounded-xl text-xs text-indigo-600 w-full">
                                         <Info size={14} className="flex-shrink-0" />
-                                        <span>Thay đổi có hiệu lực ngay lập tức cho tin nhắn mới</span>
+                                        <span>Thay ─æß╗òi c├│ hiß╗çu lß╗▒c ngay lß║¡p tß╗⌐c cho tin nhß║»n mß╗¢i</span>
                                     </div>
                                 </div>
                             </div>
@@ -368,13 +368,13 @@ const AiSettingsPage = () => {
                             {/* Welcome Message */}
                             <div className="mb-4">
                                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                                    Tin nhắn chào mừng
+                                    Tin nhß║»n ch├áo mß╗½ng
                                 </label>
                                 <textarea
                                     value={settings.welcomeMessage || ""}
                                     onChange={(e) => updateField("welcomeMessage", e.target.value)}
                                     rows={2}
-                                    placeholder="Xin chào! Tôi là trợ lý AI..."
+                                    placeholder="Xin ch├áo! T├┤i l├á trß╗ú l├╜ AI..."
                                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 resize-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none transition-all"
                                 />
                             </div>
@@ -382,17 +382,17 @@ const AiSettingsPage = () => {
                             {/* System Prompt */}
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                                    System Prompt (Hướng dẫn cho AI)
+                                    System Prompt (H╞░ß╗¢ng dß║½n cho AI)
                                 </label>
                                 <textarea
                                     value={settings.systemPrompt || ""}
                                     onChange={(e) => updateField("systemPrompt", e.target.value)}
                                     rows={8}
-                                    placeholder="Bạn là trợ lý AI nội bộ..."
+                                    placeholder="Bß║ín l├á trß╗ú l├╜ AI nß╗Öi bß╗Ö..."
                                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 font-mono resize-y focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none transition-all"
                                 />
                                 <p className="text-[10px] text-slate-400 mt-1">
-                                    Đây là lệnh hệ thống gửi kèm mọi câu hỏi. Thay đổi cẩn thận.
+                                    ─É├óy l├á lß╗çnh hß╗ç thß╗æng gß╗¡i k├¿m mß╗ìi c├óu hß╗Åi. Thay ─æß╗òi cß║⌐n thß║¡n.
                                 </p>
                             </div>
                         </div>
@@ -405,9 +405,9 @@ const AiSettingsPage = () => {
                                 <MessageSquare size={16} className="text-green-500" />
                             </div>
                             <div>
-                                <h2 className="text-sm font-bold text-slate-800">Gợi ý nhanh</h2>
+                                <h2 className="text-sm font-bold text-slate-800">Gß╗úi ├╜ nhanh</h2>
                                 <p className="text-[10px] text-slate-400">
-                                    Các nút gợi ý hiển thị trên giao diện chat
+                                    C├íc n├║t gß╗úi ├╜ hiß╗ân thß╗ï tr├¬n giao diß╗çn chat
                                 </p>
                             </div>
                         </div>
@@ -416,7 +416,7 @@ const AiSettingsPage = () => {
                                 {[1, 2, 3, 4, 5].map((num) => (
                                     <div key={num}>
                                         <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                                            Gợi ý {num}
+                                            Gß╗úi ├╜ {num}
                                         </label>
                                         <input
                                             type="text"
@@ -424,14 +424,14 @@ const AiSettingsPage = () => {
                                             onChange={(e) =>
                                                 updateField(`quickPrompt${num}`, e.target.value)
                                             }
-                                            placeholder={`VD: Doanh thu hôm nay thế nào?`}
+                                            placeholder={`VD: Doanh thu h├┤m nay thß║┐ n├áo?`}
                                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none transition-all"
                                         />
                                     </div>
                                 ))}
                             </div>
                             <p className="text-[10px] text-slate-400 mt-3">
-                                Để trống để ẩn gợi ý. Tối đa 5 gợi ý.
+                                ─Éß╗â trß╗æng ─æß╗â ß║⌐n gß╗úi ├╜. Tß╗æi ─æa 5 gß╗úi ├╜.
                             </p>
                         </div>
                     </div>
