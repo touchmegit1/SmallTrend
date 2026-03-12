@@ -20,16 +20,16 @@ export const useFetchVariants = (productId) => {
         unit_name: v.unitName,
         unit_value: v.unitValue,
         sku: v.sku,
-        barcode: v.barcode,
+        barcode: v.barcode || v.pluCode || '',
         plu_code: v.pluCode,
-        sell_price: v.sellPrice,
-        cost_price: v.costPrice,
-        stock_quantity: v.stockQuantity,
-        image_url: v.imageUrl,
-        is_active: v.isActive,
-        created_at: v.createdAt,
-        attributes: v.attributes,
-        unit_conversions: v.unitConversions || []
+        sell_price: v.sellPrice || 0,
+        cost_price: v.costPrice || 0,
+        stock_quantity: v.stockQuantity || 0,
+        image_url: v.imageUrl || v.image_url || null,
+        is_active: v.isActive !== false,
+        created_at: v.createdAt || v.created_at,
+        attributes: v.attributes || {},
+        unit_conversions: v.unitConversions || v.unit_conversions || []
       }));
       setVariants(mappedVariants);
       setError(null);

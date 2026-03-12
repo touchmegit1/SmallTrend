@@ -546,9 +546,9 @@ function ProductDetail() {
                       <TableCell className="font-semibold text-gray-400 text-center text-xs">{index + 1}</TableCell>
                       <TableCell className="text-center">
                         <div className="w-9 h-9 mx-auto bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                          {(variant.image_url || variant.imageUrl) ? (
+                          {variant.image_url ? (
                             <img
-                              src={variant.image_url || variant.imageUrl}
+                              src={variant.image_url}
                               alt={variant.name}
                               className="w-full h-full object-cover"
                             />
