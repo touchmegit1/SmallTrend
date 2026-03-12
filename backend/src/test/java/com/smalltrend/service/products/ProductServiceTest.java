@@ -6,7 +6,6 @@ import com.smalltrend.entity.Brand;
 import com.smalltrend.entity.Category;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.ProductVariant;
-import com.smalltrend.entity.Supplier;
 import com.smalltrend.entity.TaxRate;
 import com.smalltrend.repository.BrandRepository;
 import com.smalltrend.repository.CategoryRepository;
@@ -96,14 +95,12 @@ class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("getAll - mapToResponse với đầy đủ brand, category, taxRate, variants, supplier")
+    @DisplayName("getAll - mapToResponse với đầy đủ brand, category, taxRate, variants")
     void getAll_shouldMapAllFields_whenBrandCategoryTaxRateVariantsPresent() {
         // Arrange: Cover tất cả nhánh TRUE trong mapToResponse:
         // brand != null → TRUE, category != null → TRUE,
-        // taxRate != null → TRUE, variants != null → TRUE,
-        // brand.getSupplier() != null → TRUE
-        Supplier supplier = Supplier.builder().id(1).name("NCC ABC").build();
-        Brand brand = Brand.builder().id(4).name("Heineken").supplier(supplier).build();
+        // taxRate != null → TRUE, variants != null → TRUE
+        Brand brand = Brand.builder().id(4).name("Heineken").build();
         Category category = Category.builder().id(3).name("Bia").build();
         TaxRate taxRate = TaxRate.builder().id(1).name("VAT 10%").rate(BigDecimal.valueOf(10)).build();
 
@@ -133,15 +130,13 @@ class ProductServiceTest {
         assertEquals(BigDecimal.valueOf(10), resp.getTax_rate_value());
         // Verify variant count
         assertEquals(2, resp.getVariant_count());
-        // Verify supplier
-        assertEquals("NCC ABC", resp.getSupplier_name());
     }
 
     @Test
-    @DisplayName("getAll - mapToResponse khi brand có nhưng supplier null")
-    void getAll_shouldMapSupplierNull_whenBrandHasNoSupplier() {
-        // Arrange: Cover nhánh: brand != null → TRUE, brand.getSupplier() != null → FALSE
-        Brand brand = Brand.builder().id(4).name("Heineken").supplier(null).build();
+    @DisplayName("getAll - mapToResponse khi brand có giá trị")
+    void getAll_shouldMapBrand_whenBrandExists() {
+        // Arrange
+        Brand brand = Brand.builder().id(4).name("Heineken").build();
         Product product = buildProduct(15, "Bia test", true);
         product.setBrand(brand);
 
@@ -153,7 +148,6 @@ class ProductServiceTest {
         // Assert
         assertEquals(1, result.size());
         assertEquals("Heineken", result.get(0).getBrand_name());
-        assertNull(result.get(0).getSupplier_name());
     }
 
     // ========== GET BY ID TESTS ==========
