@@ -224,17 +224,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   Trung tâm Báo cáo
                 </NavLink>
                 <NavLink
-                  to="/hr/shift-tickets"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Ticket đổi ca
-                </NavLink>
-                <NavLink
                   to="/admin/audit-logs"
                   className={({ isActive }) =>
                     `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
@@ -244,6 +233,17 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   }
                 >
                   Nhật ký Audit
+                </NavLink>
+                <NavLink
+                  to="/admin/ai-settings"
+                  className={({ isActive }) =>
+                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                      ? "bg-indigo-100 text-indigo-700 font-medium"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    }`
+                  }
+                >
+                  Cài đặt AI
                 </NavLink>
               </div>
             )}

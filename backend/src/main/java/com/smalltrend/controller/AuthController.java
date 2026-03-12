@@ -7,8 +7,11 @@ import com.smalltrend.dto.auth.ForgotPasswordResetRequest;
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.entity.User;
 import com.smalltrend.service.PasswordResetService;
+import com.smalltrend.repository.UserRepository;
+import com.smalltrend.service.AuditLogService;
 import com.smalltrend.service.UserService;
 import com.smalltrend.validation.UserManagementValidator;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,11 +40,22 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserManagementValidator validator;
     private final PasswordResetService passwordResetService;
+    private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
+
+    private String getClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
         try {
-            // Validate input 
+            // Validate input
             List<String> errors = validator.validateLogin(request.getUsername(), request.getPassword());
             if (validator.hasErrors(errors)) {
                 log.warn("Login validation failed: {}", validator.errorsToString(errors));
@@ -58,26 +72,46 @@ public class AuthController {
             );
 
             AuthResponse response = userService.login(request.getUsername());
+            User actor = userRepository.findByUsername(request.getUsername()).orElse(null);
+            auditLogService.logAction(actor, "LOGIN", "User",
+                    actor != null ? actor.getId() : null, "OK", ip,
+                    String.format("{\"username\":\"%s\"}", request.getUsername()), "Login successful");
             log.info("User logged in successfully: {}", request.getUsername());
             return ResponseEntity.ok(response);
 
         } catch (BadCredentialsException e) {
             log.warn("Invalid login attempt for user: {}", request.getUsername());
+            User actor = userRepository.findByUsername(request.getUsername()).orElse(null);
+            auditLogService.logAction(actor, "LOGIN", "User",
+                    actor != null ? actor.getId() : null, "FAIL", ip,
+                    String.format("{\"username\":\"%s\"}", request.getUsername()), "Invalid credentials");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Tên đăng nhập hoặc mật khẩu không đúng"));
 
         } catch (DisabledException e) {
             log.warn("Login attempt for disabled user: {}", request.getUsername());
+            User actor = userRepository.findByUsername(request.getUsername()).orElse(null);
+            auditLogService.logAction(actor, "LOGIN", "User",
+                    actor != null ? actor.getId() : null, "DENIED", ip,
+                    String.format("{\"username\":\"%s\"}", request.getUsername()), "Account disabled");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Tài khoản đã bị vô hiệu hóa"));
 
         } catch (LockedException e) {
             log.warn("Login attempt for locked user: {}", request.getUsername());
+            User actor = userRepository.findByUsername(request.getUsername()).orElse(null);
+            auditLogService.logAction(actor, "LOGIN", "User",
+                    actor != null ? actor.getId() : null, "DENIED", ip,
+                    String.format("{\"username\":\"%s\"}", request.getUsername()), "Account locked");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Tài khoản đã bị khóa"));
 
         } catch (AuthenticationException e) {
             log.warn("Authentication failed for user: {}, error: {}", request.getUsername(), e.getMessage());
+            User actor = userRepository.findByUsername(request.getUsername()).orElse(null);
+            auditLogService.logAction(actor, "LOGIN", "User",
+                    actor != null ? actor.getId() : null, "FAIL", ip,
+                    String.format("{\"username\":\"%s\"}", request.getUsername()), e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Xác thực thất bại: " + e.getMessage()));
 
@@ -89,11 +123,15 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
+    public ResponseEntity<?> logout(HttpServletRequest httpRequest) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null) {
                 String username = authentication.getName();
+                User actor = userRepository.findByUsername(username).orElse(null);
+                auditLogService.logAction(actor, "LOGOUT", "User",
+                        actor != null ? actor.getId() : null, "OK", getClientIp(httpRequest),
+                        String.format("{\"username\":\"%s\"}", username), "Logout successful");
                 log.info("User logged out: {}", username);
                 SecurityContextHolder.clearContext();
             }

@@ -126,6 +126,26 @@ const reportService = {
     },
 
     /**
+     * Fetch report binary from the backend /preview endpoint and return a blob object URL.
+     * The caller MUST call URL.revokeObjectURL(url) when done to free memory.
+     * @param {number} id - Report ID
+     * @param {string} format - Report format (PDF, EXCEL, CSV)
+     * @returns {Promise<string>} - Blob object URL
+     */
+    getPreviewBlobUrl: async (id, format) => {
+        const mimeMap = {
+            PDF: 'application/pdf',
+            EXCEL: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            CSV: 'text/csv',
+        };
+        const mime = mimeMap[(format || '').toUpperCase()] || 'application/octet-stream';
+
+        const response = await api.get(`/reports/${id}/preview`, { responseType: 'blob' });
+        const blob = new Blob([response.data], { type: mime });
+        return URL.createObjectURL(blob);
+    },
+
+    /**
      * @deprecated Use openDownload() instead.
      */
     downloadReport: async (id, _reportName, _format) => {

@@ -138,4 +138,42 @@ public class ReportController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    /**
+     * Preview the report file inline in the browser (PDF only).
+     * Same as /download but Content-Disposition is "inline" so the browser renders it.
+     */
+    @GetMapping("/{id}/preview")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> previewReport(
+            @PathVariable Integer id,
+            Authentication authentication) {
+        String userEmail = authentication.getName();
+        ReportDTO report = reportService.getReportById(id, userEmail);
+
+        String rawUrl = report.getDownloadUrl() != null ? report.getDownloadUrl() : report.getFilePath();
+        if (!"COMPLETED".equals(report.getStatus()) || rawUrl == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        try {
+            byte[] fileBytes = cloudinaryService.downloadFileBytes(rawUrl);
+            String filename = rawUrl.substring(rawUrl.lastIndexOf('/') + 1);
+
+            MediaType contentType = MediaType.APPLICATION_PDF;
+            if (filename.endsWith(".xlsx"))
+                contentType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            else if (filename.endsWith(".csv"))
+                contentType = MediaType.parseMediaType("text/csv");
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    .contentType(contentType)
+                    .body(fileBytes);
+
+        } catch (Exception e) {
+            log.error("Failed to preview report {} for user {}", id, userEmail, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

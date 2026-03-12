@@ -264,26 +264,18 @@ const AuditLogPage = () => {
         }).replace(',', '');
     };
 
-    // ── export ──
-    const handleExport = () => {
-        const csv = [
-            ['Time', 'Actor', 'Action', 'Target', 'Result', 'IP', 'Trace ID'].join(','),
-            ...auditLogs.map(log => [
-                formatTimestamp(log.createdAt),
-                `${log.userName || 'N/A'} (${log.userEmail || 'N/A'})`,
-                log.action || 'N/A',
-                log.target || 'N/A',
-                log.result || 'N/A',
-                log.ipAddress || 'N/A',
-                log.traceId || 'N/A',
-            ].map(c => `"${c}"`).join(','))
-        ].join('\n');
-        const a = Object.assign(document.createElement('a'), {
-            href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
-            download: `audit_logs_${new Date().toISOString()}.csv`,
-        });
-        a.click();
-        URL.revokeObjectURL(a.href);
+    // ── export PDF (server-side) ──
+    const [exporting, setExporting] = useState(false);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            await auditLogService.exportPdf(filters);
+        } catch (err) {
+            alert('Export failed: ' + (err?.message || 'Unknown error'));
+        } finally {
+            setExporting(false);
+        }
     };
 
     // ── save/apply saved filters ──
@@ -369,14 +361,17 @@ const AuditLogPage = () => {
                     )}
                 </button>
 
-                {/* Export */}
+                {/* Export PDF */}
                 <button
-                    style={s.exportBtn}
+                    style={{
+                        ...s.exportBtn,
+                        ...(exporting ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
+                    }}
                     onClick={handleExport}
-                    disabled={auditLogs.length === 0}
+                    disabled={exporting}
                 >
                     <Download size={14} />
-                    Export
+                    {exporting ? 'Exporting…' : 'Export PDF'}
                 </button>
             </div>
 
