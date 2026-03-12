@@ -301,6 +301,8 @@ function ProductDetail() {
     });
   };
 
+  const productImage = product?.image_url || product?.imageUrl || null;
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
 
@@ -419,9 +421,9 @@ function ProductDetail() {
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Profile Thu nhỏ</span>
           </div>
           <div className="aspect-square bg-white flex items-center justify-center p-4 relative group">
-            {product.image_url ? (
+            {productImage ? (
               <img
-                src={product.image_url}
+                src={productImage}
                 alt={product.name}
                 className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
               />
@@ -544,9 +546,9 @@ function ProductDetail() {
                       <TableCell className="font-semibold text-gray-400 text-center text-xs">{index + 1}</TableCell>
                       <TableCell className="text-center">
                         <div className="w-9 h-9 mx-auto bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                          {variant.image_url ? (
+                          {(variant.image_url || variant.imageUrl) ? (
                             <img
-                              src={variant.image_url}
+                              src={variant.image_url || variant.imageUrl}
                               alt={variant.name}
                               className="w-full h-full object-cover"
                             />
@@ -601,11 +603,11 @@ function ProductDetail() {
                       </TableCell>
 
                       <TableCell className="text-right">
-                        <span className="text-base font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded whitespace-nowrap">{variant.sell_price?.toLocaleString('vi-VN') || "0"} ₫</span>
+                        <span className="text-base font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded whitespace-nowrap">{(variant.sell_price ?? variant.sellPrice ?? 0).toLocaleString('vi-VN')} ₫</span>
                       </TableCell>
 
                       <TableCell className="text-center">
-                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{variant.stockQuantity || 0}</span>
+                        <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">{variant.stock_quantity ?? variant.stockQuantity ?? 0}</span>
                       </TableCell>
 
                       <TableCell className="text-center">
