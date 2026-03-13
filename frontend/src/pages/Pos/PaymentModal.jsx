@@ -207,7 +207,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
   const [voucher, setVoucher] = useState("");
   const [voucherError, setVoucherError] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState(null); // { type: 'PERCENT' | 'FIXED', value: number, max: number, code: string }
-  const [discount, setDiscount] = useState(0); // Giảm giá thủ công
+  const [discount, setDiscount] = useState(""); // Giảm giá thủ công (dạng chuỗi để trống ban đầu)
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
@@ -242,8 +242,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
     }
   }
 
-  const totalDiscount = pointsDiscount + discount + voucherDiscountAmt;
-  const finalTotal = subtotal - totalDiscount;
+  const discountNum = parseFloat(discount) || 0;
+  const totalDiscount = pointsDiscount + discountNum + voucherDiscountAmt;
+  const finalTotal = Math.max(0, subtotal - totalDiscount);
   const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
 
   // Fetch danh sách hạng thành viên khi mở modal
@@ -386,7 +387,12 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
       // F10 shortcuts actions
       else if (shortcuts && e.key === shortcuts.payment1) {
         e.preventDefault();
-        paymentButtonRef.current?.click();
+        if (finalTotal === 0) {
+          // Đơn 0đ: Hoàn tất ngay không cần nhập tiền
+          completePaymentProcess("cash", 0, 0);
+        } else {
+          paymentButtonRef.current?.click();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -458,7 +464,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
       customerMoney: receivedAmt,
       change: changeAmt,
       pointsDiscount,
-      discount: discount + voucherDiscountAmt, // Gộp cả giảm giá định dạng này qua `onComplete` nếu cần
+      discount: discountNum + voucherDiscountAmt,
       notes,
       paymentMethod: method === "cash" ? "Tiền mặt" : "Chuyển khoản"
     });
@@ -510,6 +516,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
   };
 
   const initiatePayment = () => {
+    if (finalTotal === 0) {
+      // Đơn 0đ: Hoàn tất ngay không cần nhập tiền
+      completePaymentProcess("cash", 0, 0);
+      return;
+    }
     if (paymentMethod === "cash") {
       if (!cashAmount || parseFloat(cashAmount) < finalTotal) {
         alert("Số tiền không đủ!");
@@ -669,7 +680,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   <span>-{voucherDiscountAmt.toLocaleString()}đ</span>
                 </div>
               )}
-              {discount > 0 && (
+              {discountNum > 0 && (
                 <div
                   style={{
                     display: "flex",
@@ -679,7 +690,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   }}
                 >
                   <span>Giảm giá:</span>
-                  <span>-{discount.toLocaleString()}đ</span>
+                  <span>-{discountNum.toLocaleString()}đ</span>
                 </div>
               )}
             </div>
@@ -840,7 +851,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 type="number"
                 placeholder="Nhập số tiền giảm"
                 value={discount}
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setDiscount(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 style={{
                   width: "100%",
                   padding: "8px",
@@ -1105,14 +1117,14 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
               ref={paymentButtonRef}
               onClick={initiatePayment}
               onFocus={() => setFocusedField("paymentButton")}
-              disabled={!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal))}
+              disabled={finalTotal > 0 && (!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)))}
               style={{
                 width: "100%",
                 padding: "18px",
                 background:
-                  !paymentMethod ||
+                  finalTotal > 0 && (!paymentMethod ||
                     (paymentMethod === "cash" &&
-                      (!cashAmount || parseFloat(cashAmount) < finalTotal))
+                      (!cashAmount || parseFloat(cashAmount) < finalTotal)))
                     ? "#6c757d"
                     : "#007bff",
                 color: "white",
@@ -1121,9 +1133,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 fontSize: "18px",
                 fontWeight: "bold",
                 cursor:
-                  !paymentMethod ||
+                  finalTotal > 0 && (!paymentMethod ||
                     (paymentMethod === "cash" &&
-                      (!cashAmount || parseFloat(cashAmount) < finalTotal))
+                      (!cashAmount || parseFloat(cashAmount) < finalTotal)))
                     ? "not-allowed"
                     : "pointer",
                 boxShadow: "0 4px 12px rgba(0,123,255,0.3)",

@@ -17,6 +17,10 @@ function TransactionHistory() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [refundModal, setRefundModal] = useState(null);
+  const [refundQtys, setRefundQtys] = useState({});
+  const [editCustomerModal, setEditCustomerModal] = useState(null); // transaction đang sửa
+  const [editCustomerData, setEditCustomerData] = useState({ name: '', phone: '' });
 
   useEffect(() => {
     const loadAndSaveTransactions = async () => {
@@ -157,6 +161,49 @@ function TransactionHistory() {
 
     setSelectedIds([]);
     setBulkDeleteConfirm(false);
+  };
+
+  const openRefundModal = (transaction) => {
+    const items = transaction.cart || transaction.items || [];
+    const initQtys = {};
+    items.forEach((_, i) => { initQtys[i] = 0; });
+    setRefundQtys(initQtys);
+    setRefundModal(transaction);
+    setShowActionMenu(null);
+  };
+
+  const confirmRefund = () => {
+    if (!refundModal) return;
+    const items = refundModal.cart || refundModal.items || [];
+    const hasRefund = items.some((_, i) => (refundQtys[i] || 0) > 0);
+    if (!hasRefund) { alert('Vui lòng chọn ít nhất 1 sản phẩm để hoàn trả!'); return; }
+
+    const newItems = items.map((item, i) => {
+      const returnQty = refundQtys[i] || 0;
+      const newQty = (item.qty || item.quantity || 1) - returnQty;
+      return newQty > 0 ? { ...item, qty: newQty } : null;
+    }).filter(Boolean);
+
+    let refundAmount = 0;
+    items.forEach((item, i) => { refundAmount += (refundQtys[i] || 0) * (item.price || 0); });
+
+    const oldTotal = parseInt((refundModal.total || '').toString().replace(/[^0-9]/g, '')) || 0;
+    const newTotal = Math.max(0, oldTotal - refundAmount);
+
+    const updatedTransaction = {
+      ...refundModal,
+      cart: newItems,
+      items: newItems,
+      total: `${newTotal.toLocaleString()} đ`,
+      quantity: `${newItems.reduce((s, it) => s + (it.qty || it.quantity || 1), 0)} món`,
+      status: newItems.length === 0 ? 'Đã hoàn trả' : 'Hoàn thành',
+      refundNote: `Hoàn trả ${refundAmount.toLocaleString()}đ lúc ${new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}`,
+    };
+
+    const updatedTransactions = transactions.map(t => t.id === refundModal.id ? updatedTransaction : t);
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    setRefundModal(null);
   };
 
   const toggleSelect = (id) => {
@@ -407,33 +454,8 @@ function TransactionHistory() {
             <option value="price_asc">Giá: Thấp → Cao</option>
           </select>
 
-          {(searchTerm || selectedDate || statusFilter !== "all" || paymentFilter !== "all" || sortBy !== "time_desc") && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedDate("");
-                setStatusFilter("all");
-                setPaymentFilter("all");
-                setSortBy("time_desc");
-              }}
-              style={{
-                padding: "8px",
-                borderRadius: "8px",
-                border: "1px solid #dc3545",
-                background: "#fff",
-                color: "#dc3545",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "36px",
-                height: "36px"
-              }}
-              title="Xóa lọc"
-            >
-              <span style={{ fontSize: "16px", fontWeight: "bold" }}>✕</span>
-            </button>
-          )}
+
+
 
           {selectedIds.length > 0 && (
             <button
@@ -588,6 +610,51 @@ function TransactionHistory() {
                         minWidth: "120px",
                         marginTop: "4px"
                       }}>
+                        {item.status === "Hoàn thành" && (
+                          <button
+                            onClick={() => openRefundModal(item)}
+                            style={{
+                              width: "100%",
+                              padding: "8px 12px",
+                              border: "none",
+                              background: "white",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontSize: "13px",
+                              borderBottom: "1px solid #f0f0f0",
+                              color: "#e67e22"
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
+                            onMouseLeave={(e) => e.target.style.background = "white"}
+                          >
+                            🔄 Hoàn trả sản phẩm
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setEditCustomerData({
+                              name: item.customer?.name || '',
+                              phone: item.customer?.phone || ''
+                            });
+                            setEditCustomerModal(item);
+                            setShowActionMenu(null);
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            border: "none",
+                            background: "white",
+                            textAlign: "left",
+                            cursor: "pointer",
+                            fontSize: "13px",
+                            borderBottom: "1px solid #f0f0f0",
+                            color: "#6c757d"
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
+                          onMouseLeave={(e) => e.target.style.background = "white"}
+                        >
+                          ✏️ Sửa thông tin KH
+                        </button>
                         {item.status === "Chờ thanh toán" && (
                           <button
                             onClick={() => restorePendingOrder(item)}
@@ -901,6 +968,221 @@ function TransactionHistory() {
           transaction={selectedTransaction}
           onClose={() => setShowInvoice(false)}
         />
+      )}
+
+      {/* Modal hoàn trả sản phẩm */}
+      {refundModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: "white", borderRadius: "12px", padding: "30px",
+            width: "540px", maxWidth: "95%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+          }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: "18px", color: "#333" }}>
+              🔄 Hoàn trả sản phẩm
+            </h3>
+            <p style={{ color: "#666", fontSize: "13px", margin: "0 0 18px" }}>
+              Đơn <strong style={{ color: "#0d6efd" }}>{refundModal.id}</strong> — Chọn số lượng muốn hoàn trả:
+            </p>
+            <div style={{ maxHeight: "300px", overflowY: "auto", marginBottom: "18px" }}>
+              {(refundModal.cart || refundModal.items || []).map((item, i) => {
+                const maxQty = item.qty || item.quantity || 1;
+                return (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 12px", marginBottom: "8px",
+                    border: "1px solid #e9ecef", borderRadius: "8px",
+                    background: (refundQtys[i] || 0) > 0 ? "#fff3cd" : "#f8f9fa"
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: "600", fontSize: "13px" }}>{item.name}</div>
+                      <div style={{ fontSize: "12px", color: "#888", marginTop: "2px" }}>
+                        {(item.price || 0).toLocaleString()}đ × {maxQty} = {((item.price || 0) * maxQty).toLocaleString()}đ
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "14px" }}>
+                      <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>Trả lại:</span>
+                      <button
+                        onClick={() => setRefundQtys(q => ({ ...q, [i]: Math.max(0, (q[i] || 0) - 1) }))}
+                        style={{ width: "26px", height: "26px", border: "1px solid #ddd", background: "white", borderRadius: "4px", cursor: "pointer", fontSize: "14px" }}
+                      >-</button>
+                      <input
+                        type="number" min={0} max={maxQty}
+                        value={refundQtys[i] || 0}
+                        onChange={(e) => {
+                          const v = Math.min(maxQty, Math.max(0, parseInt(e.target.value) || 0));
+                          setRefundQtys(q => ({ ...q, [i]: v }));
+                        }}
+                        style={{
+                          width: "42px", textAlign: "center", fontSize: "13px",
+                          fontWeight: "bold", border: "1px solid #ddd",
+                          borderRadius: "4px", padding: "2px 4px", height: "26px"
+                        }}
+                      />
+                      <button
+                        onClick={() => setRefundQtys(q => ({ ...q, [i]: Math.min(maxQty, (q[i] || 0) + 1) }))}
+                        style={{ width: "26px", height: "26px", border: "1px solid #ddd", background: "white", borderRadius: "4px", cursor: "pointer", fontSize: "14px" }}
+                      >+</button>
+                      <span style={{ fontSize: "12px", color: "#888" }}>/ {maxQty}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Tóm tắt số tiền hoàn trả */}
+            {(() => {
+              const items = refundModal.cart || refundModal.items || [];
+              const amt = items.reduce((s, item, i) => s + (refundQtys[i] || 0) * (item.price || 0), 0);
+              return amt > 0 ? (
+                <div style={{
+                  padding: "10px 14px", marginBottom: "16px",
+                  background: "#fff3cd", borderRadius: "8px", border: "1px solid #ffc107",
+                  fontSize: "14px", display: "flex", justifyContent: "space-between"
+                }}>
+                  <span>Số tiền cần hoàn lại cho khách:</span>
+                  <strong style={{ color: "#e67e22" }}>{amt.toLocaleString()}đ</strong>
+                </div>
+              ) : null;
+            })()}
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setRefundModal(null)}
+                style={{
+                  padding: "10px 22px", borderRadius: "8px",
+                  border: "1px solid #ddd", background: "white",
+                  cursor: "pointer", fontSize: "14px", fontWeight: "500"
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmRefund}
+                style={{
+                  padding: "10px 22px", borderRadius: "8px",
+                  border: "none", background: "#e67e22",
+                  color: "white", cursor: "pointer",
+                  fontSize: "14px", fontWeight: "600"
+                }}
+              >
+                Xác nhận Hoàn trả
+              </button>
+            </div>
+          </div>
+        </div>
+      )}\r\n\r\n      {/* Modal sửa thông tin khách hàng */}
+      {editCustomerModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: "white", borderRadius: "12px", padding: "30px",
+            width: "420px", maxWidth: "95%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+          }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: "18px", color: "#333" }}>
+              ✏️ Sửa thông tin khách hàng
+            </h3>
+            <p style={{ color: "#888", fontSize: "13px", margin: "0 0 20px" }}>
+              Đơn <strong style={{ color: "#0d6efd" }}>{editCustomerModal.id}</strong>
+            </p>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "5px", color: "#555" }}>
+                Tên khách hàng:
+              </label>
+              <input
+                type="text"
+                placeholder="Nhập tên khách hàng"
+                value={editCustomerData.name}
+                onChange={(e) => setEditCustomerData(d => ({ ...d, name: e.target.value }))}
+                autoFocus
+                style={{
+                  width: "100%", padding: "10px 12px", fontSize: "14px",
+                  border: "1px solid #ddd", borderRadius: "8px", outline: "none",
+                  boxSizing: "border-box",
+                  transition: "border-color 0.15s"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#0d6efd"}
+                onBlur={(e) => e.target.style.borderColor = "#ddd"}
+              />
+            </div>
+
+            <div style={{ marginBottom: "22px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "5px", color: "#555" }}>
+                Số điện thoại:
+              </label>
+              <input
+                type="tel"
+                placeholder="Nhập số điện thoại"
+                value={editCustomerData.phone}
+                onChange={(e) => setEditCustomerData(d => ({ ...d, phone: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // trigger save
+                    const updatedTransactions = transactions.map(t =>
+                      t.id === editCustomerModal.id
+                        ? { ...t, customer: { ...(t.customer || {}), name: editCustomerData.name, phone: editCustomerData.phone } }
+                        : t
+                    );
+                    setTransactions(updatedTransactions);
+                    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+                    setEditCustomerModal(null);
+                  }
+                }}
+                style={{
+                  width: "100%", padding: "10px 12px", fontSize: "14px",
+                  border: "1px solid #ddd", borderRadius: "8px", outline: "none",
+                  boxSizing: "border-box",
+                  transition: "border-color 0.15s"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#0d6efd"}
+                onBlur={(e) => e.target.style.borderColor = "#ddd"}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setEditCustomerModal(null)}
+                style={{
+                  padding: "10px 22px", borderRadius: "8px",
+                  border: "1px solid #ddd", background: "white",
+                  cursor: "pointer", fontSize: "14px", fontWeight: "500"
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  const updatedTransactions = transactions.map(t =>
+                    t.id === editCustomerModal.id
+                      ? { ...t, customer: { ...(t.customer || {}), name: editCustomerData.name, phone: editCustomerData.phone } }
+                      : t
+                  );
+                  setTransactions(updatedTransactions);
+                  localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+                  setEditCustomerModal(null);
+                }}
+                style={{
+                  padding: "10px 22px", borderRadius: "8px",
+                  border: "none", background: "#0d6efd",
+                  color: "white", cursor: "pointer",
+                  fontSize: "14px", fontWeight: "600"
+                }}
+              >
+                Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
