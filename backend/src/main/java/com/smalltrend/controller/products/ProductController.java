@@ -22,13 +22,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controller xử lý các HTTP request liên quan đến Product (Sản phẩm)
- * Cung cấp các RESTful API cho sản phẩm và các biến thể (variants) của nó
+ * Controller xử lý các HTTP request liên quan đến Product (Sản phẩm) Cung cấp
+ * các RESTful API cho sản phẩm và các biến thể (variants) của nó
  */
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000" })
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"})
 public class ProductController {
 
     private final ProductService productService;
@@ -166,7 +166,6 @@ public class ProductController {
     }
 
     // ─── Variant Prices ──────────────────────────────────────────────────────
-
     // Tạo giá mới cho variant (giá cũ chuyển INACTIVE)
     @PostMapping("/variants/{variantId}/prices")
     public ResponseEntity<VariantPriceResponse> createVariantPrice(

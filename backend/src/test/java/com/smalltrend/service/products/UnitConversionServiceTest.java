@@ -140,7 +140,8 @@ class UnitConversionServiceTest {
         savedVariant.setId(500);
         savedVariant.setSku("BEV-COCA-BOX24");
         savedVariant.setBarcode("2010100500123");
-        when(productVariantRepository.save(any(ProductVariant.class))).thenReturn(savedVariant);
+        savedVariant.setAttributes(new java.util.HashMap<String, String>());
+        when(productVariantRepository.saveAndFlush(any(ProductVariant.class))).thenReturn(savedVariant);
 
         // Mock Inventory share
         ProductBatch baseBatch = new ProductBatch();
@@ -166,7 +167,7 @@ class UnitConversionServiceTest {
         // Verify 1 conversion saved
         verify(unitConversionRepository).save(any(UnitConversion.class));
         // Verify packaging variant saved twice (init + barcode)
-        verify(productVariantRepository, times(2)).save(any(ProductVariant.class));
+        verify(productVariantRepository, times(1)).saveAndFlush(any(ProductVariant.class));
         // Verify inventory copy: 48 / 24 = 2 Thùng
         verify(inventoryStockRepository).save(argThat(stock -> stock.getQuantity() == 2));
     }
@@ -201,14 +202,21 @@ class UnitConversionServiceTest {
 
     @Test
     void deleteConversion_Success() {
-        when(unitConversionRepository.existsById(100)).thenReturn(true);
+        when(unitConversionRepository.findById(100)).thenReturn(Optional.of(testConversion));
+        ProductVariant autoVariant = new ProductVariant();
+        autoVariant.setId(500);
+        when(productVariantRepository.findByProductIdAndUnitId(10, 2)).thenReturn(List.of(autoVariant));
+        doNothing().when(productVariantService).deleteVariant(500);
+
         unitConversionService.deleteConversion(100);
+
         verify(unitConversionRepository).deleteById(100);
+        verify(productVariantService).deleteVariant(500);
     }
     
     @Test
     void deleteConversion_NotFound() {
-        when(unitConversionRepository.existsById(99)).thenReturn(false);
+        when(unitConversionRepository.findById(99)).thenReturn(Optional.empty());
         assertThrows(RuntimeException.class, () -> unitConversionService.deleteConversion(99));
     }
 }

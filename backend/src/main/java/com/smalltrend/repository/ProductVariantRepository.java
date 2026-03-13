@@ -19,6 +19,8 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     Optional<ProductVariant> findByProductIdAndIsBaseUnitTrue(Integer productId);
 
+    List<ProductVariant> findByProductIdAndUnitId(Integer productId, Integer unitId);
+
     boolean existsBySku(String sku);
 
     boolean existsByBarcode(String barcode);

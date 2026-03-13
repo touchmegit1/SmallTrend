@@ -84,7 +84,7 @@ public class UnitConversionService {
                 String autoSku = productVariantService.generateSkuForConversion(
                                 baseVariant, toUnit, request.getConversionFactor());
 
-                // Tạo variant mới với đơn vị đích
+                // Tạo variant mới với đơn vị đích (khởi tạo map rỗng để Hibernate quản lý dưới dạng PersistentMap)
                 ProductVariant packagingVariant = ProductVariant.builder()
                                 .product(product)
                                 .sku(autoSku)
@@ -92,19 +92,21 @@ public class UnitConversionService {
                                 .sellPrice(request.getSellPrice())
                                 .isActive(baseVariant.isActive())
                                 .imageUrl(baseVariant.getImageUrl()) // Kế thừa ảnh từ variant gốc
-                                .attributes(baseVariant.getAttributes() != null
-                                                ? new java.util.HashMap<>(baseVariant.getAttributes())
-                                                : null) // Kế thừa thuộc tính
+                                .attributes(new java.util.HashMap<>()) // QUAN TRỌNG: tránh duplicate entry
                                 .build();
 
                 ProductVariant savedVariant = productVariantRepository.saveAndFlush(packagingVariant);
 
-                // ─── 3. Sinh barcode nội bộ (20 + ProductID + VariantID + Random) ──────
+                // ─── 3. Sinh barcode nội bộ & gán thuộc tính ──────
                 String autoBarcode = productVariantService.generateInternalBarcodeForPackaging(
                                 product.getId(), savedVariant.getId());
                 savedVariant.setBarcode(autoBarcode);
-                // JPA dirty checking will automatically update the barcode at the end of the transaction
-                // Removing productVariantRepository.save(savedVariant) prevents duplicate insert errors in @ElementCollection
+                
+                // Gán thuộc tính bằng putAll để cập nhật PersistentMap, tránh lỗi Hibernate cố gắng Insert lại collection
+                if (baseVariant.getAttributes() != null && !baseVariant.getAttributes().isEmpty()) {
+                        savedVariant.getAttributes().putAll(baseVariant.getAttributes());
+                }
+
 
 
                 // ─── 4. Chia sẻ tồn kho từ variant gốc cho variant quy đổi ─────────────
@@ -188,10 +190,21 @@ public class UnitConversionService {
 
         @Transactional
         public void deleteConversion(Integer conversionId) {
-                if (!unitConversionRepository.existsById(conversionId)) {
-                        throw new RuntimeException("Không tìm thấy quy đổi với ID: " + conversionId);
-                }
+                UnitConversion conversion = unitConversionRepository.findById(conversionId)
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy quy đổi với ID: " + conversionId));
+
+                Integer productId = conversion.getVariant().getProduct().getId();
+                Integer toUnitId = conversion.getToUnit().getId();
+
                 unitConversionRepository.deleteById(conversionId);
+
+                // Xoá biến thể đóng gói được tạo tự động khi tạo quy đổi
+                List<ProductVariant> autoVariants = productVariantRepository.findByProductIdAndUnitId(productId, toUnitId);
+                if (autoVariants != null && !autoVariants.isEmpty()) {
+                        for (ProductVariant v : autoVariants) {
+                                productVariantService.deleteVariant(v.getId());
+                        }
+                }
         }
 
         public UnitConversionResponse mapToResponse(UnitConversion entity) {

@@ -22,8 +22,8 @@ public class VariantPriceService {
     private final ProductVariantRepository productVariantRepository;
 
     /**
-     * Tạo giá mới cho variant.
-     * Tất cả giá cũ đang ACTIVE sẽ chuyển sang INACTIVE.
+     * Tạo giá mới cho variant. Tất cả giá cũ đang ACTIVE sẽ chuyển sang
+     * INACTIVE.
      */
     @Transactional
     public VariantPriceResponse createPrice(Integer variantId, VariantPriceRequest request) {
@@ -107,8 +107,8 @@ public class VariantPriceService {
     }
 
     /**
-     * Toggle trạng thái active/inactive cho một bản ghi giá.
-     * Nếu kích hoạt một giá, tất cả giá khác của variant sẽ bị INACTIVE.
+     * Toggle trạng thái active/inactive cho một bản ghi giá. Nếu kích hoạt một
+     * giá, tất cả giá khác của variant sẽ bị INACTIVE.
      */
     @Transactional
     public VariantPriceResponse togglePriceStatus(Integer priceId) {
@@ -134,7 +134,6 @@ public class VariantPriceService {
     }
 
     // ─── Mapper ──────────────────────────────────────────────────────────────
-
     private VariantPriceResponse mapToResponse(VariantPrice entity) {
         VariantPriceResponse response = new VariantPriceResponse();
         response.setId(entity.getId());
