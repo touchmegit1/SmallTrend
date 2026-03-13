@@ -115,11 +115,11 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
                     <td className="px-4 py-3 text-center">
                       {price.status === 'ACTIVE' ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                          <CheckCircle2 size={12} /> Active
+                          <CheckCircle2 size={12} /> Kích hoạt
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-                          <XCircle size={12} /> Inactive
+                          <XCircle size={12} /> Đã tắt kích hoạt
                         </span>
                       )}
                     </td>
@@ -140,9 +140,9 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
                         {toggling === price.id ? (
                           <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                         ) : price.status === 'ACTIVE' ? (
-                          <><ToggleRight size={14} /> Deactivate</>
+                          <><ToggleRight size={14} /> Tắt kích hoạt</>
                         ) : (
-                          <><ToggleLeft size={14} /> Activate</>
+                          <><ToggleLeft size={14} /> Kích hoạt</>
                         )}
                       </button>
                     </td>

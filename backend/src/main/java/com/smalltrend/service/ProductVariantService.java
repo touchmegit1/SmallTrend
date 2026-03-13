@@ -176,7 +176,12 @@ public class ProductVariantService {
             variant.setActive(request.getIsActive());
         }
         if (request.getAttributes() != null) {
-            variant.setAttributes(request.getAttributes());
+            if (variant.getAttributes() == null) {
+                variant.setAttributes(new java.util.HashMap<>());
+            } else {
+                variant.getAttributes().clear();
+            }
+            variant.getAttributes().putAll(request.getAttributes());
         }
 
         ProductVariant saved = productVariantRepository.save(variant);

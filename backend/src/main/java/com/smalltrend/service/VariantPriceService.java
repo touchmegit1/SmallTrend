@@ -58,6 +58,11 @@ public class VariantPriceService {
                 .build();
 
         VariantPrice saved = variantPriceRepository.save(newPrice);
+
+        // Sync to ProductVariant
+        variant.setSellPrice(saved.getSellingPrice());
+        productVariantRepository.save(variant);
+
         return mapToResponse(saved);
     }
 
@@ -130,6 +135,19 @@ public class VariantPriceService {
         }
 
         VariantPrice saved = variantPriceRepository.save(price);
+
+        // Sync to ProductVariant
+        ProductVariant variant = price.getVariant();
+        if (saved.getStatus() == VariantPriceStatus.ACTIVE) {
+            variant.setSellPrice(saved.getSellingPrice());
+        } else {
+            // Need to set to 0 or null if no active price?
+            // Actually, if we deactivate, we should probably find if there's any other active (which there shouldn't be).
+            // Defaulting to 0 for safety when no price is active.
+            variant.setSellPrice(java.math.BigDecimal.ZERO);
+        }
+        productVariantRepository.save(variant);
+
         return mapToResponse(saved);
     }
 
