@@ -14,6 +14,7 @@ public class VariantPriceResponse {
     private BigDecimal sellingPrice;
     private BigDecimal taxPercent;
     private LocalDate effectiveDate;
+    private LocalDate expiryDate;
     private String status;
     private LocalDateTime createdAt;
 }

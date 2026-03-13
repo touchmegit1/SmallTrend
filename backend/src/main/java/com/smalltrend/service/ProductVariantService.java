@@ -518,6 +518,7 @@ public class ProductVariantService {
                     response.setActiveSellingPrice(activePrice.getSellingPrice());
                     response.setActiveTaxPercent(activePrice.getTaxPercent());
                     response.setActiveEffectiveDate(activePrice.getEffectiveDate());
+                    response.setActiveExpiryDate(activePrice.getExpiryDate());
                 });
 
         return response;

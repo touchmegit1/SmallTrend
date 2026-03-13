@@ -42,6 +42,9 @@ public class VariantPrice {
     @Column(name = "effective_date", nullable = false)
     private LocalDate effectiveDate;
 
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     @Builder.Default

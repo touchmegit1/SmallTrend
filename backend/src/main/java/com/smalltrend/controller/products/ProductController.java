@@ -204,6 +204,18 @@ public class ProductController {
         return ResponseEntity.ok(variantPriceService.updateActivePriceDate(variantId, newDate));
     }
 
+    // Cập nhật ngày hết hiệu lực cho giá ACTIVE hiện tại
+    @PutMapping("/variants/{variantId}/prices/active/expiry")
+    public ResponseEntity<VariantPriceResponse> updateActivePriceExpiry(
+            @PathVariable Integer variantId,
+            @RequestBody java.util.Map<String, String> request) {
+        String dateStr = request.get("expiryDate");
+        java.time.LocalDate newDate = (dateStr != null && !dateStr.isBlank())
+                ? java.time.LocalDate.parse(dateStr.split("T")[0])
+                : null;
+        return ResponseEntity.ok(variantPriceService.updateActivePriceExpiry(variantId, newDate));
+    }
+
     // Toggle trạng thái active/inactive của một bản ghi giá
     @PutMapping("/prices/{priceId}/toggle-status")
     public ResponseEntity<VariantPriceResponse> togglePriceStatus(@PathVariable Integer priceId) {

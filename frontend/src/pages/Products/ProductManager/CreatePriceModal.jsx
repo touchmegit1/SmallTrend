@@ -8,10 +8,12 @@ const CreatePriceModal = ({ isOpen, onClose, variant, onPriceCreated }) => {
     sellingPrice: variant?.activeSellingPrice || variant?.sellPrice || '',
     taxPercent: variant?.activeTaxPercent || variant?.taxRate || '10',
     effectiveDate: new Date().toISOString().split('T')[0],
+    expiryDate: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isDateFocused, setIsDateFocused] = useState(false);
+  const [isExpiryDateFocused, setIsExpiryDateFocused] = useState(false);
 
   if (!isOpen) return null;
 
@@ -48,6 +50,7 @@ const CreatePriceModal = ({ isOpen, onClose, variant, onPriceCreated }) => {
         sellingPrice: parseFloat(formData.sellingPrice),
         taxPercent: parseFloat(formData.taxPercent) || 0,
         effectiveDate: formData.effectiveDate,
+        expiryDate: formData.expiryDate || null,
       });
       onPriceCreated && onPriceCreated();
       onClose(true); // Pass true to indicate successful creation
@@ -165,7 +168,25 @@ const CreatePriceModal = ({ isOpen, onClose, variant, onPriceCreated }) => {
             </div>
           </div>
 
-          {/* Lợi nhuận preview */}
+          {/* Ngày hết hiệu lực */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ngày hết hiệu lực <span className="text-gray-400 text-xs">(tuỳ chọn)</span>
+            </label>
+            <div className="relative">
+              <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type={isExpiryDateFocused ? "date" : "text"}
+                name="expiryDate"
+                value={isExpiryDateFocused ? formData.expiryDate : (formData.expiryDate ? (() => { const [y, m, d] = formData.expiryDate.split('-'); return `${d}/${m}/${y.slice(-2)}`; })() : '')}
+                onChange={handleChange}
+                onFocus={() => setIsExpiryDateFocused(true)}
+                onBlur={() => setIsExpiryDateFocused(false)}
+                placeholder="Không giới hạn"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition cursor-pointer"
+              />
+            </div>
+          </div>
           {(purchasePrice > 0 || sellingPrice > 0) && (
             <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
               <div className="flex items-center gap-2 mb-2">

@@ -197,6 +197,21 @@ const PriceSetting = () => {
         }
     };
 
+    const handleExpiryDateChange = async (variant, newDateStr) => {
+        try {
+            await api.put(`/products/variants/${variant.id}/prices/active/expiry`, { expiryDate: newDateStr || null });
+            setSuccessMsg(`Đã cập nhật ngày hết hiệu lực cho ${variant.name}`);
+            setVariants((prev) =>
+                prev.map((v) => (v.id === variant.id ? { ...v, activeExpiryDate: newDateStr || null } : v))
+            );
+            setTimeout(() => setSuccessMsg(""), 4000);
+        } catch (err) {
+            console.error("Error updating expiry date:", err);
+            setErrorMsg("Lỗi khi cập nhật ngày hết hiệu lực.");
+            setTimeout(() => setErrorMsg(""), 4000);
+        }
+    };
+
     // ═══════════════════════════════════════════
     // SELECTION
     // ═══════════════════════════════════════════
@@ -378,6 +393,7 @@ const PriceSetting = () => {
                     onCreatePriceModalOpen={(v) => setCreatePriceVariant(v)}
                     onViewHistory={(v) => setHistoryVariant(v)}
                     onEffectiveDateChange={handleEffectiveDateChange}
+                    onExpiryDateChange={handleExpiryDateChange}
                 />
 
                 {/* ─── PAGINATION ─── */}

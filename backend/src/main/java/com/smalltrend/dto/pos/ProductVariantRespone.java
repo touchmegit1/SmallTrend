@@ -34,4 +34,5 @@ public class ProductVariantRespone {
     private BigDecimal activeSellingPrice;
     private BigDecimal activeTaxPercent;
     private java.time.LocalDate activeEffectiveDate;
+    private java.time.LocalDate activeExpiryDate;
 }

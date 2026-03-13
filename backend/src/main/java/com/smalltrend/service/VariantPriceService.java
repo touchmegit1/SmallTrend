@@ -53,6 +53,7 @@ public class VariantPriceService {
                 .sellingPrice(request.getSellingPrice())
                 .taxPercent(request.getTaxPercent())
                 .effectiveDate(request.getEffectiveDate())
+                .expiryDate(request.getExpiryDate())
                 .status(VariantPriceStatus.ACTIVE)
                 .build();
 
@@ -88,6 +89,19 @@ public class VariantPriceService {
                 .orElseThrow(() -> new RuntimeException("No active price found for variant " + variantId));
 
         activePrice.setEffectiveDate(newDate);
+        VariantPrice saved = variantPriceRepository.save(activePrice);
+        return mapToResponse(saved);
+    }
+
+    /**
+     * Cập nhật ngày hết hiệu lực của giá đang ACTIVE (nullable).
+     */
+    @Transactional
+    public VariantPriceResponse updateActivePriceExpiry(Integer variantId, java.time.LocalDate newDate) {
+        VariantPrice activePrice = variantPriceRepository.findFirstByVariantIdAndStatus(variantId, VariantPriceStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException("No active price found for variant " + variantId));
+
+        activePrice.setExpiryDate(newDate);
         VariantPrice saved = variantPriceRepository.save(activePrice);
         return mapToResponse(saved);
     }
@@ -129,6 +143,7 @@ public class VariantPriceService {
         response.setSellingPrice(entity.getSellingPrice());
         response.setTaxPercent(entity.getTaxPercent());
         response.setEffectiveDate(entity.getEffectiveDate());
+        response.setExpiryDate(entity.getExpiryDate());
         response.setStatus(entity.getStatus().name());
         response.setCreatedAt(entity.getCreatedAt());
         return response;

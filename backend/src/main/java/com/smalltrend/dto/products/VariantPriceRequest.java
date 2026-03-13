@@ -11,4 +11,5 @@ public class VariantPriceRequest {
     private BigDecimal sellingPrice;
     private BigDecimal taxPercent;
     private LocalDate effectiveDate;
+    private LocalDate expiryDate;
 }
