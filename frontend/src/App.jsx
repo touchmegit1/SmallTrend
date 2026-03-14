@@ -1,9 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
-import ShiftManagement from "./pages/HR/ShiftManagement";
-import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
-import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
+import MainLayout from "./components/layout/MainLayout";
+import { useAuth } from "./context/AuthContext";
+import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
+import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
+import AiChatPage from "./pages/Admin/AiChatPage";
+import AuditLogPage from "./pages/Admin/AuditLogPage";
+import TicketCenter from "./pages/Admin/TicketCenter";
+import Login from "./pages/Auth/Login";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -23,6 +28,9 @@ import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import InventoryCountList from "./pages/Inventory/InventoryCountList";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import LocationManagement from "./pages/Inventory/LocationManagement";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
+import NotFoundPage from "./pages/Common/NotFoundPage";
 import POS from "./pages/Pos/pos";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import ShiftHandover from "./pages/Pos/ShiftHandover";
@@ -37,6 +45,8 @@ import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import ProductList from "./pages/Products/ProductManager/ProductList";
 import Suppliers from "./pages/Products/ProductManager/Suppliers";
+
+
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -63,11 +73,6 @@ function RootRedirect() {
     );
   }
 
-  return isAuthenticated ? (
-    <Navigate to="/dashboard" replace />
-  ) : (
-    <Navigate to="/crm/homepage" replace />
-  );
   return isAuthenticated ? (
     <Navigate to="/dashboard" replace />
   ) : (
