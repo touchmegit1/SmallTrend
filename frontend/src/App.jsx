@@ -1,9 +1,15 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
-import ShiftManagement from "./pages/HR/ShiftManagement";
-import PurchaseOrderList from "./pages/Inventory/PurchaseOrder/PurchaseOrderList";
-import CreatePurchaseOrder from "./pages/Inventory/PurchaseOrder/CreatePurchaseOrder";
+import MainLayout from "./components/layout/MainLayout";
+import { useAuth } from "./context/AuthContext";
+import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
+import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
+import AiChatPage from "./pages/Admin/AiChatPage";
+import AuditLogPage from "./pages/Admin/AuditLogPage";
+import TicketCenter from "./pages/Admin/TicketCenter";
+import Login from "./pages/Auth/Login";
+import NotFoundPage from "./pages/Common/NotFoundPage";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -14,13 +20,16 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import EmployeeList from "./pages/HR/EmployeeList";
 import PayrollManagement from "./pages/HR/PayrollManagement";
+import ShiftManagement from "./pages/HR/ShiftManagement";
 import UserManagement from "./pages/HR/UserManagement";
-import DisposalDetail from "./pages/Inventory/Disposal/DisposalDetail";
-import DisposalList from "./pages/Inventory/Disposal/DisposalList";
-import InventoryCountDetail from "./pages/Inventory/Count/InventoryCountDetail";
-import InventoryCountList from "./pages/Inventory/Count/InventoryCountList";
-import InventoryDashboard from "./pages/Inventory/Dashboard/InventoryDashboard";
-import LocationManagement from "./pages/Inventory/Location/LocationManagement";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import DisposalList from "./pages/Inventory/DisposalList";
+import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
+import InventoryCountList from "./pages/Inventory/InventoryCountList";
+import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
+import LocationManagement from "./pages/Inventory/LocationManagement";
 import POS from "./pages/Pos/pos";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import ShiftHandover from "./pages/Pos/ShiftHandover";
@@ -35,15 +44,6 @@ import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import ProductList from "./pages/Products/ProductManager/ProductList";
 import Suppliers from "./pages/Products/ProductManager/Suppliers";
-import Login from "./pages/Auth/Login";
-import MainLayout from "./components/layout/MainLayout";
-import { useAuth } from "./context/AuthContext";
-import TicketCenter from "./pages/Admin/TicketCenter";
-import AuditLogPage from "./pages/Admin/AuditLogPage";
-import AiChatPage from "./pages/Admin/AiChatPage";
-import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
-import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
-import NotFoundPage from "./pages/Common/NotFoundPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -125,18 +125,6 @@ function App() {
         <Route path="pos/shift-handover" element={<ShiftHandover />} />
         {/* Module 2: Inventory (Kho) */}
         <Route path="inventory" element={<InventoryDashboard />} />
-        <Route
-          path="inventory/purchase-orders"
-          element={<PurchaseOrderList />}
-        />
-        <Route
-          path="inventory/purchase-orders/create"
-          element={<CreatePurchaseOrder />}
-        />
-        <Route
-          path="inventory/purchase-orders/:id"
-          element={<CreatePurchaseOrder />}
-        />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
 
         <Route path="inventory-counts" element={<InventoryCountList />} />
@@ -184,7 +172,7 @@ function App() {
 
         <Route
           path="products/suppliers"
-          element={<div className="p-4"><Suppliers/></div>}
+          element={<div className="p-4"><Suppliers /></div>}
         />
         {/* Module 4: CRM (Khách hàng) */}
         <Route

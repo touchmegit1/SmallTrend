@@ -1,26 +1,25 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import api from "../../../config/axiosConfig";
 import {
-    Search,
     AlertCircle,
-    Percent,
-    RefreshCw,
-    Save,
-    Filter,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    Filter,
+    Percent,
+    RefreshCw,
+    Save,
+    Search,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
+import api from "../../../config/axiosConfig";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
-import TaxRateManagerModal from "./TaxRateManagerModal";
-import PriceHistoryModal from "./PriceHistoryModal";
-import CreatePriceModal from "./CreatePriceModal";
 import PriceTable from "../ProductComponents/PriceTable";
+import CreatePriceModal from "./CreatePriceModal";
+import PriceHistoryModal from "./PriceHistoryModal";
+import TaxRateManagerModal from "./TaxRateManagerModal";
 import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
-import { calculateProfit } from "../../../utils/priceCalculation";
-import * as XLSX from "xlsx";
 
 /**
  * Thiết lập Giá sản phẩm — phiên bản đơn giản.
@@ -477,10 +476,10 @@ const PriceSetting = () => {
                 <TaxRateManagerModal onClose={() => setIsTaxModalOpen(false)} onDataChange={fetchVariants} />
             )}
             {historyVariant && (
-                <PriceHistoryModal 
-                    isOpen={true} 
-                    variant={historyVariant} 
-                    onClose={() => setHistoryVariant(null)} 
+                <PriceHistoryModal
+                    isOpen={true}
+                    variant={historyVariant}
+                    onClose={() => setHistoryVariant(null)}
                     onStatusChanged={fetchVariants}
                 />
             )}
