@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useToast, ToastContainer } from '../../hooks/useToast.jsx';
 import eventService from '../../services/eventService';
+import cloudinaryUploadService from '../../services/cloudinaryUploadService';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useVouchers } from '../../hooks/useVouchers';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
@@ -56,6 +57,7 @@ const EventManagement = () => {
   };
   const [campaignForm, setCampaignForm] = useState(initialCampaignForm);
   const [savingCampaign, setSavingCampaign] = useState(false);
+  const [uploadingCampaignImage, setUploadingCampaignImage] = useState(false);
 
   // ── Vouchers ──
   const { vouchers, loading: loadingVouchers, refetch: refetchVouchers } = useVouchers();
@@ -122,6 +124,25 @@ const EventManagement = () => {
 
   const handleDeleteCampaign = (id) => {
     setConfirmDialog({ open: true, type: 'campaign', id, label: 'sự kiện' });
+  };
+
+  const handleUploadCampaignBanner = async (file) => {
+    if (!file) return;
+    if (!file.type?.startsWith('image/')) {
+      showToast('Vui lòng chọn file ảnh hợp lệ', 'warning');
+      return;
+    }
+
+    setUploadingCampaignImage(true);
+    try {
+      const res = await cloudinaryUploadService.uploadImage(file, 'crm/campaigns');
+      setCampaignForm((prev) => ({ ...prev, bannerImageUrl: res.url || '' }));
+      showToast('Upload banner thành công');
+    } catch (err) {
+      showToast('Upload ảnh thất bại: ' + (err?.response?.data?.error || err.message), 'error');
+    } finally {
+      setUploadingCampaignImage(false);
+    }
   };
 
   // ── Voucher handlers ───────────────────────────────────────────────────────────
@@ -504,10 +525,26 @@ const EventManagement = () => {
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-2">URL Banner</label>
-                  <input type="url" value={campaignForm.bannerImageUrl}
-                    onChange={e => setCampaignForm({ ...campaignForm, bannerImageUrl: e.target.value })}
-                    placeholder="https://..."
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                  <div className="flex gap-2">
+                    <input type="url" value={campaignForm.bannerImageUrl}
+                      onChange={e => setCampaignForm({ ...campaignForm, bannerImageUrl: e.target.value })}
+                      placeholder="https://..."
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                    <label className="px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700 cursor-pointer whitespace-nowrap transition-colors">
+                      {uploadingCampaignImage ? 'Đang up...' : 'Up ảnh'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingCampaignImage}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          handleUploadCampaignBanner(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
                   {campaignForm.bannerImageUrl && (
                     <img src={campaignForm.bannerImageUrl} alt="Preview" className="mt-2 h-24 rounded-lg object-cover w-full" onError={e => e.target.style.display = 'none'} />
                   )}

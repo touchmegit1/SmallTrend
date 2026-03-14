@@ -13,6 +13,7 @@ import {
     X,
 } from "lucide-react";
 import adService from "../../services/adService";
+import cloudinaryUploadService from "../../services/cloudinaryUploadService";
 import { useToast, ToastContainer } from "../../hooks/useToast.jsx";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 
@@ -71,9 +72,29 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
     const isEdit = !!ad?.id;
     const [form, setForm] = useState(ad ? { ...initialForm, ...ad } : initialForm);
     const [saving, setSaving] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
 
     const setField = (key, value) => {
         setForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handleUploadImage = async (file) => {
+        if (!file) return;
+        if (!file.type?.startsWith("image/")) {
+            showToast("Vui lòng chọn file ảnh hợp lệ", "warning");
+            return;
+        }
+
+        setUploadingImage(true);
+        try {
+            const res = await cloudinaryUploadService.uploadImage(file, "crm/ads");
+            setField("imageUrl", res.url || "");
+            showToast("Upload ảnh quảng cáo thành công");
+        } catch (err) {
+            showToast("Upload ảnh thất bại: " + (err?.response?.data?.error || err.message), "error");
+        } finally {
+            setUploadingImage(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -174,12 +195,28 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-slate-600 mb-1.5 block">URL ảnh</label>
-                            <input
-                                className={INPUT_CLS}
-                                value={form.imageUrl || ""}
-                                onChange={(e) => setField("imageUrl", e.target.value)}
-                                placeholder="https://..."
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    className={INPUT_CLS}
+                                    value={form.imageUrl || ""}
+                                    onChange={(e) => setField("imageUrl", e.target.value)}
+                                    placeholder="https://..."
+                                />
+                                <label className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700 cursor-pointer whitespace-nowrap transition-colors">
+                                    {uploadingImage ? "Đang up..." : "Up ảnh"}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        disabled={uploadingImage}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            handleUploadImage(file);
+                                            e.target.value = "";
+                                        }}
+                                    />
+                                </label>
+                            </div>
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-slate-600 mb-1.5 block">URL liên kết</label>
