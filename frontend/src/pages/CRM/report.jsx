@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
-    Users, Gift, Megaphone, Tag, TrendingUp, ShoppingBag,
+    Users, Gift, Megaphone, Tag, TrendingUp,
     ChevronRight, X, Calendar, Search, BarChart2, Award
 } from 'lucide-react';
 import { useFetchCustomers } from '../../hooks/Customers';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useCoupons } from '../../hooks/useCoupons';
 import { useGifts } from '../../hooks/useGifts';
-import { useDiscountedVariants } from '../../hooks/useEventData';
+import adService from '../../services/adService';
 
 // ─── STAT CARD (clickable) ────────────────────────────────────────────────────
 const ReportCard = ({ icon: Icon, label, value, sub, color, onClick }) => (
@@ -89,10 +89,26 @@ export default function CRMReport() {
     const { campaigns, loading: loadingCampaigns } = useCampaigns();
     const { coupons, loading: loadingCoupons } = useCoupons();
     const { gifts, loading: loadingGifts } = useGifts();
-    const { variants, loading: loadingVariants } = useDiscountedVariants();
+    const [ads, setAds] = useState([]);
+    const [loadingAds, setLoadingAds] = useState(true);
 
-    const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'discounted'
+    const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'ads'
     const [search, setSearch] = useState('');
+
+    React.useEffect(() => {
+        const loadAds = async () => {
+            setLoadingAds(true);
+            try {
+                const list = await adService.getAll();
+                setAds(Array.isArray(list) ? list : []);
+            } catch (_e) {
+                setAds([]);
+            } finally {
+                setLoadingAds(false);
+            }
+        };
+        loadAds();
+    }, []);
 
     const openModal = (key) => { setActiveModal(key); setSearch(''); };
     const closeModal = () => { setActiveModal(null); setSearch(''); };
@@ -109,15 +125,17 @@ export default function CRMReport() {
         c.couponName?.toLowerCase().includes(kw) || c.couponCode?.toLowerCase().includes(kw)
     );
     const filteredGifts = gifts.filter(g => g.name?.toLowerCase().includes(kw));
-    const filteredVariants = variants.filter(v =>
-        v.name?.toLowerCase().includes(kw) || v.sku?.toLowerCase().includes(kw)
+    const filteredAds = ads.filter(a =>
+        a.sponsorName?.toLowerCase().includes(kw)
+        || a.title?.toLowerCase().includes(kw)
+        || a.slot?.toLowerCase().includes(kw)
     );
 
     // Summary stats
     const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
     const activeCoupons = coupons.filter(c => c.status === 'ACTIVE').length;
     const totalLoyaltyPts = customers.reduce((s, c) => s + (c.loyaltyPoints || 0), 0);
-    const discountedCount = variants.length;
+    const activeAds = ads.filter(a => a.isActive).length;
 
     const fmt = v => v != null ? Number(v).toLocaleString('vi-VN') + 'đ' : '-';
 
@@ -135,7 +153,7 @@ export default function CRMReport() {
                     { label: 'KH đăng ký', value: customers.length, color: 'bg-indigo-500' },
                     { label: 'Campaign ACTIVE', value: activeCampaigns, color: 'bg-emerald-500' },
                     { label: 'Coupon ACTIVE', value: activeCoupons, color: 'bg-purple-500' },
-                    { label: 'SP đang KM', value: discountedCount, color: 'bg-rose-500' },
+                    { label: 'Quảng cáo ACTIVE', value: activeAds, color: 'bg-sky-500' },
                 ].map(s => (
                     <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center">
                         <div className={`w-2 h-2 rounded-full ${s.color} mx-auto mb-2`} />
@@ -180,12 +198,12 @@ export default function CRMReport() {
                     onClick={() => openModal('gifts')}
                 />
                 <ReportCard
-                    icon={ShoppingBag}
-                    label="Sản phẩm đang khuyến mãi"
-                    value={loadingVariants ? '...' : discountedCount}
-                    sub="Đang được áp dụng coupon"
-                    color="bg-rose-500"
-                    onClick={() => openModal('discounted')}
+                    icon={TrendingUp}
+                    label="Quảng cáo"
+                    value={loadingAds ? '...' : ads.length}
+                    sub={`${activeAds} đang hiển thị`}
+                    color="bg-sky-500"
+                    onClick={() => openModal('ads')}
                 />
                 <ReportCard
                     icon={Award}
@@ -368,47 +386,58 @@ export default function CRMReport() {
                 </Modal>
             )}
 
-            {/* ── MODAL: DISCOUNTED PRODUCTS ── */}
-            {activeModal === 'discounted' && (
+            {/* ── MODAL: ADS ── */}
+            {activeModal === 'ads' && (
                 <Modal
-                    title="Sản phẩm đang được khuyến mãi"
-                    subtitle={`${variants.length} sản phẩm đang áp dụng coupon`}
+                    title="Danh sách quảng cáo"
+                    subtitle={`${ads.length} quảng cáo · ${activeAds} đang hiển thị`}
                     onClose={closeModal}
                 >
-                    <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên hoặc SKU..." />
-                    {filteredVariants.length === 0 ? <Empty text="Chưa có sản phẩm nào đang khuyến mãi." /> : (
+                    <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo nhà tài trợ, tiêu đề hoặc vị trí..." />
+                    {filteredAds.length === 0 ? <Empty text="Chưa có quảng cáo phù hợp." /> : (
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 border-b border-slate-100">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Sản phẩm</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Giá gốc</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Giá KM</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Coupon</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Nhà tài trợ / Tiêu đề</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Vị trí</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Trạng thái</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Liên kết</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredVariants.map(v => (
-                                    <tr key={v.sku} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                {filteredAds.map(a => (
+                                    <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 <img
-                                                    src={v.imageUrl || 'https://placehold.co/40x40?text=?'}
-                                                    alt={v.name}
+                                                    src={a.imageUrl || 'https://placehold.co/40x40?text=Ad'}
+                                                    alt={a.title}
                                                     className="w-9 h-9 rounded-lg object-cover border border-slate-100 flex-shrink-0"
-                                                    onError={e => { e.target.src = 'https://placehold.co/40x40?text=?'; }}
+                                                    onError={e => { e.target.src = 'https://placehold.co/40x40?text=Ad'; }}
                                                 />
                                                 <div>
-                                                    <p className="font-medium text-slate-800 text-sm">{v.name}</p>
-                                                    <p className="text-xs text-slate-400 font-mono">{v.sku}</p>
+                                                    <p className="font-medium text-slate-800 text-sm">{a.sponsorName}</p>
+                                                    <p className="text-xs text-slate-500">{a.title}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-400 line-through text-sm">{fmt(v.sellPrice)}</td>
-                                        <td className="px-4 py-3 font-bold text-rose-500 text-sm">{fmt(v.discountedPrice ?? v.sellPrice)}</td>
                                         <td className="px-4 py-3">
-                                            <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded font-mono text-xs font-bold">
-                                                {v.couponCode}
+                                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded font-mono text-xs font-bold">
+                                                {a.slot}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <Badge
+                                                text={a.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                                color={a.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}
+                                            />
+                                        </td>
+                                        <td className="px-4 py-3 text-xs text-indigo-600">
+                                            {a.linkUrl ? (
+                                                <a href={a.linkUrl} target="_blank" rel="noreferrer" className="hover:underline">
+                                                    Mở link
+                                                </a>
+                                            ) : '-'}
                                         </td>
                                     </tr>
                                 ))}
