@@ -27,6 +27,7 @@ TRUNCATE TABLE user_credentials;
 TRUNCATE TABLE tickets;
 TRUNCATE TABLE reports;
 TRUNCATE TABLE audit_logs;
+TRUNCATE TABLE admin_notes;
 TRUNCATE TABLE cash_registers;
 TRUNCATE TABLE purchase_order_items;
 TRUNCATE TABLE purchase_orders;
@@ -152,7 +153,8 @@ INSERT INTO users (
 ('cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Vo Thi Cashier 2', 'cashier2@smalltrend.com', '0968765432', '321 Ba Trieu, HCMC', 'ACTIVE', 3, 'https://i.pravatar.cc/150?img=47', 'HOURLY', 13200000.00, 72000.00, NULL, TRUE, 208.00, NOW(), NOW()),
 ('inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4, 'https://i.pravatar.cc/150?img=25', 'MONTHLY', 13000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
 ('sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=41', 'HOURLY', 12600000.00, 70000.00, NULL, TRUE, 208.00, NOW(), NOW()),
-('sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Sales 2', 'sales2@smalltrend.com', '0987654012', '45 Hai Ba Trung, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=6', 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 20, TRUE, 208.00, NOW(), NOW())
+('sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Sales 2', 'sales2@smalltrend.com', '0987654012', '45 Hai Ba Trung, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=6', 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 20, TRUE, 208.00, NOW(), NOW()),
+('admin2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Tran Thi Admin', 'admin2@smalltrend.com', '0911223344', '789 CMT8, HCMC', 'ACTIVE', 1, 'https://i.pravatar.cc/150?img=5', 'MONTHLY', 25000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
 password = VALUES(password),
 active = VALUES(active),
@@ -992,6 +994,18 @@ INSERT INTO advertisements (
     'Đối tác giao hàng nhanh khu vực HCM & Hà Nội. Hợp đồng gia hạn mỗi 6 tháng.',
     NOW(), NOW()
 );
+
+-- =============================================================================
+-- 29. ADMIN NOTES
+INSERT INTO admin_notes (title, content, tag, status, is_deleted, created_by, created_at, updated_at) VALUES
+('Chào mừng đến với SmallTrend POS', 'Chào mừng bạn đến với Bảng tin Admin mới! Sử dụng không gian này để chia sẻ các cập nhật quan trọng với nhóm của bạn.', 'ANNOUNCEMENT', 'OPEN', FALSE, 1, NOW(), NOW()),
+('Cập nhật Chính sách Cửa hàng - Tháng 3/2026', 'Tất cả nhân viên bắt buộc phải mặc đồng phục mới bắt đầu từ thứ Hai tới. Vui lòng nhận đồng phục tại văn phòng nhân sự.', 'POLICY_UPDATE', 'OPEN', FALSE, 1, NOW(), NOW()),
+('Lịch Bảo trì Tủ lạnh', 'Tủ lạnh sữa chính sẽ được bảo trì định kỳ vào thứ Sáu tuần này lúc 22:00. Vui lòng đảm bảo các mặt hàng nhạy cảm với nhiệt độ được chuyển đi tạm thời nếu cần thiết.', 'MAINTENANCE', 'IN_PROGRESS', FALSE, 2, NOW(), NOW()),
+('Sự kiện Khuyến mãi Mùa xuân', 'Sẵn sàng cho đợt Giảm giá Mùa xuân! Tài liệu marketing sẽ được gửi đến vào sáng mai.', 'EVENT', 'OPEN', FALSE, 2, NOW(), NOW()),
+('Nhắc nhở Nhập hàng: Sữa tươi', 'Hàng tồn kho sữa tươi đang ở mức thấp. Vui lòng ưu tiên bổ sung lên các kệ trưng bày.', 'RESTOCK', 'OPEN', FALSE, 3, NOW(), NOW()),
+('Phản hồi Khách hàng: Cổng thanh toán', 'Một số khách hàng báo cáo thanh toán MOMO bị chậm vào ngày hôm qua. Bộ phận IT đang kiểm tra.', 'CUSTOMER_ISSUE', 'OPEN', FALSE, 1, NOW(), NOW()),
+('Bàn giao Ca Sáng', 'Két tiền 1 đã đối soát xong. Đã hoàn thành kiểm kê bánh kẹo. Không có vấn đề gì cần báo cáo.', 'SHIFT_HANDOFF', 'DONE', FALSE, 3, NOW(), NOW()),
+('Ghi chú Chung: Máy pha cà phê', 'Vui lòng nhớ vệ sinh máy pha cà phê trước khi đóng cửa.', 'GENERAL', 'OPEN', FALSE, 2, NOW(), NOW());
 
 -- =============================================================================
 -- End of SmallTrend Combined Sample Data
