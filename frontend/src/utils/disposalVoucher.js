@@ -44,10 +44,18 @@ export const DV_STATUS_CONFIG = {
 // ─── Reason Types ────────────────────────────────────────────
 export const REASON_TYPE = {
   EXPIRED: "EXPIRED",
+  DAMAGED: "DAMAGED",
+  LOST: "LOST",
+  OBSOLETE: "OBSOLETE",
+  OTHER: "OTHER",
 };
 
 export const REASON_CONFIG = {
   [REASON_TYPE.EXPIRED]: { label: "Hết hạn sử dụng" },
+  [REASON_TYPE.DAMAGED]: { label: "Hư hỏng" },
+  [REASON_TYPE.LOST]: { label: "Thất thoát" },
+  [REASON_TYPE.OBSOLETE]: { label: "Lỗi thời" },
+  [REASON_TYPE.OTHER]: { label: "Khác" },
 };
 
 // ─── Allowed Transitions ─────────────────────────────────────
@@ -87,7 +95,9 @@ export function validateForConfirm(voucher, items, batches) {
     errors.push("Phiếu xử lý phải có ít nhất 1 sản phẩm.");
   }
 
-  // reason_type is always EXPIRED, no need to validate
+  if (!voucher.reason_type) {
+    errors.push("Vui lòng chọn lý do xử lý.");
+  }
 
   if (!voucher.location_id) {
     errors.push("Vui lòng chọn kho.");

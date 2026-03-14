@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -29,7 +30,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/shifts")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"})
 public class ShiftController {
 
     private final WorkShiftService workShiftService;
@@ -75,7 +76,7 @@ public class ShiftController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<?> updateShift(@PathVariable Integer id, @Valid @RequestBody WorkShiftRequest request) {
-        List<String> errors = validator.validateId(id, "Shift id");
+        List<String> errors = new ArrayList<>(validator.validateId(id, "Shift id"));
         errors.addAll(validator.validateShift(request));
         if (validator.hasErrors(errors)) {
             return ResponseEntity.badRequest()

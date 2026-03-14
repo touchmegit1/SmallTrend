@@ -1,8 +1,11 @@
 package com.smalltrend.service;
 
 import com.smalltrend.dto.pos.SavePurchaseHistoryRequest;
+import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.PurchaseHistory;
 import com.smalltrend.repository.PurchaseHistoryRepository;
+import com.smalltrend.repository.ProductVariantRepository;
+import com.smalltrend.service.inventory.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,10 +18,17 @@ import java.util.List;
 public class PurchaseHistoryService {
 
     private final PurchaseHistoryRepository purchaseHistoryRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final InventoryStockService inventoryStockService;
 
     @Transactional
     public void savePurchaseHistory(SavePurchaseHistoryRequest request) {
         List<PurchaseHistory> histories = new ArrayList<>();
+
+        if (request.getItems() == null) {
+            purchaseHistoryRepository.saveAll(histories);
+            return;
+        }
 
         for (SavePurchaseHistoryRequest.PurchaseItem item : request.getItems()) {
             PurchaseHistory history = PurchaseHistory.builder()
@@ -35,10 +45,27 @@ public class PurchaseHistoryService {
             histories.add(history);
         }
 
-        purchaseHistoryRepository.saveAll(histories);
+        List<PurchaseHistory> savedHistories = purchaseHistoryRepository.saveAll(histories);
+
+        for (PurchaseHistory history : savedHistories) {
+            if (history.getProductId() == null) {
+                continue;
+            }
+
+            Integer variantId = history.getProductId().intValue();
+            productVariantRepository.findById(variantId).ifPresent(variant -> deductStockQuietly(variant, history));
+        }
     }
 
     public List<PurchaseHistory> getCustomerHistory(Long customerId) {
         return purchaseHistoryRepository.findByCustomerId(customerId);
+    }
+
+    private void deductStockQuietly(ProductVariant variant, PurchaseHistory history) {
+        try {
+            inventoryStockService.deductStock(variant, history.getQuantity(), history.getId(), "POS_SALE");
+        } catch (Exception ignored) {
+            // Keep purchase history persistence resilient even when inventory deduction fails.
+        }
     }
 }

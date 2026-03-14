@@ -12,6 +12,7 @@ import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.Unit;
 import com.smalltrend.entity.ProductBatch;
+import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -46,9 +48,9 @@ public class ProductVariantService {
             String searchLower = search.toLowerCase();
             variants = productVariantRepository.findAll().stream()
                     .filter(v -> (v.getProduct().getName() != null
-                            && v.getProduct().getName().toLowerCase().contains(searchLower)) ||
-                            (v.getSku() != null && v.getSku().toLowerCase().contains(searchLower)) ||
-                            (v.getBarcode() != null && v.getBarcode().contains(search)))
+                    && v.getProduct().getName().toLowerCase().contains(searchLower))
+                    || (v.getSku() != null && v.getSku().toLowerCase().contains(searchLower))
+                    || (v.getBarcode() != null && v.getBarcode().contains(search)))
                     .collect(Collectors.toList());
         } else {
             variants = productVariantRepository.findAll();
@@ -116,11 +118,12 @@ public class ProductVariantService {
 
         ProductVariant saved = productVariantRepository.save(variant);
 
-        // Tạo ProductBatch mặc định để lưu giá nhập
         if (request.getCostPrice() != null) {
             ProductBatch batch = ProductBatch.builder()
                     .variant(saved)
-                    .batchNumber("INITIAL-" + saved.getSku())
+                    .batchNumber("AUTO-" + System.currentTimeMillis())
+                    .mfgDate(LocalDate.now())
+                    .expiryDate(LocalDate.now().plusYears(1))
                     .costPrice(request.getCostPrice())
                     .build();
             productBatchRepository.save(batch);
@@ -184,9 +187,6 @@ public class ProductVariantService {
             variant.getAttributes().putAll(request.getAttributes());
         }
 
-        ProductVariant saved = productVariantRepository.save(variant);
-
-        // Cập nhật giá nhập cho batch mới nhất
         if (request.getCostPrice() != null) {
             List<ProductBatch> batches = productBatchRepository.findByVariantId(variantId);
             if (batches != null && !batches.isEmpty()) {
@@ -194,21 +194,24 @@ public class ProductVariantService {
                 latestBatch.setCostPrice(request.getCostPrice());
                 productBatchRepository.save(latestBatch);
             } else {
-                ProductBatch batch = ProductBatch.builder()
-                        .variant(saved)
-                        .batchNumber("UPDATE-" + saved.getSku())
+                ProductBatch newBatch = ProductBatch.builder()
+                        .variant(variant)
+                        .batchNumber("AUTO-" + System.currentTimeMillis())
+                        .mfgDate(LocalDate.now())
+                        .expiryDate(LocalDate.now().plusYears(1))
                         .costPrice(request.getCostPrice())
                         .build();
-                productBatchRepository.save(batch);
+                productBatchRepository.save(newBatch);
             }
         }
 
+        ProductVariant saved = productVariantRepository.save(variant);
         return mapToResponse(saved);
     }
 
     /**
-     * Generate SKU based on product data.
-     * Format: {CATEGORY_CODE}-{BRAND_SHORT}-{PRODUCT_SHORT}-{UNIT_CODE}
+     * Generate SKU based on product data. Format:
+     * {CATEGORY_CODE}-{BRAND_SHORT}-{PRODUCT_SHORT}-{UNIT_CODE}
      */
     public String generateSku(Integer productId, Integer unitId) {
         Product product = productRepository.findById(productId)
@@ -261,10 +264,10 @@ public class ProductVariantService {
     }
 
     /**
-     * Generate internal barcode for store-created products using EAN-13 standard.
-     * Format: 893 (Country) + 00001 (Company) + XXXX (Product) + C (Check Digit)
-     * Total: 13 digits
-     * Used by the manual "Generate Barcode" button.
+     * Generate internal barcode for store-created products using EAN-13
+     * standard. Format: 893 (Country) + 00001 (Company) + XXXX (Product) + C
+     * (Check Digit) Total: 13 digits Used by the manual "Generate Barcode"
+     * button.
      */
     public String generateInternalBarcode(Integer productId) {
         String countryCode = "893"; // Việt Nam
@@ -287,10 +290,10 @@ public class ProductVariantService {
     }
 
     /**
-     * Generate internal barcode for packaging units (unit conversions).
-     * Format: 20 + ProductID(4 digits) + VariantID(4 digits) + Random(3 digits)
-     * Total: 13 digits
-     * Prefix 20 = store-created product (EAN-13 internal use range 20-29).
+     * Generate internal barcode for packaging units (unit conversions). Format:
+     * 20 + ProductID(4 digits) + VariantID(4 digits) + Random(3 digits) Total:
+     * 13 digits Prefix 20 = store-created product (EAN-13 internal use range
+     * 20-29).
      */
     public String generateInternalBarcodeForPackaging(Integer productId, Integer variantId) {
         String prefix = "20";
@@ -312,8 +315,8 @@ public class ProductVariantService {
     }
 
     /**
-     * Generate SKU for a packaging variant created via unit conversion.
-     * Appends the unit abbreviation + conversion factor to the base variant's SKU.
+     * Generate SKU for a packaging variant created via unit conversion. Appends
+     * the unit abbreviation + conversion factor to the base variant's SKU.
      * Example: BEV-COCA-COLA-LON → BEV-COCA-COLA-LOC6
      */
     public String generateSkuForConversion(ProductVariant baseVariant, Unit toUnit,
@@ -368,7 +371,6 @@ public class ProductVariantService {
         productVariantRepository.save(variant);
     }
 
-    @org.springframework.transaction.annotation.Transactional
     public void deleteVariant(Integer variantId) {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new RuntimeException("Variant not found with id: " + variantId));
@@ -381,37 +383,32 @@ public class ProductVariantService {
             }
         }
 
-        // 1. Delete associated inventory stock to avoid FK constraints
-        List<com.smalltrend.entity.InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
+        List<InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
         if (stocks != null && !stocks.isEmpty()) {
             inventoryStockRepository.deleteAll(stocks);
         }
 
-        // 2. Delete associated product batches
         List<ProductBatch> batches = productBatchRepository.findByVariantId(variantId);
         if (batches != null && !batches.isEmpty()) {
             productBatchRepository.deleteAll(batches);
         }
 
-        // 3. Delete any unit conversions pointing FROM this variant
-        unitConversionRepository.deleteByVariantId(variantId);
-
-        // 3.5 Delete any incoming conversions (if this variant was auto-generated for a
-        // packaging unit)
         if (variant.getProduct() != null && variant.getUnit() != null) {
-            List<UnitConversion> incomingConversions = unitConversionRepository.findByProductIdAndToUnitId(
-                    variant.getProduct().getId(), variant.getUnit().getId());
-            if (incomingConversions != null && !incomingConversions.isEmpty()) {
-                unitConversionRepository.deleteAll(incomingConversions);
+            List<UnitConversion> conversions = unitConversionRepository.findByProductIdAndToUnitId(
+                    variant.getProduct().getId(),
+                    variant.getUnit().getId());
+            unitConversionRepository.deleteByVariantId(variantId);
+            if (conversions != null && !conversions.isEmpty()) {
+                unitConversionRepository.deleteAll(conversions);
             }
+        } else {
+            unitConversionRepository.deleteByVariantId(variantId);
         }
 
-        // 4. Finally delete the variant
         productVariantRepository.deleteById(variantId);
     }
 
     // ─── Validation Helpers ──────────────────────────────────────────────────
-
     private void validateBarcode(String barcode) {
         if (!barcode.matches("^\\d{12,13}$")) {
             throw new RuntimeException("Barcode phải gồm 12-13 chữ số.");
@@ -429,8 +426,9 @@ public class ProductVariantService {
      * uppercase, no spaces.
      */
     private String abbreviate(String input, int maxLen) {
-        if (input == null || input.isEmpty())
+        if (input == null || input.isEmpty()) {
             return "";
+        }
         // Remove Vietnamese diacritics for cleaner codes
         String normalized = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
@@ -441,7 +439,6 @@ public class ProductVariantService {
     }
 
     // ─── Mapper ──────────────────────────────────────────────────────────────
-
     private ProductVariantRespone mapToResponse(ProductVariant variant) {
         ProductVariantRespone response = new ProductVariantRespone();
         response.setId(variant.getId());

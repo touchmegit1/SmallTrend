@@ -65,18 +65,15 @@ export const getExpiredBatches = async (locationId) => {
   const data = await response.json();
   return data.map(b => ({
     ...b,
-    id: b.batchId || b.id,
     product_id: b.productId,
     product_name: b.productName,
     batch_code: b.batchCode,
-    quantity: b.availableQuantity || b.quantity || 0,
-    unit_cost: b.unitCost || b.unit_cost || 0,
     expiry_date: b.expiryDate,
-    received_date: b.receivedDate,
+    received_date: b.receivedDate
   }));
 };
 
-export const createDisposalVoucher = async (voucherData, userId) => {
+export const saveDisposalDraft = async (voucherData, userId) => {
   // Map frontend state to Spring Boot request exact format
   const payload = {
     locationId: voucherData.location_id || voucherData.locationId,
@@ -89,12 +86,22 @@ export const createDisposalVoucher = async (voucherData, userId) => {
     })),
   };
 
-  const response = await fetch(`${SPRING_API}?userId=${userId || 1}`, {
+  const response = await fetch(`${SPRING_API}/draft?userId=${userId || 1}`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Failed to create disposal voucher");
+  if (!response.ok) throw new Error("Failed to save draft");
+  const data = await response.json();
+  return mapToFrontend(data);
+};
+
+export const submitDisposalVoucher = async (id) => {
+  const response = await fetch(`${SPRING_API}/${id}/submit`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to submit disposal voucher");
   const data = await response.json();
   return mapToFrontend(data);
 };
