@@ -2,8 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
 import ShiftManagement from "./pages/HR/ShiftManagement";
-import PurchaseOrderList from "./pages/Inventory/PurchaseOrder/PurchaseOrderList";
-import CreatePurchaseOrder from "./pages/Inventory/PurchaseOrder/CreatePurchaseOrder";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -16,12 +16,12 @@ import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import EmployeeList from "./pages/HR/EmployeeList";
 import PayrollManagement from "./pages/HR/PayrollManagement";
 import UserManagement from "./pages/HR/UserManagement";
-import DisposalDetail from "./pages/Inventory/Disposal/DisposalDetail";
-import DisposalList from "./pages/Inventory/Disposal/DisposalList";
-import InventoryCountDetail from "./pages/Inventory/Count/InventoryCountDetail";
-import InventoryCountList from "./pages/Inventory/Count/InventoryCountList";
-import InventoryDashboard from "./pages/Inventory/Dashboard/InventoryDashboard";
-import LocationManagement from "./pages/Inventory/Location/LocationManagement";
+import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import DisposalList from "./pages/Inventory/DisposalList";
+import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
+import InventoryCountList from "./pages/Inventory/InventoryCountList";
+import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
+import LocationManagement from "./pages/Inventory/LocationManagement";
 import POS from "./pages/Pos/pos";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import ShiftHandover from "./pages/Pos/ShiftHandover";
@@ -71,6 +71,11 @@ function RootRedirect() {
     );
   }
 
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/crm/homepage" replace />
+  );
   return isAuthenticated ? (
     <Navigate to="/dashboard" replace />
   ) : (
@@ -145,6 +150,9 @@ function App() {
         <Route path="inventory/disposal" element={<DisposalList />} />
         <Route path="inventory/disposal/create" element={<DisposalDetail />} />
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
+        <Route path="inventory/purchase-orders" element={<PurchaseOrderList />} />
+        <Route path="inventory/purchase-orders/create" element={<CreatePurchaseOrder />} />
+        <Route path="inventory/purchase-orders/:id" element={<CreatePurchaseOrder />} />
 
         {/* Module 3: Products (Sản phẩm) */}
         <Route path="products" element={<ProductList />} />

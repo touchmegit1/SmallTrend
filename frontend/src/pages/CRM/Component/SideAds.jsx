@@ -31,9 +31,12 @@ export default function SideAds() {
 
   return (
     <>
+      {/* Left Ad */}
       <div className="hidden xl:flex fixed left-6 top-10 bottom-10 z-40">
         <AdPanel ad={leftAd} />
       </div>
+
+      {/* Right Ad */}
       <div className="hidden xl:flex fixed right-6 top-10 bottom-10 z-40">
         <AdPanel ad={rightAd} />
       </div>

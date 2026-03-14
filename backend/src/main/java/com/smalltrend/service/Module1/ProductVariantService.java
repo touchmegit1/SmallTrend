@@ -27,7 +27,9 @@ public class ProductVariantService {
                 .toList();
     }
 
-    /** Chỉ lấy variant đang có coupon áp dụng (dùng cho Event Promotion) */
+    /**
+     * Chỉ lấy variant đang có coupon áp dụng (dùng cho Event Promotion)
+     */
     public List<ProductVariantRespone> getVariantsWithCoupon() {
         return productVariantRepository.findAll().stream()
                 .filter(v -> v.getCoupon() != null)
@@ -35,7 +37,9 @@ public class ProductVariantService {
                 .toList();
     }
 
-    /** Áp dụng coupon cho một variant theo SKU */
+    /**
+     * Áp dụng coupon cho một variant theo SKU
+     */
     public ProductVariantRespone applyCoupon(String sku, Integer couponId) {
         ProductVariant variant = productVariantRepository.findBySku(sku)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + sku));
@@ -47,7 +51,9 @@ public class ProductVariantService {
         return mapToResponse(productVariantRepository.save(variant));
     }
 
-    /** Xóa coupon khỏi một variant theo SKU */
+    /**
+     * Xóa coupon khỏi một variant theo SKU
+     */
     public ProductVariantRespone removeCoupon(String sku) {
         ProductVariant variant = productVariantRepository.findBySku(sku)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + sku));

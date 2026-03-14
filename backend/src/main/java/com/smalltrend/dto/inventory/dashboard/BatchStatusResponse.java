@@ -18,5 +18,4 @@ public class BatchStatusResponse {
     private Integer daysUntilExpiry;
     private BigDecimal value;
     private LocalDate receivedDate;
-    private String locationName;
 }
