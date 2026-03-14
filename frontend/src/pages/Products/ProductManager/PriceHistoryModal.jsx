@@ -1,109 +1,170 @@
-/**
- * PriceHistoryModal.jsx
- * Modal hiển thị lịch sử thay đổi giá một sản phẩm.
- */
-import React, { useState, useEffect } from "react";
-import { X, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { formatCurrency } from "../../../utils/priceCalculation";
+import React, { useState, useEffect } from 'react';
+import { X, History, CheckCircle2, XCircle, ToggleLeft, ToggleRight } from 'lucide-react';
+import { getVariantPriceHistory, toggleVariantPriceStatus } from '../../../hooks/useVariantPrices';
 
-export default function PriceHistoryModal({ variant, onClose }) {
-    const [history, setHistory] = useState([]);
-    const [loading, setLoading] = useState(true);
+const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
+  const [prices, setPrices] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [toggling, setToggling] = useState(null);
 
-    useEffect(() => {
-        // Simulate loading price history (replace with actual API call)
-        setLoading(true);
-        const timer = setTimeout(() => {
-            // Mock data - replace with actual API: api.get(`/products/variants/${variant.id}/price-history`)
-            setHistory([
-                {
-                    id: 1,
-                    date: new Date().toISOString(),
-                    oldPrice: variant.costPrice || 0,
-                    newPrice: variant.sellPrice || 0,
-                    changedBy: "Hệ thống",
-                    reason: "Khởi tạo giá bán",
-                },
-            ]);
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [variant]);
+  useEffect(() => {
+    if (isOpen && variant?.id) {
+      fetchHistory();
+    }
+  }, [isOpen, variant?.id]);
 
-    const getPriceChangeIcon = (oldP, newP) => {
-        if (newP > oldP) return <TrendingUp className="w-4 h-4 text-emerald-500" />;
-        if (newP < oldP) return <TrendingDown className="w-4 h-4 text-red-500" />;
-        return <Minus className="w-4 h-4 text-gray-400" />;
-    };
+  const fetchHistory = async () => {
+    setLoading(true);
+    try {
+      const data = await getVariantPriceHistory(variant.id);
+      setPrices(data);
+    } catch (err) {
+      console.error('Error fetching price history:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-gray-50 to-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200">
-                            <Clock className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-800">Lịch sử giá</h2>
-                            <p className="text-xs text-gray-500 mt-0.5">{variant?.name} — {variant?.sku}</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 rounded-xl transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+  const handleToggle = async (priceId) => {
+    setToggling(priceId);
+    try {
+      await toggleVariantPriceStatus(priceId);
+      await fetchHistory();
+      onStatusChanged && onStatusChanged();
+    } catch (err) {
+      console.error('Error toggling price status:', err);
+    } finally {
+      setToggling(null);
+    }
+  };
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-                            <span className="text-sm">Đang tải lịch sử...</span>
-                        </div>
-                    ) : history.length === 0 ? (
-                        <div className="text-center py-12 text-gray-400">
-                            <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                            <p className="font-medium">Chưa có lịch sử thay đổi giá</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {history.map((entry) => (
-                                <div
-                                    key={entry.id}
-                                    className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100/70 transition-colors"
-                                >
-                                    <div className="flex-shrink-0">
-                                        {getPriceChangeIcon(entry.oldPrice, entry.newPrice)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <span className="text-gray-500 line-through">
-                                                {formatCurrency(entry.oldPrice)}
-                                            </span>
-                                            <span className="text-gray-400">→</span>
-                                            <span className="font-bold text-gray-900">
-                                                {formatCurrency(entry.newPrice)}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mt-1">{entry.reason || "Không có ghi chú"}</p>
-                                    </div>
-                                    <div className="text-right flex-shrink-0">
-                                        <p className="text-xs text-gray-500">
-                                            {new Date(entry.date).toLocaleDateString("vi-VN")}
-                                        </p>
-                                        <p className="text-xs text-gray-400 mt-0.5">{entry.changedBy}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
+  if (!isOpen) return null;
+
+  const formatVND = (val) =>
+    val != null
+      ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
+      : '—';
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden max-h-[85vh] flex flex-col">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-violet-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-white text-lg font-bold flex items-center gap-2">
+              <History size={20} /> Lịch sử giá
+            </h2>
+            <p className="text-purple-100 text-sm mt-0.5">
+              {variant?.name || variant?.sku || 'Variant'}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white transition">
+            <X size={24} />
+          </button>
         </div>
-    );
-}
+
+        {/* Table */}
+        <div className="overflow-auto flex-1 p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="w-8 h-8 border-3 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+            </div>
+          ) : prices.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <History size={48} className="mx-auto mb-3 opacity-50" />
+              <p>Chưa có lịch sử giá nào.</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">#</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-600">Giá nhập</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-600">Giá bán</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-600">Thuế (%)</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày hiệu lực</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Trạng thái</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày tạo</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prices.map((price, idx) => (
+                  <tr
+                    key={price.id}
+                    className={`border-b border-gray-100 hover:bg-gray-50 transition ${
+                      price.status === 'ACTIVE' ? 'bg-emerald-50/50' : ''
+                    }`}
+                  >
+                    <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
+                    <td className="px-4 py-3 text-right font-medium">{formatVND(price.purchasePrice)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-blue-700">
+                      {formatVND(price.sellingPrice)}
+                    </td>
+                    <td className="px-4 py-3 text-right">{price.taxPercent ?? 0}%</td>
+                    <td className="px-4 py-3 text-center">{formatDate(price.effectiveDate)}</td>
+                    <td className="px-4 py-3 text-center">
+                      {price.status === 'ACTIVE' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                          <CheckCircle2 size={12} /> Kích hoạt
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                          <XCircle size={12} /> Đã tắt kích hoạt
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center text-gray-400 text-xs">
+                      {formatDate(price.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => handleToggle(price.id)}
+                        disabled={toggling === price.id}
+                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                          price.status === 'ACTIVE'
+                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                            : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                        } disabled:opacity-50`}
+                        title={price.status === 'ACTIVE' ? 'Tắt kích hoạt' : 'Kích hoạt'}
+                      >
+                        {toggling === price.id ? (
+                          <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : price.status === 'ACTIVE' ? (
+                          <><ToggleRight size={14} /> Tắt kích hoạt</>
+                        ) : (
+                          <><ToggleLeft size={14} /> Kích hoạt</>
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-100 px-6 py-3 flex justify-end flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PriceHistoryModal;

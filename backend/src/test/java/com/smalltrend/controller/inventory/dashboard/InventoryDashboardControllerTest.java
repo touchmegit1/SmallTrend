@@ -1,7 +1,8 @@
 package com.smalltrend.controller.inventory.dashboard;
 
+import com.smalltrend.controller.inventory.InventoryDashboardController;
 import com.smalltrend.dto.inventory.dashboard.*;
-import com.smalltrend.service.inventory.dashboard.InventoryDashboardService;
+import com.smalltrend.service.inventory.InventoryDashboardService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -189,10 +189,7 @@ const AddNewProductVariant = () => {
       setErrorMsg("Vui lòng chọn đơn vị");
       return false;
     }
-    if (!formData.sell_price) {
-      setErrorMsg("Vui lòng nhập giá bán");
-      return false;
-    }
+
     // Barcode: optional but must be 12-13 digits if provided
     if (formData.barcode.trim() && !/^\d{12,13}$/.test(formData.barcode.trim())) {
       setErrorMsg("Barcode phải gồm 12-13 chữ số.");
@@ -234,9 +231,7 @@ const AddNewProductVariant = () => {
         pluCode: formData.plu_code || null,
         unitId: parseInt(formData.unit_id),
         costPrice: formData.cost_price ? parseFloat(formData.cost_price) : null,
-        sellPrice: product?.tax_rate_value
-          ? Math.round(parseFloat(formData.sell_price) * (1 + product.tax_rate_value / 100))
-          : parseFloat(formData.sell_price),
+        sellPrice: formData.sell_price ? parseFloat(formData.sell_price) : 0,
         imageUrl: imageUrl,
         isActive: formData.is_active,
         attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
@@ -245,14 +240,14 @@ const AddNewProductVariant = () => {
       const variantId = response.data?.id || response.data?.data?.id; // Fallback for diff API responses
 
       if (variantId && conversions.length > 0) {
-        const validConversions = conversions.filter((c) => c.toUnitId && c.conversionFactor && c.sellPrice);
+        const validConversions = conversions.filter((c) => c.toUnitId && c.conversionFactor);
         if (validConversions.length > 0) {
           await Promise.all(
             validConversions.map((c) =>
               api.post(`/products/variants/${variantId}/conversions`, {
                 toUnitId: parseInt(c.toUnitId),
                 conversionFactor: parseFloat(c.conversionFactor),
-                sellPrice: parseFloat(c.sellPrice),
+                sellPrice: 0,
                 isActive: c.isActive,
                 description: "Quy đổi đơn vị"
               })
@@ -429,7 +424,7 @@ const AddNewProductVariant = () => {
 
                   <div className="border-t border-gray-100 pt-4" />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                       <Label className="text-sm font-semibold text-gray-700">
                         Đơn vị <span className="text-red-500">*</span>
@@ -449,75 +444,35 @@ const AddNewProductVariant = () => {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700">
-                        Giá nhập
-                      </Label>
-                      <Input
-                        type="text"
-                        className="mt-2 h-11 border-gray-200 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
-                        placeholder="0"
-                        name="cost_price"
-                        value={formData.cost_price || "0"}
-                        readOnly
-                        disabled
-                      />
-                      <p className="text-[11px] text-gray-400 mt-1 italic">Sẽ tự động cập nhật từ phiếu nhập kho</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700">
-                        Giá bán <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        step="any"
-                        className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold"
-                        placeholder="VD: 85000"
-                        name="sell_price"
-                        value={formData.sell_price}
-                        onChange={handleChange}
-                        required
-                      />
-                      {formData.sell_price && !isNaN(formData.sell_price) && product?.tax_rate_value != null && product.tax_rate_value > 0 ? (
-                        <p className="text-xs text-emerald-700 mt-1.5 font-medium ml-1 flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1.5 rounded-lg w-max border border-emerald-100">
-                          Giá bán cho khách (+ thuế {product.tax_rate_value}%):
-                          <span className="font-bold text-sm">
-                            {Math.round(parseFloat(formData.sell_price) * (1 + product.tax_rate_value / 100)).toLocaleString('vi-VN')} đ
-                          </span>
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-gray-400 mt-1 ml-1">Nhập giá bán trước thuế, hệ thống sẽ tự cộng thuế</p>
-                      )}
-                    </div>
-                  </div>
 
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700">
-                      Trạng thái
-                    </Label>
-                    <select
-                      name="is_active"
-                      className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
-                      value={formData.is_active}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          is_active: e.target.value === "true",
-                        }))
-                      }
-                      disabled={product?.is_active === false}
-                    >
-                      {product?.is_active !== false && (
-                        <option value="true">Đang hoạt động</option>
+                    <div>
+                      <Label className="text-sm font-semibold text-gray-700">
+                        Trạng thái
+                      </Label>
+                      <select
+                        name="is_active"
+                        className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                        value={formData.is_active}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            is_active: e.target.value === "true",
+                          }))
+                        }
+                        disabled={product?.is_active === false}
+                      >
+                        {product?.is_active !== false && (
+                          <option value="true">Đang hoạt động</option>
+                        )}
+                        <option value="false">Ngừng hoạt động</option>
+                      </select>
+                      {product?.is_active === false && (
+                        <p className="text-xs text-red-500 mt-1">
+                          Sản phẩm gốc đang ngừng hoạt động, không thể tạo biến
+                          thể kích hoạt.
+                        </p>
                       )}
-                      <option value="false">Ngừng hoạt động</option>
-                    </select>
-                    {product?.is_active === false && (
-                      <p className="text-xs text-red-500 mt-1">
-                        Sản phẩm gốc đang ngừng hoạt động, không thể tạo biến
-                        thể kích hoạt.
-                      </p>
-                    )}
+                    </div>
                   </div>
 
                   {/* DYNAMIC ATTRIBUTES */}
@@ -618,17 +573,7 @@ const AddNewProductVariant = () => {
                               </div>
                             </div>
                             <div className="flex gap-3 items-end">
-                              <div className="flex-1">
-                                <Label className="text-xs text-gray-500 mb-1 block">Giá bán</Label>
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  placeholder="Giá bán quy đổi"
-                                  className="h-10 text-sm border-gray-200 rounded-xl"
-                                  value={conv.sellPrice}
-                                  onChange={(e) => handleChangeConversion(index, "sellPrice", e.target.value)}
-                                />
-                              </div>
+
                               <div className="flex-1 mb-2">
                                 <label className="flex items-center gap-2 cursor-pointer mt-2 text-sm text-gray-700">
                                   <input

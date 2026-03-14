@@ -13,7 +13,6 @@ public class CreateTicketRequest {
     private String relatedEntityType;
     private Long relatedEntityId;
     private Integer assignedToUserId;
-    private Integer createdById;
 
     // Refund-specific fields
     private String sku;

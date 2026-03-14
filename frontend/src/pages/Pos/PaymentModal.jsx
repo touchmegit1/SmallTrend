@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import CustomerSearch from "./CustomerSearch";
 
 import api from "../../config/axiosConfig";
+import customerTierService from "../../services/customerTierService";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
@@ -191,17 +192,28 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
     </div>
   );
 };
+// Helper: tìm hạng thành viên phù hợp dựa trên spentAmount
+const getCustomerTier = (spentAmount, tiers) => {
+  if (!tiers || tiers.length === 0) return null;
+  return [...tiers]
+    .sort((a, b) => Number(b.minSpending) - Number(a.minSpending))
+    .find(tier => spentAmount >= Number(tier.minSpending)) || null;
+};
+
 export default function PaymentModal({ cart, customer, onClose, onComplete, shortcuts }) {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
   const [usePoints, setUsePoints] = useState(false);
   const [voucher, setVoucher] = useState("");
-  const [discount, setDiscount] = useState(0);
+  const [voucherError, setVoucherError] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null); // { type: 'PERCENT' | 'FIXED', value: number, max: number, code: string }
+  const [discount, setDiscount] = useState(""); // Giảm giá thủ công (dạng chuỗi để trống ban đầu)
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [focusedField, setFocusedField] = useState("customerSearch");
   const [suggestedIndex, setSuggestedIndex] = useState(-1);
+  const [tiers, setTiers] = useState([]); // Danh sách hạng thành viên
 
   const customerSearchRef = useRef(null);
   const voucherInputRef = useRef(null);
@@ -217,9 +229,36 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
     usePoints && selectedCustomer
       ? Math.min(currentLoyaltyPoints * 100, subtotal)
       : 0;
-  const totalDiscount = pointsDiscount + discount;
-  const finalTotal = subtotal - totalDiscount;
+
+  let voucherDiscountAmt = 0;
+  if (appliedVoucher) {
+    if (appliedVoucher.type === 'PERCENTAGE') {
+      voucherDiscountAmt = subtotal * (appliedVoucher.value / 100);
+      if (appliedVoucher.max > 0 && voucherDiscountAmt > appliedVoucher.max) {
+        voucherDiscountAmt = appliedVoucher.max;
+      }
+    } else {
+      voucherDiscountAmt = appliedVoucher.value;
+    }
+  }
+
+  const discountNum = parseFloat(discount) || 0;
+  const totalDiscount = pointsDiscount + discountNum + voucherDiscountAmt;
+  const finalTotal = Math.max(0, subtotal - totalDiscount);
   const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
+
+  // Fetch danh sách hạng thành viên khi mở modal
+  useEffect(() => {
+    const fetchTiers = async () => {
+      try {
+        const data = await customerTierService.getAllTiers();
+        setTiers(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error fetching tiers in PaymentModal:', err);
+      }
+    };
+    fetchTiers();
+  }, []);
 
   useEffect(() => {
     if (focusedField === "customerSearch" && customerSearchRef.current) {
@@ -348,7 +387,12 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
       // F10 shortcuts actions
       else if (shortcuts && e.key === shortcuts.payment1) {
         e.preventDefault();
-        paymentButtonRef.current?.click();
+        if (finalTotal === 0) {
+          // Đơn 0đ: Hoàn tất ngay không cần nhập tiền
+          completePaymentProcess("cash", 0, 0);
+        } else {
+          paymentButtonRef.current?.click();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -375,28 +419,37 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
   const completePaymentProcess = async (method, receivedAmt, changeAmt) => {
     let customerToUpdate = selectedCustomer;
 
-
     // Cập nhật điểm trung thành trong bảng customers
     if (selectedCustomer && selectedCustomer.id) {
       try {
-        const earnedPoints = Math.floor(finalTotal / 10000); // 1 điểm/10,000đ
+        const currentSpent = selectedCustomer.spentAmount || 0;
+        const newSpent = currentSpent + finalTotal;
+
+        // Tìm hạng hiện tại của khách (dựa trên spentAmount TRƯỚC giao dịch này)
+        const customerTier = getCustomerTier(currentSpent, tiers);
+        const multiplier = customerTier?.pointsMultiplier || 1;
+
+        // Tích điểm: (finalTotal / 10,000) * hệ số nhân của hạng
+        const basePoints = finalTotal / 10000;
+        const earnedPoints = Math.floor(basePoints * multiplier);
         const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
         const currentPoints = selectedCustomer.loyaltyPoints || 0;
-
 
         // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
         const newPoints = currentPoints - pointsUsed + earnedPoints;
 
-        // Lưu vào cột loyalty_points trong bảng customers
+        // Lưu vào cột loyalty_points và spent_amount trong bảng customers
         await api.put(`/crm/customers/${selectedCustomer.id}`, {
           name: selectedCustomer.name,
           phone: selectedCustomer.phone,
           loyaltyPoints: newPoints,
+          spentAmount: newSpent,
         });
 
         customerToUpdate = {
           ...selectedCustomer,
           loyaltyPoints: newPoints,
+          spentAmount: newSpent,
         };
       } catch (error) {
         console.error('Error updating customer loyalty points:', error);
@@ -411,13 +464,63 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
       customerMoney: receivedAmt,
       change: changeAmt,
       pointsDiscount,
-      discount,
+      discount: discountNum + voucherDiscountAmt,
       notes,
       paymentMethod: method === "cash" ? "Tiền mặt" : "Chuyển khoản"
     });
   };
 
+  const handleApplyVoucher = async () => {
+    if (!voucher || !voucher.trim()) return;
+    setVoucherError("");
+    setAppliedVoucher(null);
+    try {
+      const response = await api.get('/crm/coupons');
+      const coupons = response.data;
+      const validCoupon = coupons.find(c => c.couponCode.toUpperCase() === voucher.trim().toUpperCase() && c.status === 'ACTIVE');
+
+      if (!validCoupon) {
+        setVoucherError("Mã voucher không hợp lệ hoặc đã hết hạn/chưa kích hoạt!");
+        setDiscount(0);
+        return;
+      }
+
+      if (validCoupon.minPurchaseAmount && subtotal < validCoupon.minPurchaseAmount) {
+        setVoucherError(`Đơn hàng tối thiểu ${validCoupon.minPurchaseAmount.toLocaleString()}đ để áp mã này!`);
+        setDiscount(0);
+        return;
+      }
+
+      if (validCoupon.couponType === 'PERCENTAGE') {
+        setAppliedVoucher({
+          type: 'PERCENTAGE',
+          value: validCoupon.discountPercent || 0,
+          max: validCoupon.maxDiscountAmount || 0,
+          code: validCoupon.couponCode
+        });
+      } else {
+        setAppliedVoucher({
+          type: 'FIXED_AMOUNT',
+          value: validCoupon.discountAmount || 0,
+          max: 0,
+          code: validCoupon.couponCode
+        });
+      }
+
+      setFocusedField("notes");
+      notesRef.current?.focus();
+    } catch (error) {
+      console.error('Error applying voucher:', error);
+      setVoucherError("Lỗi kết nối máy chủ để kiểm tra mã voucher.");
+    }
+  };
+
   const initiatePayment = () => {
+    if (finalTotal === 0) {
+      // Đơn 0đ: Hoàn tất ngay không cần nhập tiền
+      completePaymentProcess("cash", 0, 0);
+      return;
+    }
     if (paymentMethod === "cash") {
       if (!cashAmount || parseFloat(cashAmount) < finalTotal) {
         alert("Số tiền không đủ!");
@@ -562,7 +665,22 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   <span>-{pointsDiscount.toLocaleString()}đ</span>
                 </div>
               )}
-              {discount > 0 && (
+              {appliedVoucher && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "#17a2b8",
+                  }}
+                >
+                  <span>
+                    Voucher ({appliedVoucher.code}):
+                  </span>
+                  <span>-{voucherDiscountAmt.toLocaleString()}đ</span>
+                </div>
+              )}
+              {discountNum > 0 && (
                 <div
                   style={{
                     display: "flex",
@@ -572,7 +690,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   }}
                 >
                   <span>Giảm giá:</span>
-                  <span>-{discount.toLocaleString()}đ</span>
+                  <span>-{discountNum.toLocaleString()}đ</span>
                 </div>
               )}
             </div>
@@ -589,48 +707,78 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
             />
 
             {/* Thông tin khách hàng */}
-            {selectedCustomer && (
-              <div
-                style={{
-                  padding: "12px",
-                  background: "#d1ecf1",
-                  borderRadius: "6px",
-                  marginBottom: "15px",
-                  fontSize: "13px",
-                  border: "1px solid #007bff",
-                }}
-              >
-                <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-                  {selectedCustomer.name} - {selectedCustomer.phone} {selectedCustomer.tier && <span style={{ color: "#d9534f", marginLeft: "5px" }}>(Hạng: {selectedCustomer.tier})</span>}
+            {selectedCustomer && (() => {
+              const currentSpent = selectedCustomer.spentAmount || 0;
+              const customerTier = getCustomerTier(currentSpent, tiers);
+              const multiplier = customerTier?.pointsMultiplier || 1;
+              const earnedPoints = Math.floor((finalTotal / 10000) * multiplier);
+              return (
+                <div
+                  style={{
+                    padding: "12px",
+                    background: "#d1ecf1",
+                    borderRadius: "6px",
+                    marginBottom: "15px",
+                    fontSize: "13px",
+                    border: "1px solid #007bff",
+                  }}
+                >
+                  <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                    {selectedCustomer.name} - {selectedCustomer.phone}
+                    {customerTier ? (
+                      <span style={{
+                        display: "inline-block",
+                        marginLeft: "8px",
+                        padding: "1px 8px",
+                        background: customerTier.color || "#d9534f",
+                        color: "#fff",
+                        borderRadius: "10px",
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                      }}>
+                        👑 {customerTier.tierName}
+                      </span>
+                    ) : selectedCustomer.tier ? (
+                      <span style={{ color: "#d9534f", marginLeft: "5px" }}>(Hạng: {selectedCustomer.tier})</span>
+                    ) : null}
+                  </div>
+                  <div>Điểm hiện tại: <strong>{currentLoyaltyPoints}</strong></div>
+                  <div style={{ color: "#17a2b8", marginTop: "2px" }}>
+                    Sẽ tích: <strong>+{earnedPoints} điểm</strong>
+                    {multiplier !== 1 && (
+                      <span style={{ fontSize: "11px", marginLeft: "4px", color: "#6c757d" }}>
+                        (×{Number(multiplier).toFixed(1)} hệ số {customerTier?.tierName})
+                      </span>
+                    )}
+                  </div>
+                  {currentLoyaltyPoints > 0 && (
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginTop: "8px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={usePoints}
+                        onChange={(e) => setUsePoints(e.target.checked)}
+                      />
+                      <span>
+                        Sử dụng điểm (-
+                        {Math.min(
+                          currentLoyaltyPoints * 100,
+                          subtotal,
+                        ).toLocaleString()}
+                        đ)
+                      </span>
+                    </label>
+                  )}
                 </div>
-                <div>Điểm hiện tại: {currentLoyaltyPoints}</div>
-                {currentLoyaltyPoints > 0 && (
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      marginTop: "8px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={usePoints}
-                      onChange={(e) => setUsePoints(e.target.checked)}
-                    />
-                    <span>
-                      Sử dụng điểm (-
-                      {Math.min(
-                        currentLoyaltyPoints * 100,
-                        subtotal,
-                      ).toLocaleString()}
-                      đ)
-                    </span>
-                  </label>
-                )}
-              </div>
-            )}
+              );
+            })()}
 
             {/* Voucher */}
             <div style={{ marginBottom: "15px" }}>
@@ -650,7 +798,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   type="text"
                   placeholder="Nhập mã voucher"
                   value={voucher}
-                  onChange={(e) => setVoucher(e.target.value)}
+                  onChange={(e) => {
+                    setVoucher(e.target.value);
+                    setVoucherError("");
+                    setAppliedVoucher(null); // Xóa voucher cũ khi người dùng gõ thay đổi
+                  }}
                   onFocus={() => setFocusedField("voucher")}
                   style={{
                     flex: 1,
@@ -662,10 +814,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 />
                 <button
                   ref={voucherButtonRef}
-                  onClick={() => {
-                    if (voucher === "GIAM10") setDiscount(subtotal * 0.1);
-                    else alert("Mã không hợp lệ");
-                  }}
+                  onClick={handleApplyVoucher}
                   style={{
                     padding: "8px 16px",
                     background: "#007bff",
@@ -679,6 +828,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   Áp dụng
                 </button>
               </div>
+              {voucherError && (
+                <div style={{ color: "#dc3545", fontSize: "12px", marginTop: "5px" }}>
+                  {voucherError}
+                </div>
+              )}
             </div>
 
             {/* Giảm giá thủ công */}
@@ -691,13 +845,14 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                   fontWeight: "500",
                 }}
               >
-                Giảm giá:
+                Giảm giá thủ công (VNĐ):
               </label>
               <input
                 type="number"
                 placeholder="Nhập số tiền giảm"
                 value={discount}
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setDiscount(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 style={{
                   width: "100%",
                   padding: "8px",
@@ -962,14 +1117,14 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
               ref={paymentButtonRef}
               onClick={initiatePayment}
               onFocus={() => setFocusedField("paymentButton")}
-              disabled={!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal))}
+              disabled={finalTotal > 0 && (!paymentMethod || (paymentMethod === "cash" && (!cashAmount || parseFloat(cashAmount) < finalTotal)))}
               style={{
                 width: "100%",
                 padding: "18px",
                 background:
-                  !paymentMethod ||
+                  finalTotal > 0 && (!paymentMethod ||
                     (paymentMethod === "cash" &&
-                      (!cashAmount || parseFloat(cashAmount) < finalTotal))
+                      (!cashAmount || parseFloat(cashAmount) < finalTotal)))
                     ? "#6c757d"
                     : "#007bff",
                 color: "white",
@@ -978,9 +1133,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
                 fontSize: "18px",
                 fontWeight: "bold",
                 cursor:
-                  !paymentMethod ||
+                  finalTotal > 0 && (!paymentMethod ||
                     (paymentMethod === "cash" &&
-                      (!cashAmount || parseFloat(cashAmount) < finalTotal))
+                      (!cashAmount || parseFloat(cashAmount) < finalTotal)))
                     ? "not-allowed"
                     : "pointer",
                 boxShadow: "0 4px 12px rgba(0,123,255,0.3)",

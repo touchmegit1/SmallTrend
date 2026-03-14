@@ -7,11 +7,14 @@ import com.smalltrend.dto.products.UnitConversionRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
 import com.smalltrend.dto.products.UnitRequest;
 import com.smalltrend.dto.products.UnitResponse;
+import com.smalltrend.dto.products.VariantPriceRequest;
+import com.smalltrend.dto.products.VariantPriceResponse;
 import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.service.products.ProductService;
 import com.smalltrend.service.ProductVariantService;
 import com.smalltrend.service.UnitConversionService;
 import com.smalltrend.service.UnitService;
+import com.smalltrend.service.VariantPriceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,19 +22,20 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controller xử lý các HTTP request liên quan đến Product (Sản phẩm)
- * Cung cấp các RESTful API cho sản phẩm và các biến thể (variants) của nó
+ * Controller xử lý các HTTP request liên quan đến Product (Sản phẩm) Cung cấp
+ * các RESTful API cho sản phẩm và các biến thể (variants) của nó
  */
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000" })
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"})
 public class ProductController {
 
     private final ProductService productService;
     private final ProductVariantService productVariantService;
     private final UnitConversionService unitConversionService;
     private final UnitService unitService;
+    private final VariantPriceService variantPriceService;
 
     // Lấy danh sách tất cả sản phẩm
     @GetMapping
@@ -159,6 +163,62 @@ public class ProductController {
     public ResponseEntity<String> deleteUnit(@PathVariable Integer id) {
         unitService.deleteUnit(id);
         return ResponseEntity.ok("Unit deleted");
+    }
+
+    // ─── Variant Prices ──────────────────────────────────────────────────────
+    // Tạo giá mới cho variant (giá cũ chuyển INACTIVE)
+    @PostMapping("/variants/{variantId}/prices")
+    public ResponseEntity<VariantPriceResponse> createVariantPrice(
+            @PathVariable Integer variantId,
+            @RequestBody VariantPriceRequest request) {
+        return ResponseEntity.ok(variantPriceService.createPrice(variantId, request));
+    }
+
+    // Lấy lịch sử giá của variant
+    @GetMapping("/variants/{variantId}/prices")
+    public ResponseEntity<List<VariantPriceResponse>> getVariantPriceHistory(@PathVariable Integer variantId) {
+        return ResponseEntity.ok(variantPriceService.getPriceHistory(variantId));
+    }
+
+    // Lấy giá ACTIVE hiện tại của variant
+    @GetMapping("/variants/{variantId}/prices/active")
+    public ResponseEntity<VariantPriceResponse> getActiveVariantPrice(@PathVariable Integer variantId) {
+        VariantPriceResponse price = variantPriceService.getActivePrice(variantId);
+        if (price == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(price);
+    }
+
+    // Cập nhật ngày hiệu lực cho giá ACTIVE hiện tại
+    @PutMapping("/variants/{variantId}/prices/active/date")
+    public ResponseEntity<VariantPriceResponse> updateActivePriceDate(
+            @PathVariable Integer variantId,
+            @RequestBody java.util.Map<String, String> request) {
+        String dateStr = request.get("effectiveDate");
+        if (dateStr == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        java.time.LocalDate newDate = java.time.LocalDate.parse(dateStr.split("T")[0]); // Handle ISO string from JS
+        return ResponseEntity.ok(variantPriceService.updateActivePriceDate(variantId, newDate));
+    }
+
+    // Cập nhật ngày hết hiệu lực cho giá ACTIVE hiện tại
+    @PutMapping("/variants/{variantId}/prices/active/expiry")
+    public ResponseEntity<VariantPriceResponse> updateActivePriceExpiry(
+            @PathVariable Integer variantId,
+            @RequestBody java.util.Map<String, String> request) {
+        String dateStr = request.get("expiryDate");
+        java.time.LocalDate newDate = (dateStr != null && !dateStr.isBlank())
+                ? java.time.LocalDate.parse(dateStr.split("T")[0])
+                : null;
+        return ResponseEntity.ok(variantPriceService.updateActivePriceExpiry(variantId, newDate));
+    }
+
+    // Toggle trạng thái active/inactive của một bản ghi giá
+    @PutMapping("/prices/{priceId}/toggle-status")
+    public ResponseEntity<VariantPriceResponse> togglePriceStatus(@PathVariable Integer priceId) {
+        return ResponseEntity.ok(variantPriceService.togglePriceStatus(priceId));
     }
 
     @PostMapping

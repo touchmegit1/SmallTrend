@@ -3,6 +3,7 @@ package com.smalltrend.service.inventory.stock;
 import com.smalltrend.dto.inventory.StockAdjustRequest;
 import com.smalltrend.dto.inventory.StockImportRequest;
 import com.smalltrend.entity.*;
+import com.smalltrend.service.inventory.InventoryStockService;
 import com.smalltrend.entity.enums.StockTransactionType;
 import com.smalltrend.repository.*;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,10 +1,11 @@
 package com.smalltrend.service;
 
 import com.smalltrend.dto.pos.SavePurchaseHistoryRequest;
+import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.PurchaseHistory;
 import com.smalltrend.repository.PurchaseHistoryRepository;
 import com.smalltrend.repository.ProductVariantRepository;
-import com.smalltrend.service.inventory.stock.InventoryStockService;
+import com.smalltrend.service.inventory.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,10 +25,12 @@ public class PurchaseHistoryService {
     public void savePurchaseHistory(SavePurchaseHistoryRequest request) {
         List<PurchaseHistory> histories = new ArrayList<>();
 
+        if (request.getItems() == null) {
+            purchaseHistoryRepository.saveAll(histories);
+            return;
+        }
+
         for (SavePurchaseHistoryRequest.PurchaseItem item : request.getItems()) {
-            // Note: If item is a combo, productId might be null or formatted differently depending on frontend.
-            // Currently POS sends numeric ID for products. Combos might not have a numeric ID if they are 'combo_1' etc.
-            // But we will catch it if productId is null or invalid.
             PurchaseHistory history = PurchaseHistory.builder()
                     .customerId(request.getCustomerId())
                     .customerName(request.getCustomerName())
@@ -45,17 +48,24 @@ public class PurchaseHistoryService {
         List<PurchaseHistory> savedHistories = purchaseHistoryRepository.saveAll(histories);
 
         for (PurchaseHistory history : savedHistories) {
-            if (history.getProductId() != null) {
-                productVariantRepository.findById(history.getProductId().intValue()).ifPresent(variant -> {
-                    try {
-                        inventoryStockService.deductStock(variant, history.getQuantity(), history.getId(), "POS_SALE");
-                    } catch (Exception e) {
-                        System.err.println("Warning: Could not deduct stock for product " + variant.getSku() + ": " + e.getMessage());
-                        // If strict inventory is required, throw RuntimeException to rollback
-                        // throw new RuntimeException(e);
-                    }
-                });
+            if (history.getProductId() == null) {
+                continue;
             }
+
+            Integer variantId = history.getProductId().intValue();
+            productVariantRepository.findById(variantId).ifPresent(variant -> deductStockQuietly(variant, history));
+        }
+    }
+
+    public List<PurchaseHistory> getCustomerHistory(Long customerId) {
+        return purchaseHistoryRepository.findByCustomerId(customerId);
+    }
+
+    private void deductStockQuietly(ProductVariant variant, PurchaseHistory history) {
+        try {
+            inventoryStockService.deductStock(variant, history.getQuantity(), history.getId(), "POS_SALE");
+        } catch (Exception ignored) {
+            // Keep purchase history persistence resilient even when inventory deduction fails.
         }
     }
 }

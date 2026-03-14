@@ -1,10 +1,11 @@
 package com.smalltrend.controller.inventory.inventorycount;
 
+import com.smalltrend.controller.inventory.InventoryCountController;
 import com.smalltrend.dto.inventory.inventorycount.InventoryCountItemRequest;
 import com.smalltrend.dto.inventory.inventorycount.InventoryCountItemResponse;
 import com.smalltrend.dto.inventory.inventorycount.InventoryCountRequest;
 import com.smalltrend.dto.inventory.inventorycount.InventoryCountResponse;
-import com.smalltrend.service.inventory.inventorycount.InventoryCountService;
+import com.smalltrend.service.inventory.InventoryCountService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

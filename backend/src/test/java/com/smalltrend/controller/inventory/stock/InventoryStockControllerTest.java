@@ -1,8 +1,9 @@
 package com.smalltrend.controller.inventory.stock;
 
+import com.smalltrend.controller.inventory.InventoryStockController;
 import com.smalltrend.dto.inventory.StockAdjustRequest;
 import com.smalltrend.dto.inventory.StockImportRequest;
-import com.smalltrend.service.inventory.stock.InventoryStockService;
+import com.smalltrend.service.inventory.InventoryStockService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

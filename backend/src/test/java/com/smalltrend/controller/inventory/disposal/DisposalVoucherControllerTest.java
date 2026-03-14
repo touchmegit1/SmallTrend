@@ -1,9 +1,10 @@
 package com.smalltrend.controller.inventory.disposal;
 
+import com.smalltrend.controller.inventory.DisposalVoucherController;
 import com.smalltrend.dto.inventory.disposal.DisposalVoucherRequest;
 import com.smalltrend.dto.inventory.disposal.DisposalVoucherResponse;
 import com.smalltrend.dto.inventory.disposal.ExpiredBatchResponse;
-import com.smalltrend.service.inventory.disposal.DisposalVoucherService;
+import com.smalltrend.service.inventory.DisposalVoucherService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -92,16 +93,16 @@ class DisposalVoucherControllerTest {
     }
 
     @Test
-    void createDisposalVoucher_shouldReturnOk() {
+    void saveDraft_shouldReturnOk() {
         DisposalVoucherRequest request = new DisposalVoucherRequest();
         DisposalVoucherResponse expected = new DisposalVoucherResponse();
-        when(disposalVoucherService.createDisposalVoucher(request, 1L)).thenReturn(expected);
+        when(disposalVoucherService.saveDraft(request, 1L)).thenReturn(expected);
 
-        ResponseEntity<DisposalVoucherResponse> response = controller.createDisposalVoucher(request, 1L);
+        ResponseEntity<DisposalVoucherResponse> response = controller.saveDraft(request, 1L);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(expected, response.getBody());
-        verify(disposalVoucherService).createDisposalVoucher(request, 1L);
+        verify(disposalVoucherService).saveDraft(request, 1L);
     }
 
     @Test

@@ -5,83 +5,60 @@ import com.smalltrend.dto.CRM.SaveAdvertisementRequest;
 import com.smalltrend.service.CRM.AdvertisementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/advertisements")
+@RequestMapping("/api/crm/ads")
 @RequiredArgsConstructor
 public class AdvertisementController {
 
-    private final AdvertisementService advertisementService;
+    private final AdvertisementService adService;
 
-    /**
-     * Lấy quảng cáo đang active (for homepage)
-     * Không cần authentication
-     */
-    @GetMapping("/active")
-    public ResponseEntity<Map<String, AdvertisementResponse>> getActiveAdvertisements() {
-        return ResponseEntity.ok(advertisementService.getActiveAds());
-    }
-
-    /**
-     * Lấy tất cả quảng cáo (admin only)
-     */
+    /** GET /api/crm/ads — toàn bộ danh sách (admin) */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<List<AdvertisementResponse>> getAllAdvertisements() {
-        return ResponseEntity.ok(advertisementService.getAll());
+    public ResponseEntity<List<AdvertisementResponse>> getAll() {
+        return ResponseEntity.ok(adService.getAll());
     }
 
-    /**
-     * Lấy stats của quảng cáo
-     */
+    /** GET /api/crm/ads/active — 2 quảng cáo đang active (LEFT + RIGHT) */
+    @GetMapping("/active")
+    public ResponseEntity<Map<String, AdvertisementResponse>> getActive() {
+        return ResponseEntity.ok(adService.getActiveAds());
+    }
+
+    /** GET /api/crm/ads/stats — báo cáo thống kê hợp đồng */
     @GetMapping("/stats")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<Map<String, Object>> getAdvertisementStats() {
-        return ResponseEntity.ok(advertisementService.getStats());
+    public ResponseEntity<Map<String, Object>> getStats() {
+        return ResponseEntity.ok(adService.getStats());
     }
 
-    /**
-     * Tạo hoặc cập nhật quảng cáo
-     */
-    @PostMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<AdvertisementResponse> saveAdvertisement(
-            @PathVariable(required = false) Long id,
-            @RequestBody SaveAdvertisementRequest request) {
-        return ResponseEntity.ok(advertisementService.save(id, request));
-    }
-
-    /**
-     * Tạo quảng cáo mới
-     */
+    /** POST /api/crm/ads — tạo mới */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<AdvertisementResponse> createAdvertisement(
-            @RequestBody SaveAdvertisementRequest request) {
-        return ResponseEntity.ok(advertisementService.save(null, request));
+    public ResponseEntity<AdvertisementResponse> create(@RequestBody SaveAdvertisementRequest req) {
+        return ResponseEntity.ok(adService.save(null, req));
     }
 
-    /**
-     * Bật / tắt quảng cáo
-     */
-    @PutMapping("/{id}/toggle")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<AdvertisementResponse> toggleActiveAdvertisement(@PathVariable Long id) {
-        return ResponseEntity.ok(advertisementService.toggleActive(id));
+    /** PUT /api/crm/ads/{id} — cập nhật */
+    @PutMapping("/{id}")
+    public ResponseEntity<AdvertisementResponse> update(
+            @PathVariable Long id,
+            @RequestBody SaveAdvertisementRequest req) {
+        return ResponseEntity.ok(adService.save(id, req));
     }
 
-    /**
-     * Xoá quảng cáo
-     */
+    /** PATCH /api/crm/ads/{id}/toggle — bật/tắt hiển thị */
+    @PatchMapping("/{id}/toggle")
+    public ResponseEntity<AdvertisementResponse> toggle(@PathVariable Long id) {
+        return ResponseEntity.ok(adService.toggleActive(id));
+    }
+
+    /** DELETE /api/crm/ads/{id} */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<Void> deleteAdvertisement(@PathVariable Long id) {
-        advertisementService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        adService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

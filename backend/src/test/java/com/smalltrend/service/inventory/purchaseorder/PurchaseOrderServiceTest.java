@@ -3,6 +3,7 @@ package com.smalltrend.service.inventory.purchaseorder;
 import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.ProductResponse;
 import com.smalltrend.entity.*;
+import com.smalltrend.service.inventory.PurchaseOrderService;
 import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -180,10 +181,8 @@ class PurchaseOrderServiceTest {
         when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(new ArrayList<>());
         
         GoodsReceiptRequest req = new GoodsReceiptRequest();
-        req.setSupplierId(1);
-        req.setLocationId(1);
         req.setItems(List.of(
-            GoodsReceiptRequest.GoodsReceiptItemRequest.builder().itemId(1).receivedQuantity(10).importPrice(BigDecimal.TEN).expiryDate(LocalDate.now()).notes("ok").build()
+            GoodsReceiptRequest.GoodsReceiptItemRequest.builder().itemId(1).receivedQuantity(10).notes("ok").build()
         ));
 
         assertNotNull(purchaseOrderService.receiveGoods(1, req));

@@ -4,6 +4,7 @@ import com.smalltrend.dto.inventory.location.FullLocationResponse;
 import com.smalltrend.dto.inventory.location.LocationRequest;
 import com.smalltrend.dto.inventory.location.LocationStockItemResponse;
 import com.smalltrend.entity.*;
+import com.smalltrend.service.inventory.LocationService;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.LocationRepository;
 import com.smalltrend.repository.StockMovementRepository;

@@ -43,8 +43,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       children: [
         { label: "Giao diện bán hàng", path: "/pos" },
         { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Báo cáo doanh thu", path: "/pos/suspended" },
-        { label: "Khiếu nại", path: "/pos/complain" },
+        { label: "Đơn hàng treo", path: "/pos/suspended" },
+        { label: "Giao ca", path: "/pos/shift-handover" },
       ],
     },
     {
@@ -64,9 +64,10 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       label: "Sản phẩm",
       path: "/products",
       children: [
+        { label: "Danh mục & Thương hiệu", path: "/products/categories" },
+        { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
         { label: "Danh sách sản phẩm", path: "/products" },
         { label: "Thêm sản phẩm", path: "/products/addproduct" },
-        { label: "Danh mục & Brand", path: "/products/categories" },
         { label: "Thiết lập giá", path: "/products/price" },
         { label: "Combo sản phẩm", path: "/products/combo" },
       ],
@@ -79,6 +80,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         { label: "Danh sách khách hàng", path: "/crm/customer" },
         { label: "Khuyến Mãi", path: "/crm/event" },
         { label: "Kho quà tặng", path: "/crm/loyalty" },
+        { label: "Khiếu nại", path: "/crm/complain" },
+        { label: "Quản lý Quảng cáo", path: "/crm/ads" },
         { label: "Báo Cáo Thống Kê", path: "/crm/report" },
       ],
     },

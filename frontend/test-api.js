@@ -1,18 +1,7 @@
 const axios = require('axios');
-
-async function test() {
-  try {
-    const res = await axios.put('http://localhost:8081/api/crm/tickets/1', {
-      title: "Test bug",
-      description: "Test description",
-      priority: "NORMAL",
-      status: "RESOLVED",
-      resolution: "Tested resolution"
-    });
-    console.log("SUCCESS:", res.data);
-  } catch (e) {
-    console.error("ERROR:", e.response ? e.response.data : e.message);
-  }
-}
-
-test();
+axios.post('http://localhost:8081/api/ai/chat', {
+  query: "Hello",
+  sessionId: null,
+  contextDate: "2025-02-20"
+}).then(res => console.log(JSON.stringify(res.data, null, 2)))
+  .catch(err => console.error(err.message));

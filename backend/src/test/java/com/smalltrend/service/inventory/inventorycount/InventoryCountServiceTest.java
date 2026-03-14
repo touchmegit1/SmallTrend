@@ -2,6 +2,7 @@ package com.smalltrend.service.inventory.inventorycount;
 
 import com.smalltrend.dto.inventory.inventorycount.*;
 import com.smalltrend.entity.*;
+import com.smalltrend.service.inventory.InventoryCountService;
 import com.smalltrend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

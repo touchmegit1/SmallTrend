@@ -29,7 +29,11 @@ export const useFetchVariants = (productId) => {
         is_active: v.isActive,
         created_at: v.createdAt,
         attributes: v.attributes,
-        unit_conversions: v.unitConversions || []
+        unit_conversions: v.unitConversions || [],
+        activePurchasePrice: v.activePurchasePrice,
+        activeSellingPrice: v.activeSellingPrice,
+        activeTaxPercent: v.activeTaxPercent,
+        activeEffectiveDate: v.activeEffectiveDate
       }));
       setVariants(mappedVariants);
       setError(null);

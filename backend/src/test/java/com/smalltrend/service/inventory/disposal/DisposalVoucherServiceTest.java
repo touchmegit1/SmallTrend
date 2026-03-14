@@ -2,6 +2,7 @@ package com.smalltrend.service.inventory.disposal;
 
 import com.smalltrend.dto.inventory.disposal.*;
 import com.smalltrend.entity.*;
+import com.smalltrend.service.inventory.DisposalVoucherService;
 import com.smalltrend.entity.enums.DisposalReason;
 import com.smalltrend.entity.enums.DisposalStatus;
 import com.smalltrend.repository.*;
@@ -164,7 +165,7 @@ class DisposalVoucherServiceTest {
     }
 
     @Test
-    void createDisposalVoucher_shouldSaveAndReturnPendingVoucher() {
+    void saveDraft_shouldSaveAndReturnDraftVoucher() {
         DisposalVoucherItemRequest itemRequest = new DisposalVoucherItemRequest();
         itemRequest.setBatchId(1L);
         itemRequest.setQuantity(5);
@@ -179,20 +180,20 @@ class DisposalVoucherServiceTest {
         when(locationRepository.findById(1)).thenReturn(Optional.of(location));
         when(productBatchRepository.findById(1)).thenReturn(Optional.of(batch));
         when(disposalVoucherRepository.findMaxSequenceForDate(anyString())).thenReturn(0);
-        
+
         when(disposalVoucherRepository.save(any(DisposalVoucher.class))).thenAnswer(i -> {
             DisposalVoucher v = i.getArgument(0);
             v.setId(2L);
             return v;
         });
 
-        DisposalVoucherResponse response = disposalVoucherService.createDisposalVoucher(request, 1L);
+        DisposalVoucherResponse response = disposalVoucherService.saveDraft(request, 1L);
 
         assertNotNull(response);
-        assertEquals("PENDING", response.getStatus());
+        assertEquals("DRAFT", response.getStatus());
         assertEquals(1, response.getLocationId());
         assertEquals(5, response.getTotalQuantity());
-        assertEquals(new BigDecimal("50.0"), response.getTotalValue()); // 5 * 10.0
+        assertEquals(new BigDecimal("50.0"), response.getTotalValue());
         verify(disposalVoucherRepository).save(any(DisposalVoucher.class));
     }
 
