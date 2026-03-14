@@ -110,6 +110,8 @@ const Sidebar = () => {
 
   // Admin menu - compatible with new DB role naming
   const isAdmin = user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
+  const isManager = user && (user.role === "MANAGER" || user.role === "ROLE_MANAGER");
+  const showAdminMenu = isAdmin || isManager;
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50">
@@ -131,8 +133,8 @@ const Sidebar = () => {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-        {/* Admin Menu - ALWAYS FIRST for ROLE_ADMIN */}
-        {isAdmin && (
+        {/* Admin Menu - Visible to ADMIN and MANAGER */}
+        {showAdminMenu && (
           <div className="mb-2">
             <div
               className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === "/dashboard" ||
@@ -173,8 +175,67 @@ const Sidebar = () => {
                 >
                   Dashboard
                 </NavLink>
+                {isAdmin && (
+                  <>
+                    <NavLink
+                      to="/hr/users"
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                          ? "bg-indigo-100 text-indigo-700 font-medium"
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        }`
+                      }
+                    >
+                      Quản lý người dùng
+                    </NavLink>
+                    <NavLink
+                      to="/admin/ticket-center"
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                          ? "bg-indigo-100 text-indigo-700 font-medium"
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        }`
+                      }
+                    >
+                      Trung tâm Báo cáo
+                    </NavLink>
+                    <NavLink
+                      to="/admin/report-center"
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                          ? "bg-indigo-100 text-indigo-700 font-medium"
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        }`
+                      }
+                    >
+                      Tạo & Tải báo cáo
+                    </NavLink>
+                    <NavLink
+                      to="/admin/audit-logs"
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                          ? "bg-indigo-100 text-indigo-700 font-medium"
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        }`
+                      }
+                    >
+                      Nhật ký Audit
+                    </NavLink>
+                    <NavLink
+                      to="/admin/ai-settings"
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                          ? "bg-indigo-100 text-indigo-700 font-medium"
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        }`
+                      }
+                    >
+                      Cài đặt AI
+                    </NavLink>
+                  </>
+                )}
                 <NavLink
-                  to="/hr/users"
+                  to="/admin/notes"
                   className={({ isActive }) =>
                     `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
                       ? "bg-indigo-100 text-indigo-700 font-medium"
@@ -182,51 +243,7 @@ const Sidebar = () => {
                     }`
                   }
                 >
-                  Quản lý người dùng
-                </NavLink>
-                <NavLink
-                  to="/admin/ticket-center"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Trung tâm Báo cáo
-                </NavLink>
-                <NavLink
-                  to="/admin/report-center"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Tạo & Tải báo cáo
-                </NavLink>
-                <NavLink
-                  to="/admin/audit-logs"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Nhật ký Audit
-                </NavLink>
-                <NavLink
-                  to="/admin/ai-settings"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Cài đặt AI
+                  Ghi chú Admin
                 </NavLink>
               </div>
             )}
