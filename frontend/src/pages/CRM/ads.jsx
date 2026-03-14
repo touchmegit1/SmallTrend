@@ -32,28 +32,17 @@ const SLOT_GRADIENT = {
 function AdPreview({ ad }) {
     return (
         <div
-            className="w-36 rounded-2xl overflow-hidden shadow-lg border border-slate-200 flex flex-col flex-shrink-0"
-            style={{ backgroundColor: ad.bgColor || "#fff", minHeight: 200 }}
+            className="w-36 rounded-2xl overflow-hidden shadow-lg border border-slate-200 flex flex-col flex-shrink-0 bg-white"
+            style={{ height: 200 }}
         >
             {ad.imageUrl ? (
-                <img src={ad.imageUrl} alt="" className="w-full h-24 object-cover"
+                <img src={ad.imageUrl} alt={ad.title} className="w-full h-full object-cover"
                     onError={(e) => { e.target.style.display = "none"; }} />
             ) : (
-                <div className="w-full h-24 bg-slate-100 flex items-center justify-center">
-                    <Image size={20} className="text-slate-300" />
+                <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                    <Image size={24} className="text-slate-300" />
                 </div>
             )}
-            <div className="flex-1 p-2.5 flex flex-col justify-between">
-                <div>
-                    <p className="text-[9px] text-slate-400">{ad.sponsorName}</p>
-                    <p className="font-bold text-[11px] text-slate-800 leading-tight mt-0.5">{ad.title}</p>
-                    {ad.subtitle && <p className="text-[9px] text-slate-500 mt-0.5">{ad.subtitle}</p>}
-                </div>
-                <button className="mt-2 text-white text-[10px] px-2 py-1 rounded-full font-semibold"
-                    style={{ backgroundColor: ad.ctaColor || "#4f46e5" }}>
-                    {ad.ctaText || "Click"}
-                </button>
-            </div>
         </div>
     );
 }
@@ -108,16 +97,11 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
     const isNew = !ad?.id;
     const [form, setForm] = useState(
         ad ?? {
-            slot: "LEFT", sponsorName: "", title: "", subtitle: "",
-            imageUrl: "", linkUrl: "", ctaText: "Xem ngay",
-            ctaColor: "#4f46e5", bgColor: "#ffffff", isActive: true,
-            contractNumber: "", contractValue: "", contractStart: "",
-            contractEnd: "", paymentTerms: "", contactPerson: "",
-            contactEmail: "", contactPhone: "", notes: "",
+            slot: "LEFT", sponsorName: "", title: "",
+            imageUrl: "", isActive: true,
         }
     );
     const [saving, setSaving] = useState(false);
-    const [showContract, setShowContract] = useState(!isNew);
 
     const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -128,7 +112,7 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
         }
         setSaving(true);
         try {
-            const payload = { ...form, contractValue: form.contractValue || null };
+            const payload = { ...form };
             const saved = isNew
                 ? await adService.create(payload)
                 : await adService.update(ad.id, payload);
@@ -168,83 +152,16 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
                             <Field label="Nhà tài trợ *" icon={User}>
                                 <input className={inputCls} value={form.sponsorName} onChange={e => set("sponsorName", e.target.value)} placeholder="Tên nhà tài trợ..." />
                             </Field>
-                            <Field label="Tiêu đề chính *" icon={Type}>
+                            <Field label="Tiêu đề nội bộ *" icon={Type}>
                                 <input className={inputCls} value={form.title} onChange={e => set("title", e.target.value)} placeholder="Mega Sale 50%..." />
                             </Field>
-                            <Field label="Phụ đề" icon={AlignLeft}>
-                                <input className={inputCls} value={form.subtitle} onChange={e => set("subtitle", e.target.value)} placeholder="Mô tả ngắn..." />
-                            </Field>
-                            <Field label="URL ảnh" icon={Image}>
+                            <Field label="URL ảnh quảng cáo *" icon={Image}>
                                 <input className={inputCls} value={form.imageUrl} onChange={e => set("imageUrl", e.target.value)} placeholder="https://..." />
                             </Field>
-                            <Field label="URL liên kết" icon={Link}>
-                                <input className={inputCls} value={form.linkUrl} onChange={e => set("linkUrl", e.target.value)} placeholder="https://..." />
-                            </Field>
-                            <Field label="Nội dung nút CTA" icon={MousePointer}>
-                                <input className={inputCls} value={form.ctaText} onChange={e => set("ctaText", e.target.value)} placeholder="Mua ngay..." />
-                            </Field>
-                            <div className="grid grid-cols-2 gap-2">
-                                <Field label="Màu nút" icon={Palette}>
-                                    <div className="flex items-center gap-2">
-                                        <input type="color" value={form.ctaColor} onChange={e => set("ctaColor", e.target.value)}
-                                            className="h-9 w-10 rounded-lg border-2 border-slate-200 cursor-pointer" />
-                                        <span className="text-xs font-mono text-slate-400">{form.ctaColor}</span>
-                                    </div>
-                                </Field>
-                                <Field label="Màu nền" icon={Palette}>
-                                    <div className="flex items-center gap-2">
-                                        <input type="color" value={form.bgColor} onChange={e => set("bgColor", e.target.value)}
-                                            className="h-9 w-10 rounded-lg border-2 border-slate-200 cursor-pointer" />
-                                        <span className="text-xs font-mono text-slate-400">{form.bgColor}</span>
-                                    </div>
-                                </Field>
-                            </div>
                         </div>
                     </div>
 
-                    {/* Contract accordion */}
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                        <button
-                            onClick={() => setShowContract(v => !v)}
-                            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-semibold text-slate-700"
-                        >
-                            <span className="flex items-center gap-2"><FileText size={14} /> Thông tin hợp đồng</span>
-                            {showContract ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
-                        {showContract && (
-                            <div className="p-4 grid grid-cols-2 gap-3">
-                                <Field label="Số hợp đồng" icon={FileText}>
-                                    <input className={inputCls} value={form.contractNumber} onChange={e => set("contractNumber", e.target.value)} placeholder="AD-2026-LEFT-001" />
-                                </Field>
-                                <Field label="Giá trị HĐ (VNĐ)" icon={DollarSign}>
-                                    <input type="number" className={inputCls} value={form.contractValue} onChange={e => set("contractValue", e.target.value)} placeholder="5000000" />
-                                </Field>
-                                <Field label="Ngày bắt đầu" icon={Calendar}>
-                                    <input type="date" className={inputCls} value={form.contractStart} onChange={e => set("contractStart", e.target.value)} />
-                                </Field>
-                                <Field label="Ngày kết thúc" icon={Calendar}>
-                                    <input type="date" className={inputCls} value={form.contractEnd} onChange={e => set("contractEnd", e.target.value)} />
-                                </Field>
-                                <Field label="Điều khoản thanh toán" icon={FileText}>
-                                    <input className={inputCls} value={form.paymentTerms} onChange={e => set("paymentTerms", e.target.value)} placeholder="Thanh toán hàng quý..." />
-                                </Field>
-                                <Field label="Người liên hệ" icon={User}>
-                                    <input className={inputCls} value={form.contactPerson} onChange={e => set("contactPerson", e.target.value)} placeholder="Họ tên..." />
-                                </Field>
-                                <Field label="Email" icon={Mail}>
-                                    <input type="email" className={inputCls} value={form.contactEmail} onChange={e => set("contactEmail", e.target.value)} placeholder="email@..." />
-                                </Field>
-                                <Field label="Số điện thoại" icon={Phone}>
-                                    <input className={inputCls} value={form.contactPhone} onChange={e => set("contactPhone", e.target.value)} placeholder="09xx-xxx-xxx" />
-                                </Field>
-                                <div className="col-span-2">
-                                    <Field label="Ghi chú" icon={AlignLeft}>
-                                        <textarea className={inputCls + " resize-none"} rows={2} value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Ghi chú thêm về hợp đồng..." />
-                                    </Field>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+
 
                     {/* Preview */}
                     <div>
@@ -318,36 +235,6 @@ function AdCard({ ad, onEdit, onToggle, onDelete }) {
                             </button>
                         </div>
                     </div>
-
-                    {/* Contract summary */}
-                    {ad.contractNumber && (
-                        <div className="bg-slate-50 rounded-xl p-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                            <div>
-                                <p className="text-slate-400 mb-0.5">Số HĐ</p>
-                                <p className="font-semibold text-slate-700">{ad.contractNumber}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 mb-0.5">Giá trị</p>
-                                <p className="font-semibold text-slate-700">{fmtVND(ad.contractValue)}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 mb-0.5">Thời hạn</p>
-                                <p className={`font-semibold ${expired ? "text-red-500" : days != null && days <= 30 ? "text-amber-600" : "text-slate-700"}`}>
-                                    {ad.contractEnd
-                                        ? expired
-                                            ? "Đã hết hạn"
-                                            : days != null && days <= 30
-                                                ? `Còn ${days} ngày`
-                                                : new Date(ad.contractEnd).toLocaleDateString("vi-VN")
-                                        : "—"}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 mb-0.5">Liên hệ</p>
-                                <p className="font-semibold text-slate-700">{ad.contactPerson || "—"}</p>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
@@ -380,13 +267,24 @@ export default function AdsManagement() {
 
     const handleToggle = async (id) => {
         try {
+            const targetAd = ads.find((a) => a.id === id);
+            if (!targetAd) return;
+
+            // Nếu đang bật quảng cáo này, tắt các quảng cáo khác cùng slot
+            if (!targetAd.isActive) {
+                const othersInSlot = ads.filter(
+                    (a) => a.slot === targetAd.slot && a.id !== id && a.isActive
+                );
+                if (othersInSlot.length > 0) {
+                    await Promise.all(
+                        othersInSlot.map((other) => adService.toggle(other.id))
+                    );
+                }
+            }
+
             const updated = await adService.toggle(id);
-            setAds((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+            await load(); // Tải lại để có dữ liệu chính xác nhất
             showToast(updated.isActive ? "Đã bật quảng cáo" : "Đã tắt quảng cáo");
-            setStats((prev) => ({
-                ...prev,
-                active: ads.filter((a) => a.id === id ? updated.isActive : a.isActive).length,
-            }));
         } catch (e) {
             showToast("Lỗi: " + e.message, "error");
         }
@@ -405,12 +303,15 @@ export default function AdsManagement() {
         }
     };
 
-    const handleSaved = (saved) => {
-        setAds((prev) => {
-            const idx = prev.findIndex((a) => a.id === saved.id);
-            return idx >= 0 ? prev.map((a) => (a.id === saved.id ? saved : a)) : [...prev, saved];
-        });
-        load(); // reload stats
+    const handleSaved = async (saved) => {
+        if (saved.isActive) {
+            // Tắt các quảng cáo active khác cùng slot
+            const others = ads.filter((a) => a.slot === saved.slot && a.id !== saved.id && a.isActive);
+            if (others.length > 0) {
+                await Promise.all(others.map((o) => adService.toggle(o.id)));
+            }
+        }
+        await load(); // reload lại toàn bộ ads và stats
     };
 
     return (

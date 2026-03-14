@@ -10,6 +10,7 @@ import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
 import CRMreport from "./pages/CRM/report";
+import CRMads from "./pages/CRM/ads";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import EmployeeList from "./pages/HR/EmployeeList";
@@ -176,7 +177,7 @@ function App() {
 
         <Route
           path="products/suppliers"
-          element={<div className="p-4"><Suppliers/></div>}
+          element={<div className="p-4"><Suppliers /></div>}
         />
         {/* Module 4: CRM (Khách hàng) */}
         <Route
@@ -197,6 +198,7 @@ function App() {
         />
         <Route path="crm/complain" element={<CRMcomplain />} />
         <Route path="crm/complaints" element={<CRMcomplain />} />
+        <Route path="crm/ads" element={<CRMads />} />
 
         {/* Module 5: HR (Nhân sự) */}
         <Route path="hr" element={<Navigate to="/hr/employees" replace />} />
