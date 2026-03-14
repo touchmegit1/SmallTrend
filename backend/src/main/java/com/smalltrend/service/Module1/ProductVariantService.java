@@ -139,5 +139,3 @@ public class ProductVariantService {
         return r;
     }
 }
-
-return r;}}
