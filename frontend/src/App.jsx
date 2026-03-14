@@ -2,8 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
 import ShiftManagement from "./pages/HR/ShiftManagement";
-import PurchaseOrderList from "./pages/Inventory/PurchaseOrder/PurchaseOrderList";
-import CreatePurchaseOrder from "./pages/Inventory/PurchaseOrder/CreatePurchaseOrder";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -15,12 +15,12 @@ import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import EmployeeList from "./pages/HR/EmployeeList";
 import PayrollManagement from "./pages/HR/PayrollManagement";
 import UserManagement from "./pages/HR/UserManagement";
-import DisposalDetail from "./pages/Inventory/Disposal/DisposalDetail";
-import DisposalList from "./pages/Inventory/Disposal/DisposalList";
-import InventoryCountDetail from "./pages/Inventory/Count/InventoryCountDetail";
-import InventoryCountList from "./pages/Inventory/Count/InventoryCountList";
-import InventoryDashboard from "./pages/Inventory/Dashboard/InventoryDashboard";
-import LocationManagement from "./pages/Inventory/Location/LocationManagement";
+import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import DisposalList from "./pages/Inventory/DisposalList";
+import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
+import InventoryCountList from "./pages/Inventory/InventoryCountList";
+import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
+import LocationManagement from "./pages/Inventory/LocationManagement";
 import POS from "./pages/Pos/pos";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import ShiftHandover from "./pages/Pos/ShiftHandover";
@@ -184,7 +184,7 @@ function App() {
 
         <Route
           path="products/suppliers"
-          element={<div className="p-4"><Suppliers/></div>}
+          element={<div className="p-4"><Suppliers /></div>}
         />
         {/* Module 4: CRM (Khách hàng) */}
         <Route

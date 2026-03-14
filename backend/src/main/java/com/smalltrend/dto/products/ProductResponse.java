@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class ProductResponse {
+
     private Integer id;
     private String name;
     private String image_url;
@@ -22,6 +24,7 @@ public class ProductResponse {
     private String category_name;
     private Integer tax_rate_id;
     private String tax_rate_name;
+    private BigDecimal tax_rate_value;
     private Boolean is_active;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
