@@ -337,7 +337,7 @@ const PriceSetting = () => {
                             <div className="relative flex-1 lg:w-80">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <Input
-                                    placeholder="Tìm theo Tên, SKU, Brand..."
+                                    placeholder="Tìm theo tên, SKU, thương hiệu..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-10 h-11 w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
