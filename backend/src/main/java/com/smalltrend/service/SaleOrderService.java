@@ -19,7 +19,7 @@ import com.smalltrend.repository.OrderRepository;
 import com.smalltrend.repository.OrderStatusHistoryRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.UserRepository;
-import com.smalltrend.service.inventory.stock.InventoryStockService;
+import com.smalltrend.service.inventory.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

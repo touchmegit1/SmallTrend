@@ -79,7 +79,7 @@ public class DisposalVoucher {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = DisposalStatus.PENDING;
+            status = DisposalStatus.DRAFT;
         }
     }
 

@@ -3,6 +3,8 @@ package com.smalltrend.service;
 import com.smalltrend.dto.pos.SavePurchaseHistoryRequest;
 import com.smalltrend.entity.PurchaseHistory;
 import com.smalltrend.repository.PurchaseHistoryRepository;
+import com.smalltrend.repository.ProductVariantRepository;
+import com.smalltrend.service.inventory.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

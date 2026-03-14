@@ -83,183 +83,206 @@ export function SuppliersScreen() {
   if (error) return <p className="text-red-500">{error}</p>;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-2">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-2xl border border-gray-200 shadow-sm gap-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Quản lý Nhà cung cấp</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">Tổng số: {filteredSuppliers.length} nhà cung cấp đang hiển thị</p>
+          <h1 className="text-3xl font-semibold text-gray-900">Quản lý nhà cung cấp</h1>
+          <p className="text-gray-500 mt-1">Tổng số: {filteredSuppliers.length} nhà cung cấp</p>
         </div>
-        <Button onClick={handleAdd} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all rounded-lg h-10 px-5">
+        <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
           <Plus className="w-4 h-4 mr-2" />
           Thêm nhà cung cấp
         </Button>
       </div>
 
       {/* Filters */}
-      <Card className="border border-gray-200 rounded-2xl bg-white shadow-sm">
-        <CardContent className="p-5">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <Card className="border border-gray-300 rounded-lg bg-white">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="relative col-span-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Tìm kiếm theo Tên, Email, SĐT..."
-                className="pl-10 h-11 bg-gray-50/50 border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all text-sm w-full"
+                placeholder="Tìm nhà cung cấp..."
+                className="pl-9 h-10 text-md bg-gray-200 border border-gray-200 rounded-lg"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <div className="w-full md:w-56">
-              <select
-                className="w-full h-11 px-4 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all text-sm font-medium text-gray-700 appearance-none cursor-pointer outline-none"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em` }}
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="active">Đang hợp tác</option>
-                <option value="inactive">Ngưng hợp tác</option>
-              </select>
-            </div>
+            <select
+              className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Đang hợp tác</option>
+              <option value="inactive">Ngưng hợp tác</option>
+            </select>
           </div>
         </CardContent>
       </Card>
 
       {/* Table */}
-      <Card className="border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
-        <CardHeader className="p-5 border-b border-gray-100 bg-white">
-          <CardTitle className="text-lg font-bold text-gray-900">Danh sách hiển thị</CardTitle>
+      <Card className="border border-gray-300 rounded-lg bg-white">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold">Danh sách nhà cung cấp</CardTitle>
         </CardHeader>
-        <div className="p-0 overflow-x-auto">
-          <Table className="w-full">
+        <CardContent>
+          <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50/80 border-b border-gray-200 hover:bg-gray-50 cursor-default">
-                <TableHead className="font-semibold text-gray-600 pl-6 h-12">Nhà cung cấp</TableHead>
-                <TableHead className="font-semibold text-gray-600 h-12">Thông tin liên hệ</TableHead>
-                <TableHead className="font-semibold text-gray-600 h-12">Địa chỉ</TableHead>
-                <TableHead className="font-semibold text-gray-600 h-12">Trạng thái</TableHead>
-                <TableHead className="font-semibold text-gray-600 text-center pr-6 h-12 w-36">Thao tác</TableHead>
+              <TableRow className="bg-gray-50">
+                <TableHead>Nhà cung cấp</TableHead>
+                <TableHead>Liên hệ</TableHead>
+                <TableHead>Địa chỉ</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead className="text-center">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody>
-              {filteredSuppliers.length > 0 ? filteredSuppliers.map((supplier, index) => {
-                const isLast = index === filteredSuppliers.length - 1;
-                return (
-                  <TableRow key={supplier.id} className={`hover:bg-blue-50/30 transition-colors ${!isLast ? 'border-b border-gray-100' : 'border-none'}`}>
-                    <TableCell className="pl-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                          <Building2 className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 text-base">{supplier.name}</p>
-                          <p className="text-sm font-medium text-gray-500 mt-0.5">{supplier.contact_person}</p>
-                        </div>
+              {filteredSuppliers.map((supplier) => (
+                <TableRow className="hover:bg-gray-200" key={supplier.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Building2 className="w-5 h-5 text-blue-600" />
                       </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 flex justify-center"><Phone className="w-3.5 h-3.5 text-gray-400" /></div>
-                          <span className="text-sm font-medium text-gray-700">{supplier.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 flex justify-center"><Mail className="w-3.5 h-3.5 text-gray-400" /></div>
-                          <span className="text-sm text-gray-600">{supplier.email || <span className="text-gray-400 italic">Chưa cập nhật</span>}</span>
-                        </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{supplier.name}</p>
+                        <p className="text-xs text-gray-500">{supplier.contact_person}</p>
                       </div>
-                    </TableCell>
-                    <TableCell className="py-4 max-w-xs">
-                      <div className="flex items-start gap-2">
-                        <div className="w-5 mt-0.5 flex justify-center flex-shrink-0"><MapPin className="w-4 h-4 text-gray-400" /></div>
-                        <span className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{supplier.address}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="w-3 h-3 text-gray-400" />
+                        <span>{supplier.phone}</span>
                       </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      {supplier.status === 'active' ? (
-                        <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 font-medium shadow-sm">Đang hợp tác</Badge>
-                      ) : (
-                        <Badge className="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 font-medium shadow-sm">Ngưng hợp tác</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center pr-6 py-4">
-                      <div className="flex justify-center items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(supplier)}
-                          className="h-10 w-10 p-0 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                          title="Chỉnh sửa"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(supplier.id)}
-                          className="h-10 w-10 p-0 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors"
-                          title="Xóa"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </Button>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="w-3 h-3 text-gray-400" />
+                        <span className="text-xs">{supplier.email}</span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              }) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-gray-500 font-medium">
-                    Không tìm thấy dữ liệu nhà cung cấp nào.
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-3 h-3 text-gray-400 mt-1" />
+                      <span className="text-sm text-gray-600">{supplier.address}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {supplier.status === 'active' ? (
+                      <Badge className="bg-green-100 text-green-700">Đang hợp tác</Badge>
+                    ) : (
+                      <Badge className="bg-red-100 text-red-700">Ngưng hợp tác</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEdit(supplier)}
+                        title="Chỉnh sửa"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" title="Xóa" onClick={() => handleDelete(supplier.id)}>
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
-        </div>
+        </CardContent>
       </Card>
 
-      {/* Modal Cập nhật nhà cung cấp */}
+      {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
-          <div className="bg-gray-50 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-white/20">
-            <div className="bg-white px-6 py-4 flex justify-between items-center border-b border-gray-100 flex-shrink-0">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{editingSupplier ? "Cập nhật thông tin" : "Thêm mới nhà cung cấp"}</h2>
-                <p className="text-gray-500 text-sm mt-1 font-medium">Vui lòng điền đầy đủ các thông tin bắt buộc</p>
+                <h2 className="text-2xl font-bold">{editingSupplier ? "Chỉnh sửa" : "Thêm"} nhà cung cấp</h2>
+                <p className="text-gray-500 text-sm mt-1">Cập nhật thông tin nhà cung cấp</p>
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-all"
-              >
-                <X className="w-4 h-4" />
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-              <Card className="border border-gray-100 rounded-xl bg-white shadow-sm overflow-hidden">
-                <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 px-5">
-                  <CardTitle className="text-sm font-bold text-gray-700 uppercase tracking-wider">Thông tin chung</CardTitle>
+            <form onSubmit={handleSave} className="p-6">
+              <Card className="border border-gray-300 rounded-lg bg-white">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold">Thông tin nhà cung cấp</CardTitle>
                 </CardHeader>
-                <CardContent className="p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Tên nhà cung cấp <span className="text-rose-500 ml-0.5">*</span></Label>
+                      <Label>Tên nhà cung cấp <span className="text-red-600">*</span></Label>
                       <Input
-                        className="h-11 bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 text-sm"
+                        className="text-md bg-gray-200 border border-gray-200 rounded-lg"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        placeholder="VD: Công ty phân phối Vinamilk"
+                        placeholder="VD: Vinamilk"
                         required
                       />
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Tra trạng thái hợp tác <span className="text-rose-500 ml-0.5">*</span></Label>
+                      <Label>Người liên hệ <span className="text-red-600">*</span></Label>
+                      <Input
+                        className="text-md bg-gray-200 border border-gray-200 rounded-lg"
+                        name="contact"
+                        value={formData.contact}
+                        onChange={handleChange}
+                        placeholder="VD: Nguyễn Văn A"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Số điện thoại <span className="text-red-600">*</span></Label>
+                      <Input
+                        className="text-md bg-gray-200 border border-gray-200 rounded-lg"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        placeholder="VD: 0912345678"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input
+                        className="text-md bg-gray-200 border border-gray-200 rounded-lg"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="VD: contact@example.com"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>Địa chỉ <span className="text-red-600">*</span></Label>
+                      <Textarea
+                        className="text-md bg-gray-200 border border-gray-200 rounded-lg"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        placeholder="VD: 123 Đường ABC, Q.1, TP.HCM"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Trạng thái <span className="text-red-600">*</span></Label>
                       <select
                         name="status"
-                        className="w-full h-11 px-3 border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-100 transition-all text-sm font-medium text-gray-700 outline-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
                         value={formData.status}
                         onChange={handleChange}
                         required
@@ -272,76 +295,13 @@ export function SuppliersScreen() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-gray-100 rounded-xl bg-white shadow-sm overflow-hidden">
-                <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 px-5">
-                  <CardTitle className="text-sm font-bold text-gray-700 uppercase tracking-wider">Thông tin liên hệ</CardTitle>
-                </CardHeader>
-                <CardContent className="p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                    <div>
-                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Người đại diện <span className="text-rose-500 ml-0.5">*</span></Label>
-                      <Input
-                        className="h-11 bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 text-sm"
-                        name="contact"
-                        value={formData.contact}
-                        onChange={handleChange}
-                        placeholder="VD: Nguyễn Văn A"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Số điện thoại <span className="text-rose-500 ml-0.5">*</span></Label>
-                      <Input
-                        className="h-11 bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 text-sm"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="VD: 0912345678"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Email</Label>
-                      <Input
-                        className="h-11 bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 text-sm"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="VD: contact@vinamilk.com.vn"
-                      />
-                    </div>
-                    <div className="col-span-1 md:col-span-2">
-                      <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Địa chỉ <span className="text-rose-500 ml-0.5">*</span></Label>
-                      <Textarea
-                        className="bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 text-sm p-3 min-h-[4rem]"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        placeholder="VD: 10 Tân Trào, Phường Tân Phú, Quận 7, TP.HCM"
-                        rows={2}
-                        required
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex gap-3 justify-end border-t border-gray-200 pt-5 mt-2">
-                <Button
-                  type="button"
-                  variant="danger"
-                  className="min-w-[120px] bg-red text-gray-700 border border-red-300 hover:bg-red-50 h-11 font-semibold rounded-lg shadow-sm"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Hủy bỏ
-                </Button>
-                <Button
-                  type="submit"
-                  className="min-w-[140px] bg-blue-600 hover:bg-blue-700 text-white h-11 font-semibold rounded-lg shadow-sm"
-                >
+              <div className="flex gap-4 mt-6">
+                <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
                   <Save className="w-4 h-4 mr-2" />
-                  {editingSupplier ? "Lưu thay đổi" : "Lưu dữ liệu"}
+                  Lưu thay đổi
+                </Button>
+                <Button type="button" variant="danger" className="flex-1" onClick={() => setIsModalOpen(false)}>
+                  Hủy
                 </Button>
               </div>
             </form>

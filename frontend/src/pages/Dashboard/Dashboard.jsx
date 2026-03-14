@@ -11,10 +11,45 @@ const Dashboard = () => {
     React.useEffect(() => {
         const fetchSaleOrders = async () => {
             try {
-                const response = await api.get('/sale-orders');
-                setOrders(Array.isArray(response.data) ? response.data : []);
+                // Lấy dữ liệu từ localStorage (giống ReportforCashier.jsx)
+                const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+                const localOrders = savedTransactions
+                    .filter(t => t.status !== "Chờ thanh toán")
+                    .map(t => {
+                        let orderDate = new Date();
+                        if (t.time) {
+                            const parts = t.time.split(/[\s,]+/);
+                            if (parts.length >= 2) {
+                                const dateParts = parts[0].split('/');
+                                if (dateParts.length === 3) {
+                                    const [day, month, year] = dateParts;
+                                    const timeParts = parts[1].split(':');
+                                    const hour = timeParts[0] || '0';
+                                    const min = timeParts[1] || '0';
+                                    const sec = timeParts[2] || '0';
+                                    orderDate = new Date(year, month - 1, day, hour, min, sec);
+                                }
+                            } else {
+                                orderDate = new Date(t.time) || new Date();
+                            }
+                        }
+                        return {
+                            orderCode: t.id || '',
+                            orderDate: orderDate.toISOString(),
+                            cashierName: 'Thu ngân',
+                            customerName: (t.customer && t.customer.name) ? t.customer.name : 'Khách lẻ',
+                            paymentMethod: t.payment || '',
+                            status: t.status || '',
+                            subtotal: parseInt((t.total || "0").toString().replace(/[^0-9]/g, '')),
+                            taxAmount: 0,
+                            discountAmount: t.pointsDiscount || 0,
+                            totalAmount: parseInt((t.total || "0").toString().replace(/[^0-9]/g, '')),
+                        };
+                    });
+
+                setOrders(localOrders);
             } catch (error) {
-                console.error('Không thể tải dữ liệu sale-orders cho dashboard:', error);
+                console.error('Không thể tải dữ liệu cho dashboard:', error);
                 setOrders([]);
             } finally {
                 setIsLoading(false);

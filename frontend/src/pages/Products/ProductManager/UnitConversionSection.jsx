@@ -6,7 +6,7 @@ import { Label } from '../ProductComponents/label';
 import { Badge } from '../ProductComponents/badge';
 import api from '../../../config/axiosConfig';
 
-export default function UnitConversionSection({ variant, product, units, onSuccess }) {
+export default function UnitConversionSection({ variant, units, onSuccess }) {
     const [conversions, setConversions] = useState(variant.unit_conversions || []);
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -76,15 +76,10 @@ export default function UnitConversionSection({ variant, product, units, onSucce
 
         setLoading(true);
         try {
-            const taxRate = Number(product?.tax_rate_value || product?.taxRate || variant?.taxRate || variant?.tax_rate_value) || 0;
-            const finalSellPrice = taxRate > 0
-                ? Math.round(parseFloat(formData.sellPrice) * (1 + taxRate / 100))
-                : parseFloat(formData.sellPrice);
-
             const payload = {
                 toUnitId: parseInt(formData.toUnitId),
                 conversionFactor: parseFloat(formData.conversionFactor),
-                sellPrice: finalSellPrice,
+                sellPrice: parseFloat(formData.sellPrice),
                 description: formData.description,
                 isActive: formData.isActive
             };
@@ -270,7 +265,7 @@ export default function UnitConversionSection({ variant, product, units, onSucce
 
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <div>
-                            <Label className="text-xs">Giá bán (trước thuế) <span className="text-red-500">*</span></Label>
+                            <Label className="text-xs">Giá bán <span className="text-red-500">*</span></Label>
                             <Input
                                 type="number" step="any" min="0"
                                 value={formData.sellPrice}
@@ -278,11 +273,6 @@ export default function UnitConversionSection({ variant, product, units, onSucce
                                 className="h-9 mt-1 text-sm border-gray-200 rounded-lg"
                                 placeholder="VD: 55000" required
                             />
-                            {formData.sellPrice && !isNaN(formData.sellPrice) && (Number(product?.tax_rate_value || product?.taxRate || variant?.taxRate || variant?.tax_rate_value) > 0) && (
-                                <p className="text-[10px] text-emerald-600 mt-1 font-medium bg-emerald-50 p-1.5 rounded border border-emerald-100">
-                                    Sau thuế: {Math.round(parseFloat(formData.sellPrice) * (1 + Number(product?.tax_rate_value || product?.taxRate || variant?.taxRate || variant?.tax_rate_value) / 100)).toLocaleString('vi-VN')} đ
-                                </p>
-                            )}
                         </div>
                         <div>
                             <Label className="text-xs">Mô tả thêm</Label>

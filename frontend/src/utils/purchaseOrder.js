@@ -136,33 +136,10 @@ export function calcOrderFinancials(items, orderDiscount = 0, taxPercent = 0, sh
 
 /**
  * Validate order for DRAFT save (minimal rules).
- * Chỉ yêu cầu sản phẩm và số lượng.
  * Returns { valid: boolean, errors: string[] }
  */
 export function validateDraft(order, items) {
   const errors = [];
-
-  if (!items || items.length === 0) {
-    errors.push("Phiếu nhập phải có ít nhất 1 sản phẩm.");
-  }
-
-  for (const item of items) {
-    if ((item.quantity || 0) <= 0) {
-      errors.push(`Sản phẩm "${item.name}": số lượng phải > 0.`);
-    }
-  }
-
-  return { valid: errors.length === 0, errors };
-}
-
-/**
- * Validate order for CONFIRM / kiểm kê (strict rules).
- * Yêu cầu đầy đủ: nhà cung cấp, vị trí kho, HSD, giá.
- * Returns { valid: boolean, errors: string[] }
- */
-export function validateConfirm(order, items) {
-  const draftResult = validateDraft(order, items);
-  const errors = [...draftResult.errors];
 
   if (!order.supplier_id) {
     errors.push("Vui lòng chọn nhà cung cấp.");
@@ -172,12 +149,44 @@ export function validateConfirm(order, items) {
     errors.push("Vui lòng chọn vị trí nhập kho.");
   }
 
+  if (!items || items.length === 0) {
+    errors.push("Phiếu nhập phải có ít nhất 1 sản phẩm.");
+  }
+
   for (const item of items) {
-    if (!item.expiry_date) {
-      errors.push(`Sản phẩm "${item.name}": bắt buộc phải nhập hạn sử dụng (HSD).`);
+    if ((item.quantity || 0) <= 0) {
+      errors.push(`Sản phẩm "${item.name}": số lượng phải > 0.`);
     }
     if ((item.unit_price || 0) < 0) {
       errors.push(`Sản phẩm "${item.name}": đơn giá không được âm.`);
+    }
+    if (!item.expiry_date) {
+      errors.push(`Sản phẩm "${item.name}": bắt buộc phải nhập hạn sử dụng (HSD).`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Validate order for CONFIRM (strict rules).
+ * Returns { valid: boolean, errors: string[] }
+ */
+export function validateConfirm(order, items) {
+  const draftResult = validateDraft(order, items);
+  const errors = [...draftResult.errors];
+
+  // No need to duplicate supplier_id and location_id checks since they are now in validateDraft
+
+  // Check batches – each item should have batch info for perishable goods
+  // (Optional: we make this a warning, not a hard error)
+
+  // Double check item HSD again just in case
+  for (const item of items) {
+    if (!item.expiry_date) {
+      if (!errors.some(e => e.includes(item.name) && e.includes("HSD"))) {
+         errors.push(`Sản phẩm "${item.name}": bắt buộc phải nhập hạn sử dụng (HSD).`);
+      }
     }
   }
 

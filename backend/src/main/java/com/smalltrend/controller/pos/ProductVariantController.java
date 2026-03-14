@@ -14,7 +14,7 @@ import com.smalltrend.service.Module1.ProductVariantService;
 
 @RestController
 @RequestMapping("/api/pos")
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000" })
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class ProductVariantController {
 
     private final ProductVariantService productService;

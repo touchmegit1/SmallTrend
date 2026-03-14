@@ -22,7 +22,6 @@ public class ProductResponse {
     private String category_name;
     private Integer tax_rate_id;
     private String tax_rate_name;
-    private java.math.BigDecimal tax_rate_value;
     private Boolean is_active;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;

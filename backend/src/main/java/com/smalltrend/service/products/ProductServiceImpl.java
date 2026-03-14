@@ -42,7 +42,6 @@ public class ProductServiceImpl implements ProductService {
                 .category_name(product.getCategory() != null ? product.getCategory().getName() : null)
                 .tax_rate_id(product.getTaxRate() != null ? product.getTaxRate().getId() : null)
                 .tax_rate_name(product.getTaxRate() != null ? product.getTaxRate().getName() : null)
-                .tax_rate_value(product.getTaxRate() != null ? product.getTaxRate().getRate() : null)
                 .is_active(product.getIsActive())
                 .created_at(product.getCreatedAt())
                 .updated_at(product.getUpdatedAt())

@@ -15,15 +15,21 @@ function TransactionHistory() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [refundModal, setRefundModal] = useState(null);
+  const [refundQtys, setRefundQtys] = useState({});
+  const [editCustomerModal, setEditCustomerModal] = useState(null); // transaction đang sửa
+  const [editCustomerData, setEditCustomerData] = useState({ name: '', phone: '' });
 
   useEffect(() => {
     const loadAndSaveTransactions = async () => {
       const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       setTransactions(savedTransactions);
 
-      // Lưu tất cả transactions có customer vào database
+      // Lưu tất cả transactions hoàn thành vào database
       for (const transaction of savedTransactions) {
-        if (!transaction.savedToDb && transaction.customer && transaction.status === "Hoàn thành") {
+        if (!transaction.savedToDb && transaction.status === "Hoàn thành") {
           await savePurchaseHistory(transaction);
         }
       }
@@ -33,15 +39,13 @@ function TransactionHistory() {
   }, []);
 
   const savePurchaseHistory = async (transaction) => {
-    if (!transaction.customer) return;
-
     const items = transaction.cart || transaction.items || [];
     if (items.length === 0) return;
 
     try {
       const request = {
-        customerId: transaction.customer.id,
-        customerName: transaction.customer.name,
+        customerId: transaction.customer?.id || null,
+        customerName: transaction.customer?.name || null,
         paymentMethod: transaction.payment,
         items: items.map(item => ({
           productId: item.productId || item.id || 0,
@@ -72,22 +76,30 @@ function TransactionHistory() {
     let orders = JSON.parse(localStorage.getItem('posOrders') || '[{ "id": 1, "cart": [], "customer": null, "usePoints": false }]');
     let activeId = parseInt(localStorage.getItem('activeOrderId') || '1');
 
-    // Xem đơn hàng hiện tại có đang trống không
-    const activeOrderIndex = orders.findIndex(o => o.id === activeId);
-    const isActiveEmpty = activeOrderIndex !== -1 && (!orders[activeOrderIndex].cart || orders[activeOrderIndex].cart.length === 0);
-
     // Chuẩn bị dữ liệu giỏ hàng và khách hàng từ transaction
     const cartToRestore = transaction.cart || transaction.items || [];
     const customerToRestore = transaction.customer || null;
     const usePointsToRestore = transaction.usePoints || false;
 
-    if (isActiveEmpty) {
+    // Xem tab gốc của đơn treo còn tồn tại không
+    const transactionOrderId = transaction.orderId ? parseInt(transaction.orderId.replace('ORDER_', '')) : null;
+    const targetOrderIndex = transactionOrderId ? orders.findIndex(o => o.id === transactionOrderId) : -1;
+
+    // Xem đơn hàng hiện tại có đang trống không
+    const activeOrderIndex = orders.findIndex(o => o.id === activeId);
+    const isActiveEmpty = activeOrderIndex !== -1 && (!orders[activeOrderIndex].cart || orders[activeOrderIndex].cart.length === 0);
+
+    if (targetOrderIndex !== -1) {
+      // Tab gốc vẫn còn, update vào tab đó
+      orders[targetOrderIndex].cart = cartToRestore;
+      orders[targetOrderIndex].customer = customerToRestore;
+      orders[targetOrderIndex].usePoints = usePointsToRestore;
+      activeId = transactionOrderId;
+    } else if (isActiveEmpty) {
       // Ghi đè lên đơn hiện tại đang trống
       orders[activeOrderIndex].cart = cartToRestore;
       orders[activeOrderIndex].customer = customerToRestore;
       orders[activeOrderIndex].usePoints = usePointsToRestore;
-
-      // Không thay đổi activeId vì đang dùng đơn hiện tại
     } else {
       // Tạo một tab đơn hàng mới
       const newId = Math.max(...orders.map(o => o.id), 0) + 1;
@@ -135,6 +147,77 @@ function TransactionHistory() {
 
     setShowActionMenu(null);
     setDeleteConfirm(null);
+    setSelectedIds(prev => prev.filter(id => id !== transactionId));
+  };
+
+  const bulkDeleteTransactions = () => {
+    const updatedTransactions = transactions.filter(t => !selectedIds.includes(t.id));
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+
+    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+    const updatedPendingOrders = pendingOrders.filter(o => !selectedIds.includes(o.id));
+    localStorage.setItem('pendingOrders', JSON.stringify(updatedPendingOrders));
+
+    setSelectedIds([]);
+    setBulkDeleteConfirm(false);
+  };
+
+  const openRefundModal = (transaction) => {
+    const items = transaction.cart || transaction.items || [];
+    const initQtys = {};
+    items.forEach((_, i) => { initQtys[i] = 0; });
+    setRefundQtys(initQtys);
+    setRefundModal(transaction);
+    setShowActionMenu(null);
+  };
+
+  const confirmRefund = () => {
+    if (!refundModal) return;
+    const items = refundModal.cart || refundModal.items || [];
+    const hasRefund = items.some((_, i) => (refundQtys[i] || 0) > 0);
+    if (!hasRefund) { alert('Vui lòng chọn ít nhất 1 sản phẩm để hoàn trả!'); return; }
+
+    const newItems = items.map((item, i) => {
+      const returnQty = refundQtys[i] || 0;
+      const newQty = (item.qty || item.quantity || 1) - returnQty;
+      return newQty > 0 ? { ...item, qty: newQty } : null;
+    }).filter(Boolean);
+
+    let refundAmount = 0;
+    items.forEach((item, i) => { refundAmount += (refundQtys[i] || 0) * (item.price || 0); });
+
+    const oldTotal = parseInt((refundModal.total || '').toString().replace(/[^0-9]/g, '')) || 0;
+    const newTotal = Math.max(0, oldTotal - refundAmount);
+
+    const updatedTransaction = {
+      ...refundModal,
+      cart: newItems,
+      items: newItems,
+      total: `${newTotal.toLocaleString()} đ`,
+      quantity: `${newItems.reduce((s, it) => s + (it.qty || it.quantity || 1), 0)} món`,
+      status: newItems.length === 0 ? 'Đã hoàn trả' : 'Hoàn thành',
+      refundNote: `Hoàn trả ${refundAmount.toLocaleString()}đ lúc ${new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}`,
+    };
+
+    const updatedTransactions = transactions.map(t => t.id === refundModal.id ? updatedTransaction : t);
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    setRefundModal(null);
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredTransactions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredTransactions.map(t => t.id));
+    }
   };
 
   const parseDateTime = (timeStr) => {
@@ -194,6 +277,20 @@ function TransactionHistory() {
     });
 
   const uniquePayments = [...new Set(transactions.map(t => t.payment).filter(Boolean))];
+
+  // Logic phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const paginatedTransactions = filteredTransactions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset trang về 1 khi có thay đổi bộ lọc
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedDate, statusFilter, paymentFilter, sortBy]);
 
   // Tính toán thống kê
   const totalTransactions = filteredTransactions.length;
@@ -357,26 +454,27 @@ function TransactionHistory() {
             <option value="price_asc">Giá: Thấp → Cao</option>
           </select>
 
-          {(searchTerm || selectedDate || statusFilter !== "all" || paymentFilter !== "all" || sortBy !== "time_desc") && (
+
+
+
+          {selectedIds.length > 0 && (
             <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedDate("");
-                setStatusFilter("all");
-                setPaymentFilter("all");
-                setSortBy("time_desc");
-              }}
+              onClick={() => setBulkDeleteConfirm(true)}
               style={{
                 padding: "8px 14px",
                 borderRadius: "8px",
-                border: "1px solid #dc3545",
+                border: "none",
                 background: "#dc3545",
                 color: "white",
                 cursor: "pointer",
                 whiteSpace: "nowrap",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
               }}
             >
-              Xóa lọc
+              🗑 Xóa ({selectedIds.length}) đơn
             </button>
           )}
         </div>
@@ -392,6 +490,23 @@ function TransactionHistory() {
       >
         <thead>
           <tr style={{ background: "#f8f9fa" }}>
+            <th style={{ padding: "12px", textAlign: "center", width: "40px" }}>
+              <input
+                type="checkbox"
+                checked={paginatedTransactions.length > 0 && paginatedTransactions.every(t => selectedIds.includes(t.id))}
+                onChange={() => {
+                  const currentIds = paginatedTransactions.map(t => t.id);
+                  const allSelected = currentIds.every(id => selectedIds.includes(id));
+                  if (allSelected) {
+                    setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+                  } else {
+                    const newIds = currentIds.filter(id => !selectedIds.includes(id));
+                    setSelectedIds(prev => [...prev, ...newIds]);
+                  }
+                }}
+                style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#0d6efd" }}
+              />
+            </th>
             <th style={{ padding: "12px", textAlign: "left" }}>Mã đơn</th>
             <th style={{ padding: "12px", textAlign: "left" }}>Thời gian</th>
             <th style={{ padding: "12px", textAlign: "left" }}>Số lượng</th>
@@ -403,15 +518,29 @@ function TransactionHistory() {
         </thead>
 
         <tbody>
-          {filteredTransactions.length === 0 ? (
+          {paginatedTransactions.length === 0 ? (
             <tr>
-              <td colSpan="7" style={{ padding: "20px", textAlign: "center", color: "gray" }}>
+              <td colSpan="8" style={{ padding: "20px", textAlign: "center", color: "gray" }}>
                 {transactions.length === 0 ? "Chưa có giao dịch nào" : "Không tìm thấy giao dịch phù hợp"}
               </td>
             </tr>
           ) : (
-            filteredTransactions.map((item, index) => (
-              <tr key={index} style={{ borderBottom: "1px solid #eee" }}>
+            paginatedTransactions.map((item, index) => (
+              <tr
+                key={index}
+                style={{
+                  borderBottom: "1px solid #eee",
+                  background: selectedIds.includes(item.id) ? "#e8f0fe" : "transparent",
+                }}
+              >
+                <td style={{ padding: "12px", textAlign: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#0d6efd" }}
+                  />
+                </td>
                 <td
                   style={{
                     padding: "12px",
@@ -481,6 +610,51 @@ function TransactionHistory() {
                         minWidth: "120px",
                         marginTop: "4px"
                       }}>
+                        {item.status === "Hoàn thành" && (
+                          <button
+                            onClick={() => openRefundModal(item)}
+                            style={{
+                              width: "100%",
+                              padding: "8px 12px",
+                              border: "none",
+                              background: "white",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontSize: "13px",
+                              borderBottom: "1px solid #f0f0f0",
+                              color: "#e67e22"
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
+                            onMouseLeave={(e) => e.target.style.background = "white"}
+                          >
+                            🔄 Hoàn trả sản phẩm
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setEditCustomerData({
+                              name: item.customer?.name || '',
+                              phone: item.customer?.phone || ''
+                            });
+                            setEditCustomerModal(item);
+                            setShowActionMenu(null);
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            border: "none",
+                            background: "white",
+                            textAlign: "left",
+                            cursor: "pointer",
+                            fontSize: "13px",
+                            borderBottom: "1px solid #f0f0f0",
+                            color: "#6c757d"
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
+                          onMouseLeave={(e) => e.target.style.background = "white"}
+                        >
+                          ✏️ Sửa thông tin KH
+                        </button>
                         {item.status === "Chờ thanh toán" && (
                           <button
                             onClick={() => restorePendingOrder(item)}
@@ -498,7 +672,7 @@ function TransactionHistory() {
                             onMouseEnter={(e) => e.target.style.background = "#f8f9fa"}
                             onMouseLeave={(e) => e.target.style.background = "white"}
                           >
-                            ↩ Quay lại POS
+                            💳 Tiếp tục thanh toán
                           </button>
                         )}
                         <button
@@ -551,6 +725,87 @@ function TransactionHistory() {
           )}
         </tbody>
       </table>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: "20px",
+          padding: "10px 0",
+          borderTop: "1px solid #eee"
+        }}>
+          <div style={{ color: "gray", fontSize: "14px" }}>
+            Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} trong tổng số {filteredTransactions.length} giao dịch
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #ddd",
+                background: currentPage === 1 ? "#f5f5f5" : "white",
+                color: currentPage === 1 ? "#aaa" : "#333",
+                borderRadius: "6px",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer"
+              }}
+            >
+              &laquo; Trước
+            </button>
+            <div style={{ display: "flex", gap: "5px" }}>
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const pageNum = i + 1;
+                // Chỉ hiển thị vài trang xung quanh trang hiện tại
+                if (
+                  pageNum === 1 ||
+                  pageNum === totalPages ||
+                  (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      style={{
+                        padding: "8px 12px",
+                        border: "1px solid",
+                        borderColor: currentPage === pageNum ? "#0d6efd" : "#ddd",
+                        background: currentPage === pageNum ? "#0d6efd" : "white",
+                        color: currentPage === pageNum ? "white" : "#333",
+                        borderRadius: "6px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                } else if (
+                  pageNum === currentPage - 2 ||
+                  pageNum === currentPage + 2
+                ) {
+                  return <span key={pageNum} style={{ padding: "8px 4px", color: "gray" }}>...</span>;
+                }
+                return null;
+              })}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #ddd",
+                background: currentPage === totalPages ? "#f5f5f5" : "white",
+                color: currentPage === totalPages ? "#aaa" : "#333",
+                borderRadius: "6px",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer"
+              }}
+            >
+              Sau &raquo;
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal xác nhận xóa */}
       {deleteConfirm && (
@@ -630,11 +885,304 @@ function TransactionHistory() {
         </div>
       )}
 
+      {/* Modal xác nhận xóa hàng loạt */}
+      {bulkDeleteConfirm && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: "white",
+            borderRadius: "12px",
+            padding: "30px",
+            width: "400px",
+            maxWidth: "90%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            textAlign: "center"
+          }}>
+            <div style={{
+              width: "50px",
+              height: "50px",
+              borderRadius: "50%",
+              background: "#fff3f3",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 15px",
+              fontSize: "24px"
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ margin: "0 0 10px", fontSize: "18px", color: "#333" }}>
+              Xác nhận xóa {selectedIds.length} giao dịch
+            </h3>
+            <p style={{ color: "#666", fontSize: "14px", margin: "0 0 20px" }}>
+              Bạn có chắc chắn muốn xóa <strong style={{ color: "#dc3545" }}>{selectedIds.length} đơn hàng</strong> đã chọn không?<br />
+              Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                onClick={() => setBulkDeleteConfirm(false)}
+                style={{
+                  padding: "10px 25px",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd",
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}
+              >
+                Không
+              </button>
+              <button
+                onClick={bulkDeleteTransactions}
+                style={{
+                  padding: "10px 25px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "#dc3545",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500"
+                }}
+              >
+                Xóa tất cả
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showInvoice && (
         <Invoice
           transaction={selectedTransaction}
           onClose={() => setShowInvoice(false)}
         />
+      )}
+
+      {/* Modal hoàn trả sản phẩm */}
+      {refundModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: "white", borderRadius: "12px", padding: "30px",
+            width: "540px", maxWidth: "95%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+          }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: "18px", color: "#333" }}>
+              🔄 Hoàn trả sản phẩm
+            </h3>
+            <p style={{ color: "#666", fontSize: "13px", margin: "0 0 18px" }}>
+              Đơn <strong style={{ color: "#0d6efd" }}>{refundModal.id}</strong> — Chọn số lượng muốn hoàn trả:
+            </p>
+            <div style={{ maxHeight: "300px", overflowY: "auto", marginBottom: "18px" }}>
+              {(refundModal.cart || refundModal.items || []).map((item, i) => {
+                const maxQty = item.qty || item.quantity || 1;
+                return (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 12px", marginBottom: "8px",
+                    border: "1px solid #e9ecef", borderRadius: "8px",
+                    background: (refundQtys[i] || 0) > 0 ? "#fff3cd" : "#f8f9fa"
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: "600", fontSize: "13px" }}>{item.name}</div>
+                      <div style={{ fontSize: "12px", color: "#888", marginTop: "2px" }}>
+                        {(item.price || 0).toLocaleString()}đ × {maxQty} = {((item.price || 0) * maxQty).toLocaleString()}đ
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "14px" }}>
+                      <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>Trả lại:</span>
+                      <button
+                        onClick={() => setRefundQtys(q => ({ ...q, [i]: Math.max(0, (q[i] || 0) - 1) }))}
+                        style={{ width: "26px", height: "26px", border: "1px solid #ddd", background: "white", borderRadius: "4px", cursor: "pointer", fontSize: "14px" }}
+                      >-</button>
+                      <input
+                        type="number" min={0} max={maxQty}
+                        value={refundQtys[i] || 0}
+                        onChange={(e) => {
+                          const v = Math.min(maxQty, Math.max(0, parseInt(e.target.value) || 0));
+                          setRefundQtys(q => ({ ...q, [i]: v }));
+                        }}
+                        style={{
+                          width: "42px", textAlign: "center", fontSize: "13px",
+                          fontWeight: "bold", border: "1px solid #ddd",
+                          borderRadius: "4px", padding: "2px 4px", height: "26px"
+                        }}
+                      />
+                      <button
+                        onClick={() => setRefundQtys(q => ({ ...q, [i]: Math.min(maxQty, (q[i] || 0) + 1) }))}
+                        style={{ width: "26px", height: "26px", border: "1px solid #ddd", background: "white", borderRadius: "4px", cursor: "pointer", fontSize: "14px" }}
+                      >+</button>
+                      <span style={{ fontSize: "12px", color: "#888" }}>/ {maxQty}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Tóm tắt số tiền hoàn trả */}
+            {(() => {
+              const items = refundModal.cart || refundModal.items || [];
+              const amt = items.reduce((s, item, i) => s + (refundQtys[i] || 0) * (item.price || 0), 0);
+              return amt > 0 ? (
+                <div style={{
+                  padding: "10px 14px", marginBottom: "16px",
+                  background: "#fff3cd", borderRadius: "8px", border: "1px solid #ffc107",
+                  fontSize: "14px", display: "flex", justifyContent: "space-between"
+                }}>
+                  <span>Số tiền cần hoàn lại cho khách:</span>
+                  <strong style={{ color: "#e67e22" }}>{amt.toLocaleString()}đ</strong>
+                </div>
+              ) : null;
+            })()}
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setRefundModal(null)}
+                style={{
+                  padding: "10px 22px", borderRadius: "8px",
+                  border: "1px solid #ddd", background: "white",
+                  cursor: "pointer", fontSize: "14px", fontWeight: "500"
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmRefund}
+                style={{
+                  padding: "10px 22px", borderRadius: "8px",
+                  border: "none", background: "#e67e22",
+                  color: "white", cursor: "pointer",
+                  fontSize: "14px", fontWeight: "600"
+                }}
+              >
+                Xác nhận Hoàn trả
+              </button>
+            </div>
+          </div>
+        </div>
+      )}\r\n\r\n      {/* Modal sửa thông tin khách hàng */}
+      {editCustomerModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: "white", borderRadius: "12px", padding: "30px",
+            width: "420px", maxWidth: "95%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+          }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: "18px", color: "#333" }}>
+              ✏️ Sửa thông tin khách hàng
+            </h3>
+            <p style={{ color: "#888", fontSize: "13px", margin: "0 0 20px" }}>
+              Đơn <strong style={{ color: "#0d6efd" }}>{editCustomerModal.id}</strong>
+            </p>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "5px", color: "#555" }}>
+                Tên khách hàng:
+              </label>
+              <input
+                type="text"
+                placeholder="Nhập tên khách hàng"
+                value={editCustomerData.name}
+                onChange={(e) => setEditCustomerData(d => ({ ...d, name: e.target.value }))}
+                autoFocus
+                style={{
+                  width: "100%", padding: "10px 12px", fontSize: "14px",
+                  border: "1px solid #ddd", borderRadius: "8px", outline: "none",
+                  boxSizing: "border-box",
+                  transition: "border-color 0.15s"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#0d6efd"}
+                onBlur={(e) => e.target.style.borderColor = "#ddd"}
+              />
+            </div>
+
+            <div style={{ marginBottom: "22px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "5px", color: "#555" }}>
+                Số điện thoại:
+              </label>
+              <input
+                type="tel"
+                placeholder="Nhập số điện thoại"
+                value={editCustomerData.phone}
+                onChange={(e) => setEditCustomerData(d => ({ ...d, phone: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // trigger save
+                    const updatedTransactions = transactions.map(t =>
+                      t.id === editCustomerModal.id
+                        ? { ...t, customer: { ...(t.customer || {}), name: editCustomerData.name, phone: editCustomerData.phone } }
+                        : t
+                    );
+                    setTransactions(updatedTransactions);
+                    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+                    setEditCustomerModal(null);
+                  }
+                }}
+                style={{
+                  width: "100%", padding: "10px 12px", fontSize: "14px",
+                  border: "1px solid #ddd", borderRadius: "8px", outline: "none",
+                  boxSizing: "border-box",
+                  transition: "border-color 0.15s"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#0d6efd"}
+                onBlur={(e) => e.target.style.borderColor = "#ddd"}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setEditCustomerModal(null)}
+                style={{
+                  padding: "10px 22px", borderRadius: "8px",
+                  border: "1px solid #ddd", background: "white",
+                  cursor: "pointer", fontSize: "14px", fontWeight: "500"
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  const updatedTransactions = transactions.map(t =>
+                    t.id === editCustomerModal.id
+                      ? { ...t, customer: { ...(t.customer || {}), name: editCustomerData.name, phone: editCustomerData.phone } }
+                      : t
+                  );
+                  setTransactions(updatedTransactions);
+                  localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+                  setEditCustomerModal(null);
+                }}
+                style={{
+                  padding: "10px 22px", borderRadius: "8px",
+                  border: "none", background: "#0d6efd",
+                  color: "white", cursor: "pointer",
+                  fontSize: "14px", fontWeight: "600"
+                }}
+              >
+                Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
