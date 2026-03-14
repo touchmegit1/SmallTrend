@@ -1,29 +1,22 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
-import MainLayout from "./components/layout/MainLayout";
-import { useAuth } from "./context/AuthContext";
-import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
-import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
-import AiChatPage from "./pages/Admin/AiChatPage";
-import AuditLogPage from "./pages/Admin/AuditLogPage";
-import TicketCenter from "./pages/Admin/TicketCenter";
-import Login from "./pages/Auth/Login";
-import NotFoundPage from "./pages/Common/NotFoundPage";
+import ShiftManagement from "./pages/HR/ShiftManagement";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
 import CRMreport from "./pages/CRM/report";
+import CRMads from "./pages/CRM/ads";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import EmployeeList from "./pages/HR/EmployeeList";
 import PayrollManagement from "./pages/HR/PayrollManagement";
 import ShiftManagement from "./pages/HR/ShiftManagement";
 import UserManagement from "./pages/HR/UserManagement";
-import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
-import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
 import DisposalDetail from "./pages/Inventory/DisposalDetail";
 import DisposalList from "./pages/Inventory/DisposalList";
 import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
@@ -193,6 +186,7 @@ function App() {
         />
         <Route path="crm/complain" element={<CRMcomplain />} />
         <Route path="crm/complaints" element={<CRMcomplain />} />
+        <Route path="crm/ads" element={<CRMads />} />
 
         {/* Module 5: HR (Nhân sự) */}
         <Route path="hr" element={<Navigate to="/hr/employees" replace />} />

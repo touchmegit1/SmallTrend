@@ -15,11 +15,11 @@ import com.smalltrend.service.CRM.CustomerService;
 @RestController
 @RequestMapping("/api/crm")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"})
 public class CustomerController {
-    
+
     private final CustomerService customerService;
-    
+
     @GetMapping("/customers")
     public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
         List<CustomerResponse> customers = customerService.getAllCustomers();
@@ -39,7 +39,7 @@ public class CustomerController {
             return ResponseEntity.ok(customer);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new com.smalltrend.dto.common.MessageResponse(e.getMessage()));
+                    .body(new com.smalltrend.dto.common.MessageResponse(e.getMessage()));
         }
     }
 
@@ -60,10 +60,11 @@ public class CustomerController {
             @PathVariable Integer id,
             @RequestBody UpdateCustomerRequest request) {
         CustomerResponse customer = customerService.updateCustomer(
-            id, 
-            request.getName(), 
-            request.getPhone(),
-            request.getLoyaltyPoints()
+                id,
+                request.getName(),
+                request.getPhone(),
+                request.getLoyaltyPoints(),
+                request.getSpentAmount()
         );
         return ResponseEntity.ok(customer);
     }
