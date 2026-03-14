@@ -37,7 +37,7 @@ public class InventoryDashboardService {
         List<Product> products = productRepository.findAll();
         List<InventoryStock> allStocks = inventoryStockRepository.findAll();
         
-        log.debug("📦 Dashboard: {} products, {} inventory stock rows", products.size(), allStocks.size());
+        log.debug(" Dashboard: {} products, {} inventory stock rows", products.size(), allStocks.size());
         allStocks.forEach(s -> log.debug("  Stock: variant={}, batch={}, qty={}", 
             s.getVariant() != null ? s.getVariant().getId() : "null",
             s.getBatch() != null ? s.getBatch().getId() : "null",
@@ -170,7 +170,7 @@ public class InventoryDashboardService {
         // Need action
         int needActionCount = lowStockCount + expiredCount;
         
-        log.debug("📊 Summary: totalProducts={}, totalValue={}, lowStock={}, expired={}, expiring={}", 
+        log.debug(" Summary: totalProducts={}, totalValue={}, lowStock={}, expired={}, expiring={}", 
             totalProducts, totalValue, lowStockCount, expiredCount, expiringSoonCount);
         
         return DashboardSummaryResponse.builder()

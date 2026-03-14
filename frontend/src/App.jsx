@@ -1,9 +1,16 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
-import ShiftManagement from "./pages/HR/ShiftManagement";
-import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
-import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
+import MainLayout from "./components/layout/MainLayout";
+import { useAuth } from "./context/AuthContext";
+import Login from "./pages/Auth/Login";
+import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
+import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
+import AiChatPage from "./pages/Admin/AiChatPage";
+import AuditLogPage from "./pages/Admin/AuditLogPage";
+import TicketCenter from "./pages/Admin/TicketCenter";
+import NotFoundPage from "./pages/Common/NotFoundPage";
+import CRMads from "./pages/CRM/ads";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
@@ -14,13 +21,16 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
 import EmployeeList from "./pages/HR/EmployeeList";
 import PayrollManagement from "./pages/HR/PayrollManagement";
+import ShiftManagement from "./pages/HR/ShiftManagement";
 import UserManagement from "./pages/HR/UserManagement";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
 import DisposalDetail from "./pages/Inventory/DisposalDetail";
 import DisposalList from "./pages/Inventory/DisposalList";
 import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
 import InventoryCountList from "./pages/Inventory/InventoryCountList";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import LocationManagement from "./pages/Inventory/LocationManagement";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
 import POS from "./pages/Pos/pos";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import ShiftHandover from "./pages/Pos/ShiftHandover";
@@ -31,19 +41,10 @@ import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
 import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
-import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
 import ProductList from "./pages/Products/ProductManager/ProductList";
+import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import Suppliers from "./pages/Products/ProductManager/Suppliers";
-import Login from "./pages/Auth/Login";
-import MainLayout from "./components/layout/MainLayout";
-import { useAuth } from "./context/AuthContext";
-import TicketCenter from "./pages/Admin/TicketCenter";
-import AuditLogPage from "./pages/Admin/AuditLogPage";
-import AiChatPage from "./pages/Admin/AiChatPage";
-import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
-import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
-import NotFoundPage from "./pages/Common/NotFoundPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -70,11 +71,6 @@ function RootRedirect() {
     );
   }
 
-  return isAuthenticated ? (
-    <Navigate to="/dashboard" replace />
-  ) : (
-    <Navigate to="/crm/homepage" replace />
-  );
   return isAuthenticated ? (
     <Navigate to="/dashboard" replace />
   ) : (
@@ -112,7 +108,9 @@ function App() {
         <Route
           path="dashboard"
           element={
-            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES, ...SALES_ROLES, ...INVENTORY_ROLES, ...CASHIER_ROLES]}>
+            <ProtectedRoute
+              allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}
+            >
               <Dashboard />
             </ProtectedRoute>
           }
@@ -149,52 +147,27 @@ function App() {
         <Route path="inventory/disposal" element={<DisposalList />} />
         <Route path="inventory/disposal/create" element={<DisposalDetail />} />
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
-        <Route path="inventory/purchase-orders" element={<PurchaseOrderList />} />
-        <Route path="inventory/purchase-orders/create" element={<CreatePurchaseOrder />} />
-        <Route path="inventory/purchase-orders/:id" element={<CreatePurchaseOrder />} />
 
         {/* Module 3: Products (Sản phẩm) */}
         <Route path="products" element={<ProductList />} />
         <Route path="products/addproduct" element={<AddNewProduct />} />
         <Route path="products/detail/:id" element={<ProductDetail />} />
-        <Route
-          path="products/addproduct_variant"
-          element={<AddNewProductVariant />}
-        />
-        <Route
-          path="products/categories"
-          element={<div className="p-4"><CategoryAndBrand /></div>}
-        />
-        <Route
-          path="products/combo"
-          element={<div className="p-4"><ComboManage /></div>}
-        />
-        <Route
-          path="products/create_combo"
-          element={<div className="p-4"><CreateCombo /></div>}
-        />
-        <Route
-          path="products/combo_detail"
-          element={<div className="p-4"><ComboDetail /></div>}
-        />
-        <Route
-          path="products/price"
-          element={<div className="p-4"><PriceSetting /></div>}
-        />
+        <Route path="products/addproduct_variant" element={<AddNewProductVariant />} />
+        <Route path="products/categories" element={<div className="p-4"><CategoryAndBrand /></div>} />
+        <Route path="products/suppliers" element={<div className="p-4"><Suppliers /></div>} />
+        <Route path="products/price" element={<div className="p-4"><PriceSetting /></div>} />
+        <Route path="products/combo" element={<div className="p-4"><ComboManage /></div>} />
+        <Route path="products/create_combo" element={<div className="p-4"><CreateCombo /></div>} />
+        <Route path="products/combo_detail" element={<div className="p-4"><ComboDetail /></div>} />
 
-        <Route
-          path="products/suppliers"
-          element={<div className="p-4"><Suppliers /></div>}
-        />
-        {/* Module 4: CRM (Khách hàng) */}
-        <Route
-          path="crm"
-          element={<div className="p-4">CRM &amp; Promotion</div>}
-        />
+        <Route path="crm" element={<div className="p-4">CRM &amp; Promotion</div>} />
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
         <Route path="crm/report" element={<CRMreport />} />
+        <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
+        <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
+
         <Route
           path="crm/promotions"
           element={<div className="p-4">Chương trình KM</div>}
@@ -205,6 +178,7 @@ function App() {
         />
         <Route path="crm/complain" element={<CRMcomplain />} />
         <Route path="crm/complaints" element={<CRMcomplain />} />
+        <Route path="crm/ads" element={<CRMads />} />
 
         {/* Module 5: HR (Nhân sự) */}
         <Route path="hr" element={<Navigate to="/hr/employees" replace />} />
@@ -277,23 +251,10 @@ function App() {
           }
         />
 
-        {/* Module 6: Reports (Báo cáo) */}
-        <Route
-          path="reports"
-          element={<div className="p-4">Reports & AI (Báo cáo)</div>}
-        />
-        <Route
-          path="reports/create"
-          element={<div className="p-4">Tạo báo cáo</div>}
-        />
-        <Route
-          path="reports/manage"
-          element={<div className="p-4">Quản lý báo cáo</div>}
-        />
-        <Route
-          path="reports/ai"
-          element={<div className="p-4">AI dự báo</div>}
-        />
+        <Route path="reports" element={<div className="p-4">Reports & AI (Báo cáo)</div>} />
+        <Route path="reports/create" element={<div className="p-4">Tạo báo cáo</div>} />
+        <Route path="reports/manage" element={<div className="p-4">Quản lý báo cáo</div>} />
+        <Route path="reports/ai" element={<div className="p-4">AI dự báo</div>} />
         <Route
           path="reports/ai-chat"
           element={
