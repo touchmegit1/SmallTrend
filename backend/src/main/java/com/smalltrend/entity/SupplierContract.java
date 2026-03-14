@@ -1,5 +1,6 @@
 package com.smalltrend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.smalltrend.entity.enums.ContractStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -26,6 +27,7 @@ public class SupplierContract {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id", nullable = false)
+    @JsonIgnoreProperties({ "purchaseOrders", "hibernateLazyInitializer", "handler" })
     private Supplier supplier;
 
     @Column(name = "contract_number", unique = true, nullable = false)

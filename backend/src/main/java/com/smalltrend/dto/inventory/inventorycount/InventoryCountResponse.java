@@ -22,6 +22,7 @@ public class InventoryCountResponse {
     private String locationName;
 
     private String notes;
+    private String rejectionReason;
 
     private BigDecimal totalShortageValue;
     private BigDecimal totalOverageValue;

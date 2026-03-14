@@ -35,6 +35,10 @@ public class PayrollSummaryResponse {
         private BigDecimal workedHours;
         private BigDecimal overtimeHours;
         private BigDecimal hourlyRate;
+        private String salaryType;
+        private Integer minRequiredShifts;
+        private Boolean eligibleForMonthlySalary;
+        private BigDecimal baseSalary;
         private BigDecimal grossPay;
         private BigDecimal deductions;
         private BigDecimal netPay;

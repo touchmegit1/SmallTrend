@@ -25,11 +25,11 @@ import {
   ArrowDownCircle
 } from 'lucide-react';
 import ticketService from '../../services/ticketService';
+import customerService from '../../services/customerService';
 
 const PAGE_SIZE = 5;
 
 const STATUS_CONFIG = {
-  OPEN: { label: 'Mở', color: 'bg-blue-100 text-blue-700', icon: CircleDot },
   IN_PROGRESS: { label: 'Đang xử lý', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
   RESOLVED: { label: 'Đã giải quyết', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
   CLOSED: { label: 'Đã đóng', color: 'bg-gray-100 text-gray-600', icon: XCircle }
@@ -43,17 +43,14 @@ const PRIORITY_CONFIG = {
 };
 
 const TYPE_CONFIG = {
-  REFUND: { label: 'Hoàn trả' },
-  SHIFT_CHANGE: { label: 'Đổi ca' },
-  ISSUE: { label: 'Sự cố' },
-  SUPPLIER: { label: 'Nhà cung cấp' },
-  ORDER: { label: 'Đơn hàng' },
-  AI_SUGGESTION: { label: 'AI Gợi ý' }
+  ORDER: { label: 'Vấn đề đơn hàng' },
+  REFUND: { label: 'Yêu cầu hoàn trả' },
+  ISSUE: { label: 'Chất lượng sản phẩm' },
+  SUPPLIER: { label: 'Dịch vụ / Thái độ' },
+  AI_SUGGESTION: { label: 'Góp ý khác' }
 };
 
 const RELATED_ENTITY_TYPES = [
-  { value: 'WorkShift', label: 'Ca làm việc' },
-  { value: 'CashRegister', label: 'Quầy thu ngân' },
   { value: 'Order', label: 'Đơn hàng' },
   { value: 'Product', label: 'Sản phẩm' }
 ];
@@ -83,6 +80,11 @@ export default function CustomerComplaintSystem() {
   const [skuVariants, setSkuVariants] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [loadingVariants, setLoadingVariants] = useState(false);
+
+  // Customer states
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [loadingCustomer, setLoadingCustomer] = useState(false);
 
   const [form, setForm] = useState({
     ticketType: 'REFUND',
@@ -133,12 +135,20 @@ export default function CustomerComplaintSystem() {
     return true;
   });
 
+  // Sort by priority (URGENT > HIGH > NORMAL > LOW) then by newest
+  const priorityOrder = { URGENT: 4, HIGH: 3, NORMAL: 2, LOW: 1 };
+  filtered.sort((a, b) => {
+    const pA = priorityOrder[a.priority] || 0;
+    const pB = priorityOrder[b.priority] || 0;
+    if (pA !== pB) return pB - pA; // Higher priority first
+    return new Date(b.createdAt) - new Date(a.createdAt); // Then newest first
+  });
+
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const stats = {
     total: tickets.length,
-    open: tickets.filter(t => t.status === 'OPEN').length,
     inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
     resolved: tickets.filter(t => t.status === 'RESOLVED').length
   };
@@ -153,7 +163,7 @@ export default function CustomerComplaintSystem() {
       relatedEntityType: '',
       relatedEntityId: 1,
       assignedToUserId: '',
-      status: 'OPEN',
+      status: 'IN_PROGRESS',
       resolution: '',
       sku: '',
       refundQuantity: 1
@@ -164,6 +174,8 @@ export default function CustomerComplaintSystem() {
     setSkuInput('');
     setSkuVariants([]);
     setSelectedVariant(null);
+    setCustomerPhone('');
+    setCustomerName('');
   };
 
   const openCreate = () => {
@@ -181,7 +193,7 @@ export default function CustomerComplaintSystem() {
       relatedEntityType: ticket.relatedEntityType || '',
       relatedEntityId: ticket.relatedEntityId || '',
       assignedToUserId: ticket.assignedToUserId || '',
-      status: ticket.status || 'OPEN',
+      status: (ticket.status === 'OPEN' ? 'IN_PROGRESS' : ticket.status) || 'IN_PROGRESS',
       resolution: ticket.resolution || '',
       sku: '',
       refundQuantity: 1
@@ -191,6 +203,8 @@ export default function CustomerComplaintSystem() {
     setSkuInput('');
     setSkuVariants([]);
     setSelectedVariant(null);
+    setCustomerPhone(ticket.customerPhone || '');
+    setCustomerName(ticket.customerName || '');
     setShowModal(true);
   };
 
@@ -198,23 +212,55 @@ export default function CustomerComplaintSystem() {
     try {
       setSaving(true);
       if (editingTicket) {
+        if (request.resolution) {
+          ticket.resolution = request.resolution;
+        }
+
+        // Add customer details to description if provided
+        let desc = form.description;
+        if (customerPhone || customerName) {
+          desc = `[Khách hàng: ${customerName || '—'} - SĐT: ${customerPhone || '—'}]\n${desc}`;
+        }
+
         await ticketService.updateTicket(editingTicket.id, {
           title: form.title,
-          description: form.description,
+          description: desc,
           priority: form.priority,
           status: form.status,
           assignedToUserId: form.assignedToUserId ? Number(form.assignedToUserId) : null,
           resolution: form.resolution
         });
       } else {
+        // Lấy thông tin user đăng nhập
+        const userStr = localStorage.getItem('user');
+        let currentUserId = null;
+        let currentUserName = null;
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            currentUserId = user.id;
+            currentUserName = user.fullName || user.username;
+          } catch (e) { }
+        }
+
+        // Add customer details to description if provided
+        let desc = form.description;
+        if (customerPhone || customerName) {
+          desc = `[Khách hàng: ${customerName || '—'} - SĐT: ${customerPhone || '—'}]\n${desc}`;
+        }
+
         await ticketService.createTicket({
           ticketType: form.ticketType,
           title: form.title,
-          description: form.description,
+          description: desc,
           priority: form.priority,
+          status: 'IN_PROGRESS',
           relatedEntityType: form.relatedEntityType || null,
           relatedEntityId: form.relatedEntityId ? Number(form.relatedEntityId) : null,
-          assignedToUserId: form.assignedToUserId ? Number(form.assignedToUserId) : null,
+          assignedToUserId: currentUserId, // Tự động gán cho người tạo
+          createdById: currentUserId,
+          createdByName: currentUserName,
+          assignedToName: currentUserName,
           sku: form.sku || null,
           refundQuantity: form.refundQuantity ? Number(form.refundQuantity) : null
         });
@@ -255,7 +301,8 @@ export default function CustomerComplaintSystem() {
   };
 
   const StatusBadge = ({ status }) => {
-    const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.OPEN;
+    const effectiveStatus = status === 'OPEN' ? 'IN_PROGRESS' : status;
+    const cfg = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.IN_PROGRESS;
     const Icon = cfg.icon;
     return (
       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
@@ -283,10 +330,10 @@ export default function CustomerComplaintSystem() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">
-              Quản lý Ticket Khiếu nại
+              Khiếu nại & Góp ý khách hàng
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Theo dõi và xử lý các ticket khiếu nại, yêu cầu
+              Quản lý và xử lý các phản hồi từ khách hàng
             </p>
           </div>
           <button
@@ -294,18 +341,21 @@ export default function CustomerComplaintSystem() {
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
           >
             <Plus size={16} />
-            Tạo ticket mới
+            Tạo phiếu khiếu nại
           </button>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            onClick={() => { setFilterStatus('ALL'); setPage(1); }}
+            className={`cursor-pointer bg-white border ${filterStatus === 'ALL' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'} rounded-xl p-5 hover:shadow-md transition-all`}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Tổng ticket</p>
+                <p className="text-sm text-gray-500">Tổng khiếu nại</p>
                 <p className="text-3xl font-bold text-gray-900 mt-1">{stats.total}</p>
               </div>
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
@@ -313,18 +363,10 @@ export default function CustomerComplaintSystem() {
               </div>
             </div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Đang mở</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">{stats.open}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <CircleDot className="text-blue-600" size={24} />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
+          <div
+            onClick={() => { setFilterStatus('IN_PROGRESS'); setPage(1); }}
+            className={`cursor-pointer bg-white border ${filterStatus === 'IN_PROGRESS' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-gray-200'} rounded-xl p-5 hover:shadow-md transition-all`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Đang xử lý</p>
@@ -335,7 +377,10 @@ export default function CustomerComplaintSystem() {
               </div>
             </div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
+          <div
+            onClick={() => { setFilterStatus('RESOLVED'); setPage(1); }}
+            className={`cursor-pointer bg-white border ${filterStatus === 'RESOLVED' ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200'} rounded-xl p-5 hover:shadow-md transition-all`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Đã giải quyết</p>
@@ -355,7 +400,7 @@ export default function CustomerComplaintSystem() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input
                 type="text"
-                placeholder="Tìm theo mã ticket, tiêu đề..."
+                placeholder="Tìm theo mã, tên khách hàng, nội dung..."
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -369,7 +414,7 @@ export default function CustomerComplaintSystem() {
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="ALL">Tất cả trạng thái</option>
-                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                {Object.entries(STATUS_CONFIG).filter(([key]) => key !== 'OPEN').map(([key, cfg]) => (
                   <option key={key} value={key}>{cfg.label}</option>
                 ))}
               </select>
@@ -422,6 +467,7 @@ export default function CustomerComplaintSystem() {
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Mã Ticket</th>
+                      <th className="text-left px-5 py-3 font-semibold text-gray-600">Khách hàng</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Loại</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Tiêu đề</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Ưu tiên</th>
@@ -439,6 +485,20 @@ export default function CustomerComplaintSystem() {
                           </span>
                         </td>
                         <td className="px-5 py-4">
+                          {(() => {
+                            const match = ticket.description?.match(/\[Khách hàng: (.*?) - SĐT: (.*?)\]/);
+                            if (match) {
+                              return (
+                                <div>
+                                  <p className="font-medium text-gray-900">{match[2]}</p>
+                                  <p className="text-xs text-gray-500">{match[1]}</p>
+                                </div>
+                              );
+                            }
+                            return <span className="text-gray-400 text-xs">—</span>;
+                          })()}
+                        </td>
+                        <td className="px-5 py-4">
                           <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full">
                             <Tag size={12} />
                             {TYPE_CONFIG[ticket.ticketType]?.label || ticket.ticketType}
@@ -447,7 +507,9 @@ export default function CustomerComplaintSystem() {
                         <td className="px-5 py-4">
                           <p className="font-medium text-gray-900 truncate max-w-[260px]">{ticket.title}</p>
                           {ticket.description && (
-                            <p className="text-xs text-gray-500 truncate max-w-[260px] mt-0.5">{ticket.description}</p>
+                            <p className="text-xs text-gray-500 truncate max-w-[260px] mt-0.5" title={ticket.description}>
+                              {ticket.description.replace(/\[Khách hàng: .*? - SĐT: .*?\]\n?/, '')}
+                            </p>
                           )}
                         </td>
                         <td className="px-5 py-4">
@@ -535,7 +597,7 @@ export default function CustomerComplaintSystem() {
           <div className="bg-white w-[520px] max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                {editingTicket ? 'Chỉnh sửa Ticket' : 'Tạo Ticket mới'}
+                {editingTicket ? 'Cập nhật khiếu nại' : 'Tạo phiếu khiếu nại mới'}
               </h3>
               <button onClick={() => { setShowModal(false); resetForm(); }} className="p-1 rounded-lg hover:bg-gray-100">
                 <X size={20} className="text-gray-400" />
@@ -545,7 +607,7 @@ export default function CustomerComplaintSystem() {
               {/* Ticket Type (only on create) */}
               {!editingTicket && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Loại ticket *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Loại khiếu nại *</label>
                   <select
                     value={form.ticketType}
                     onChange={e => setForm({ ...form, ticketType: e.target.value })}
@@ -558,12 +620,55 @@ export default function CustomerComplaintSystem() {
                 </div>
               )}
 
+              {/* Customer Lookup */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại khách hàng</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                    placeholder="Nhập số điện thoại..."
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    title="Tính năng này cần backend cập nhật"
+                    className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50"
+                    onClick={async () => {
+                      if (!customerPhone.trim()) return;
+                      try {
+                        setLoadingCustomer(true);
+                        const customer = await customerService.searchByPhone(customerPhone.trim());
+                        if (customer && customer.name) {
+                          setCustomerName(customer.name);
+                        } else {
+                          setCustomerName('Khách lạ');
+                        }
+                      } catch (err) {
+                        console.error(err);
+                        setCustomerName('Khách lạ');
+                      } finally {
+                        setLoadingCustomer(false);
+                      }
+                    }}
+                  >
+                    {loadingCustomer ? 'Đang tải...' : 'Tìm khách'}
+                  </button>
+                </div>
+                {customerName && (
+                  <p className="mt-1.5 text-sm text-blue-700 bg-blue-50 p-2 rounded-lg border border-blue-100 flex items-center gap-2">
+                    <UserCircle size={16} /> <b>{customerName}</b>
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề *</label>
                 <input
                   value={form.title}
                   onChange={e => setForm({ ...form, title: e.target.value })}
-                  placeholder="VD: Hoàn tiền đơn hàng ORD-2026-001"
+                  placeholder="VD: Sản phẩm bị lỗi, đơn hàng giao chậm..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -574,7 +679,7 @@ export default function CustomerComplaintSystem() {
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
                   rows={3}
-                  placeholder="Mô tả chi tiết vấn đề..."
+                  placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
@@ -627,61 +732,13 @@ export default function CustomerComplaintSystem() {
                 </div>
               )}
 
-              {/* Assign user by Role ID lookup */}
+
+              {/* Phần ghi chú cho khách hàng */}
               {!editingTicket && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nhập Role ID để chọn người xử lý</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={roleIdInput}
-                      onChange={e => setRoleIdInput(e.target.value)}
-                      placeholder="VD: 1, 2, 3..."
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!roleIdInput) return;
-                        try {
-                          setLoadingUsers(true);
-                          const users = await ticketService.getUsersByRole(roleIdInput);
-                          setRoleUsers(users);
-                        } catch (err) {
-                          console.error(err);
-                          setRoleUsers([]);
-                        } finally {
-                          setLoadingUsers(false);
-                        }
-                      }}
-                      className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                    >
-                      {loadingUsers ? 'Đang tải...' : 'Tìm'}
-                    </button>
-                  </div>
-                  {roleUsers.length > 0 && (
-                    <div className="mt-2 border border-gray-200 rounded-lg max-h-[150px] overflow-y-auto">
-                      {roleUsers.map(u => (
-                        <div
-                          key={u.id}
-                          onClick={() => setForm({ ...form, assignedToUserId: u.id })}
-                          className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-blue-50 text-sm transition-colors ${form.assignedToUserId === u.id ? 'bg-blue-50 border-l-2 border-blue-600' : ''
-                            }`}
-                        >
-                          <div>
-                            <p className="font-medium text-gray-900">{u.fullName}</p>
-                            <p className="text-xs text-gray-500">{u.username} • {u.roleName}</p>
-                          </div>
-                          {form.assignedToUserId === u.id && (
-                            <CheckCircle2 size={16} className="text-blue-600" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {form.assignedToUserId && (
-                    <p className="mt-1 text-xs text-green-600">Đã chọn User ID: {form.assignedToUserId}</p>
-                  )}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700">
+                    💡 Khiếu nại của bạn sẽ được nhân viên tiếp nhận và phản hồi trong thời gian sớm nhất.
+                  </p>
                 </div>
               )}
 
@@ -691,7 +748,7 @@ export default function CustomerComplaintSystem() {
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="text-xs text-green-700 font-medium flex items-center gap-1.5">
                       <CheckCircle2 size={14} />
-                      Ticket hoàn trả sẽ tự động xử lý: sản phẩm được nhập kho lại và ticket được đánh dấu đã giải quyết.
+                      Yêu cầu hoàn trả sẽ được nhân viên xử lý và phản hồi nhanh nhất có thể.
                     </p>
                   </div>
                   <div>
@@ -803,7 +860,7 @@ export default function CustomerComplaintSystem() {
                 className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {saving && <Loader2 size={14} className="animate-spin" />}
-                {editingTicket ? 'Cập nhật' : 'Tạo ticket'}
+                {editingTicket ? 'Cập nhật' : 'Gửi khiếu nại'}
               </button>
             </div>
           </div>
@@ -815,7 +872,7 @@ export default function CustomerComplaintSystem() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50">
           <div className="bg-white w-[480px] h-full shadow-2xl overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-              <h3 className="text-lg font-semibold text-gray-900">Chi tiết Ticket</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Chi tiết khiếu nại</h3>
               <button onClick={() => setDetailTicket(null)} className="p-1 rounded-lg hover:bg-gray-100">
                 <X size={20} className="text-gray-400" />
               </button>
@@ -845,9 +902,11 @@ export default function CustomerComplaintSystem() {
                 {detailTicket.description && (
                   <div className="flex items-start gap-3">
                     <MessageSquare size={16} className="text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-gray-500">Mô tả</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{detailTicket.description}</p>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">Mô tả & Thông tin</p>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg mt-1 border border-gray-100">
+                        {detailTicket.description}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -952,7 +1011,7 @@ export default function CustomerComplaintSystem() {
               </div>
               <div>
                 <h4 className="font-semibold text-gray-900">Xác nhận xóa</h4>
-                <p className="text-sm text-gray-500">Bạn có chắc muốn xóa ticket <b>{showDeleteConfirm.ticketCode}</b>?</p>
+                <p className="text-sm text-gray-500">Bạn có chắc muốn xóa khiếu nại <b>{showDeleteConfirm.ticketCode}</b>?</p>
               </div>
             </div>
             <div className="flex justify-end gap-3">
@@ -966,7 +1025,7 @@ export default function CustomerComplaintSystem() {
                 onClick={() => handleDelete(showDeleteConfirm.id)}
                 className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
-                Xóa ticket
+                Xóa
               </button>
             </div>
           </div>

@@ -1,15 +1,20 @@
 package com.smalltrend.service.inventory;
 
-import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.inventorycount.*;
-import com.smalltrend.dto.inventory.location.*;
-import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.InventoryCount;
 import com.smalltrend.entity.InventoryCountItem;
+import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.Location;
+import com.smalltrend.entity.ProductVariant;
+import com.smalltrend.entity.StockMovement;
+import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.repository.InventoryCountItemRepository;
 import com.smalltrend.repository.InventoryCountRepository;
+import com.smalltrend.repository.InventoryStockRepository;
+import com.smalltrend.repository.StockMovementRepository;
+import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.LocationRepository;
+import com.smalltrend.repository.ProductBatchRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.Year;
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +33,10 @@ public class InventoryCountService {
     private final InventoryCountRepository countRepository;
     private final InventoryCountItemRepository itemRepository;
     private final LocationRepository locationRepository;
+    private final InventoryStockRepository inventoryStockRepository;
+    private final StockMovementRepository stockMovementRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final ProductBatchRepository productBatchRepository;
 
     // ─── LIST ────────────────────────────────────────────────
 
@@ -144,7 +153,8 @@ public class InventoryCountService {
         count = countRepository.save(count);
         saveItems(count, request.getItems());
 
-        // TODO: Update actual stock quantities in inventory_stock
+        // Cập nhật tồn kho thực tế
+        adjustStock(count);
 
         return toDetailResponse(count);
     }
@@ -175,6 +185,116 @@ public class InventoryCountService {
         count = countRepository.save(count);
         saveItems(count, request.getItems());
 
+        // Cập nhật tồn kho thực tế
+        adjustStock(count);
+
+        return toDetailResponse(count);
+    }
+
+    // ─── SUBMIT FOR APPROVAL ─────────────────────────────────
+
+    @Transactional
+    public InventoryCountResponse submitForApproval(Integer id, InventoryCountRequest request) {
+        InventoryCount count = countRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay phieu kiem kho."));
+
+        if (!"DRAFT".equals(count.getStatus()) && !"COUNTING".equals(count.getStatus())) {
+            throw new RuntimeException("Chi co the gui duyet phieu nhap hoac dang kiem.");
+        }
+
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("Phieu kiem kho phai co it nhat 1 san pham.");
+        }
+
+        if (request.getLocationId() == null) {
+            throw new RuntimeException("Vui long chon vi tri can kiem kho truoc khi gui duyet.");
+        }
+
+        count.setStatus("PENDING");
+        count.setNotes(request.getNotes());
+        count.setRejectionReason(null);
+
+        setLocation(count, request.getLocationId());
+        calculateTotals(count, request.getItems());
+
+        // Delete old items and save new ones
+        itemRepository.deleteByInventoryCountId(id);
+        count = countRepository.save(count);
+        saveItems(count, request.getItems());
+
+        return toDetailResponse(count);
+    }
+
+    // ─── SUBMIT FOR APPROVAL (create new + submit) ──────────
+
+    @Transactional
+    public InventoryCountResponse createAndSubmitForApproval(InventoryCountRequest request) {
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("Phieu kiem kho phai co it nhat 1 san pham.");
+        }
+
+        if (request.getLocationId() == null) {
+            throw new RuntimeException("Vui long chon vi tri can kiem kho truoc khi gui duyet.");
+        }
+
+        String code = generateCode();
+
+        InventoryCount count = InventoryCount.builder()
+                .code(code)
+                .status("PENDING")
+                .notes(request.getNotes())
+                .createdBy(1) // TODO: from auth
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        setLocation(count, request.getLocationId());
+        calculateTotals(count, request.getItems());
+
+        count = countRepository.save(count);
+        saveItems(count, request.getItems());
+
+        return toDetailResponse(count);
+    }
+
+    // ─── APPROVE ─────────────────────────────────────────────
+
+    @Transactional
+    public InventoryCountResponse approveCount(Integer id) {
+        InventoryCount count = countRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay phieu kiem kho."));
+
+        if (!"PENDING".equals(count.getStatus())) {
+            throw new RuntimeException("Chi co the duyet phieu dang cho duyet.");
+        }
+
+        count.setStatus("CONFIRMED");
+        count.setConfirmedBy(1); // TODO: from auth
+        count.setConfirmedAt(LocalDateTime.now());
+        count.setRejectionReason(null);
+
+        count = countRepository.save(count);
+
+        // Cập nhật tồn kho thực tế
+        adjustStock(count);
+
+        return toDetailResponse(count);
+    }
+
+    // ─── REJECT ──────────────────────────────────────────────
+
+    @Transactional
+    public InventoryCountResponse rejectCount(Integer id, String rejectionReason) {
+        InventoryCount count = countRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay phieu kiem kho."));
+
+        if (!"PENDING".equals(count.getStatus())) {
+            throw new RuntimeException("Chi co the tu choi phieu dang cho duyet.");
+        }
+
+        count.setStatus("REJECTED");
+        count.setRejectionReason(rejectionReason);
+
+        count = countRepository.save(count);
         return toDetailResponse(count);
     }
 
@@ -193,10 +313,110 @@ public class InventoryCountService {
         count = countRepository.save(count);
         return toListResponse(count);
     }
+    // ═══════════════════════════════════════════════════════════
+    //  7. Xóa phiếu (Delete)
+    // ═══════════════════════════════════════════════════════════
+
+    /** Xóa phiếu kiểm kê (chỉ cho phép xóa DRAFT hoặc CANCELLED) */
+    @Transactional
+    public void deleteCount(Integer id) {
+        InventoryCount count = countRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu kiểm kho."));
+
+        if ("CONFIRMED".equals(count.getStatus())) {
+            throw new RuntimeException("Không thể xóa phiếu đã xác nhận.");
+        }
+
+        // Xóa items trước (do foreign key constraint)
+        itemRepository.deleteByInventoryCountId(id);
+        countRepository.delete(count);
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  Private Helpers
     // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Điều chỉnh tồn kho dựa trên kết quả kiểm kê.
+     * Với mỗi item trong phiếu kiểm kê, tìm tất cả InventoryStock
+     * tại location tương ứng cho product đó và điều chỉnh số lượng.
+     */
+    private void adjustStock(InventoryCount count) {
+        List<InventoryCountItem> items = itemRepository.findByInventoryCountId(count.getId());
+        Location location = count.getLocation();
+
+        for (InventoryCountItem item : items) {
+            int diff = item.getDifferenceQuantity() != null ? item.getDifferenceQuantity() : 0;
+            if (diff == 0) continue; // Không có chênh lệch, bỏ qua
+
+            // Tìm tất cả variants của product này
+            List<ProductVariant> variants = productVariantRepository.findByProductId(item.getProductId());
+            if (variants.isEmpty()) continue;
+
+            // Lấy variant đầu tiên để ghi StockMovement
+            ProductVariant variant = variants.get(0);
+
+            // Tìm tất cả stock records của variant tại location
+            List<InventoryStock> stocks;
+            if (location != null) {
+                stocks = inventoryStockRepository.findByLocationIdWithProduct(location.getId())
+                        .stream()
+                        .filter(s -> s.getVariant().getId().equals(variant.getId()))
+                        .collect(Collectors.toList());
+            } else {
+                stocks = inventoryStockRepository.findByVariantId(variant.getId());
+            }
+
+            if (!stocks.isEmpty()) {
+                // Điều chỉnh stock record đầu tiên tìm được
+                InventoryStock stock = stocks.get(0);
+                int newQty = stock.getQuantity() + diff;
+                if (newQty < 0) newQty = 0;
+                stock.setQuantity(newQty);
+                inventoryStockRepository.save(stock);
+
+                // Tạo StockMovement để ghi lại
+                StockMovement movement = StockMovement.builder()
+                        .variant(variant)
+                        .batch(stock.getBatch())
+                        .location(location)
+                        .type("ADJUSTMENT")
+                        .quantity(diff)
+                        .referenceType("inventory_count")
+                        .referenceId(count.getId().longValue())
+                        .notes("Kiểm kê " + count.getCode() + ": chênh lệch " + diff
+                                + (item.getReason() != null ? " - " + item.getReason() : ""))
+                        .build();
+                stockMovementRepository.save(movement);
+            } else if (diff > 0) {
+                // Nếu chưa có stock record nào (số lượng = 0 trong hệ thống, nhưng thực tế có)
+                // Lấy một batch bất kỳ của sản phẩm hoặc tạo mới tuỳ logic, ở đây lấy batch đầu tiên (nếu có)
+                List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());
+                ProductBatch batch = batches.isEmpty() ? null : batches.get(0);
+
+                InventoryStock newStock = InventoryStock.builder()
+                        .variant(variant)
+                        .batch(batch)
+                        .location(location)
+                        .quantity(diff)
+                        .build();
+                inventoryStockRepository.save(newStock);
+
+                 StockMovement movement = StockMovement.builder()
+                        .variant(variant)
+                        .batch(batch)
+                        .location(location)
+                        .type("ADJUSTMENT")
+                        .quantity(diff)
+                        .referenceType("inventory_count")
+                        .referenceId(count.getId().longValue())
+                        .notes("Kiểm kê " + count.getCode() + ": thêm mới " + diff
+                                + (item.getReason() != null ? " - " + item.getReason() : ""))
+                        .build();
+                stockMovementRepository.save(movement);
+            }
+        }
+    }
 
     private void setLocation(InventoryCount count, Integer locationId) {
         if (locationId != null) {
@@ -263,6 +483,7 @@ public class InventoryCountService {
                 .locationId(count.getLocation() != null ? count.getLocation().getId() : null)
                 .locationName(count.getLocation() != null ? count.getLocation().getName() : "")
                 .notes(count.getNotes())
+                .rejectionReason(count.getRejectionReason())
                 .totalShortageValue(count.getTotalShortageValue())
                 .totalOverageValue(count.getTotalOverageValue())
                 .totalDifferenceValue(count.getTotalDifferenceValue())

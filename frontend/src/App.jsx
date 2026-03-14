@@ -1,44 +1,49 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import MainLayout from "./components/layout/MainLayout";
-import Dashboard from "./pages/Dashboard/Dashboard";
-import POS from "./pages/Pos/pos";
-import Login from "./pages/Auth/Login";
+import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
-import UserManagement from "./pages/HR/UserManagement";
-import EmployeeList from "./pages/HR/EmployeeList";
 import ShiftManagement from "./pages/HR/ShiftManagement";
-import AttendanceManagement from "./pages/HR/AttendanceManagement";
-import PayrollManagement from "./pages/HR/PayrollManagement";
-import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
-import ImportInventory from "./pages/Inventory/ImportInventory";
-import CreateImport from "./pages/Inventory/CreateImport";
-import InventoryCountList from "./pages/Inventory/InventoryCountList";
-import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
-import LocationManagement from "./pages/Inventory/LocationManagement";
-import DisposalList from "./pages/Inventory/DisposalList";
-import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
 import CRMcomplain from "./pages/CRM/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import CRMevent from "./pages/CRM/event";
 import CRMhomepage from "./pages/CRM/homepage";
 import CRMloyalty from "./pages/CRM/loyalty";
-import ProductList from "./pages/Products/ProductManager/ProductList";
+import CRMreport from "./pages/CRM/report";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import AttendanceManagement from "./pages/HR/AttendanceManagement";
+import EmployeeList from "./pages/HR/EmployeeList";
+import PayrollManagement from "./pages/HR/PayrollManagement";
+import UserManagement from "./pages/HR/UserManagement";
+import DisposalDetail from "./pages/Inventory/DisposalDetail";
+import DisposalList from "./pages/Inventory/DisposalList";
+import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
+import InventoryCountList from "./pages/Inventory/InventoryCountList";
+import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
+import LocationManagement from "./pages/Inventory/LocationManagement";
+import POS from "./pages/Pos/pos";
+import ReportforCashier from "./pages/Pos/ReportforCashier";
+import ShiftHandover from "./pages/Pos/ShiftHandover";
+import TransactionHistory from "./pages/Pos/TransactionHistory";
 import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
-import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
-import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
 import AddNewProductVariant from "./pages/Products/ProductManager/AddNewProductVariant";
+import CategoryAndBrand from "./pages/Products/ProductManager/CategoryAndBrand";
+import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
 import ComboManage from "./pages/Products/ProductManager/ComboManage";
 import CreateCombo from "./pages/Products/ProductManager/CreateCombo";
-import ComboDetail from "./pages/Products/ProductManager/ComboDetail";
+import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
+import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
+import ProductList from "./pages/Products/ProductManager/ProductList";
+import Suppliers from "./pages/Products/ProductManager/Suppliers";
+import Login from "./pages/Auth/Login";
+import MainLayout from "./components/layout/MainLayout";
 import { useAuth } from "./context/AuthContext";
-import TransactionHistory from "./pages/Pos/TransactionHistory";
-import ShiftHandover from "./pages/Pos/ShiftHandover";
-import ReportforCashier from "./pages/Pos/ReportforCashier";
 import TicketCenter from "./pages/Admin/TicketCenter";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
-import CRMreport from "./pages/CRM/report";
+import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
+import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
+import NotFoundPage from "./pages/Common/NotFoundPage";
 
 const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
@@ -65,7 +70,16 @@ function RootRedirect() {
     );
   }
 
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/crm/homepage" replace />;
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/crm/homepage" replace />
+  );
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/crm/homepage" replace />
+  );
 }
 
 function App() {
@@ -98,7 +112,7 @@ function App() {
         <Route
           path="dashboard"
           element={
-            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}>
+            <ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES, ...SALES_ROLES, ...INVENTORY_ROLES, ...CASHIER_ROLES]}>
               <Dashboard />
             </ProtectedRoute>
           }
@@ -106,32 +120,25 @@ function App() {
 
         {/* Module 1: POS (Bán hàng) */}
         <Route path="pos" element={<POS />} />
-        <Route
-          path="pos/history"
-          element={<TransactionHistory />}
-        />
-        <Route
-          path="pos/suspended"
-          element={<ReportforCashier />}
-        />
-        <Route
-          path="pos/shift-handover"
-          element={<ShiftHandover />}
-        />
+        <Route path="pos/history" element={<TransactionHistory />} />
+        <Route path="pos/suspended" element={<ReportforCashier />} />
+        <Route path="pos/shift-handover" element={<ShiftHandover />} />
         {/* Module 2: Inventory (Kho) */}
-        < Route path="inventory" element={<InventoryDashboard />} />
-        <Route path="inventory/import" element={<ImportInventory />} />
-        <Route path="inventory/import/create" element={<CreateImport />} />
-        <Route path="inventory/export" element={<DisposalList />} />
+        <Route path="inventory" element={<InventoryDashboard />} />
+        <Route
+          path="inventory/purchase-orders"
+          element={<PurchaseOrderList />}
+        />
+        <Route
+          path="inventory/purchase-orders/create"
+          element={<CreatePurchaseOrder />}
+        />
+        <Route
+          path="inventory/purchase-orders/:id"
+          element={<CreatePurchaseOrder />}
+        />
         <Route path="inventory/alerts" element={<InventoryCountList />} />
-        <Route
-          path="inventory/suppliers"
-          element={<div className="p-4">Quản lý nhà cung cấp (Supplier)</div>}
-        />
-        <Route
-          path="inventory/audit"
-          element={<Navigate to="/inventory-counts" replace />}
-        />
+
         <Route path="inventory-counts" element={<InventoryCountList />} />
         <Route
           path="inventory-counts/create"
@@ -142,52 +149,60 @@ function App() {
         <Route path="inventory/disposal" element={<DisposalList />} />
         <Route path="inventory/disposal/create" element={<DisposalDetail />} />
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
+        <Route path="inventory/purchase-orders" element={<PurchaseOrderList />} />
+        <Route path="inventory/purchase-orders/create" element={<CreatePurchaseOrder />} />
+        <Route path="inventory/purchase-orders/:id" element={<CreatePurchaseOrder />} />
 
         {/* Module 3: Products (Sản phẩm) */}
-        <Route
-          path="products"
-          element={<ProductList />}
-        />
-        <Route
-          path="products/addproduct"
-          element={<AddNewProduct />}
-        />
-        <Route
-          path="products/detail/:id"
-          element={<ProductDetail />}
-        />
+        <Route path="products" element={<ProductList />} />
+        <Route path="products/addproduct" element={<AddNewProduct />} />
+        <Route path="products/detail/:id" element={<ProductDetail />} />
         <Route
           path="products/addproduct_variant"
           element={<AddNewProductVariant />}
         />
         <Route
           path="products/categories"
-          element={<div className="p-4">{<CategoryAndBrand />}</div>}
-        />
-        <Route
-          path="products/price"
-          element={<div className="p-4">{ }</div>}
+          element={<div className="p-4"><CategoryAndBrand /></div>}
         />
         <Route
           path="products/combo"
-          element={<div className="p-4">{<ComboManage />}</div>}
+          element={<div className="p-4"><ComboManage /></div>}
         />
         <Route
           path="products/create_combo"
-          element={<div className="p-4">{<CreateCombo />}</div>}
+          element={<div className="p-4"><CreateCombo /></div>}
         />
         <Route
           path="products/combo_detail"
-          element={<div className="p-4">{<ComboDetail />}</div>}
+          element={<div className="p-4"><ComboDetail /></div>}
+        />
+        <Route
+          path="products/price"
+          element={<div className="p-4"><PriceSetting /></div>}
+        />
+
+        <Route
+          path="products/suppliers"
+          element={<div className="p-4"><Suppliers /></div>}
         />
         {/* Module 4: CRM (Khách hàng) */}
-        <Route path="crm" element={<div className="p-4">CRM &amp; Promotion</div>} />
+        <Route
+          path="crm"
+          element={<div className="p-4">CRM &amp; Promotion</div>}
+        />
         <Route path="crm/customer" element={<CRMcustomer />} />
         <Route path="crm/event" element={<CRMevent />} />
         <Route path="crm/loyalty" element={<CRMloyalty />} />
         <Route path="crm/report" element={<CRMreport />} />
-        <Route path="crm/promotions" element={<div className="p-4">Chương trình KM</div>} />
-        <Route path="crm/vouchers" element={<div className="p-4">Voucher/Coupon</div>} />
+        <Route
+          path="crm/promotions"
+          element={<div className="p-4">Chương trình KM</div>}
+        />
+        <Route
+          path="crm/vouchers"
+          element={<div className="p-4">Voucher/Coupon</div>}
+        />
         <Route path="crm/complain" element={<CRMcomplain />} />
         <Route path="crm/complaints" element={<CRMcomplain />} />
 
@@ -304,7 +319,12 @@ function App() {
           element={<div className="p-4">Nhật ký hoạt động</div>}
         />
 
-        <Route path="*" element={<Navigate to="/pos" replace />} />
+        {/* Account Routes */}
+        <Route path="account/profile" element={<PersonalInfoPage />} />
+        <Route path="account/settings" element={<AccountSettingsPage />} />
+
+        {/* 404 Not Found - Show error page instead of redirect */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

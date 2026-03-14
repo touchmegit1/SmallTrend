@@ -27,11 +27,17 @@
     "date-fns": "^4.1.0",
     "json-server": "^1.0.0-beta.5",
     "lucide-react": "^0.562.0",
+    "mammoth": "^1.11.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
+    "react-qr-barcode-scanner": "^2.1.23",
+    "react-redux": "^9.2.0",
     "react-router-dom": "^6.20.0",
-    "tailwind-merge": "^3.4.1",
+    "redux": "^5.0.1",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.5.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

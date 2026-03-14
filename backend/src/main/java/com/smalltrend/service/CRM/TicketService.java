@@ -11,16 +11,21 @@ import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Ticket;
 import com.smalltrend.entity.User;
+import com.smalltrend.entity.WorkShiftAssignment;
 import com.smalltrend.entity.enums.TicketPriority;
 import com.smalltrend.entity.enums.TicketStatus;
 import com.smalltrend.entity.enums.TicketType;
+import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.TicketRepository;
 import com.smalltrend.repository.UserRepository;
+import com.smalltrend.repository.WorkShiftAssignmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +35,8 @@ public class TicketService {
     private final UserRepository userRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final WorkShiftAssignmentRepository workShiftAssignmentRepository;
+    private final AttendanceRepository attendanceRepository;
 
     // Mapping TicketType -> code prefix
     private static final Map<TicketType, String> TYPE_CODE_PREFIX = Map.of(
@@ -71,59 +78,210 @@ public class TicketService {
     public TicketResponse createTicket(CreateTicketRequest request) {
         TicketType ticketType = TicketType.valueOf(request.getTicketType());
 
+        WorkShiftAssignment requesterAssignment = null;
+        WorkShiftAssignment targetAssignment = null;
+        User requesterUser = null;
+        User targetSwapUser = null;
+
+        if (ticketType == TicketType.SHIFT_CHANGE && "SHIFT_SWAP".equalsIgnoreCase(request.getRelatedEntityType())) {
+            requesterAssignment = validateShiftSwapTicketRequest(request);
+            requesterUser = userRepository.findById(request.getRequesterUserId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên tạo yêu cầu đổi ca"));
+
+            Integer targetUserId = request.getSwapTargetUserId() != null
+                    ? request.getSwapTargetUserId()
+                    : request.getAssignedToUserId();
+
+            if (targetUserId != null) {
+                targetSwapUser = userRepository.findById(targetUserId)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên được đề nghị đổi ca"));
+            }
+
+            if (request.getSwapTargetAssignmentId() != null) {
+                targetAssignment = workShiftAssignmentRepository.findByIdAndDeletedFalse(request.getSwapTargetAssignmentId())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy ca phía nhân viên còn lại"));
+            }
+        }
+
         Ticket ticket = Ticket.builder()
                 .ticketCode(generateTicketCode(ticketType))
                 .ticketType(ticketType)
                 .title(request.getTitle())
-                .description(request.getDescription())
+                .description(buildTicketDescription(request, requesterAssignment, targetAssignment))
                 .priority(request.getPriority() != null
                         ? TicketPriority.valueOf(request.getPriority())
                         : TicketPriority.NORMAL)
+                .status(request.getStatus() != null
+                        ? TicketStatus.valueOf(request.getStatus())
+                        : TicketStatus.IN_PROGRESS)
                 .relatedEntityType(request.getRelatedEntityType())
-                .relatedEntityId(request.getRelatedEntityId())
+                .relatedEntityId(resolveRelatedEntityId(request, requesterAssignment))
                 .build();
 
-        if (request.getAssignedToUserId() != null) {
+        if (requesterUser != null) {
+            ticket.setCreatedBy(requesterUser);
+        }
+
+        if (targetSwapUser != null) {
+            ticket.setAssignedTo(targetSwapUser);
+        }
+
+        if (ticket.getAssignedTo() == null && request.getAssignedToUserId() != null) {
             User assignedTo = userRepository.findById(request.getAssignedToUserId())
                     .orElseThrow(() -> new RuntimeException("Assigned user not found"));
             ticket.setAssignedTo(assignedTo);
         }
 
-        // REFUND tickets: auto-resolve and restock inventory
-        if (ticketType == TicketType.REFUND) {
-            ticket.setStatus(TicketStatus.RESOLVED);
-            ticket.setResolvedAt(LocalDateTime.now());
-            ticket.setResolution("Tự động hoàn tiền và nhập kho sản phẩm");
-
-            // Restock inventory by SKU
-            if (request.getSku() != null && !request.getSku().trim().isEmpty()
-                    && request.getRefundQuantity() != null && request.getRefundQuantity() > 0) {
-                ProductVariant variant = productVariantRepository.findBySku(request.getSku().trim())
-                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + request.getSku()));
-                restockInventory(variant.getId(), request.getRefundQuantity());
-            }
-        }
+        // Auto-resolve functionality for REFUND has been removed.
+        // Refunds must be manually reviewed and resolved.
 
         Ticket saved = ticketRepository.save(ticket);
         return mapToResponse(saved);
     }
 
+    private WorkShiftAssignment validateShiftSwapTicketRequest(CreateTicketRequest request) {
+        if (request.getRequesterUserId() == null) {
+            throw new RuntimeException("Thiếu requesterUserId cho ticket đổi ca");
+        }
+
+        Integer requesterAssignmentId = request.getSwapRequesterAssignmentId() != null
+                ? request.getSwapRequesterAssignmentId()
+                : (request.getRelatedEntityId() != null ? request.getRelatedEntityId().intValue() : null);
+
+        if (requesterAssignmentId == null) {
+            throw new RuntimeException("Thiếu ca làm của người yêu cầu để tạo ticket đổi ca");
+        }
+
+        WorkShiftAssignment requesterAssignment = workShiftAssignmentRepository.findByIdAndDeletedFalse(requesterAssignmentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người yêu cầu"));
+
+        if (!requesterAssignment.getUser().getId().equals(request.getRequesterUserId())) {
+            throw new RuntimeException("Bạn chỉ được tạo ticket cho ca làm của chính mình");
+        }
+
+        if (!isFutureOrToday(requesterAssignment.getShiftDate())) {
+            throw new RuntimeException("Chỉ được tạo ticket đổi cho ca hiện tại hoặc ca tương lai");
+        }
+
+        if (isAttendanceCompleted(requesterAssignment.getUser().getId(), requesterAssignment.getShiftDate())) {
+            throw new RuntimeException("Ca này đã chấm công, không thể tạo ticket đổi ca");
+        }
+
+        Integer targetUserId = request.getSwapTargetUserId() != null
+                ? request.getSwapTargetUserId()
+                : request.getAssignedToUserId();
+
+        if (targetUserId == null) {
+            throw new RuntimeException("Thiếu nhân viên được đề nghị đổi ca");
+        }
+
+        if (targetUserId.equals(request.getRequesterUserId())) {
+            throw new RuntimeException("Không thể gửi yêu cầu đổi ca cho chính mình");
+        }
+
+        if (request.getSwapTargetAssignmentId() != null) {
+            WorkShiftAssignment targetAssignment = workShiftAssignmentRepository.findByIdAndDeletedFalse(request.getSwapTargetAssignmentId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của nhân viên được đổi"));
+
+            if (!targetAssignment.getUser().getId().equals(targetUserId)) {
+                throw new RuntimeException("Ca phía đối tác không thuộc nhân viên được chọn");
+            }
+
+            if (!isFutureOrToday(targetAssignment.getShiftDate())) {
+                throw new RuntimeException("Ca phía đối tác đã qua, không thể dùng để đổi");
+            }
+
+            if (isAttendanceCompleted(targetAssignment.getUser().getId(), targetAssignment.getShiftDate())) {
+                throw new RuntimeException("Ca phía đối tác đã chấm công, không thể dùng để đổi");
+            }
+
+            if (requesterAssignment.getId().equals(targetAssignment.getId())) {
+                throw new RuntimeException("Không thể đổi cùng một ca");
+            }
+
+            if (requesterAssignment.getShiftDate().equals(targetAssignment.getShiftDate())
+                    && requesterAssignment.getWorkShift() != null
+                    && targetAssignment.getWorkShift() != null
+                    && requesterAssignment.getWorkShift().getId().equals(targetAssignment.getWorkShift().getId())) {
+                throw new RuntimeException("Không thể đổi ca với người đã được xếp cùng ca của bạn");
+            }
+        }
+
+        return requesterAssignment;
+    }
+
+    private boolean isFutureOrToday(LocalDate date) {
+        return date != null && !date.isBefore(LocalDate.now());
+    }
+
+    private boolean isAttendanceCompleted(Integer userId, LocalDate date) {
+        return attendanceRepository.findByUserIdAndDate(userId, date)
+                .map(attendance -> {
+                    String status = attendance.getStatus() == null ? "" : attendance.getStatus().trim().toUpperCase();
+                    return "PRESENT".equals(status) || "LATE".equals(status);
+                })
+                .orElse(false);
+    }
+
+    private Long resolveRelatedEntityId(CreateTicketRequest request, WorkShiftAssignment requesterAssignment) {
+        if (request.getRelatedEntityId() != null) {
+            return request.getRelatedEntityId();
+        }
+        if (requesterAssignment != null) {
+            return requesterAssignment.getId().longValue();
+        }
+        return null;
+    }
+
+    private String buildTicketDescription(CreateTicketRequest request,
+            WorkShiftAssignment requesterAssignment,
+            WorkShiftAssignment targetAssignment) {
+        StringBuilder builder = new StringBuilder();
+        if (request.getDescription() != null) {
+            builder.append(request.getDescription().trim());
+        }
+
+        if ("SHIFT_SWAP".equalsIgnoreCase(request.getRelatedEntityType()) && requesterAssignment != null) {
+            appendMetaLine(builder, "SWAP_MODE", request.getSwapMode() != null ? request.getSwapMode() : "DIRECT");
+            appendMetaLine(builder, "SWAP_REQUESTER_ASSIGNMENT_ID", requesterAssignment.getId());
+            appendMetaLine(builder, "SWAP_REQUESTER_USER_ID", requesterAssignment.getUser().getId());
+            if (request.getSwapTargetUserId() != null) {
+                appendMetaLine(builder, "SWAP_TARGET_USER_ID", request.getSwapTargetUserId());
+            }
+            if (targetAssignment != null) {
+                appendMetaLine(builder, "SWAP_TARGET_ASSIGNMENT_ID", targetAssignment.getId());
+            }
+        }
+
+        return builder.toString().trim();
+    }
+
+    private void appendMetaLine(StringBuilder builder, String key, Object value) {
+        if (value == null) {
+            return;
+        }
+        if (!builder.isEmpty()) {
+            builder.append('\n');
+        }
+        builder.append('[').append(key).append('=').append(value).append(']');
+    }
+
     /**
-     * Add quantity back to inventory_stock for the given variant.
-     * Finds the first stock record for the variant and increases its quantity.
+     * Add quantity back to inventory_stock for the given variant. Finds the
+     * first stock record for the variant and increases its quantity.
      */
     private void restockInventory(Integer variantId, Integer quantity) {
         List<InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
-        if (!stocks.isEmpty()) {
-            // Add to the first stock record found for this variant
+        if (stocks != null && !stocks.isEmpty()) {
             InventoryStock stock = stocks.get(0);
-            stock.setQuantity(stock.getQuantity() + quantity);
+            stock.setQuantity((stock.getQuantity() != null ? stock.getQuantity() : 0) + quantity);
             inventoryStockRepository.save(stock);
         }
     }
 
     /**
-     * Lookup product variant by SKU — runs in transaction to access lazy collections.
+     * Lookup product variant by SKU — runs in transaction to access lazy
+     * collections.
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> lookupVariantBySku(String sku) {

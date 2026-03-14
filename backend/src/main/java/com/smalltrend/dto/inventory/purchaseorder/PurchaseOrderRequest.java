@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -13,24 +14,25 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PurchaseOrderRequest {
-    private String poNumber;
+    private String orderNumber;
     private Integer supplierId;
-    private String supplierName;
+    private Long contractId;
+    private Integer createdBy;
     private Integer locationId;
+    private LocalDate expectedDeliveryDate;
     private String status;
 
     // Financials
-    private BigDecimal discount;
+    private BigDecimal discountAmount;
+    private BigDecimal taxAmount;
     private BigDecimal taxPercent;
+    private BigDecimal subtotal;
+    private BigDecimal totalAmount;
     private BigDecimal shippingFee;
     private BigDecimal paidAmount;
-    private BigDecimal subtotal;
-    private BigDecimal taxAmount;
-    private BigDecimal totalAmount;
-    private BigDecimal remainingAmount;
 
     private String notes;
-    private Integer createdBy;
+    private String rejectionReason;
 
     // Items
     private List<PurchaseOrderItemRequest> items;

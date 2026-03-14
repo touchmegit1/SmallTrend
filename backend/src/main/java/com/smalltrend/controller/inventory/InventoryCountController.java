@@ -25,7 +25,7 @@ public class InventoryCountController {
     }
 
     // ─── Get by ID ───────────────────────────────────────────
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<InventoryCountResponse> getCountById(@PathVariable Integer id) {
         return ResponseEntity.ok(countService.getCountById(id));
     }
@@ -45,7 +45,7 @@ public class InventoryCountController {
     }
 
     // ─── Update existing count ───────────────────────────────
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     public ResponseEntity<InventoryCountResponse> updateCount(
             @PathVariable Integer id,
             @RequestBody InventoryCountRequest request) {
@@ -61,7 +61,7 @@ public class InventoryCountController {
     }
 
     // ─── Confirm existing count ──────────────────────────────
-    @PutMapping("/{id}/confirm")
+    @PutMapping("/{id:\\d+}/confirm")
     public ResponseEntity<InventoryCountResponse> confirmExisting(
             @PathVariable Integer id,
             @RequestBody InventoryCountRequest request) {
@@ -70,10 +70,48 @@ public class InventoryCountController {
     }
 
     // ─── Cancel ──────────────────────────────────────────────
-    @PutMapping("/{id}/cancel")
+    @PutMapping("/{id:\\d+}/cancel")
     public ResponseEntity<InventoryCountResponse> cancelCount(@PathVariable Integer id) {
         InventoryCountResponse response = countService.cancelCount(id);
         return ResponseEntity.ok(response);
     }
-}
 
+    // ─── Submit for approval (existing) ─────────────────────
+    @PutMapping("/{id:\\d+}/submit")
+    public ResponseEntity<InventoryCountResponse> submitForApproval(
+            @PathVariable Integer id,
+            @RequestBody InventoryCountRequest request) {
+        InventoryCountResponse response = countService.submitForApproval(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // ─── Submit for approval (create new + submit) ──────────
+    @PostMapping("/submit")
+    public ResponseEntity<InventoryCountResponse> createAndSubmitForApproval(@RequestBody InventoryCountRequest request) {
+        InventoryCountResponse response = countService.createAndSubmitForApproval(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // ─── Approve ────────────────────────────────────────────
+    @PutMapping("/{id:\\d+}/approve")
+    public ResponseEntity<InventoryCountResponse> approveCount(@PathVariable Integer id) {
+        InventoryCountResponse response = countService.approveCount(id);
+        return ResponseEntity.ok(response);
+    }
+
+    // ─── Reject ─────────────────────────────────────────────
+    @PutMapping("/{id:\\d+}/reject")
+    public ResponseEntity<InventoryCountResponse> rejectCount(
+            @PathVariable Integer id,
+            @RequestBody InventoryCountRequest request) {
+        InventoryCountResponse response = countService.rejectCount(id, request.getRejectionReason());
+        return ResponseEntity.ok(response);
+    }
+
+    // ─── Delete ─────────────────────────────────────────────
+    @DeleteMapping("/{id:\\d+}")
+    public ResponseEntity<Void> deleteCount(@PathVariable Integer id) {
+        countService.deleteCount(id);
+        return ResponseEntity.noContent().build();
+    }
+}

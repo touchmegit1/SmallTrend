@@ -10,4 +10,14 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
+    server: {
+        proxy: {
+            '/sepay-api': {
+                target: 'https://my.sepay.vn',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/sepay-api/, ''),
+                secure: true,
+            },
+        },
+    },
 })

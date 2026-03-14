@@ -118,6 +118,7 @@ public class AuthController {
                     .fullName(user.getFullName())
                     .email(user.getEmail())
                     .role(user.getRole() != null ? user.getRole().getName() : "ROLE_USER")
+                    .avatarUrl(user.getAvatarUrl())
                     .build());
 
         } catch (Exception e) {

@@ -1,13 +1,14 @@
 package com.smalltrend.repository;
 
-import com.smalltrend.entity.Customer;
-
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import com.smalltrend.entity.Customer;
 
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Integer> {
@@ -20,5 +21,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Integer> {
 
     @Query("SELECT COUNT(c) FROM Customer c")
     Long countTotalCustomers();
-}
 
+    @Query(value = "SELECT name, spent_amount, loyalty_points FROM customers ORDER BY spent_amount DESC LIMIT :lim", nativeQuery = true)
+    List<Object[]> findTopCustomers(@Param("lim") int lim);
+}

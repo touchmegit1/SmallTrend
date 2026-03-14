@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useDisposalVoucher } from "../../hooks/useDisposalVoucher";
+import { useToast } from "../../components/ui/Toast";
 import {
   DV_STATUS,
   DV_STATUS_CONFIG,
@@ -19,6 +21,7 @@ import {
 export default function DisposalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const {
     voucher,
     items,
@@ -34,8 +37,9 @@ export default function DisposalDetail() {
     removeItem,
     updateItemQty,
     saveDraft,
-    confirmVoucher,
-    cancelVoucher,
+    submitVoucher,
+    approveVoucher,
+    rejectVoucher,
   } = useDisposalVoucher(id || null);
 
   const [batchSearch, setBatchSearch] = useState("");
@@ -58,23 +62,36 @@ export default function DisposalDetail() {
   const handleSaveDraft = async () => {
     try {
       const saved = await saveDraft();
-      alert("Đã lưu nháp thành công!");
+      toast.success("Đã lưu nháp thành công!");
       if (!id) navigate(`/inventory/disposal/${saved.id}`, { replace: true });
     } catch {
-      alert("Lỗi khi lưu nháp!");
+      toast.error("Lỗi khi lưu nháp!");
     }
   };
 
-  const handleConfirm = async () => {
-    const success = await confirmVoucher();
+  const handleSubmit = async () => {
+    const success = await submitVoucher();
     if (success) {
-      alert("Đã xác nhận phiếu xử lý! Tồn kho đã được trừ.");
+      toast.success("Đã gửi phiếu đi chờ duyệt!");
+      if (!id) navigate(`/inventory/disposal/${voucher.id}`, { replace: true });
     }
   };
 
-  const handleCancel = async () => {
-    const success = await cancelVoucher();
-    if (success) navigate("/inventory/disposal");
+  const handleApprove = async () => {
+    const success = await approveVoucher();
+    if (success) {
+      toast.success("Đã duyệt phiếu xử lý! Tồn kho đã được trừ.");
+    }
+  };
+
+  const handleReject = async () => {
+    const reason = window.prompt("Nhập lý do từ chối:");
+    if (reason !== null) {
+      const success = await rejectVoucher(reason);
+      if (success) {
+        toast.success("Đã từ chối phiếu xử lý!");
+      }
+    }
   };
 
   if (loading) {
@@ -100,30 +117,28 @@ export default function DisposalDetail() {
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate("/inventory/disposal")}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-sm text-gray-600"
-          >
-            ← Quay lại
-          </button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {id ? "Chi tiết phiếu xử lý" : "Tạo phiếu xử lý"}
-              </h1>
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusCfg.badgeBg} ${statusCfg.text}`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-                {statusCfg.label}
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 mt-1 font-mono">
-              {voucher.code || "Đang tạo..."}
-            </p>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate("/inventory/disposal")}
+          className="p-1.5 rounded-lg hover:bg-slate-100 transition text-slate-500"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-base font-bold text-slate-900 tracking-tight">
+              {id ? "Chi tiết phiếu xử lý" : "Tạo phiếu xử lý"}
+            </h1>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full border ${statusCfg.badgeBg} ${statusCfg.text}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+              {statusCfg.label}
+            </span>
           </div>
+          <p className="text-xs text-slate-400 mt-0.5 font-mono">
+            {voucher.code || "Đang tạo..."}
+          </p>
         </div>
       </div>
 
@@ -132,8 +147,8 @@ export default function DisposalDetail() {
         <div className="lg:col-span-2 space-y-6">
           {/* Expired batches picker (only in edit mode) */}
           {isEditable && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 bg-red-50">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 bg-red-50">
                 <h2 className="text-sm font-semibold text-red-800">
                   Lô hàng hết hạn có thể xử lý ({expiredBatches.length} lô)
                 </h2>
@@ -141,7 +156,7 @@ export default function DisposalDetail() {
 
               {expiredBatches.length === 0 ? (
                 <div className="p-8 text-center">
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-slate-500 text-sm">
                     Không có lô hàng hết hạn
                   </p>
                 </div>
@@ -153,12 +168,12 @@ export default function DisposalDetail() {
                       value={batchSearch}
                       onChange={(e) => setBatchSearch(e.target.value)}
                       placeholder="Tìm theo tên sản phẩm hoặc mã lô..."
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
                     />
                   </div>
                   <div className="max-h-64 overflow-y-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50 text-xs text-gray-500 uppercase sticky top-0">
+                      <thead className="bg-slate-50 text-xs text-slate-500 uppercase sticky top-0">
                         <tr>
                           <th className="px-4 py-2 text-left">Sản phẩm</th>
                           <th className="px-4 py-2 text-left">Mã lô</th>
@@ -167,7 +182,7 @@ export default function DisposalDetail() {
                           <th className="px-4 py-2 text-center">Thêm</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-slate-50">
                         {availableBatches.map((b) => {
                           const batchStatus = classifyBatch(b.expiry_date);
                           const bCfg = BATCH_STATUS_CONFIG[batchStatus];
@@ -176,10 +191,10 @@ export default function DisposalDetail() {
                               key={b.id}
                               className="hover:bg-red-50/50 transition-colors"
                             >
-                              <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                              <td className="px-4 py-2 text-sm font-medium text-slate-900">
                                 {b.product_name}
                               </td>
-                              <td className="px-4 py-2 text-sm font-mono text-gray-600">
+                              <td className="px-4 py-2 text-sm font-mono text-slate-600">
                                 {b.batch_code}
                               </td>
                               <td className="px-4 py-2 text-sm text-right font-medium">
@@ -208,7 +223,7 @@ export default function DisposalDetail() {
                             <tr>
                               <td
                                 colSpan="5"
-                                className="px-4 py-6 text-center text-sm text-gray-500"
+                                className="px-4 py-6 text-center text-sm text-slate-500"
                               >
                                 Tất cả lô đã được thêm vào phiếu
                               </td>
@@ -223,18 +238,18 @@ export default function DisposalDetail() {
           )}
 
           {/* Items in voucher */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-800">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h2 className="text-sm font-semibold text-slate-800">
                 Danh sách sản phẩm xử lý ({items.length})
               </h2>
             </div>
 
             {items.length === 0 ? (
               <div className="p-10 text-center">
-                <p className="text-gray-500 text-sm">Chưa có sản phẩm nào</p>
+                <p className="text-slate-500 text-sm">Chưa có sản phẩm nào</p>
                 {isEditable && (
-                  <p className="text-gray-400 text-xs mt-1">
+                  <p className="text-slate-400 text-xs mt-1">
                     Thêm sản phẩm hết hạn từ danh sách phía trên
                   </p>
                 )}
@@ -242,7 +257,7 @@ export default function DisposalDetail() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                  <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
                     <tr>
                       <th className="px-4 py-3 text-left">#</th>
                       <th className="px-4 py-3 text-left">Sản phẩm</th>
@@ -256,19 +271,19 @@ export default function DisposalDetail() {
                       )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {items.map((item, idx) => (
                       <tr
                         key={item.batch_id}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-slate-50 transition-colors"
                       >
-                        <td className="px-4 py-3 text-sm text-gray-400">
+                        <td className="px-4 py-3 text-sm text-slate-400">
                           {idx + 1}
                         </td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
                           {item.product_name}
                         </td>
-                        <td className="px-4 py-3 text-sm font-mono text-gray-600">
+                        <td className="px-4 py-3 text-sm font-mono text-slate-600">
                           {item.batch_code}
                         </td>
                         <td className="px-4 py-3">
@@ -285,7 +300,7 @@ export default function DisposalDetail() {
                               onChange={(e) =>
                                 updateItemQty(item.batch_id, e.target.value)
                               }
-                              className="w-20 text-right px-2 py-1 border border-gray-200 rounded-md text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                              className="w-20 text-right px-2 py-1 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-red-500 outline-none"
                             />
                           ) : (
                             <span className="text-sm font-medium">
@@ -293,10 +308,10 @@ export default function DisposalDetail() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right text-gray-600">
+                        <td className="px-4 py-3 text-sm text-right text-slate-600">
                           {formatCurrency(item.unit_cost)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
+                        <td className="px-4 py-3 text-sm text-right font-semibold text-slate-900">
                           {formatCurrency(item.total_cost)}
                         </td>
                         {isEditable && (
@@ -313,15 +328,15 @@ export default function DisposalDetail() {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50 font-semibold">
+                  <tfoot className="bg-slate-50 font-semibold">
                     <tr>
                       <td
                         colSpan={isEditable ? 4 : 4}
-                        className="px-4 py-3 text-sm text-gray-700 text-right"
+                        className="px-4 py-3 text-sm text-slate-700 text-right"
                       >
                         Tổng cộng
                       </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900">
+                      <td className="px-4 py-3 text-sm text-right text-slate-900">
                         {formatNumber(totals.totalQty)}
                       </td>
                       <td className="px-4 py-3" />
@@ -340,14 +355,14 @@ export default function DisposalDetail() {
         {/* Right: Info Panel */}
         <div className="space-y-6">
           {/* Voucher Info */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-800">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-slate-800">
               Thông tin phiếu
             </h3>
 
             {/* Code */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-slate-500 mb-1">
                 Mã phiếu
               </label>
               <p className="font-mono text-sm font-semibold text-red-600">
@@ -357,7 +372,7 @@ export default function DisposalDetail() {
 
             {/* Location */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-slate-500 mb-1">
                 Kho
               </label>
               {isEditable ? (
@@ -366,7 +381,7 @@ export default function DisposalDetail() {
                   onChange={(e) =>
                     updateVoucher("location_id", Number(e.target.value) || null)
                   }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
                 >
                   <option value="">-- Chọn kho --</option>
                   {locations.map((loc) => (
@@ -376,7 +391,7 @@ export default function DisposalDetail() {
                   ))}
                 </select>
               ) : (
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-slate-700">
                   {locations.find((l) => l.id === voucher.location_id)
                     ?.location_name || "—"}
                 </p>
@@ -385,14 +400,14 @@ export default function DisposalDetail() {
 
             {/* Reason type */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-slate-500 mb-1">
                 Lý do xử lý
               </label>
               {isEditable ? (
                 <select
                   value={voucher.reason_type || REASON_TYPE.EXPIRED}
                   onChange={(e) => updateVoucher("reason_type", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
                 >
                   {Object.entries(REASON_CONFIG).map(([key, cfg]) => (
                     <option key={key} value={key}>
@@ -401,7 +416,7 @@ export default function DisposalDetail() {
                   ))}
                 </select>
               ) : (
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-slate-700">
                   {REASON_CONFIG[voucher.reason_type]?.label ||
                     voucher.reason_type}
                 </p>
@@ -410,7 +425,7 @@ export default function DisposalDetail() {
 
             {/* Notes */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-slate-500 mb-1">
                 Ghi chú
               </label>
               {isEditable ? (
@@ -419,15 +434,15 @@ export default function DisposalDetail() {
                   onChange={(e) => updateVoucher("notes", e.target.value)}
                   rows={3}
                   placeholder="Ghi chú thêm..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none resize-none"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none resize-none"
                 />
               ) : (
-                <p className="text-sm text-gray-700">{voucher.notes || "—"}</p>
+                <p className="text-sm text-slate-700">{voucher.notes || "—"}</p>
               )}
             </div>
 
             {/* Timestamps */}
-            <div className="pt-3 border-t border-gray-100 space-y-2 text-xs text-gray-500">
+            <div className="pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-500">
               <div className="flex justify-between">
                 <span>Ngày tạo</span>
                 <span>{formatDateTime(voucher.created_at)}</span>
@@ -476,23 +491,35 @@ export default function DisposalDetail() {
               <button
                 onClick={handleSaveDraft}
                 disabled={saving}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm disabled:opacity-50"
               >
                 {saving ? "Đang lưu..." : "Lưu nháp"}
               </button>
               <button
-                onClick={handleConfirm}
+                onClick={handleSubmit}
                 disabled={saving || items.length === 0}
-                className="w-full px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? "Đang xử lý..." : "Xác nhận & Trừ kho"}
+                {saving ? "Đang gửi..." : "Gửi duyệt quản lý"}
+              </button>
+            </div>
+          )}
+
+          {voucher.status === DV_STATUS.PENDING && (
+            <div className="space-y-3">
+              <button
+                onClick={handleApprove}
+                disabled={saving}
+                className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50"
+              >
+                {saving ? "Đang xử lý..." : "Duyệt & Trừ kho"}
               </button>
               <button
-                onClick={handleCancel}
+                onClick={handleReject}
                 disabled={saving}
-                className="w-full px-4 py-2.5 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm disabled:opacity-50"
+                className="w-full px-4 py-2.5 text-red-600 border border-red-200 bg-white rounded-lg hover:bg-red-50 transition-colors font-medium text-sm disabled:opacity-50"
               >
-                Hủy phiếu
+                {saving ? "Đang xử lý..." : "Từ chối phiếu"}
               </button>
             </div>
           )}
@@ -500,16 +527,26 @@ export default function DisposalDetail() {
           {voucher.status === DV_STATUS.CONFIRMED && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
               <p className="text-sm text-emerald-800 font-medium">
-                Phiếu đã được xác nhận. Tồn kho đã trừ.
+                Phiếu đã được xác nhận. Tồn kho đã bị trừ.
               </p>
             </div>
           )}
 
-          {voucher.status === DV_STATUS.CANCELLED && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-              <p className="text-sm text-gray-600 font-medium">
-                Phiếu đã bị hủy.
+          {voucher.status === DV_STATUS.REJECTED && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
+              <p className="text-sm text-red-600 font-medium">
+                Phiếu đã bị từ chối.
               </p>
+              {voucher.rejection_reason && (
+                <div className="bg-white/60 p-3 rounded-lg border border-red-100">
+                  <span className="block text-xs font-semibold text-red-800 mb-1">
+                    Lý do:
+                  </span>
+                  <p className="text-sm text-red-700">
+                    {voucher.rejection_reason}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

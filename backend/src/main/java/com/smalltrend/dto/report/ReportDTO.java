@@ -22,7 +22,8 @@ public class ReportDTO {
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
     private String format;
-    private String filePath;
+    private String filePath;     // legacy field, same value as downloadUrl
+    private String downloadUrl;  // Cloudinary secure_url — the direct cloud download link
     private Integer createdBy;
     private String createdByName;
     private String createdByEmail;
@@ -38,6 +39,7 @@ public class ReportDTO {
                 .completedAt(report.getCompletedAt())
                 .format(report.getFormat())
                 .filePath(report.getFilePath())
+                .downloadUrl(report.getDownloadUrl())
                 .createdBy(report.getCreatedBy() != null ? report.getCreatedBy().getId() : null)
                 .createdByName(report.getCreatedBy() != null ? report.getCreatedBy().getFullName() : null)
                 .createdByEmail(report.getCreatedBy() != null ? report.getCreatedBy().getEmail() : null)

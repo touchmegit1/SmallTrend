@@ -1,8 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Search, Barcode, X } from "lucide-react";
+import { Search, X, FileUp } from "lucide-react";
+import * as XLSX from "xlsx";
+import { useToast } from "../../ui/Toast";
 
-export default function ProductSearchBar({ products, onAddProduct }) {
+export default function ProductSearchBar({
+  products,
+  onAddProduct,
+  onImportProducts,
+}) {
   const [query, setQuery] = useState("");
+  const toast = useToast();
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const inputRef = useRef(null);
@@ -72,6 +79,85 @@ export default function ProductSearchBar({ products, onAddProduct }) {
     }
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        const importedList = [];
+        const notFound = [];
+
+        data.forEach((row) => {
+          // Normalize keys
+          const normalizedRow = {};
+          for (let key in row) {
+            normalizedRow[key.toString().toLowerCase().trim()] = row[key];
+          }
+
+          const sku =
+            normalizedRow["sku"] ||
+            normalizedRow["mã sp"] ||
+            normalizedRow["mã sản phẩm"];
+          const quantity =
+            normalizedRow["quantity"] ||
+            normalizedRow["số lượng"] ||
+            normalizedRow["sl"] ||
+            1;
+          const price =
+            normalizedRow["price"] ||
+            normalizedRow["giá"] ||
+            normalizedRow["đơn giá nhập"] ||
+            normalizedRow["đơn giá"];
+
+          if (sku) {
+            const product = products.find(
+              (p) => p.sku.toLowerCase() === sku.toString().toLowerCase(),
+            );
+            if (product) {
+              importedList.push({
+                product,
+                quantity: Number(quantity),
+                unit_price: price ? Number(price) : undefined,
+              });
+            } else {
+              notFound.push(sku);
+            }
+          }
+        });
+
+        if (importedList.length > 0) {
+          if (onImportProducts) {
+            onImportProducts(importedList);
+          }
+          toast.success(
+            `Đã import thành công ${importedList.length} sản phẩm.${notFound.length > 0 ? ` Không tìm thấy: ${notFound.join(", ")}` : ""}`,
+          );
+        } else if (notFound.length > 0) {
+          toast.error(
+            `Không có mã SKU nào trong file khớp với hệ thống. Các mã không tìm thấy: ${notFound.join(", ")}`,
+          );
+        } else {
+          toast.warning(
+            "Danh sách trống hoặc sai định dạng cột (Cần có cột SKU, Quantity...).",
+          );
+        }
+      } catch (error) {
+        console.error("Import error:", error);
+        toast.error("Lỗi khi đọc file. Vui lòng kiểm tra lại định dạng.");
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = null; // reset
+  };
+
   return (
     <div className="relative">
       <div className="flex items-center gap-2 px-5 py-3 bg-slate-50/70 border-b border-slate-200">
@@ -108,8 +194,16 @@ export default function ProductSearchBar({ products, onAddProduct }) {
           )}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-400 shrink-0">
-          <Barcode size={14} />
-          <span>Quét mã vạch</span>
+          <label className="flex items-center gap-1.5 cursor-pointer hover:text-indigo-600 transition-colors">
+            <input
+              type="file"
+              accept=".xlsx, .xls, .csv"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <FileUp size={14} />
+            <span>Import Excel</span>
+          </label>
         </div>
       </div>
 

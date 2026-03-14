@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
@@ -40,6 +41,8 @@ public class WorkShiftResponse {
     private Integer lateClockOutMinutes;
     private Integer gracePeriodMinutes;
     private String status;
+    private LocalDate effectiveFrom;
+    private LocalDate effectiveTo;
     private Boolean requiresApproval;
     private Integer supervisorRoleId;
     private String supervisorRoleName;
@@ -73,6 +76,8 @@ public class WorkShiftResponse {
                 .lateClockOutMinutes(shift.getLateClockOutMinutes())
                 .gracePeriodMinutes(shift.getGracePeroidMinutes())
                 .status(shift.getStatus())
+                .effectiveFrom(shift.getEffectiveFrom())
+                .effectiveTo(shift.getEffectiveTo())
                 .requiresApproval(shift.getRequiresApproval())
                 .supervisorRoleId(role != null ? role.getId() : null)
                 .supervisorRoleName(role != null ? role.getName() : null)

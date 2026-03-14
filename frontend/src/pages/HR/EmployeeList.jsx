@@ -141,6 +141,7 @@ const EmployeeList = () => {
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Họ tên</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">SĐT</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Cấu hình lương</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Vai trò</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Trạng thái</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Chi tiết</th>
@@ -152,6 +153,7 @@ const EmployeeList = () => {
                                     <td className="px-4 py-3 text-sm font-medium text-slate-900">{user.fullName || '-'}</td>
                                     <td className="px-4 py-3 text-sm text-slate-700">{user.email || '-'}</td>
                                     <td className="px-4 py-3 text-sm text-slate-700">{user.phone || '-'}</td>
+                                    <td className="px-4 py-3 text-sm text-slate-700">{summarizeSalary(user)}</td>
                                     <td className="px-4 py-3 text-sm text-slate-700">{user.role?.name || '-'}</td>
                                     <td className="px-4 py-3 text-sm">
                                         <span className={`rounded-full px-2 py-1 text-xs font-medium ${normalizeStatus(user.status) === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
@@ -192,6 +194,10 @@ const EmployeeList = () => {
                             <Info label="Địa chỉ" value={selectedEmployee.address} />
                             <Info label="Vai trò" value={selectedEmployee.role?.name} />
                             <Info label="Trạng thái" value={normalizeStatus(selectedEmployee.status) === 'active' ? 'Hoạt động' : 'Vô hiệu'} />
+                            <Info label="Chế độ lương" value={formatSalaryMode(selectedEmployee.salaryType)} />
+                            <Info label="Lương cơ bản" value={formatCurrencyCompact(selectedEmployee.baseSalary)} />
+                            <Info label="Đơn giá theo giờ" value={selectedEmployee.hourlyRate != null ? `${formatCurrencyCompact(selectedEmployee.hourlyRate)}/giờ` : '-'} />
+                            <Info label="Ca tối thiểu/tháng" value={selectedEmployee.salaryType === 'MONTHLY_MIN_SHIFTS' ? (selectedEmployee.minRequiredShifts ?? 0) : '-'} />
                         </div>
                     </div>
                 </div>
@@ -216,5 +222,31 @@ const normalizeUsers = (payload) => {
 };
 
 const normalizeStatus = (status) => String(status || '').toLowerCase();
+
+const formatCurrencyCompact = (value) => {
+    if (value === null || value === undefined || value === '') return '-';
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        maximumFractionDigits: 0
+    }).format(Number(value) || 0);
+};
+
+const formatSalaryMode = (salaryType) => {
+    if (salaryType === 'HOURLY') return 'Theo giờ';
+    if (salaryType === 'MONTHLY_MIN_SHIFTS') return 'Theo tháng (đủ ca)';
+    return 'Theo tháng';
+};
+
+const summarizeSalary = (user) => {
+    const salaryMode = formatSalaryMode(user.salaryType);
+    if (user.salaryType === 'HOURLY') {
+        return `${salaryMode}: ${formatCurrencyCompact(user.hourlyRate)}/giờ`;
+    }
+    if (user.salaryType === 'MONTHLY_MIN_SHIFTS') {
+        return `${salaryMode}: ${formatCurrencyCompact(user.baseSalary)} · Tối thiểu ${user.minRequiredShifts ?? 0} ca`;
+    }
+    return `${salaryMode}: ${formatCurrencyCompact(user.baseSalary)}`;
+};
 
 export default EmployeeList;

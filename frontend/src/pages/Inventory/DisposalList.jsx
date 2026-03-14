@@ -1,12 +1,39 @@
 import React from "react";
+import { Plus, Search, Trash2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDisposalList } from "../../hooks/useDisposalList";
 import { formatCurrency } from "../../utils/inventory";
+import CustomSelect from "../../components/common/CustomSelect";
 
 const STATUS_CONFIG = {
-  DRAFT: { label: "Nháp", bg: "bg-yellow-50", text: "text-yellow-700", dot: "bg-yellow-500" },
-  CONFIRMED: { label: "Đã xác nhận", bg: "bg-green-50", text: "text-green-700", dot: "bg-green-500" },
-  CANCELLED: { label: "Đã hủy", bg: "bg-gray-50", text: "text-gray-600", dot: "bg-gray-400" },
+  DRAFT: {
+    label: "Nháp",
+    bg: "bg-yellow-50",
+    text: "text-yellow-700",
+    dot: "bg-yellow-400",
+    border: "border-yellow-200",
+  },
+  CONFIRMED: {
+    label: "Đã xác nhận",
+    bg: "bg-green-50",
+    text: "text-green-700",
+    dot: "bg-green-500",
+    border: "border-green-200",
+  },
+  PENDING: {
+    label: "Chờ duyệt",
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    dot: "bg-indigo-500",
+    border: "border-indigo-200",
+  },
+  REJECTED: {
+    label: "Từ chối",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    dot: "bg-red-500",
+    border: "border-red-200",
+  },
 };
 
 const REASON_CONFIG = {
@@ -15,6 +42,21 @@ const REASON_CONFIG = {
   LOST: { label: "Thất thoát" },
   OBSOLETE: { label: "Lỗi thời" },
   OTHER: { label: "Khác" },
+};
+
+const SortIcon = ({ field, sortField, sortDir }) => (
+  <span className="ml-1 text-[10px]">
+    {sortField === field ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+  </span>
+);
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 };
 
 export default function DisposalList() {
@@ -34,255 +76,253 @@ export default function DisposalList() {
     page,
     setPage,
     totalPages,
-    cancelVoucher,
   } = useDisposalList();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
-          <div className="flex items-center gap-2">
-            <div>
-              <p className="font-semibold">Lỗi tải dữ liệu</p>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
-          </div>
+      <div className="flex items-center justify-center h-screen p-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 max-w-md w-full text-center">
+          <p className="font-semibold text-lg mb-1">Lỗi tải dữ liệu</p>
+          <p className="text-sm">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition"
+          >
+            Thử lại
+          </button>
         </div>
       </div>
     );
   }
 
-  const statusTabs = [
-    { key: "ALL", label: "Tất cả" },
-    { key: "DRAFT", label: "Nháp" },
-    { key: "CONFIRMED", label: "Đã xác nhận" },
-    { key: "CANCELLED", label: "Đã hủy" },
+  const statusOptions = [
+    { value: "ALL", label: `Tất cả (${statusCounts["ALL"] || 0})` },
+    { value: "DRAFT", label: `Nháp (${statusCounts["DRAFT"] || 0})` },
+    { value: "PENDING", label: `Chờ duyệt (${statusCounts["PENDING"] || 0})` },
+    {
+      value: "CONFIRMED",
+      label: `Đã xác nhận (${statusCounts["CONFIRMED"] || 0})`,
+    },
+    { value: "REJECTED", label: `Từ chối (${statusCounts["REJECTED"] || 0})` },
   ];
 
-  const SortIcon = ({ field }) => (
-    <span className="ml-1 text-xs">
-      {sortField === field ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
-    </span>
-  );
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "—";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
-  };
-
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Phiếu xử lý hàng</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Quản lý phiếu xử lý hàng hết hạn, hư hỏng, thất thoát
-          </p>
-        </div>
-        <button
-          onClick={() => navigate("/inventory/disposal/create")}
-          className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-sm"
-        >
-          Tạo phiếu xử lý
-        </button>
-      </div>
-
-      {/* Status tabs */}
-      <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => {
-              setStatusFilter(tab.key);
-              setPage(1);
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === tab.key
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {tab.label}
-            <span
-              className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                statusFilter === tab.key
-                  ? "bg-red-100 text-red-700"
-                  : "bg-gray-200 text-gray-500"
-              }`}
+    <div className="flex flex-col h-screen bg-slate-50">
+      {/* ── HEADER ─────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-slate-200 px-6 py-4 shrink-0">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <button
+              onClick={() => navigate("/inventory")}
+              className="p-1.5 rounded-lg hover:bg-slate-100 transition text-slate-500 shrink-0"
             >
-              {statusCounts[tab.key] || 0}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Tìm theo mã phiếu, ghi chú, kho..."
-          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
-        />
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
-                  onClick={() => toggleSort("code")}
-                >
-                  Mã phiếu <SortIcon field="code" />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Lý do
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Kho
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  SL sản phẩm
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  Tổng SL
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  Giá trị
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
-                  onClick={() => toggleSort("createdAt")}
-                >
-                  Ngày tạo <SortIcon field="createdAt" />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Trạng thái
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {vouchers.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="px-4 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <p className="text-gray-500 text-sm font-medium">Chưa có phiếu xử lý nào</p>
-                      <button
-                        onClick={() => navigate("/inventory/disposal/create")}
-                        className="mt-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        Tạo phiếu đầu tiên
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                vouchers.map((v) => {
-                  const statusCfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
-                  const reasonCfg = REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
-
-                  return (
-                    <tr
-                      key={v.id}
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => navigate(`/inventory/disposal/${v.id}`)}
-                    >
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-sm font-semibold text-red-600">
-                          {v.code}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {reasonCfg.label}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {v.locationName || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-700">
-                        {v.totalItems || 0}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-700">
-                        {v.totalQuantity || 0}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
-                        {formatCurrency(v.totalValue || 0)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {formatDate(v.createdAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.text}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-                          {statusCfg.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {v.status === "DRAFT" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm("Bạn có chắc muốn hủy phiếu này?")) {
-                                cancelVoucher(v.id);
-                              }
-                            }}
-                            className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                          >
-                            Hủy
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Trang {page} / {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage(page - 1)}
-                disabled={page === 1}
-                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                ← Trước
-              </button>
-              <button
-                onClick={() => setPage(page + 1)}
-                disabled={page === totalPages}
-                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Sau →
-              </button>
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Trash2 size={20} className="text-red-600" />
+                Xử lý hàng hóa
+              </h1>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Quản lý tất cả phiếu xử lý hàng hóa
+              </p>
             </div>
+          </div>
+
+          <button
+            onClick={() => navigate("/inventory/disposal/create")}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium flex items-center gap-2 transition shadow-sm shrink-0"
+          >
+            <Plus size={16} />
+            Tạo phiếu xử lý
+          </button>
+        </div>
+      </div>
+
+      {/* ── FILTER BAR ─────────────────────────────────────────── */}
+      <div className="bg-white border-b border-slate-200 px-6 py-3 shrink-0">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1"></div>
+          <div className="flex items-center gap-3">
+            <div className="relative w-64">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Tìm theo mã phiếu, ghi chú..."
+                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none bg-slate-50"
+              />
+            </div>
+            <div className="w-52">
+              <CustomSelect
+                value={statusFilter}
+                onChange={(val) => {
+                  setStatusFilter(val);
+                  setPage(1);
+                }}
+                options={statusOptions}
+                variant="status"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── TABLE ──────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-auto px-6 py-4">
+        {vouchers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center mt-16 gap-4">
+            <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center">
+              <Trash2 size={36} className="text-slate-300" />
+            </div>
+            <p className="text-slate-500 font-medium">
+              Chưa có phiếu xử lý nào
+            </p>
+            <button
+              onClick={() => navigate("/inventory/disposal/create")}
+              className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition"
+            >
+              Tạo phiếu đầu tiên
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50/80 border-b border-slate-200">
+                  <tr>
+                    <th
+                      className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700"
+                      onClick={() => toggleSort("code")}
+                    >
+                      Mã phiếu{" "}
+                      <SortIcon
+                        field="code"
+                        sortField={sortField}
+                        sortDir={sortDir}
+                      />
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      Lý do
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      Kho
+                    </th>
+                    <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      SL sản phẩm
+                    </th>
+                    <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      Tổng SL
+                    </th>
+                    <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      Giá trị
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700"
+                      onClick={() => toggleSort("createdAt")}
+                    >
+                      Ngày tạo{" "}
+                      <SortIcon
+                        field="createdAt"
+                        sortField={sortField}
+                        sortDir={sortDir}
+                      />
+                    </th>
+                    <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      Trạng thái
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {vouchers.map((v) => {
+                    const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
+                    const reason =
+                      REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
+                    return (
+                      <tr
+                        key={v.id}
+                        className="hover:bg-slate-50 cursor-pointer transition-colors"
+                        onClick={() => navigate(`/inventory/disposal/${v.id}`)}
+                      >
+                        <td className="px-4 py-3">
+                          <span className="font-mono text-sm font-semibold text-red-600">
+                            {v.code}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700">
+                          {reason.label}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          {v.locationName || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-slate-700">
+                          {v.totalItems || 0}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-slate-700">
+                          {v.totalQuantity || 0}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-medium text-slate-900">
+                          {formatCurrency(v.totalValue || 0)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-500">
+                          {formatDate(v.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}
+                            />
+                            {cfg.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+                <p className="text-sm text-slate-500">
+                  Trang {page} / {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(page - 1)}
+                    disabled={page === 1}
+                    className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    ← Trước
+                  </button>
+                  <button
+                    onClick={() => setPage(page + 1)}
+                    disabled={page === totalPages}
+                    className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    Sau →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

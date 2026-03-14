@@ -29,4 +29,11 @@ public class Attendance {
     private LocalTime timeIn;
     private LocalTime timeOut;
     private String status;
+
+    private Integer assignmentIdSnapshot;
+    private Integer shiftIdSnapshot;
+    private String shiftNameSnapshot;
+    private LocalTime shiftStartSnapshot;
+    private LocalTime shiftEndSnapshot;
+    private Integer shiftWorkingMinutesSnapshot;
 }

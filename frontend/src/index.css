@@ -28,31 +28,54 @@
   --radius-sm: calc(var(--radius) - 4px);
 
   /* Font family */
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: "Inter", sans-serif;
 
   /* Animations */
-  --animate-cursor: cursor .6s linear infinite alternate;
-  --animate-type: type 1.8s ease-in .8s 1 normal both;
+  --animate-cursor: cursor 0.6s linear infinite alternate;
+  --animate-type: type 1.8s ease-in 0.8s 1 normal both;
   --animate-fade-in: fade-in 0.5s ease-out;
   --animate-pulse-slow: pulse-slow 2s infinite;
   --animate-slide-in: slide-in 0.3s ease-out;
   --animate-typing: typing 1.4s infinite;
 
   @keyframes pulse-slow {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
   @keyframes slide-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   @keyframes typing {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
-    30% { transform: translateY(-10px); opacity: 1; }
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.7;
+    }
+    30% {
+      transform: translateY(-10px);
+      opacity: 1;
+    }
   }
   @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }
 
@@ -86,6 +109,16 @@
     -moz-osx-font-smoothing: grayscale;
     color: hsl(var(--foreground));
     background-color: rgb(248 250 252);
+  }
+
+  /* Ẩn nút tăng giảm trên input number */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
   }
 }
 

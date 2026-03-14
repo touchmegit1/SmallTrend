@@ -124,13 +124,12 @@ export default function ProductStockTable({
                 <th
                   key={col.key}
                   onClick={() => col.sortable && handleSort(col.key)}
-                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap ${
-                    col.align === "right"
+                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap ${col.align === "right"
                       ? "text-right"
                       : col.align === "center"
                         ? "text-center"
                         : "text-left"
-                  } ${col.sortable ? "cursor-pointer select-none hover:text-indigo-600 transition-colors" : ""}`}
+                    } ${col.sortable ? "cursor-pointer select-none hover:text-indigo-600 transition-colors" : ""}`}
                 >
                   <span className="inline-flex items-center">
                     {col.label}
@@ -167,12 +166,12 @@ export default function ProductStockTable({
                 const isExpanded = expandedRow === product.id;
                 const stockPercent = product.min_stock
                   ? Math.min(
+                    100,
+                    Math.round(
+                      ((product.stock_quantity || 0) / product.min_stock) *
                       100,
-                      Math.round(
-                        ((product.stock_quantity || 0) / product.min_stock) *
-                          100,
-                      ),
-                    )
+                    ),
+                  )
                   : 100;
 
                 return (
@@ -251,13 +250,12 @@ export default function ProductStockTable({
                               </p>
                               <div className="bg-slate-200 rounded-full h-2 overflow-hidden">
                                 <div
-                                  className={`h-2 rounded-full transition-all ${
-                                    stockPercent < 50
+                                  className={`h-2 rounded-full transition-all ${stockPercent < 50
                                       ? "bg-red-500"
                                       : stockPercent < 100
                                         ? "bg-amber-500"
                                         : "bg-emerald-500"
-                                  }`}
+                                    }`}
                                   style={{ width: `${stockPercent}%` }}
                                 ></div>
                               </div>
@@ -285,8 +283,8 @@ export default function ProductStockTable({
                                         SL: {b.quantity} ·{" "}
                                         {b.expiry_date
                                           ? new Date(
-                                              b.expiry_date,
-                                            ).toLocaleDateString("vi-VN")
+                                            b.expiry_date,
+                                          ).toLocaleDateString("vi-VN")
                                           : "Không HSD"}
                                       </span>
                                     </div>

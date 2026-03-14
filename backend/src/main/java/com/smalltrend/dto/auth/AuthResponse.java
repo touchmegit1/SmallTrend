@@ -19,13 +19,15 @@ public class AuthResponse {
     private String fullName;
     private String email;
     private String role;
+    private String avatarUrl;
 
-    public AuthResponse(String token, Integer userId, String username, String fullName, String email, String role) {
+    public AuthResponse(String token, Integer userId, String username, String fullName, String email, String role, String avatarUrl) {
         this.token = token;
         this.userId = userId;
         this.username = username;
         this.fullName = fullName;
         this.email = email;
         this.role = role;
+        this.avatarUrl = avatarUrl;
     }
 }

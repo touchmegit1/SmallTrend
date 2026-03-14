@@ -1,6 +1,7 @@
 package com.smalltrend.dto.user;
 
 import com.smalltrend.entity.User;
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +19,14 @@ public class UserDTO {
     private String email;
     private String phone;
     private String address;
+    private String avatarUrl;
     private String status;
+    private String salaryType;
+    private BigDecimal baseSalary;
+    private BigDecimal hourlyRate;
+    private Integer minRequiredShifts;
+    private Boolean countLateAsPresent;
+    private BigDecimal workingHoursPerMonth;
     private RoleDTO role;
 
     @Data
@@ -54,7 +62,14 @@ public class UserDTO {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .address(user.getAddress())
+                .avatarUrl(user.getAvatarUrl())
                 .status(user.getStatus())
+                .salaryType(user.getSalaryType() != null ? user.getSalaryType().name() : null)
+                .baseSalary(user.getBaseSalary())
+                .hourlyRate(user.getHourlyRate())
+                .minRequiredShifts(user.getMinRequiredShifts())
+                .countLateAsPresent(user.getCountLateAsPresent())
+                .workingHoursPerMonth(user.getWorkingHoursPerMonth())
                 .role(roleDTO)
                 .build();
     }

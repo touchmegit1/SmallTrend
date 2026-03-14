@@ -1,7 +1,14 @@
-
+/**
+ * table.jsx
+ * Xây dựng UI kiến trúc Bảng lưới (Table) hiển thị Data List chuẩn hệ thống.
+ * Chia Component thành từng Node nhỏ (Thead, Tbody, Tr, Td) để điều khiển linh hoạt.
+ */
 import React from "react";
 import { cn } from "./utils";
 
+/**
+ * Box bao bọc (Container). Ngăn tràn bằng thanh cuộn dọc (X-auto).
+ */
 function Table({ className, ...props }) {
   return (
     <div
@@ -17,6 +24,9 @@ function Table({ className, ...props }) {
   );
 }
 
+/**
+ * Ngăn tiêu đề bảng (Thường chứa tên các cột table). 
+ */
 function TableHeader({ className, ...props }) {
   return (
     <thead
@@ -27,6 +37,9 @@ function TableHeader({ className, ...props }) {
   );
 }
 
+/**
+ * Vùng chứa khối data nội dung kết xuất.
+ */
 function TableBody({ className, ...props }) {
   return (
     <tbody
@@ -37,6 +50,9 @@ function TableBody({ className, ...props }) {
   );
 }
 
+/**
+ * Đáy bảng chứa Summary (Vd Tổng tiền, phân trang cuối cùng).
+ */
 function TableFooter({ className, ...props }) {
   return (
     <tfoot
@@ -50,6 +66,9 @@ function TableFooter({ className, ...props }) {
   );
 }
 
+/**
+ * Dòng kẻ ngang, hỗ trợ Hover hiệu ứng màu nền để rõ ràng dòng cho User.
+ */
 function TableRow({ className, ...props }) {
   return (
     <tr
@@ -63,6 +82,9 @@ function TableRow({ className, ...props }) {
   );
 }
 
+/**
+ * Từng cục ô tên cột trên Header. Đổ nền tối hơn bảng để tách biệt khu vực
+ */
 function TableHead({ className, ...props }) {
   return (
     <th
@@ -76,6 +98,9 @@ function TableHead({ className, ...props }) {
   );
 }
 
+/**
+ * Từng Cell ô Data hiển thị Content, có padding chuẩn giãn cách không dính lưới table.
+ */
 function TableCell({ className, ...props }) {
   return (
     <td
@@ -89,6 +114,9 @@ function TableCell({ className, ...props }) {
   );
 }
 
+/**
+ * Ghi chú caption giải thích cả table
+ */
 function TableCaption({ className, ...props }) {
   return (
     <caption

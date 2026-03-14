@@ -8,4 +8,5 @@ public class CustomerResponse {
     private String name;
     private String phone;
     private long loyaltyPoints;
+    private long spentAmount;
 }

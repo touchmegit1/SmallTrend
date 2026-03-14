@@ -11,6 +11,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -55,28 +57,41 @@ public class WorkShiftService {
         return WorkShiftResponse.fromEntity(shift);
     }
 
-    public List<WorkShiftResponse> listShifts(String query, String status) {
+    public List<WorkShiftResponse> listShifts(String query, String status, boolean includeExpired) {
         List<WorkShift> shifts;
         if (query != null && !query.trim().isEmpty()) {
             String q = query.trim();
             shifts = workShiftRepository
                     .findByShiftNameContainingIgnoreCaseOrShiftCodeContainingIgnoreCase(q, q);
-        } else if (status != null && !status.trim().isEmpty()) {
-            shifts = workShiftRepository.findByStatusIgnoreCase(status.trim());
         } else {
             shifts = workShiftRepository.findAll(Sort.by("shiftName").ascending());
         }
 
+        String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
+        if (!normalizedStatus.isEmpty()) {
+            shifts = shifts.stream()
+                    .filter(shift -> normalizedStatus.equalsIgnoreCase(normalize(shift.getStatus(), "")))
+                    .collect(Collectors.toList());
+        }
+
+        if (!includeExpired && (normalizedStatus.isEmpty() || "ACTIVE".equals(normalizedStatus))) {
+            LocalDate today = LocalDate.now();
+            shifts = shifts.stream()
+                    .filter(shift -> isAvailableOnDate(shift, today))
+                    .collect(Collectors.toList());
+        }
+
         return shifts.stream()
+                .sorted(Comparator.comparing(WorkShift::getShiftName, String.CASE_INSENSITIVE_ORDER))
                 .map(WorkShiftResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
     public void deleteShift(Integer id) {
-        if (!workShiftRepository.existsById(id)) {
-            throw new RuntimeException("Shift not found");
-        }
-        workShiftRepository.deleteById(id);
+        WorkShift shift = workShiftRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Shift not found"));
+        shift.setStatus("INACTIVE");
+        workShiftRepository.save(shift);
     }
 
     private WorkShift buildShiftEntity(WorkShift shift, WorkShiftRequest request) {
@@ -104,6 +119,8 @@ public class WorkShiftService {
         shift.setLateClockOutMinutes(request.getLateClockOutMinutes());
         shift.setGracePeroidMinutes(request.getGracePeriodMinutes());
         shift.setStatus(normalize(request.getStatus(), "ACTIVE"));
+        shift.setEffectiveFrom(request.getEffectiveFrom());
+        shift.setEffectiveTo(request.getEffectiveTo());
         shift.setRequiresApproval(Boolean.TRUE.equals(request.getRequiresApproval()));
         shift.setSupervisorRole(supervisorRole);
         shift.setDescription(request.getDescription());
@@ -120,5 +137,24 @@ public class WorkShiftService {
 
     private BigDecimal defaultDecimal(BigDecimal value, String fallback) {
         return Optional.ofNullable(value).orElse(new BigDecimal(fallback));
+    }
+
+    private boolean isAvailableOnDate(WorkShift shift, LocalDate date) {
+        if (!"ACTIVE".equalsIgnoreCase(normalize(shift.getStatus(), ""))) {
+            return false;
+        }
+
+        LocalDate effectiveFrom = shift.getEffectiveFrom();
+        LocalDate effectiveTo = shift.getEffectiveTo();
+
+        if (effectiveFrom != null && date.isBefore(effectiveFrom)) {
+            return false;
+        }
+
+        if (effectiveTo != null && date.isAfter(effectiveTo)) {
+            return false;
+        }
+
+        return true;
     }
 }
