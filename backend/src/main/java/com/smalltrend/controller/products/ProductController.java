@@ -1,5 +1,6 @@
 package com.smalltrend.controller.products;
 
+import com.smalltrend.dto.inventory.dashboard.PriceExpiryAlertResponse;
 import com.smalltrend.dto.products.CreateProductRequest;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.dto.products.ProductResponse;
@@ -219,6 +220,13 @@ public class ProductController {
     @PutMapping("/prices/{priceId}/toggle-status")
     public ResponseEntity<VariantPriceResponse> togglePriceStatus(@PathVariable Integer priceId) {
         return ResponseEntity.ok(variantPriceService.togglePriceStatus(priceId));
+    }
+
+    // Lấy danh sách giá sắp hết hiệu lực theo số ngày cảnh báo
+    @GetMapping("/price-expiry-alerts")
+    public ResponseEntity<List<PriceExpiryAlertResponse>> getPriceExpiryAlerts(
+            @RequestParam(defaultValue = "1") int days) {
+        return ResponseEntity.ok(variantPriceService.getPriceExpiryAlerts(days));
     }
 
     @PostMapping

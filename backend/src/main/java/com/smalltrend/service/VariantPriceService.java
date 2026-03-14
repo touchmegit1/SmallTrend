@@ -1,5 +1,6 @@
 package com.smalltrend.service;
 
+import com.smalltrend.dto.inventory.dashboard.PriceExpiryAlertResponse;
 import com.smalltrend.dto.products.VariantPriceRequest;
 import com.smalltrend.dto.products.VariantPriceResponse;
 import com.smalltrend.entity.ProductVariant;
@@ -11,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -149,6 +152,31 @@ public class VariantPriceService {
         productVariantRepository.save(variant);
 
         return mapToResponse(saved);
+    }
+
+    public List<PriceExpiryAlertResponse> getPriceExpiryAlerts(int daysBeforeExpiry) {
+        LocalDate today = LocalDate.now();
+        LocalDate targetDate = today.plusDays(daysBeforeExpiry);
+
+        return variantPriceRepository.findByStatusAndExpiryDateWithVariant(VariantPriceStatus.ACTIVE, targetDate)
+                .stream()
+                .map(vp -> {
+                    String variantName = "N/A";
+                    if (vp.getVariant() != null && vp.getVariant().getProduct() != null) {
+                        variantName = vp.getVariant().getProduct().getName();
+                    }
+
+                    return PriceExpiryAlertResponse.builder()
+                            .variantPriceId(vp.getId())
+                            .variantId(vp.getVariant() != null ? vp.getVariant().getId() : null)
+                            .variantName(variantName)
+                            .sku(vp.getVariant() != null ? vp.getVariant().getSku() : null)
+                            .activeSellingPrice(vp.getSellingPrice())
+                            .expiryDate(vp.getExpiryDate())
+                            .daysUntilExpiry((int) ChronoUnit.DAYS.between(today, vp.getExpiryDate()))
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     // ─── Mapper ──────────────────────────────────────────────────────────────
