@@ -421,9 +421,6 @@ export function ProductListScreen() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/30">
-              Xuất dữ liệu
-            </Button>
             <Button
               onClick={() => navigate("/products/addproduct")}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 border border-transparent"
