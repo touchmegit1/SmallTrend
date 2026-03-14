@@ -60,6 +60,9 @@ export default function GoodsReceiptTable({
             <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-32">
               SL thực nhận
             </th>
+            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-32">
+              Giá nhập
+            </th>
             <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-24">
               Chênh lệch
             </th>
@@ -129,10 +132,26 @@ export default function GoodsReceiptTable({
                       onUpdateReceiptItem(
                         item.id,
                         "receivedQuantity",
-                        parseInt(e.target.value) || 0,
+                        Number.parseInt(e.target.value, 10) || 0,
                       )
                     }
                     className="w-20 text-center px-2 py-1.5 text-sm font-semibold border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={ri.unitCost ?? item.unitCost ?? 0}
+                    onChange={(e) =>
+                      onUpdateReceiptItem(
+                        item.id,
+                        "unitCost",
+                        Number.parseFloat(e.target.value) || 0,
+                      )
+                    }
+                    className="w-24 text-center px-2 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </td>
                 <td className="px-4 py-3 text-center">
