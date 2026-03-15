@@ -43,6 +43,8 @@ function CreatePurchaseOrder() {
     confirmOrder,
     startChecking,
     receiveGoods,
+    closeShortage,
+    requestSupplierSupplement,
     rejectOrder,
     deleteOrder,
   } = usePurchaseOrder(id || null);
@@ -67,6 +69,19 @@ function CreatePurchaseOrder() {
       confirmText: "Nhập kho",
       variant: "warning",
     },
+    closeShortage: {
+      title: "Chốt thiếu hàng",
+      message:
+        "Xác nhận chốt thiếu và cập nhật tồn kho theo số thực nhận hiện tại?",
+      confirmText: "Chốt thiếu",
+      variant: "warning",
+    },
+    requestSupplement: {
+      title: "Yêu cầu NCC giao bù",
+      message: "Xác nhận chuyển phiếu sang trạng thái chờ nhà cung cấp giao bù?",
+      confirmText: "Yêu cầu giao bù",
+      variant: "info",
+    },
     deleteOrder: {
       title: "Xóa phiếu nháp",
       message: "Bạn có chắc chắn muốn xóa phiếu nhập tạm này không?",
@@ -85,6 +100,8 @@ function CreatePurchaseOrder() {
       confirmOrder: () => confirmOrder(navigate),
       startChecking,
       receiveGoods: () => receiveGoods(navigate),
+      closeShortage,
+      requestSupplement: requestSupplierSupplement,
       deleteOrder: () => deleteOrder(navigate),
     };
 
@@ -156,7 +173,13 @@ function CreatePurchaseOrder() {
   const isEditable =
     order.status === PO_STATUS.DRAFT || order.status === PO_STATUS.REJECTED;
   const isChecking = order.status === PO_STATUS.CHECKING;
+  const isShortagePendingApproval =
+    order.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL;
+  const isSupplierSupplementPending =
+    order.status === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING;
   const isReceived = order.status === PO_STATUS.RECEIVED;
+  const isReceiptView =
+    isChecking || isReceived || isShortagePendingApproval || isSupplierSupplementPending;
   const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
 
   const totalQty = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
@@ -180,12 +203,12 @@ function CreatePurchaseOrder() {
           onBack={() => navigate("/inventory/purchase-orders")}
         />
 
-        {isChecking || isReceived ? (
+        {isReceiptView ? (
           <GoodsReceiptTable
             items={items}
             receiptItems={receiptItems}
             onUpdateReceiptItem={updateReceiptItem}
-            isReadOnly={isReceived}
+            isReadOnly={!isChecking}
           />
         ) : (
           <div className="flex-1 overflow-auto px-6 py-5">
@@ -266,13 +289,15 @@ function CreatePurchaseOrder() {
                 onDelete={() => openConfirm("deleteOrder")}
                 onStartChecking={() => openConfirm("startChecking")}
                 onReceiveGoods={() => openConfirm("receiveGoods")}
+                onCloseShortage={() => openConfirm("closeShortage")}
+                onRequestSupplement={() => openConfirm("requestSupplement")}
               />
             </div>
           </div>
         )}
       </div>
 
-      {(isChecking || isReceived) && (
+      {isReceiptView && (
         <div className="flex flex-col w-[340px] xl:w-[360px] bg-white border-l border-slate-200 shrink-0 h-full">
           <SummaryPanel
             order={order}
@@ -301,6 +326,8 @@ function CreatePurchaseOrder() {
               onDelete={() => openConfirm("deleteOrder")}
               onStartChecking={() => openConfirm("startChecking")}
               onReceiveGoods={() => openConfirm("receiveGoods")}
+              onCloseShortage={() => openConfirm("closeShortage")}
+              onRequestSupplement={() => openConfirm("requestSupplement")}
             />
           </div>
         </div>

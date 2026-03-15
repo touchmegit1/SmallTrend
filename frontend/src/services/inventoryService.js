@@ -46,6 +46,8 @@ export const getPurchaseOrders = async () => {
     paid_amount: order.paidAmount || order.paid_amount,
     remaining_amount: order.remainingAmount || order.remaining_amount,
     tax_amount: order.taxAmount || order.tax_amount,
+    shortage_reason: order.shortageReason || order.shortage_reason,
+    manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
   }));
 };
 
@@ -72,6 +74,8 @@ export const getPurchaseOrderById = async (id) => {
     paid_amount: order.paidAmount || order.paid_amount,
     remaining_amount: order.remainingAmount || order.remaining_amount,
     tax_amount: order.taxAmount || order.tax_amount,
+    shortage_reason: order.shortageReason || order.shortage_reason,
+    manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
   };
 };
 
@@ -262,6 +266,35 @@ export const rejectPurchaseOrder = async (id, rejectionReason) => {
   return response.json();
 };
 
+export const closeShortageOrder = async (id, managerDecisionNote) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/shortage/close`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ managerDecisionNote: managerDecisionNote || "" }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi chốt thiếu hàng");
+  }
+  return response.json();
+};
+
+export const requestSupplierSupplementOrder = async (id, managerDecisionNote) => {
+  const response = await fetch(
+    `${SPRING_API}/purchase-orders/${id}/shortage/request-supplement`,
+    {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ managerDecisionNote: managerDecisionNote || "" }),
+    },
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi yêu cầu nhà cung cấp giao bù");
+  }
+  return response.json();
+};
+
 // ═══════════════════════════════════════════════════════════
 //  Reference Data (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
@@ -286,46 +319,6 @@ export const getProducts = async () => {
     stock_quantity: p.stockQuantity ?? p.stock_quantity ?? 0,
     image_url: p.imageUrl || p.image_url,
     unit: p.unit || "",
-  }));
-};
-
-export const getLocations = async () => {
-  const response = await fetch(`${SPRING_API}/locations`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to fetch locations");
-  const data = await response.json();
-  return data.map((loc) => ({
-    ...loc,
-    location_name: loc.locationName || loc.location_name,
-    location_code: loc.locationCode || loc.location_code,
-    location_type: loc.locationType || loc.location_type,
-    created_at: loc.createdAt || loc.created_at,
-    total_products: loc.totalProducts || loc.total_products || 0,
-    stock_items: (loc.stockItems || loc.stock_items || []).map((item) => ({
-      ...item,
-      variant_id: item.variantId || item.variant_id,
-      product_name: item.productName || item.product_name,
-      variant_unit: item.variantUnit || item.variant_unit,
-      batch_code: item.batchCode || item.batch_code,
-      batch_id: item.batchId || item.batch_id,
-    })),
-  }));
-};
-
-export const getLocationStocks = async (locationId) => {
-  const response = await fetch(`${SPRING_API}/locations/${locationId}/stocks`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to fetch location stocks");
-  const data = await response.json();
-  return data.map((item) => ({
-    ...item,
-    variant_id: item.variantId || item.variant_id,
-    product_name: item.productName || item.product_name,
-    variant_unit: item.variantUnit || item.variant_unit,
-    batch_code: item.batchCode || item.batch_code,
-    batch_id: item.batchId || item.batch_id,
   }));
 };
 
@@ -458,6 +451,11 @@ export const getProductBatches = async () => {
 //  Location CRUD (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
 
+const getApiErrorMessage = async (response, fallbackMessage) => {
+  const err = await response.json().catch(() => null);
+  return err?.message || fallbackMessage;
+};
+
 export const createLocation = async (locationData) => {
   const response = await fetch(`${SPRING_API}/locations`, {
     method: "POST",
@@ -467,11 +465,15 @@ export const createLocation = async (locationData) => {
       locationCode: locationData.location_code,
       locationType: locationData.location_type,
       address: locationData.address,
-      capacity: locationData.capacity,
+      capacity: Number(locationData.capacity ?? 0),
       description: locationData.description,
     }),
   });
-  if (!response.ok) throw new Error("Failed to create location");
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể tạo vị trí"),
+    );
+  }
   const data = await response.json();
   return {
     ...data,
@@ -491,11 +493,15 @@ export const updateLocation = async (id, locationData) => {
       locationCode: locationData.location_code,
       locationType: locationData.location_type,
       address: locationData.address,
-      capacity: locationData.capacity,
+      capacity: Number(locationData.capacity ?? 0),
       description: locationData.description,
     }),
   });
-  if (!response.ok) throw new Error("Failed to update location");
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể cập nhật vị trí"),
+    );
+  }
   const data = await response.json();
   return {
     ...data,
@@ -511,8 +517,135 @@ export const deleteLocation = async (id) => {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to delete location");
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể xóa vị trí"),
+    );
+  }
   return true;
+};
+
+export const toLocationTransferPayload = ({
+  fromLocationId,
+  toLocationId,
+  variantId,
+  batchId,
+  quantity,
+}) => ({
+  fromLocationId: Number(fromLocationId),
+  toLocationId: Number(toLocationId),
+  variantId: Number(variantId),
+  batchId: Number(batchId),
+  quantity: Number(quantity),
+});
+
+const validateLocationTransferPayload = (payload) => {
+  if (
+    !payload.fromLocationId ||
+    !payload.toLocationId ||
+    !payload.variantId ||
+    !payload.batchId
+  ) {
+    throw new Error("Thiếu thông tin chuyển hàng");
+  }
+  if (payload.fromLocationId === payload.toLocationId) {
+    throw new Error("Vị trí nguồn và đích không được trùng nhau");
+  }
+  if (!Number.isInteger(payload.quantity) || payload.quantity <= 0) {
+    throw new Error("Số lượng chuyển phải lớn hơn 0");
+  }
+};
+
+export const transferStock = async (request) => {
+  const payload = toLocationTransferPayload(request);
+  validateLocationTransferPayload(payload);
+
+  const response = await fetch(`${SPRING_API}/locations/transfer`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Lỗi khi chuyển hàng giữa vị trí"),
+    );
+  }
+  return response.json();
+};
+
+export const getActiveLocations = async () => {
+  const response = await fetch(`${SPRING_API}/locations/active`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể tải vị trí đang hoạt động"),
+    );
+  }
+  const data = await response.json();
+  return data.map((loc) => ({
+    ...loc,
+    id: loc.id ?? loc.locationId ?? loc.location_id,
+    location_name: loc.locationName || loc.location_name,
+    location_code: loc.locationCode || loc.location_code,
+    location_type: loc.locationType || loc.location_type,
+    created_at: loc.createdAt || loc.created_at,
+    total_products: loc.totalProducts || loc.total_products || 0,
+    stock_items: (loc.stockItems || loc.stock_items || []).map((item) => ({
+      ...item,
+      variant_id: item.variantId || item.variant_id,
+      product_name: item.productName || item.product_name,
+      variant_unit: item.variantUnit || item.variant_unit,
+      batch_code: item.batchCode || item.batch_code,
+      batch_id: item.batchId || item.batch_id,
+    })),
+  }));
+};
+
+export const getLocationStocks = async (locationId) => {
+  const response = await fetch(`${SPRING_API}/locations/${locationId}/stocks`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể tải tồn kho vị trí"),
+    );
+  }
+  const data = await response.json();
+  return data.map((item) => ({
+    ...item,
+    variant_id: item.variantId || item.variant_id,
+    product_name: item.productName || item.product_name,
+    variant_unit: item.variantUnit || item.variant_unit,
+    batch_code: item.batchCode || item.batch_code,
+    batch_id: item.batchId || item.batch_id,
+  }));
+};
+
+export const getLocations = async () => {
+  const response = await fetch(`${SPRING_API}/locations`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, "Không thể tải vị trí"));
+  }
+  const data = await response.json();
+  return data.map((loc) => ({
+    ...loc,
+    location_name: loc.locationName || loc.location_name,
+    location_code: loc.locationCode || loc.location_code,
+    location_type: loc.locationType || loc.location_type,
+    created_at: loc.createdAt || loc.created_at,
+    total_products: loc.totalProducts || loc.total_products || 0,
+    stock_items: (loc.stockItems || loc.stock_items || []).map((item) => ({
+      ...item,
+      variant_id: item.variantId || item.variant_id,
+      product_name: item.productName || item.product_name,
+      variant_unit: item.variantUnit || item.variant_unit,
+      batch_code: item.batchCode || item.batch_code,
+      batch_id: item.batchId || item.batch_id,
+    })),
+  }));
 };
 
 export const toggleLocationStatus = async (id) => {
@@ -521,8 +654,9 @@ export const toggleLocationStatus = async (id) => {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
-    const err = await response.json().catch(() => null);
-    throw new Error(err?.message || "Lỗi khi chuyển trạng thái vị trí");
+    throw new Error(
+      await getApiErrorMessage(response, "Lỗi khi chuyển trạng thái vị trí"),
+    );
   }
   const data = await response.json();
   return {
@@ -543,47 +677,18 @@ export const toggleLocationStatus = async (id) => {
   };
 };
 
-export const transferStock = async ({
-  fromLocationId,
-  toLocationId,
-  variantId,
-  batchId,
-  quantity,
-}) => {
-  const response = await fetch(`${SPRING_API}/locations/transfer`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ fromLocationId, toLocationId, variantId, batchId, quantity }),
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => null);
-    throw new Error(err?.message || "Lỗi khi chuyển hàng giữa vị trí");
-  }
-  return response.json();
-};
+export const deleteLocationById = deleteLocation;
 
-export const getActiveLocations = async () => {
-  const response = await fetch(`${SPRING_API}/locations/active`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to fetch active locations");
-  const data = await response.json();
-  return data.map((loc) => ({
-    ...loc,
-    location_name: loc.locationName || loc.location_name,
-    location_code: loc.locationCode || loc.location_code,
-    location_type: loc.locationType || loc.location_type,
-    created_at: loc.createdAt || loc.created_at,
-    total_products: loc.totalProducts || loc.total_products || 0,
-    stock_items: (loc.stockItems || loc.stock_items || []).map((item) => ({
-      ...item,
-      variant_id: item.variantId || item.variant_id,
-      product_name: item.productName || item.product_name,
-      variant_unit: item.variantUnit || item.variant_unit,
-      batch_code: item.batchCode || item.batch_code,
-      batch_id: item.batchId || item.batch_id,
-    })),
-  }));
+export const locationApi = {
+  getLocations,
+  getActiveLocations,
+  getLocationStocks,
+  createLocation,
+  updateLocation,
+  deleteLocation,
+  toggleLocationStatus,
+  transferStock,
+  toLocationTransferPayload,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -634,6 +739,7 @@ export const getInventoryCountById = async (id) => {
     items: (ic.items || []).map((item) => ({
       ...item,
       product_id: item.productId || item.product_id,
+      variant_id: item.variantId || item.variant_id,
       system_quantity: item.systemQuantity ?? item.system_quantity,
       actual_quantity: item.actualQuantity ?? item.actual_quantity,
       difference_quantity: item.differenceQuantity ?? item.difference_quantity,
@@ -643,32 +749,13 @@ export const getInventoryCountById = async (id) => {
 };
 
 export const getInventoryCountNextCode = async () => {
-  try {
-    const response = await fetch(`${SPRING_API}/inventory-counts/next-code`, {
-      headers: getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error("Failed to get next code");
-    const data = await response.json();
-    return data.code;
-  } catch {
-    // Fallback: generate code client-side
-    const counts = await getInventoryCounts();
-    return generateICCode(counts);
-  }
+  const response = await fetch(`${SPRING_API}/inventory-counts/next-code`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to get next code");
+  const data = await response.json();
+  return data.code;
 };
-
-function generateICCode(existingCounts = []) {
-  const prefix = "IC-";
-  let maxNum = 0;
-  for (const count of existingCounts) {
-    const code = count.code || "";
-    if (code.startsWith(prefix)) {
-      const num = parseInt(code.slice(prefix.length), 10);
-      if (!isNaN(num) && num > maxNum) maxNum = num;
-    }
-  }
-  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
-}
 
 export const saveInventoryCountDraft = async (request) => {
   const body = mapCountRequestToBackend(request);
@@ -791,10 +878,13 @@ function mapCountRequestToBackend(request) {
     items: (request.items || [])
       .filter(
         (item) =>
-          item.actual_quantity !== null && item.actual_quantity !== undefined,
+          item.actual_quantity !== null &&
+          item.actual_quantity !== undefined &&
+          (item.variant_id || item.variantId),
       )
       .map((item) => ({
         productId: item.product_id || item.productId,
+        variantId: item.variant_id || item.variantId,
         systemQuantity: item.system_quantity ?? item.systemQuantity,
         actualQuantity: item.actual_quantity ?? item.actualQuantity,
         differenceQuantity: item.difference_quantity ?? item.differenceQuantity,

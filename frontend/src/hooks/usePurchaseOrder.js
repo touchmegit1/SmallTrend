@@ -12,6 +12,8 @@ import {
   receiveGoodsOrder,
   approvePurchaseOrder,
   rejectPurchaseOrder,
+  closeShortageOrder,
+  requestSupplierSupplementOrder,
 } from "../services/inventoryService";
 import {
   PO_STATUS,
@@ -59,6 +61,10 @@ const mapExistingOrderItem = (item, products) => {
 };
 
 const toReceiptItem = (item, orderStatus) => {
+  const isCompletedReceiptStatus =
+    orderStatus === PO_STATUS.RECEIVED ||
+    orderStatus === PO_STATUS.SHORTAGE_PENDING_APPROVAL ||
+    orderStatus === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING;
   const receivedQuantity = Number(
     item.received_quantity ?? item.receivedQuantity,
   );
@@ -71,7 +77,7 @@ const toReceiptItem = (item, orderStatus) => {
     ? conversionFactor
     : 1;
   let checkingUnitCost = sourceUnitCost;
-  if (orderStatus !== PO_STATUS.RECEIVED && normalizedFactor > 1) {
+  if (!isCompletedReceiptStatus && normalizedFactor > 1) {
     checkingUnitCost = sourceUnitCost / normalizedFactor;
   }
 
@@ -99,6 +105,45 @@ const buildReceiptPayloadItems = (receiptItems) =>
     unitCost: mapReceiptItemToBaseCost(ri),
     expiryDate: ri.expiryDate || ri.expiry_date || null,
   }));
+
+const mapOrderResponseToFrontend = (existingOrder) => ({
+  ...existingOrder,
+  po_number: existingOrder.orderNumber || existingOrder.po_number,
+  supplier_id: existingOrder.supplierId || existingOrder.supplier_id,
+  supplier_name: existingOrder.supplierName || existingOrder.supplier_name,
+  shortage_reason:
+    existingOrder.shortageReason || existingOrder.shortage_reason || "",
+  shortage_submitted_at:
+    existingOrder.shortageSubmittedAt || existingOrder.shortage_submitted_at || null,
+  manager_decision: existingOrder.managerDecision || existingOrder.manager_decision || null,
+  manager_decision_note:
+    existingOrder.managerDecisionNote || existingOrder.manager_decision_note || "",
+  manager_decided_at:
+    existingOrder.managerDecidedAt || existingOrder.manager_decided_at || null,
+  discount: Number(existingOrder.discountAmount || existingOrder.discount || 0),
+  tax_percent: Number(existingOrder.taxPercent || existingOrder.tax_percent || 0),
+  shipping_fee: Number(existingOrder.shippingFee || existingOrder.shipping_fee || 0),
+  paid_amount: Number(existingOrder.paidAmount || existingOrder.paid_amount || 0),
+  subtotal: Number(existingOrder.subtotal || 0),
+  tax_amount: Number(existingOrder.taxAmount || existingOrder.tax_amount || 0),
+  total_amount: Number(existingOrder.totalAmount || existingOrder.total_amount || 0),
+  location_id: existingOrder.locationId || existingOrder.location_id || null,
+});
+
+const mapOrderStateFromResponse = (existingOrder, products) => {
+  const mappedOrder = mapOrderResponseToFrontend(existingOrder);
+  const mappedItems = (existingOrder.items || []).map((item) =>
+    mapExistingOrderItem(item, products),
+  );
+
+  return {
+    mappedOrder,
+    mappedItems,
+    mappedReceiptItems: mappedItems.map((item) =>
+      toReceiptItem(item, mappedOrder.status),
+    ),
+  };
+};
 
 const mergeImportedItems = (prevItems, importedList) => {
   const newItems = [...prevItems];
@@ -224,44 +269,15 @@ export function usePurchaseOrder(initialId = null) {
 
         if (initialId) {
           existingOrder = results[3];
-          // Map backend camelCase → frontend snake_case field names
-          const mappedOrder = {
-            ...existingOrder,
-            po_number: existingOrder.orderNumber || existingOrder.po_number,
-            supplier_id: existingOrder.supplierId || existingOrder.supplier_id,
-            supplier_name:
-              existingOrder.supplierName || existingOrder.supplier_name,
+          const { mappedOrder, mappedItems, mappedReceiptItems } =
+            mapOrderStateFromResponse(existingOrder, results[0]);
 
-            discount: Number(
-              existingOrder.discountAmount || existingOrder.discount || 0,
-            ),
-            tax_percent: Number(
-              existingOrder.taxPercent || existingOrder.tax_percent || 0,
-            ),
-            shipping_fee: Number(
-              existingOrder.shippingFee || existingOrder.shipping_fee || 0,
-            ),
-            paid_amount: Number(
-              existingOrder.paidAmount || existingOrder.paid_amount || 0,
-            ),
-            location_id:
-              existingOrder.locationId || existingOrder.location_id || null,
-          };
           setOrder(mappedOrder);
+          setItems(mappedItems);
+          setReceiptItems(mappedReceiptItems);
 
-          if (existingOrder.items) {
-            const mappedItems = existingOrder.items.map((item) =>
-              mapExistingOrderItem(item, results[0]),
-            );
-            setItems(mappedItems);
-
-            // Khởi tạo receiptItems cho kiểm kê
-            setReceiptItems(
-              mappedItems.map((item) => toReceiptItem(item, mappedOrder.status)),
-            );
-          }
           const initialSupplierName =
-            existingOrder.supplierName || existingOrder.supplier_name || "";
+            mappedOrder.supplier_name || existingOrder.supplierName || "";
           if (initialSupplierName) {
             setSupplierQuery(initialSupplierName);
           }
@@ -573,7 +589,7 @@ export function usePurchaseOrder(initialId = null) {
 
   // NV kho xác nhận nhập kho (CHECKING → RECEIVED) — cập nhật stock
   const receiveGoods = useCallback(
-    async (navigate) => {
+    async () => {
       if (!initialId) return false;
 
       // Validate item-level
@@ -618,10 +634,24 @@ export function usePurchaseOrder(initialId = null) {
         return false;
       }
 
+      const hasShortage = items.some((item) => {
+        const identity = item.id ?? item._key;
+        const receiptItem = receiptItems.find((ri) => ri.itemId === identity);
+        const expectedQty = Number(item.checking_quantity ?? item.checkingQuantity ?? item.quantity ?? 0);
+        const receivedQty = Number(receiptItem?.receivedQuantity ?? expectedQty);
+        return receivedQty < expectedQty;
+      });
+
+      if (hasShortage && String(order.notes ?? "").trim() === "") {
+        toast.warning("Vui lòng nhập lý do thiếu hàng ở mục Ghi chú trước khi gửi quản lý.");
+        return false;
+      }
+
       setSaving(true);
       try {
         const receiptData = {
           notes: order.notes,
+          shortageReason: hasShortage ? String(order.notes ?? "").trim() : null,
           supplierId: order.supplier_id,
           locationId: order.location_id,
           taxPercent: toNumber(order.tax_percent),
@@ -637,8 +667,41 @@ export function usePurchaseOrder(initialId = null) {
         };
         const response = await receiveGoodsOrder(initialId, receiptData);
 
+        const syncedCount = Number(response?.syncedPurchasePriceCount) || 0;
+        if (syncedCount > 0) {
+          const syncedItems = Array.isArray(response?.syncedPurchasePriceItems)
+            ? response.syncedPurchasePriceItems
+            : [];
+          const noticePayload = {
+            syncedCount,
+            orderNumber: response?.orderNumber || order.po_number || null,
+            syncedItems,
+            createdAt: response?.syncedPurchasePriceAt || new Date().toISOString(),
+          };
+          try {
+            sessionStorage.setItem("priceSyncNotice", JSON.stringify(noticePayload));
+          } catch (storageError) {
+            console.error("Không thể lưu thông báo đồng bộ giá:", storageError);
+          }
+        }
+
+        if (response) {
+          const { mappedOrder, mappedItems, mappedReceiptItems } =
+            mapOrderStateFromResponse(response, products);
+          setOrder(mappedOrder);
+          setItems(mappedItems);
+          setReceiptItems(mappedReceiptItems);
+        }
+
+        if (response?.status === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING) {
+          toast.success("Đã nhập kho phần hàng nhận được và chuyển sang chờ NCC giao bù.");
+        } else {
+          toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
+        }
         setOrder((prev) => ({ ...prev, status: PO_STATUS.RECEIVED }));
-        toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
+        if (syncedCount > 0) {
+          toast.info(`Đã đồng bộ giá nhập cho ${syncedCount} sản phẩm từ phiếu nhập này.`);
+        }
         return true;
       } catch (err) {
         console.error("Receive goods error:", err);
@@ -652,6 +715,7 @@ export function usePurchaseOrder(initialId = null) {
       initialId,
       receiptItems,
       items,
+      products,
       order.notes,
       order.supplier_id,
       order.location_id,
@@ -661,6 +725,78 @@ export function usePurchaseOrder(initialId = null) {
       checkingFinancials,
     ],
   );
+
+  const closeShortage = useCallback(async () => {
+    if (!initialId) return false;
+    if (order.status !== PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
+      toast.warning("Chỉ có thể chốt thiếu khi phiếu đang chờ quản lý xử lý.");
+      return false;
+    }
+
+    setSaving(true);
+    try {
+      const managerDecisionNote =
+        order.manager_decision_note ?? order.managerDecisionNote ?? "";
+      const response = await closeShortageOrder(initialId, managerDecisionNote);
+      if (response) {
+        const { mappedOrder, mappedItems, mappedReceiptItems } =
+          mapOrderStateFromResponse(response, products);
+        setOrder(mappedOrder);
+        setItems(mappedItems);
+        setReceiptItems(mappedReceiptItems);
+      }
+      toast.success("Đã chốt thiếu và cập nhật tồn kho theo số thực nhận.");
+      return true;
+    } catch (err) {
+      console.error("Close shortage error", err);
+      toast.error("Lỗi khi chốt thiếu: " + err.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    initialId,
+    order.status,
+    order.manager_decision_note,
+    order.managerDecisionNote,
+    products,
+  ]);
+
+  const requestSupplierSupplement = useCallback(async () => {
+    if (!initialId) return false;
+    if (order.status !== PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
+      toast.warning("Chỉ có thể yêu cầu giao bù khi phiếu đang chờ quản lý xử lý.");
+      return false;
+    }
+
+    setSaving(true);
+    try {
+      const managerDecisionNote =
+        order.manager_decision_note ?? order.managerDecisionNote ?? "";
+      const response = await requestSupplierSupplementOrder(initialId, managerDecisionNote);
+      if (response) {
+        const { mappedOrder, mappedItems, mappedReceiptItems } =
+          mapOrderStateFromResponse(response, products);
+        setOrder(mappedOrder);
+        setItems(mappedItems);
+        setReceiptItems(mappedReceiptItems);
+      }
+      toast.success("Đã gửi yêu cầu NCC giao bù.");
+      return true;
+    } catch (err) {
+      console.error("Request supplement error", err);
+      toast.error("Lỗi khi yêu cầu NCC giao bù: " + err.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    initialId,
+    order.status,
+    order.manager_decision_note,
+    order.managerDecisionNote,
+    products,
+  ]);
 
   const rejectOrder = useCallback(
     async (navigate, rejectionReason) => {
@@ -749,6 +885,8 @@ export function usePurchaseOrder(initialId = null) {
     confirmOrder,
     startChecking,
     receiveGoods,
+    closeShortage,
+    requestSupplierSupplement,
     rejectOrder,
     deleteOrder,
   };

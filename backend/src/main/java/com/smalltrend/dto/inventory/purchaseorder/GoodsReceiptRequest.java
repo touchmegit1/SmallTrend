@@ -21,6 +21,7 @@ public class GoodsReceiptRequest {
     private BigDecimal subtotal;
     private BigDecimal taxAmount;
     private BigDecimal totalAmount;
+    private String shortageReason;
     private List<GoodsReceiptItemRequest> items;
 
     @Data

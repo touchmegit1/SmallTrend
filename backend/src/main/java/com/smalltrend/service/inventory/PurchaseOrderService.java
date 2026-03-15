@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -41,6 +42,7 @@ public class PurchaseOrderService {
     // Public API
     // ═══════════════════════════════════════════════════════════
     // ─── List All Purchase Orders ────────────────────────────
+    @Transactional(readOnly = true)
     public List<PurchaseOrderResponse> getAllOrders() {
         return purchaseOrderRepository.findAll()
                 .stream()
@@ -55,6 +57,7 @@ public class PurchaseOrderService {
     }
 
     // ─── Get Single Order Detail ─────────────────────────────
+    @Transactional(readOnly = true)
     public PurchaseOrderResponse getOrderById(Integer id) {
         PurchaseOrder order = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + id));
@@ -136,7 +139,7 @@ public class PurchaseOrderService {
             saveOrderItems(savedOrder, itemRequests);
         }
 
-        log.info("✅ Purchase Order {} CONFIRMED. Chờ NV kho kiểm kê.", savedOrder.getOrderNumber());
+        log.info("Purchase Order {} CONFIRMED. Chờ NV kho kiểm kê.", savedOrder.getOrderNumber());
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
     }
 
@@ -155,30 +158,31 @@ public class PurchaseOrderService {
         order.setRejectionReason(null);
         purchaseOrderRepository.save(order);
 
-        log.info("✅ Purchase Order {} APPROVED by Manager. Chờ NV kho kiểm kê.", order.getOrderNumber());
+        log.info("Purchase Order {} APPROVED by Manager. Chờ NV kho kiểm kê.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
     // ─── Start Checking (NV kho bắt đầu kiểm kê) ───────────
-    // CONFIRMED → CHECKING
+    // CONFIRMED/SUPPLIER_SUPPLEMENT_PENDING → CHECKING
     @Transactional
     public PurchaseOrderResponse startChecking(Integer orderId) {
         PurchaseOrder order = purchaseOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
 
-        if (order.getStatus() != PurchaseOrderStatus.CONFIRMED) {
-            throw new RuntimeException("Chỉ có thể bắt đầu kiểm kê phiếu đã được duyệt.");
+        if (order.getStatus() != PurchaseOrderStatus.CONFIRMED
+                && order.getStatus() != PurchaseOrderStatus.SUPPLIER_SUPPLEMENT_PENDING) {
+            throw new RuntimeException("Chỉ có thể bắt đầu kiểm kê phiếu đã được duyệt hoặc đang chờ NCC giao bù.");
         }
 
         order.setStatus(PurchaseOrderStatus.CHECKING);
         purchaseOrderRepository.save(order);
 
-        log.info("📋 Purchase Order {} CHECKING started.", order.getOrderNumber());
+        log.info("Purchase Order {} CHECKING started.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
     // ─── Receive Goods (NV kho xác nhận nhập kho) ───────────
-    // CHECKING → RECEIVED (cập nhật stock tại đây)
+    // CHECKING → RECEIVED hoặc SHORTAGE_PENDING_APPROVAL
     @Transactional
     public PurchaseOrderResponse receiveGoods(Integer orderId, GoodsReceiptRequest receiptRequest) {
         PurchaseOrder order = purchaseOrderRepository.findById(orderId)
@@ -214,37 +218,65 @@ public class PurchaseOrderService {
             throw new RuntimeException("Phí vận chuyển không được âm.");
         }
 
-        // Cập nhật receivedQuantity cho từng item
+        boolean hasShortage = false;
+        List<PurchaseOrderItemRequest> stockItemRequests = new ArrayList<>();
+
         if (receiptRequest.getItems() != null) {
             for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
                 if (receiptItem.getReceivedQuantity() == null || receiptItem.getReceivedQuantity() < 0) {
                     throw new RuntimeException("Số lượng thực nhận không hợp lệ.");
                 }
-            }
-        }
 
-        // Cập nhật receivedQuantity cho từng item
-        if (receiptRequest.getItems() != null) {
-            for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
                 PurchaseOrderItem orderItem = order.getItems().stream()
                         .filter(i -> i.getId().equals(receiptItem.getItemId()))
                         .findFirst()
-                        .orElse(null);
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm trong phiếu nhập."));
 
-                if (orderItem != null) {
-                    orderItem.setReceivedQuantity(receiptItem.getReceivedQuantity() != null
-                            ? receiptItem.getReceivedQuantity() : 0);
-                    if (receiptItem.getUnitCost() != null) {
-                        orderItem.setUnitCost(receiptItem.getUnitCost());
-                        int receivedQty = orderItem.getReceivedQuantity() != null ? orderItem.getReceivedQuantity() : 0;
-                        orderItem.setTotalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(receivedQty)));
-                    }
-                    if (receiptItem.getNotes() != null) {
-                        orderItem.setNotes(receiptItem.getNotes());
-                    }
-                    purchaseOrderItemRepository.save(orderItem);
+                int orderedQty = orderItem.getQuantity() != null ? orderItem.getQuantity() : 0;
+                Integer conversionFactorValue = resolveConversionFactor(orderItem.getVariant());
+                int conversionFactor = conversionFactorValue != null && conversionFactorValue > 0
+                        ? conversionFactorValue
+                        : 1;
+                int expectedCheckingQty = orderedQty * conversionFactor;
+
+                int previousReceivedQty = orderItem.getReceivedQuantity() != null ? orderItem.getReceivedQuantity() : 0;
+                int newReceivedQty = receiptItem.getReceivedQuantity();
+                if (newReceivedQty < previousReceivedQty) {
+                    throw new RuntimeException("Số lượng thực nhận không được nhỏ hơn số đã nhập trước đó.");
+                }
+                int deltaReceivedQty = newReceivedQty - previousReceivedQty;
+
+                if (newReceivedQty < expectedCheckingQty) {
+                    hasShortage = true;
+                }
+
+                orderItem.setReceivedQuantity(newReceivedQty);
+                orderItem.setUnitCost(receiptItem.getUnitCost());
+                orderItem.setTotalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(newReceivedQty)));
+                if (receiptItem.getExpiryDate() != null) {
+                    orderItem.setExpiryDate(receiptItem.getExpiryDate());
+                }
+                if (receiptItem.getNotes() != null) {
+                    orderItem.setNotes(receiptItem.getNotes());
+                }
+                purchaseOrderItemRepository.save(orderItem);
+
+                if (deltaReceivedQty > 0) {
+                    stockItemRequests.add(PurchaseOrderItemRequest.builder()
+                            .variantId(orderItem.getVariant() != null ? orderItem.getVariant().getId().intValue() : null)
+                            .productId(orderItem.getVariant() != null && orderItem.getVariant().getProduct() != null
+                                    ? orderItem.getVariant().getProduct().getId().intValue() : null)
+                            .quantity(deltaReceivedQty)
+                            .unitCost(receiptItem.getUnitCost())
+                            .totalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(deltaReceivedQty)))
+                            .expiryDate(orderItem.getExpiryDate())
+                            .build());
                 }
             }
+        }
+
+        if (stockItemRequests.isEmpty() && receiptRequest.getItems() != null && !receiptRequest.getItems().isEmpty()) {
+            throw new RuntimeException("Không có số lượng mới để nhập kho.");
         }
 
         Supplier supplier = supplierRepository.findById(effectiveSupplierId)
@@ -259,25 +291,77 @@ public class PurchaseOrderService {
                     return unitCost.multiply(BigDecimal.valueOf(receivedQty));
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal taxPercent = effectiveTaxPercent;
-        BigDecimal taxAmount = subtotal.multiply(taxPercent).divide(BigDecimal.valueOf(100));
-        BigDecimal shippingFee = effectiveShippingFee;
-        BigDecimal totalAmount = subtotal.add(taxAmount).add(shippingFee);
+        BigDecimal discountAmount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal afterDiscount = subtotal.subtract(discountAmount);
+        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) {
+            afterDiscount = BigDecimal.ZERO;
+        }
+        BigDecimal taxPercent = receiptRequest.getTaxPercent();
+        BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100));
+        BigDecimal shippingFee = receiptRequest.getShippingFee();
+        BigDecimal totalAmount = afterDiscount.add(taxAmount).add(shippingFee);
 
         order.setSubtotal(subtotal);
         order.setTaxPercent(taxPercent);
         order.setTaxAmount(taxAmount);
         order.setShippingFee(shippingFee);
         order.setTotalAmount(totalAmount);
-
-        order.setStatus(PurchaseOrderStatus.RECEIVED);
         order.setActualDeliveryDate(LocalDate.now());
         if (receiptRequest.getNotes() != null) {
             order.setNotes(receiptRequest.getNotes());
         }
+
+        if (!stockItemRequests.isEmpty()) {
+            updateStock(order, stockItemRequests, false);
+        }
+
+        int syncedPurchasePriceCount = syncPurchasePrices(order);
+
+        if (hasShortage) {
+            if (receiptRequest.getShortageReason() == null || receiptRequest.getShortageReason().isBlank()) {
+                throw new RuntimeException("Vui lòng nhập lý do thiếu hàng trước khi gửi quản lý.");
+            }
+            order.setShortageReason(receiptRequest.getShortageReason().trim());
+            order.setShortageSubmittedAt(LocalDateTime.now());
+            order.setManagerDecision("REQUEST_SUPPLEMENT");
+            order.setManagerDecisionNote(null);
+            order.setManagerDecidedAt(null);
+            order.setStatus(PurchaseOrderStatus.SUPPLIER_SUPPLEMENT_PENDING);
+        } else {
+            order.setStatus(PurchaseOrderStatus.RECEIVED);
+            order.setShortageReason(null);
+            order.setShortageSubmittedAt(null);
+            order.setManagerDecision(null);
+            order.setManagerDecisionNote(null);
+            order.setManagerDecidedAt(null);
+        }
+
         purchaseOrderRepository.save(order);
 
-        // Cập nhật stock dựa trên receivedQuantity
+        log.info("📦 Purchase Order {} receive processed. Status={}, stock delta updated.",
+                order.getOrderNumber(),
+                order.getStatus());
+
+        PurchaseOrderResponse response = toDetailResponse(order);
+        response.setSyncedPurchasePriceCount(syncedPurchasePriceCount);
+        return response;
+    }
+
+    @Transactional
+    public PurchaseOrderResponse closeShortage(Integer orderId, String managerDecisionNote) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL) {
+            throw new RuntimeException("Chỉ có thể chốt thiếu khi phiếu đang chờ quản lý xử lý thiếu hàng.");
+        }
+
+        order.setManagerDecision("CLOSE_SHORTAGE");
+        order.setManagerDecisionNote(managerDecisionNote);
+        order.setManagerDecidedAt(LocalDateTime.now());
+        order.setStatus(PurchaseOrderStatus.RECEIVED);
+        purchaseOrderRepository.save(order);
+
         List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
                 .map(item -> PurchaseOrderItemRequest.builder()
                 .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
@@ -290,30 +374,33 @@ public class PurchaseOrderService {
                 .build())
                 .collect(Collectors.toList());
 
-        updateStock(order, itemRequests);
+        updateStock(order, itemRequests, false);
 
-        int syncedPurchasePriceCount = 0;
-        Set<Integer> processedVariantIds = new HashSet<>();
-        for (PurchaseOrderItem item : order.getItems()) {
-            if (item.getVariant() == null || item.getVariant().getId() == null || item.getUnitCost() == null) {
-                continue;
-            }
+        int syncedPurchasePriceCount = syncPurchasePrices(order);
 
-            Integer variantId = item.getVariant().getId();
-            if (!processedVariantIds.add(variantId)) {
-                continue;
-            }
-
-            boolean synced = variantPriceService.syncActivePurchasePrice(variantId, item.getUnitCost());
-            if (synced) {
-                syncedPurchasePriceCount++;
-            }
-        }
-
-        log.info("📦 Purchase Order {} RECEIVED. Stock updated.", order.getOrderNumber());
+        log.info("✅ Purchase Order {} shortage closed by manager. Stock updated.", order.getOrderNumber());
         PurchaseOrderResponse response = toDetailResponse(order);
         response.setSyncedPurchasePriceCount(syncedPurchasePriceCount);
         return response;
+    }
+
+    @Transactional
+    public PurchaseOrderResponse requestSupplierSupplement(Integer orderId, String managerDecisionNote) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL) {
+            throw new RuntimeException("Chỉ có thể yêu cầu NCC giao bù khi phiếu đang chờ quản lý xử lý thiếu hàng.");
+        }
+
+        order.setManagerDecision("REQUEST_SUPPLEMENT");
+        order.setManagerDecisionNote(managerDecisionNote);
+        order.setManagerDecidedAt(LocalDateTime.now());
+        order.setStatus(PurchaseOrderStatus.SUPPLIER_SUPPLEMENT_PENDING);
+        purchaseOrderRepository.save(order);
+
+        log.info("📦 Purchase Order {} moved to SUPPLIER_SUPPLEMENT_PENDING.", order.getOrderNumber());
+        return toDetailResponse(order);
     }
 
     // ─── Confirm Existing Draft ──────────────────────────────
@@ -337,7 +424,7 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.CONFIRMED);
         purchaseOrderRepository.save(order);
 
-        log.info("✅ Existing Draft {} CONFIRMED. Chờ NV kho kiểm kê.", order.getOrderNumber());
+        log.info("Existing Draft {} CONFIRMED. Chờ NV kho kiểm kê.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -413,7 +500,7 @@ public class PurchaseOrderService {
         order.setRejectionReason(reason);
         purchaseOrderRepository.save(order);
 
-        log.info("🚫 Purchase Order {} REJECTED. Reason: {}", order.getOrderNumber(), reason);
+        log.info("Purchase Order {} REJECTED. Reason: {}", order.getOrderNumber(), reason);
         return toDetailResponse(order);
     }
 
@@ -430,7 +517,7 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.CANCELLED);
         purchaseOrderRepository.save(order);
 
-        log.info("❌ Purchase Order {} CANCELLED.", order.getOrderNumber());
+        log.info("Purchase Order {} CANCELLED.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -449,7 +536,7 @@ public class PurchaseOrderService {
         }
         purchaseOrderRepository.delete(order);
 
-        log.info("🗑️ Purchase Order {} DELETED.", order.getOrderNumber());
+        log.info("Purchase Order {} DELETED.", order.getOrderNumber());
     }
 
     // ─── Get All Suppliers ───────────────────────────────────
@@ -530,7 +617,6 @@ public class PurchaseOrderService {
                 .locationId(request.getLocationId())
                 .notes(request.getNotes())
                 .build();
-
         if (request.getSupplierId() != null) {
             Supplier supplier = supplierRepository.findById(request.getSupplierId())
                     .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
@@ -614,7 +700,7 @@ public class PurchaseOrderService {
     }
 
     // ─── Update Stock (on RECEIVE) ───────────────────────────
-    private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests) {
+    private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests, boolean applyUnitConversion) {
         Location targetLocation = null;
         if (order.getLocationId() != null) {
             targetLocation = locationRepository.findById(order.getLocationId()).orElse(null);
@@ -641,7 +727,7 @@ public class PurchaseOrderService {
             int finalQty = qty;
             String conversionNote = "khong quy doi";
 
-            if (variant.getProduct() != null && variant.getProduct().getVariants() != null) {
+            if (applyUnitConversion && variant.getProduct() != null && variant.getProduct().getVariants() != null) {
                 for (ProductVariant bv : variant.getProduct().getVariants()) {
                     if (bv.getId().equals(variant.getId())) {
                         continue;
@@ -658,6 +744,8 @@ public class PurchaseOrderService {
                         }
                     }
                 }
+            } else if (!applyUnitConversion) {
+                conversionNote = "da nhan so luong quy doi";
             }
 
             BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
@@ -699,6 +787,47 @@ public class PurchaseOrderService {
                     finalQty,
                     conversionNote);
         }
+    }
+
+    // ─── Sync Purchase Price from Receipt ────────────────────
+    private int syncPurchasePrices(PurchaseOrder order) {
+        if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
+            return 0;
+        }
+
+        Set<Integer> syncedVariantIds = new HashSet<>();
+        int syncedCount = 0;
+
+        for (PurchaseOrderItem item : order.getItems()) {
+            if (item == null || item.getVariant() == null || item.getVariant().getId() == null) {
+                continue;
+            }
+            Integer variantId = item.getVariant().getId().intValue();
+            if (!syncedVariantIds.add(variantId)) {
+                continue;
+            }
+
+            if (item.getReceivedQuantity() == null || item.getReceivedQuantity() <= 0) {
+                continue;
+            }
+            if (item.getUnitCost() == null || item.getUnitCost().compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            try {
+                boolean synced = variantPriceService.syncActivePurchasePrice(variantId, item.getUnitCost());
+                if (synced) {
+                    syncedCount++;
+                }
+            } catch (Exception ex) {
+                log.warn("⚠️ Không thể đồng bộ giá nhập cho variant {} từ PO {}: {}",
+                        variantId,
+                        order.getOrderNumber(),
+                        ex.getMessage());
+            }
+        }
+
+        return syncedCount;
     }
 
     // ─── Resolve Variant ─────────────────────────────────────
@@ -763,7 +892,12 @@ public class PurchaseOrderService {
                 .paidAmount(order.getPaidAmount())
                 .locationId(order.getLocationId())
                 .notes(order.getNotes())
-                .rejectionReason(order.getRejectionReason());
+                .rejectionReason(order.getRejectionReason())
+                .shortageReason(order.getShortageReason())
+                .shortageSubmittedAt(order.getShortageSubmittedAt())
+                .managerDecision(order.getManagerDecision())
+                .managerDecisionNote(order.getManagerDecisionNote())
+                .managerDecidedAt(order.getManagerDecidedAt());
 
         // Contract info
         if (order.getContract() != null) {
@@ -842,11 +976,11 @@ public class PurchaseOrderService {
         int conversionFactor = factor != null && factor > 0 ? factor : 1;
 
         if (conversionFactor <= 1) {
-            return receivedQty > 0 ? receivedQty : orderedQty;
+            return orderedQty > 0 ? orderedQty : receivedQty;
         }
 
         int baseQty = orderedQty * conversionFactor;
-        return receivedQty > 0 ? receivedQty : baseQty;
+        return baseQty > 0 ? baseQty : receivedQty;
     }
 
     private ProductVariant resolveBaseVariant(ProductVariant variant) {

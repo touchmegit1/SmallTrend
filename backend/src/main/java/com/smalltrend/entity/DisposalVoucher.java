@@ -101,9 +101,10 @@ public class DisposalVoucher {
                     if (item.getTotalCost() != null) {
                         return item.getTotalCost();
                     }
-                    BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
-                    Integer quantity = item.getQuantity() != null ? item.getQuantity() : 0;
-                    return unitCost.multiply(BigDecimal.valueOf(quantity));
+                    if (item.getUnitCost() != null && item.getQuantity() != null) {
+                        return item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity()));
+                    }
+                    return BigDecimal.ZERO;
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

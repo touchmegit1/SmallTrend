@@ -13,6 +13,8 @@ export const PO_STATUS = {
   REJECTED: "REJECTED",
   CONFIRMED: "CONFIRMED",
   CHECKING: "CHECKING",
+  SHORTAGE_PENDING_APPROVAL: "SHORTAGE_PENDING_APPROVAL",
+  SUPPLIER_SUPPLEMENT_PENDING: "SUPPLIER_SUPPLEMENT_PENDING",
   RECEIVED: "RECEIVED",
   CANCELLED: "CANCELLED",
 };
@@ -53,6 +55,20 @@ export const PO_STATUS_CONFIG = {
     border: "border-purple-200",
     dot: "bg-purple-500",
   },
+  [PO_STATUS.SHORTAGE_PENDING_APPROVAL]: {
+    label: "Chờ QL xử lý thiếu",
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+    border: "border-orange-200",
+    dot: "bg-orange-500",
+  },
+  [PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING]: {
+    label: "Chờ NCC giao bù",
+    bg: "bg-cyan-50",
+    text: "text-cyan-700",
+    border: "border-cyan-200",
+    dot: "bg-cyan-500",
+  },
   [PO_STATUS.RECEIVED]: {
     label: "Đã nhập kho",
     bg: "bg-emerald-50",
@@ -73,9 +89,14 @@ export const ALLOWED_TRANSITIONS = {
   [PO_STATUS.DRAFT]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
   [PO_STATUS.PENDING]: [PO_STATUS.CONFIRMED, PO_STATUS.REJECTED, PO_STATUS.CANCELLED],
   [PO_STATUS.REJECTED]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
-  [PO_STATUS.CONFIRMED]: [PO_STATUS.CHECKING],             // QĐ duyệt → NV kho kiểm kê
-  [PO_STATUS.CHECKING]: [PO_STATUS.RECEIVED],               // Kiểm kê xong → nhập kho
-  [PO_STATUS.RECEIVED]: [],  // terminal
+  [PO_STATUS.CONFIRMED]: [PO_STATUS.CHECKING], // QĐ duyệt → NV kho kiểm kê
+  [PO_STATUS.CHECKING]: [PO_STATUS.RECEIVED, PO_STATUS.SHORTAGE_PENDING_APPROVAL],
+  [PO_STATUS.SHORTAGE_PENDING_APPROVAL]: [
+    PO_STATUS.RECEIVED,
+    PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING,
+  ],
+  [PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING]: [PO_STATUS.CHECKING],
+  [PO_STATUS.RECEIVED]: [], // terminal
   [PO_STATUS.CANCELLED]: [], // terminal
 };
 

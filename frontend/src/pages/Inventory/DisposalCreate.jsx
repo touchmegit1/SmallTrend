@@ -4,20 +4,15 @@ import {
   getExpiredBatches,
   getNextDisposalCode,
   saveDisposalDraft,
-  confirmDisposalVoucher,
+  submitDisposalVoucher,
+  approveDisposalVoucher,
 } from "../../services/disposalService";
 import { getActiveLocations } from "../../services/inventoryService";
 import { formatCurrency } from "../../utils/inventory";
 import { useToast } from "../../components/ui/Toast";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 
-const REASON_OPTIONS = [
-  { value: "EXPIRED", label: "Háº¿t háº¡n" },
-  { value: "DAMAGED", label: "HÆ° há»ng" },
-  { value: "LOST", label: "Tháº¥t thoĂ¡t" },
-  { value: "OBSOLETE", label: "Lá»—i thá»i" },
-  { value: "OTHER", label: "KhĂ¡c" },
-];
+const REASON_OPTIONS = [{ value: "EXPIRED", label: "Hết hạn" }];
 
 export default function DisposalCreate() {
   const navigate = useNavigate();
@@ -207,7 +202,8 @@ export default function DisposalCreate() {
         userId,
       );
 
-      await confirmDisposalVoucher(draft.id, userId);
+      await submitDisposalVoucher(draft.id);
+      await approveDisposalVoucher(draft.id, userId);
 
       toast.success("XĂ¡c nháº­n thĂ nh cĂ´ng! Tá»“n kho Ä‘Ă£ Ä‘Æ°á»£c trá»«.");
       navigate("/inventory/disposal");

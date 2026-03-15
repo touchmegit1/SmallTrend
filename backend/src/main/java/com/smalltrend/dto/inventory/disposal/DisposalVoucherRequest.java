@@ -8,6 +8,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DisposalVoucherRequest {
+    private Long id;
     private Long locationId;
     private String reasonType;
     private String notes;

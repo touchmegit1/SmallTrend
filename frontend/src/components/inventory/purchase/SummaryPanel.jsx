@@ -23,8 +23,27 @@ export default function SummaryPanel({
   const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
   const isChecking = order.status === PO_STATUS.CHECKING;
   const isReceived = order.status === PO_STATUS.RECEIVED;
-  const showMetaInfo = allowMetaEdit || isReceived;
-  const showPaymentInfo = isChecking || isReceived;
+  const isShortagePendingApproval =
+    order.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL;
+  const isSupplierSupplementPending =
+    order.status === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING;
+  const showMetaInfo =
+    allowMetaEdit ||
+    isReceived ||
+    isShortagePendingApproval ||
+    isSupplierSupplementPending;
+  const showPaymentInfo =
+    isChecking || isReceived || isShortagePendingApproval || isSupplierSupplementPending;
+  const shortageReason =
+    order.shortage_reason || order.shortageReason || "";
+  const managerDecisionNote =
+    order.manager_decision_note || order.managerDecisionNote || "";
+  const showShortageReason =
+    (isShortagePendingApproval || isSupplierSupplementPending) &&
+    String(shortageReason).trim() !== "";
+  const showManagerDecisionNote =
+    (isSupplierSupplementPending || isReceived) &&
+    String(managerDecisionNote).trim() !== "";
 
   const selectedSupplier = suppliers.find(
     (s) => String(s.id) === String(order.supplier_id),
@@ -33,7 +52,42 @@ export default function SummaryPanel({
     (loc) => String(loc.id) === String(order.location_id),
   );
 
+  const locationCapacity = toNumber(selectedLocation?.capacity);
+  const locationCurrentStock = toNumber(selectedLocation?.total_products);
+  const locationUsagePercent =
+    locationCapacity > 0 ? Math.round((locationCurrentStock / locationCapacity) * 100) : 0;
+  const isLocationFull = locationCapacity > 0 && locationCurrentStock >= locationCapacity;
+  const isLocationNearFull =
+    locationCapacity > 0 && !isLocationFull && locationUsagePercent >= 80;
+
   const totalAmount = checkingFinancials?.total ?? 0;
+
+  const locationCapacityWarning = isLocationFull
+    ? {
+        title: "Kho đã đầy",
+        message:
+          "Kho đã đạt sức chứa cấu hình, nhưng bạn vẫn có thể nhập kho nếu cần.",
+        containerClass: "mt-2 rounded-lg border border-red-200 bg-red-50 p-2.5",
+        titleClass: "text-sm font-semibold text-red-800",
+        messageClass: "mt-0.5 text-xs text-red-700",
+        metaClass: "mt-1 text-xs text-red-600",
+      }
+    : isLocationNearFull
+      ? {
+          title: "Kho sắp đầy",
+          message:
+            "Kho đang gần đầy. Vui lòng kiểm tra lại dung lượng trống trước khi nhập hàng.",
+          containerClass: "mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5",
+          titleClass: "text-sm font-semibold text-amber-800",
+          messageClass: "mt-0.5 text-xs text-amber-700",
+          metaClass: "mt-1 text-xs text-amber-600",
+        }
+      : null;
+
+  const locationCapacityMeta =
+    locationCapacity > 0
+      ? `${locationCurrentStock}/${locationCapacity} (${locationUsagePercent}%)`
+      : "";
 
   const discountAmount = toNumber(order.discount);
   const hasDiscount =
@@ -144,6 +198,13 @@ export default function SummaryPanel({
                   })),
                 ]}
               />
+              {locationCapacityWarning && locationCapacityMeta && (
+                <div role="alert" aria-live="polite" className={locationCapacityWarning.containerClass}>
+                  <p className={locationCapacityWarning.titleClass}>{locationCapacityWarning.title}</p>
+                  <p className={locationCapacityWarning.messageClass}>{locationCapacityWarning.message}</p>
+                  <p className={locationCapacityWarning.metaClass}>Mức sử dụng hiện tại: {locationCapacityMeta}</p>
+                </div>
+              )}
             </div>
 
             {isReceived && (
@@ -178,6 +239,28 @@ export default function SummaryPanel({
                     </span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {showShortageReason && (
+              <div className="px-6 py-3.5 border-b border-slate-200 bg-orange-50/60">
+                <h3 className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-2">
+                  Lý do thiếu hàng
+                </h3>
+                <p className="text-sm leading-relaxed text-orange-900 whitespace-pre-wrap">
+                  {shortageReason}
+                </p>
+              </div>
+            )}
+
+            {showManagerDecisionNote && (
+              <div className="px-6 py-3.5 border-b border-slate-200 bg-cyan-50/60">
+                <h3 className="text-xs font-bold text-cyan-700 uppercase tracking-wide mb-2">
+                  Ghi chú quyết định của quản lý
+                </h3>
+                <p className="text-sm leading-relaxed text-cyan-900 whitespace-pre-wrap">
+                  {managerDecisionNote}
+                </p>
               </div>
             )}
 

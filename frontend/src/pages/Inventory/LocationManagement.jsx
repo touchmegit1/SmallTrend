@@ -87,63 +87,207 @@ function LocationManagement() {
       setLocations(data);
     } catch (error) {
       console.error("Error fetching locations:", error);
+      toast.error(error?.message || "Không thể tải danh sách vị trí", {
+        title: "Lỗi tải dữ liệu",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const classifyErrorTitle = (message = "") => {
+    const text = message.toLowerCase();
+    if (
+      text.includes("không được") ||
+      text.includes("thiếu") ||
+      text.includes("lớn hơn 0")
+    ) {
+      return "Dữ liệu chưa hợp lệ";
+    }
+    if (
+      text.includes("đã tồn tại") ||
+      text.includes("không thể") ||
+      text.includes("vượt quá") ||
+      text.includes("tham chiếu")
+    ) {
+      return "Không thể thực hiện";
+    }
+    return "Lỗi hệ thống";
+  };
+
+  const getErrorMessage = (error, fallback) =>
+    (error?.message || "").trim() || fallback;
+
+  const validateLocationForm = () => {
+    if (!formData.location_code?.trim()) {
+      toast.error("Mã vị trí không được để trống", { title: "Dữ liệu chưa hợp lệ" });
+      return false;
+    }
+    if (!formData.location_name?.trim()) {
+      toast.error("Tên vị trí không được để trống", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return false;
+    }
+    if ((Number(formData.capacity) || 0) < 0) {
+      toast.error("Sức chứa không được nhỏ hơn 0", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const validateTransferForm = () => {
+    const { toLocationId, selectedItem, quantity } = transferData;
+    if (!toLocationId || !selectedItem) {
+      toast.error("Vui lòng chọn sản phẩm và vị trí đích", {
+        title: "Thiếu thông tin",
+      });
+      return null;
+    }
+
+    const transferQty = Number(quantity);
+    if (!Number.isInteger(transferQty) || transferQty <= 0) {
+      toast.error("Số lượng chuyển phải lớn hơn 0", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return null;
+    }
+
+    if (transferQty > Number(selectedItem.quantity || 0)) {
+      toast.error("Số lượng chuyển vượt quá tồn kho hiện có", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return null;
+    }
+
+    const destinationId = Number(toLocationId);
+    if (destinationId === transferModal.location?.id) {
+      toast.error("Vị trí nguồn và đích không được trùng nhau", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return null;
+    }
+
+    const destination = locations.find((l) => l.id === destinationId);
+    if (!destination || destination.status !== "ACTIVE") {
+      toast.error("Vị trí đích phải ở trạng thái hoạt động", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return null;
+    }
+
+    return { transferQty, destinationId, selectedItem };
+  };
+
+  const buildLocationPayload = () => ({
+    ...formData,
+    location_code: formData.location_code?.trim(),
+    location_name: formData.location_name?.trim(),
+    address: formData.address?.trim(),
+    description: formData.description?.trim(),
+    capacity: Number(formData.capacity) || 0,
+  });
+
+  const buildTransferPayload = ({ transferQty, destinationId, selectedItem }) => ({
+    fromLocationId: transferModal.location.id,
+    toLocationId: destinationId,
+    variantId: Number(selectedItem.variantId),
+    batchId: Number(selectedItem.batchId),
+    quantity: transferQty,
+  });
+
+  const showApiErrorToast = (error, fallbackMessage) => {
+    const message = getErrorMessage(error, fallbackMessage);
+    toast.error(message, {
+      title: classifyErrorTitle(message),
+      duration: 5000,
+    });
+  };
+
+  const handleLocationSaved = (savedMessage) => {
+    toast.success(savedMessage);
+    fetchLocations();
+    setIsModalOpen(false);
+  };
+
+  const handleTransferSuccess = (transferQty, selectedItem) => {
+    toast.success(
+      `Đã chuyển ${transferQty} ${selectedItem.variantUnit || ""} "${selectedItem.productName}" thành công!`,
+    );
+    setTransferModal({ isOpen: false, location: null });
+    fetchLocations();
+  };
+
+  const normalizeFormData = (location) => ({
+    location_name: location.location_name,
+    location_code: location.location_code,
+    location_type: location.location_type,
+    address: location.address,
+    capacity: location.capacity,
+    description: location.description,
+  });
+
+  const createInitialFormData = () => ({
+    location_name: "",
+    location_code: "",
+    location_type: "SHELF",
+    address: "",
+    capacity: 0,
+    description: "",
+  });
+
+  const createInitialTransferData = () => ({
+    toLocationId: "",
+    selectedItem: null,
+    quantity: 1,
+  });
+
+  const parseDestinationName = (id) =>
+    locations.find((l) => l.id === Number(id))?.location_name || "";
+
+  const isTransferSubmitDisabled =
+    transferring || !transferData.selectedItem || !transferData.toLocationId;
+
   const handleOpenModal = (location = null) => {
     if (location) {
       setEditingLocation(location);
-      setFormData({
-        location_name: location.location_name,
-        location_code: location.location_code,
-        location_type: location.location_type,
-        address: location.address,
-        capacity: location.capacity,
-        description: location.description,
-      });
+      setFormData(normalizeFormData(location));
     } else {
       setEditingLocation(null);
-      setFormData({
-        location_name: "",
-        location_code: "",
-        location_type: "SHELF",
-        address: "",
-        capacity: 0,
-        description: "",
-      });
+      setFormData(createInitialFormData());
     }
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateLocationForm()) return;
+
+    const payload = buildLocationPayload();
     try {
       if (editingLocation) {
-        await updateLocation(editingLocation.id, formData);
-        toast.success(`Đã cập nhật vị trí thành công!`);
+        await updateLocation(editingLocation.id, payload);
+        handleLocationSaved("Đã cập nhật vị trí thành công!");
       } else {
-        await createLocation(formData);
-        toast.success(`Đã tạo vị trí mới thành công!`);
+        await createLocation(payload);
+        handleLocationSaved("Đã tạo vị trí mới thành công!");
       }
-      fetchLocations();
-      setIsModalOpen(false);
     } catch (error) {
       console.error("Error saving location:", error);
-      toast.error("Có lỗi xảy ra khi lưu vị trí!");
+      showApiErrorToast(error, "Có lỗi xảy ra khi lưu vị trí");
     }
   };
 
-  // Open confirm modal instead of window.confirm
   const handleToggleStatus = (loc) => {
     setConfirmModal({ isOpen: true, location: loc });
   };
 
-  // Actually perform the toggle after user confirms
   const confirmToggle = async () => {
     const loc = confirmModal.location;
     if (!loc) return;
+
     const isActive = loc.status === "ACTIVE";
     setToggling(true);
     try {
@@ -158,10 +302,7 @@ function LocationManagement() {
     } catch (error) {
       console.error("Error toggling location status:", error);
       setConfirmModal({ isOpen: false, location: null });
-      toast.error(error.message, {
-        title: "Không thể chuyển trạng thái",
-        duration: 5000,
-      });
+      showApiErrorToast(error, "Không thể chuyển trạng thái vị trí");
     } finally {
       setToggling(false);
     }
@@ -178,31 +319,21 @@ function LocationManagement() {
 
   const openTransferModal = (loc) => {
     setTransferModal({ isOpen: true, location: loc });
-    setTransferData({ toLocationId: "", selectedItem: null, quantity: 1 });
+    setTransferData(createInitialTransferData());
   };
 
   const handleTransfer = async (e) => {
     e.preventDefault();
-    const { toLocationId, selectedItem, quantity } = transferData;
-    if (!toLocationId || !selectedItem || quantity <= 0) return;
+    const validated = validateTransferForm();
+    if (!validated) return;
+
+    const { transferQty, selectedItem } = validated;
     setTransferring(true);
     try {
-      await transferStock({
-        fromLocationId: transferModal.location.id,
-        toLocationId: parseInt(toLocationId),
-        variantId: selectedItem.variantId,
-        batchId: selectedItem.batchId,
-        quantity: parseInt(quantity),
-      });
-      toast.success(
-        `Đã chuyển ${quantity} ${selectedItem.variantUnit || ""} "${selectedItem.productName}" thành công!`,
-      );
-      setTransferModal({ isOpen: false, location: null });
-      fetchLocations();
-    } catch (err) {
-      toast.error(err.message || "Chuyển hàng thất bại", {
-        title: "Lỗi chuyển hàng",
-      });
+      await transferStock(buildTransferPayload(validated));
+      handleTransferSuccess(transferQty, selectedItem);
+    } catch (error) {
+      showApiErrorToast(error, "Chuyển hàng thất bại");
     } finally {
       setTransferring(false);
     }

@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { X, DollarSign, Calendar, Percent, TrendingUp } from 'lucide-react';
 import { createVariantPrice } from '../../../hooks/useVariantPrices';
 
+/**
+ * Modal tạo bản ghi giá mới cho một variant.
+ * Khi tạo thành công, callback sẽ được gọi để màn hình cha tải lại dữ liệu.
+ */
 const CreatePriceModal = ({ isOpen, onClose, variant, onPriceCreated }) => {
   const [formData, setFormData] = useState({
     purchasePrice: variant?.costPrice || 0,

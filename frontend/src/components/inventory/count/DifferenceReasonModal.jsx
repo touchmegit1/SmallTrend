@@ -30,7 +30,7 @@ export default function DifferenceReasonModal({ item, onSave, onClose }) {
   const handleSave = () => {
     const finalReason =
       reason === "OTHER" ? customReason.trim() || "Lý do khác" : reason;
-    onSave(item.product_id, finalReason);
+    onSave(item.variant_id, finalReason);
   };
 
   return (

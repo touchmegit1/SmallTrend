@@ -42,7 +42,10 @@ import ReportCenterPage from "./pages/Admin/ReportCenterPage";
 import AuditLogPage from "./pages/Admin/AuditLogPage";
 import AiChatPage from "./pages/Admin/AiChatPage";
 import AiSettingsPage from "./pages/Admin/AiSettingsPage";
-
+import Suppliers from "./pages/Products/ProductManager/Suppliers";
+import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
+import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
 import NotFoundPage from "./pages/Common/NotFoundPage";
 import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
@@ -127,51 +130,31 @@ function App() {
         <Route path="pos/complain" element={<PosComplain />} />
         <Route path="pos/complaints" element={<PosComplain />} />
 
+        {/* Module 2: Inventory (Kho) */}
         <Route path="inventory" element={<InventoryDashboard />} />
+        <Route path="inventory/alerts" element={<InventoryCountList />} />
 
-        <Route path="inventory/export" element={<DisposalList />} />
-        <Route
-          path="inventory/alerts"
-          element={<InventoryCountList />}
-        />
-        <Route
-          path="inventory/suppliers"
-          element={
-            <div className="p-4">
-              Quản lý nhà cung cấp (Supplier)
-            </div>
-          }
-        />
-        <Route
-          path="inventory/audit"
-          element={<Navigate to="/inventory-counts" replace />}
-        />
-        <Route
-          path="inventory-counts"
-          element={<InventoryCountList />}
-        />
+        <Route path="inventory-counts" element={<InventoryCountList />} />
         <Route
           path="inventory-counts/create"
           element={<InventoryCountDetail />}
         />
-        <Route
-          path="inventory-counts/:id"
-          element={<InventoryCountDetail />}
-        />
-        <Route
-          path="inventory/locations"
-          element={<LocationManagement />}
-        />
+        <Route path="inventory-counts/:id" element={<InventoryCountDetail />} />
+        <Route path="inventory/locations" element={<LocationManagement />} />
         <Route path="inventory/disposal" element={<DisposalList />} />
+        <Route path="inventory/disposal/create" element={<DisposalDetail />} />
+        <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
+        <Route path="inventory/purchase-orders" element={<PurchaseOrderList />} />
         <Route
-          path="inventory/disposal/create"
-          element={<DisposalDetail />}
+          path="inventory/purchase-orders/create"
+          element={<CreatePurchaseOrder />}
         />
         <Route
-          path="inventory/disposal/:id"
-          element={<DisposalDetail />}
+          path="inventory/purchase-orders/:id"
+          element={<CreatePurchaseOrder />}
         />
-
+  
+        {/* Product */}
         <Route path="products" element={<ProductList />} />
         <Route path="products/addproduct" element={<AddNewProduct />} />
         <Route path="products/detail/:id" element={<ProductDetail />} />
@@ -189,7 +172,7 @@ function App() {
         />
         <Route
           path="products/price"
-          element={<div className="p-4"></div>}
+          element={<div className="p-4"><PriceSetting /></div>}
         />
         <Route
           path="products/combo"
@@ -215,6 +198,15 @@ function App() {
             </div>
           }
         />
+        <Route
+          path="products/suppliers"
+          element={
+            <div className="p-4">
+              <Suppliers />
+            </div>
+          }
+        />
+
 
         <Route
           path="crm"

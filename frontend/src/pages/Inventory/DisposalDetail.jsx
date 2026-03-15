@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { useDisposalVoucher } from "../../hooks/useDisposalVoucher";
 import { useToast } from "../../components/ui/Toast";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
-import RejectionModal from "../../components/ui/RejectionModal";
+import CustomSelect from "../../components/common/CustomSelect";
 import {
   DV_STATUS,
   DV_STATUS_CONFIG,
@@ -39,26 +39,17 @@ export default function DisposalDetail() {
     removeItem,
     updateItemQty,
     saveDraft,
-    submitVoucher,
-    approveVoucher,
-    rejectVoucher,
+    confirmAndDeduct,
   } = useDisposalVoucher(id || null);
 
   const [batchSearch, setBatchSearch] = useState("");
   const [confirmState, setConfirmState] = useState(null);
-  const [showRejectModal, setShowRejectModal] = useState(false);
 
   const confirmConfigs = {
-    submitVoucher: {
-      title: "Gửi duyệt phiếu",
-      message: "Gửi phiếu này cho quản lý để chờ duyệt?",
-      confirmText: "Gửi duyệt",
-      variant: "info",
-    },
-    approveVoucher: {
-      title: "Duyệt phiếu xử lý",
-      message: "Xác nhận duyệt phiếu xử lý? Tồn kho sẽ bị trừ ngay lập tức.",
-      confirmText: "Duyệt phiếu",
+    confirmDeduction: {
+      title: "Xác nhận xử lý",
+      message: "Xác nhận xử lý ngay và trừ tồn kho cho các lô đã chọn?",
+      confirmText: "Xác nhận & Trừ kho",
       variant: "warning",
     },
   };
@@ -68,35 +59,23 @@ export default function DisposalDetail() {
   const closeConfirm = () => setConfirmState(null);
 
   const executeConfirmedAction = async () => {
-    if (!confirmState) return;
+    if (confirmState !== "confirmDeduction") return;
 
-    if (confirmState === "submitVoucher") {
-      const success = await submitVoucher();
-      if (success) {
-        toast.success("Đã gửi phiếu đi chờ duyệt!");
-        if (!id) navigate(`/inventory/disposal/${voucher.id}`, { replace: true });
-      }
-    } else if (confirmState === "approveVoucher") {
-      const success = await approveVoucher();
-      if (success) {
-        toast.success("Đã duyệt phiếu xử lý! Tồn kho đã được trừ.");
+    const confirmedVoucher = await confirmAndDeduct();
+    if (confirmedVoucher) {
+      toast.success("Đã xử lý phiếu và trừ tồn kho.");
+      if (!id) {
+        const redirectId = confirmedVoucher.id || voucher.id;
+        if (redirectId) {
+          navigate(`/inventory/disposal/${redirectId}`, { replace: true });
+        }
       }
     }
 
     closeConfirm();
   };
 
-  const handleRejectSubmit = async (reason) => {
-    const success = await rejectVoucher(reason);
-    if (success) {
-      toast.success("Đã từ chối phiếu xử lý!");
-      setShowRejectModal(false);
-    }
-  };
-
-  const openSubmitConfirm = () => setConfirmState("submitVoucher");
-  const openApproveConfirm = () => setConfirmState("approveVoucher");
-  const openRejectModal = () => setShowRejectModal(true);
+  const openConfirmDeduction = () => setConfirmState("confirmDeduction");
 
 
   // Filter expired batches not already added and by search
@@ -124,11 +103,7 @@ export default function DisposalDetail() {
     }
   };
 
-  const handleSubmit = () => openSubmitConfirm();
-
-  const handleApprove = () => openApproveConfirm();
-
-  const handleReject = () => openRejectModal();
+  const handleConfirmDeduction = () => openConfirmDeduction();
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -415,21 +390,33 @@ export default function DisposalDetail() {
                   >
                     Kho
                   </label>
-                  <select
-                    id="disposal-location"
-                    value={voucher.location_id || ""}
-                    onChange={(e) =>
-                      updateVoucher("location_id", Number(e.target.value) || null)
-                    }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                  >
-                    <option value="">-- Chọn kho --</option>
-                    {locations.map((loc) => (
-                      <option key={loc.id} value={loc.id}>
-                        {loc.location_name}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    value={voucher.location_id || null}
+                    onChange={(val) => updateVoucher("location_id", Number(val) || null)}
+                    options={locations.map((loc) => ({
+                      value: loc.id,
+                      label: loc.location_name,
+                    }))}
+                    className="w-full"
+                  />
+
+                  {locations.length === 0 && (
+                    <p className="mt-2 text-xs text-slate-500">Không có kho khả dụng.</p>
+                  )}
+
+                  {!!voucher.location_id && (
+                    <p
+                      className={`mt-2 text-xs ${
+                        expiredBatches.length > 0
+                          ? "text-red-600"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      {expiredBatches.length > 0
+                        ? `Kho này có ${expiredBatches.length} lô hết hạn cần xử lý.`
+                        : "Kho này hiện không có lô hết hạn."}
+                    </p>
+                  )}
                 </>
               ) : (
                 <>
@@ -452,18 +439,12 @@ export default function DisposalDetail() {
                   >
                     Lý do xử lý
                   </label>
-                  <select
+                  <input
                     id="disposal-reason-type"
-                    value={voucher.reason_type || REASON_TYPE.EXPIRED}
-                    onChange={(e) => updateVoucher("reason_type", e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                  >
-                    {Object.entries(REASON_CONFIG).map(([key, cfg]) => (
-                      <option key={key} value={key}>
-                        {cfg.label}
-                      </option>
-                    ))}
-                  </select>
+                    value={REASON_CONFIG[REASON_TYPE.EXPIRED].label}
+                    readOnly
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-700"
+                  />
                 </>
               ) : (
                 <>
@@ -562,30 +543,11 @@ export default function DisposalDetail() {
                 {saving ? "Đang lưu..." : "Lưu nháp"}
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={handleConfirmDeduction}
                 disabled={saving || items.length === 0}
-                className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? "Đang gửi..." : "Gửi duyệt quản lý"}
-              </button>
-            </div>
-          )}
-
-          {voucher.status === DV_STATUS.PENDING && (
-            <div className="space-y-3">
-              <button
-                onClick={handleApprove}
-                disabled={saving}
-                className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50"
-              >
-                {saving ? "Đang xử lý..." : "Duyệt & Trừ kho"}
-              </button>
-              <button
-                onClick={handleReject}
-                disabled={saving}
-                className="w-full px-4 py-2.5 text-red-600 border border-red-200 bg-white rounded-lg hover:bg-red-50 transition-colors font-medium text-sm disabled:opacity-50"
-              >
-                {saving ? "Đang xử lý..." : "Từ chối phiếu"}
+                {saving ? "Đang xử lý..." : "Xác nhận & Trừ kho"}
               </button>
             </div>
           )}
@@ -629,12 +591,6 @@ export default function DisposalDetail() {
         onConfirm={executeConfirmedAction}
       />
 
-      <RejectionModal
-        isOpen={showRejectModal}
-        onClose={() => setShowRejectModal(false)}
-        onSubmit={handleRejectSubmit}
-        isLoading={saving}
-      />
     </div>
   );
 }

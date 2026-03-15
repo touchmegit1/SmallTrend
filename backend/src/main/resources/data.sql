@@ -918,6 +918,21 @@ SET a.assignment_id_snapshot = wsa.id,
 WHERE a.assignment_id_snapshot IS NULL;
 
 -- 25. PURCHASE ORDERS (Matching JPA PurchaseOrder schema)
+-- Ensure DB enum status stays in sync with PurchaseOrderStatus.java
+ALTER TABLE purchase_orders
+MODIFY COLUMN status ENUM(
+    'DRAFT',
+    'PENDING',
+    'CONFIRMED',
+    'REJECTED',
+    'CHECKING',
+    'SHORTAGE_PENDING_APPROVAL',
+    'SUPPLIER_SUPPLEMENT_PENDING',
+    'RECEIVED',
+    'ORDERED',
+    'CANCELLED'
+) NOT NULL DEFAULT 'DRAFT';
+
 INSERT IGNORE INTO purchase_orders (
    po_number, supplier_id, created_by, order_date, status, subtotal, 
    tax_amount, discount_amount, total_amount, notes, created_at, updated_at
