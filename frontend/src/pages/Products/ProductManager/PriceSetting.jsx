@@ -182,8 +182,8 @@ const PriceSetting = () => {
                         bV = Number(b.activeSellingPrice) || 0;
                         break;
                     case "profit":
-                        aV = calculateProfit(Number(a.activePurchasePrice) || 0, Number(a.activeSellingPrice) || 0);
-                        bV = calculateProfit(Number(b.activePurchasePrice) || 0, Number(b.activeSellingPrice) || 0);
+                        aV = calculateProfit(Number(a.costPrice) || 0, Number(a.activeSellingPrice) || 0);
+                        bV = calculateProfit(Number(b.costPrice) || 0, Number(b.activeSellingPrice) || 0);
                         break;
                     default:
                         aV = 0; bV = 0;

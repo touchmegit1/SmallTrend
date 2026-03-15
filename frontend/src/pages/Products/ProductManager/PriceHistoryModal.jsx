@@ -123,9 +123,9 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
                   <th className="px-4 py-3 text-right font-semibold text-gray-600">Giá bán</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-600">Thuế (%)</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày hiệu lực</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày tạo</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày hết hiệu lực</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-600">Trạng thái</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày tạo</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-600">Thao tác</th>
                 </tr>
               </thead>
@@ -144,6 +144,9 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
                     </td>
                     <td className="px-4 py-3 text-right">{price.taxPercent ?? 0}%</td>
                     <td className="px-4 py-3 text-center">{formatDate(price.effectiveDate)}</td>
+                    <td className="px-4 py-3 text-center text-gray-400 text-xs">
+                      {formatDate(price.createdAt)}
+                    </td>
                     <td className="px-4 py-3 text-center">{formatDate(price.expiryDate)}</td>
                     <td className="px-4 py-3 text-center">
                       {price.status === 'ACTIVE' ? (
@@ -155,9 +158,6 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
                           <XCircle size={12} /> Đã tắt kích hoạt
                         </span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-center text-gray-400 text-xs">
-                      {formatDate(price.createdAt)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
