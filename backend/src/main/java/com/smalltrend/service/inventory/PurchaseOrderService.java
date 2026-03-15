@@ -643,7 +643,9 @@ public class PurchaseOrderService {
 
             if (variant.getProduct() != null && variant.getProduct().getVariants() != null) {
                 for (ProductVariant bv : variant.getProduct().getVariants()) {
-                    if (bv.getId().equals(variant.getId())) continue;
+                    if (bv.getId().equals(variant.getId())) {
+                        continue;
+                    }
 
                     if (variant.getUnit() != null) {
                         java.util.Optional<UnitConversion> conversionOpt = unitConversionRepository.findByVariantIdAndToUnitId(bv.getId(), variant.getUnit().getId());
@@ -698,7 +700,6 @@ public class PurchaseOrderService {
                     conversionNote);
         }
     }
-
 
     // ─── Resolve Variant ─────────────────────────────────────
     private ProductVariant resolveVariant(PurchaseOrderItemRequest itemReq) {
@@ -868,4 +869,3 @@ public class PurchaseOrderService {
         return variant;
     }
 }
-
