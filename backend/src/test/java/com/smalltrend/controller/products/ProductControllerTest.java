@@ -147,7 +147,7 @@ class ProductControllerTest {
 
         // Assert (Kiểm tra kết quả): Trả về phản hồi thành công (HTTP 200 OK)
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Product status toggled", response.getBody());
+        assertEquals("Đã thay đổi trạng thái sản phẩm", response.getBody());
         verify(productService).toggleStatus(5); // Kiểm tra xem service có thực thi lệnh ở ID đó
     }
 
@@ -159,7 +159,7 @@ class ProductControllerTest {
 
         // Assert (Kiểm tra kết quả): Xác nhận lệnh Http 200 (OK)
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Product deleted", response.getBody());
+        assertEquals("Đã xóa sản phẩm", response.getBody());
         verify(productService).delete(10); // Đảm bảo test được xoá qua service
     }
 
@@ -244,7 +244,7 @@ class ProductControllerTest {
 
         // Assert (Kiểm tra kết quả)
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Variant status toggled", response.getBody());
+        assertEquals("Đã thay đổi trạng thái biến thể", response.getBody());
         verify(productVariantService).toggleVariantStatus(5);
     }
 
@@ -256,7 +256,7 @@ class ProductControllerTest {
 
         // Assert (Kiểm tra kết quả)
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Variant deleted", response.getBody());
+        assertEquals("Đã xóa biến thể", response.getBody());
         verify(productVariantService).deleteVariant(5);
     }
 
@@ -353,7 +353,7 @@ class ProductControllerTest {
 
         // Assert (Kiểm tra kết quả)
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Unit conversion deleted", response.getBody());
+        assertEquals("Đã xóa quy đổi đơn vị", response.getBody());
         verify(unitConversionService).deleteConversion(3);
     }
 
@@ -420,7 +420,7 @@ class ProductControllerTest {
 
         // Assert (Kiểm tra kết quả)
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Unit deleted", response.getBody());
+        assertEquals("Đã xóa đơn vị tính", response.getBody());
         verify(unitService).deleteUnit(2);
     }
 }
