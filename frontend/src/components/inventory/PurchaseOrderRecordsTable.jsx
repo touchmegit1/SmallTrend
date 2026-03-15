@@ -1,8 +1,10 @@
 ﻿import React from "react";
+import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { PO_STATUS_CONFIG } from "../../utils/purchaseOrder";
 
-function PurchaseOrderRecordsTable({ records, suppliers }) {
+function PurchaseOrderRecordsTable(props) {
+  const { records = [], suppliers = [] } = props;
   const navigate = useNavigate();
   if (records.length === 0) {
     return (
@@ -43,7 +45,7 @@ function PurchaseOrderRecordsTable({ records, suppliers }) {
         {record.supplier_name}
       </td>
       <td className="px-4 py-3 text-sm text-slate-900 text-right">
-        {record.total_amount?.toLocaleString() || "0"}
+        {Number(record.total_amount ?? 0).toLocaleString("vi-VN")}
       </td>
       <td className="px-4 py-3 text-center">
         {(() => {
@@ -61,6 +63,11 @@ function PurchaseOrderRecordsTable({ records, suppliers }) {
     </tr>
   ));
 }
+
+PurchaseOrderRecordsTable.propTypes = {
+  records: PropTypes.arrayOf(PropTypes.object),
+  suppliers: PropTypes.arrayOf(PropTypes.object),
+};
 
 export default PurchaseOrderRecordsTable;
 

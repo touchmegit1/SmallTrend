@@ -10,7 +10,9 @@ export default function ContractSelector({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const selectedContract = contracts.find((c) => c.id === selectedContractId);
+  const selectedContract = contracts.find(
+    (c) => c.id === selectedContractId,
+  );
 
   const getStatusLabel = (status) => {
     const map = {

@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useDisposalVoucher } from "../../hooks/useDisposalVoucher";
 import { useToast } from "../../components/ui/Toast";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import RejectionModal from "../../components/ui/RejectionModal";
 import {
   DV_STATUS,
   DV_STATUS_CONFIG,
@@ -43,6 +45,59 @@ export default function DisposalDetail() {
   } = useDisposalVoucher(id || null);
 
   const [batchSearch, setBatchSearch] = useState("");
+  const [confirmState, setConfirmState] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+
+  const confirmConfigs = {
+    submitVoucher: {
+      title: "Gửi duyệt phiếu",
+      message: "Gửi phiếu này cho quản lý để chờ duyệt?",
+      confirmText: "Gửi duyệt",
+      variant: "info",
+    },
+    approveVoucher: {
+      title: "Duyệt phiếu xử lý",
+      message: "Xác nhận duyệt phiếu xử lý? Tồn kho sẽ bị trừ ngay lập tức.",
+      confirmText: "Duyệt phiếu",
+      variant: "warning",
+    },
+  };
+
+  const activeConfirmConfig = confirmState ? confirmConfigs[confirmState] : null;
+
+  const closeConfirm = () => setConfirmState(null);
+
+  const executeConfirmedAction = async () => {
+    if (!confirmState) return;
+
+    if (confirmState === "submitVoucher") {
+      const success = await submitVoucher();
+      if (success) {
+        toast.success("Đã gửi phiếu đi chờ duyệt!");
+        if (!id) navigate(`/inventory/disposal/${voucher.id}`, { replace: true });
+      }
+    } else if (confirmState === "approveVoucher") {
+      const success = await approveVoucher();
+      if (success) {
+        toast.success("Đã duyệt phiếu xử lý! Tồn kho đã được trừ.");
+      }
+    }
+
+    closeConfirm();
+  };
+
+  const handleRejectSubmit = async (reason) => {
+    const success = await rejectVoucher(reason);
+    if (success) {
+      toast.success("Đã từ chối phiếu xử lý!");
+      setShowRejectModal(false);
+    }
+  };
+
+  const openSubmitConfirm = () => setConfirmState("submitVoucher");
+  const openApproveConfirm = () => setConfirmState("approveVoucher");
+  const openRejectModal = () => setShowRejectModal(true);
+
 
   // Filter expired batches not already added and by search
   const availableBatches = useMemo(() => {
@@ -69,31 +124,11 @@ export default function DisposalDetail() {
     }
   };
 
-  const handleSubmit = async () => {
-    const success = await submitVoucher();
-    if (success) {
-      toast.success("Đã gửi phiếu đi chờ duyệt!");
-      if (!id) navigate(`/inventory/disposal/${voucher.id}`, { replace: true });
-    }
-  };
+  const handleSubmit = () => openSubmitConfirm();
 
-  const handleApprove = async () => {
-    const success = await approveVoucher();
-    if (success) {
-      toast.success("Đã duyệt phiếu xử lý! Tồn kho đã được trừ.");
-    }
-  };
+  const handleApprove = () => openApproveConfirm();
 
-  const handleReject = async () => {
-    const reason = window.prompt("Nhập lý do từ chối:");
-    if (reason !== null) {
-      const success = await rejectVoucher(reason);
-      if (success) {
-        toast.success("Đã từ chối phiếu xử lý!");
-      }
-    }
-  };
-
+  const handleReject = () => openRejectModal();
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -331,7 +366,7 @@ export default function DisposalDetail() {
                   <tfoot className="bg-slate-50 font-semibold">
                     <tr>
                       <td
-                        colSpan={isEditable ? 4 : 4}
+                        colSpan={4}
                         className="px-4 py-3 text-sm text-slate-700 text-right"
                       >
                         Tổng cộng
@@ -362,9 +397,9 @@ export default function DisposalDetail() {
 
             {/* Code */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">
+              <p className="block text-xs font-medium text-slate-500 mb-1">
                 Mã phiếu
-              </label>
+              </p>
               <p className="font-mono text-sm font-semibold text-red-600">
                 {voucher.code}
               </p>
@@ -372,72 +407,103 @@ export default function DisposalDetail() {
 
             {/* Location */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">
-                Kho
-              </label>
               {isEditable ? (
-                <select
-                  value={voucher.location_id || ""}
-                  onChange={(e) =>
-                    updateVoucher("location_id", Number(e.target.value) || null)
-                  }
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                >
-                  <option value="">-- Chọn kho --</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.location_name}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <label
+                    htmlFor="disposal-location"
+                    className="block text-xs font-medium text-slate-500 mb-1"
+                  >
+                    Kho
+                  </label>
+                  <select
+                    id="disposal-location"
+                    value={voucher.location_id || ""}
+                    onChange={(e) =>
+                      updateVoucher("location_id", Number(e.target.value) || null)
+                    }
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                  >
+                    <option value="">-- Chọn kho --</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.location_name}
+                      </option>
+                    ))}
+                  </select>
+                </>
               ) : (
-                <p className="text-sm text-slate-700">
-                  {locations.find((l) => l.id === voucher.location_id)
-                    ?.location_name || "—"}
-                </p>
+                <>
+                  <p className="block text-xs font-medium text-slate-500 mb-1">Kho</p>
+                  <p className="text-sm text-slate-700">
+                    {locations.find((l) => l.id === voucher.location_id)
+                      ?.location_name || "—"}
+                  </p>
+                </>
               )}
             </div>
 
             {/* Reason type */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">
-                Lý do xử lý
-              </label>
               {isEditable ? (
-                <select
-                  value={voucher.reason_type || REASON_TYPE.EXPIRED}
-                  onChange={(e) => updateVoucher("reason_type", e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                >
-                  {Object.entries(REASON_CONFIG).map(([key, cfg]) => (
-                    <option key={key} value={key}>
-                      {cfg.label}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <label
+                    htmlFor="disposal-reason-type"
+                    className="block text-xs font-medium text-slate-500 mb-1"
+                  >
+                    Lý do xử lý
+                  </label>
+                  <select
+                    id="disposal-reason-type"
+                    value={voucher.reason_type || REASON_TYPE.EXPIRED}
+                    onChange={(e) => updateVoucher("reason_type", e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                  >
+                    {Object.entries(REASON_CONFIG).map(([key, cfg]) => (
+                      <option key={key} value={key}>
+                        {cfg.label}
+                      </option>
+                    ))}
+                  </select>
+                </>
               ) : (
-                <p className="text-sm text-slate-700">
-                  {REASON_CONFIG[voucher.reason_type]?.label ||
-                    voucher.reason_type}
-                </p>
+                <>
+                  <p className="block text-xs font-medium text-slate-500 mb-1">
+                    Lý do xử lý
+                  </p>
+                  <p className="text-sm text-slate-700">
+                    {REASON_CONFIG[voucher.reason_type]?.label ||
+                      voucher.reason_type}
+                  </p>
+                </>
               )}
             </div>
 
             {/* Notes */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">
-                Ghi chú
-              </label>
               {isEditable ? (
-                <textarea
-                  value={voucher.notes}
-                  onChange={(e) => updateVoucher("notes", e.target.value)}
-                  rows={3}
-                  placeholder="Ghi chú thêm..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none resize-none"
-                />
+                <>
+                  <label
+                    htmlFor="disposal-notes"
+                    className="block text-xs font-medium text-slate-500 mb-1"
+                  >
+                    Ghi chú
+                  </label>
+                  <textarea
+                    id="disposal-notes"
+                    value={voucher.notes}
+                    onChange={(e) => updateVoucher("notes", e.target.value)}
+                    rows={3}
+                    placeholder="Ghi chú thêm..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none resize-none"
+                  />
+                </>
               ) : (
-                <p className="text-sm text-slate-700">{voucher.notes || "—"}</p>
+                <>
+                  <p className="block text-xs font-medium text-slate-500 mb-1">
+                    Ghi chú
+                  </p>
+                  <p className="text-sm text-slate-700">{voucher.notes || "—"}</p>
+                </>
               )}
             </div>
 
@@ -551,6 +617,24 @@ export default function DisposalDetail() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!activeConfirmConfig}
+        title={activeConfirmConfig?.title}
+        message={activeConfirmConfig?.message}
+        confirmText={activeConfirmConfig?.confirmText}
+        cancelText="Hủy"
+        variant={activeConfirmConfig?.variant || "warning"}
+        onCancel={closeConfirm}
+        onConfirm={executeConfirmedAction}
+      />
+
+      <RejectionModal
+        isOpen={showRejectModal}
+        onClose={() => setShowRejectModal(false)}
+        onSubmit={handleRejectSubmit}
+        isLoading={saving}
+      />
     </div>
   );
 }

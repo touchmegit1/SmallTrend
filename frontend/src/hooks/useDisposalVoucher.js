@@ -2,8 +2,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "../components/ui/Toast";
 import {
   DV_STATUS,
-  REASON_TYPE,
-  generateDVCode,
   validateForConfirm,
   DEFAULT_VOUCHER,
 } from "../utils/disposalVoucher";
@@ -125,7 +123,7 @@ export function useDisposalVoucher(voucherId = null) {
   // ─── Update item quantity ──────────────────────────────
   const updateItemQty = useCallback(
     (batchId, qty) => {
-      const numQty = parseInt(qty, 10) || 0;
+      const numQty = Number.parseInt(qty, 10) || 0;
       setItems((prev) =>
         prev.map((i) =>
           i.batch_id === batchId
@@ -176,8 +174,6 @@ export function useDisposalVoucher(voucherId = null) {
       return false;
     }
 
-    if (!window.confirm("Gửi phiếu này cho quản lý để chờ duyệt?")) return false;
-
     setSaving(true);
     try {
       let currentVoucherId = voucherId || voucher.id;
@@ -199,10 +195,6 @@ export function useDisposalVoucher(voucherId = null) {
 
   // ─── Approve (stock deduction) ─────────────────────────
   const approveVoucherAction = useCallback(async () => {
-    if (!window.confirm("Xác nhận duyệt phiếu xử lý? Tồn kho sẽ bị trừ ngay lập tức.")) {
-      return false;
-    }
-
     setSaving(true);
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -229,8 +221,6 @@ export function useDisposalVoucher(voucherId = null) {
       return false;
     }
 
-    if (!window.confirm("Xác nhận từ chối phiếu xử lý này?")) return false;
-
     setSaving(true);
     try {
       const currentVoucherId = voucherId || voucher.id;
@@ -239,7 +229,8 @@ export function useDisposalVoucher(voucherId = null) {
       setVoucher(rejectedVoucher);
       return true;
     } catch (err) {
-      // alert("Lỗi khi từ chối: " + err.message);
+      setError(err.message);
+      toast.error("Lỗi khi từ chối: " + err.message);
       return false;
     } finally {
       setSaving(false);
@@ -263,6 +254,7 @@ export function useDisposalVoucher(voucherId = null) {
     addItem,
     removeItem,
     updateItemQty,
+    saveDraft,
     submitVoucher: submitVoucherAction,
     approveVoucher: approveVoucherAction,
     rejectVoucher: rejectVoucherAction,

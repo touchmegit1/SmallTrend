@@ -102,8 +102,8 @@ export default function StockHealthOverview({ products }) {
                           {p.sku}
                         </span>
                         <span className="font-bold text-red-600">
-                          {formatNumber(p.stock_quantity || 0)} /{" "}
-                          {formatNumber(p.min_stock || 50)}
+                          {formatNumber(p.stock_quantity ?? 0)} /{" "}
+                          {formatNumber(p.min_stock ?? 50)}
                         </span>
                       </div>
                     </div>

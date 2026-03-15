@@ -8,6 +8,8 @@ import {
 } from "../../services/disposalService";
 import { getActiveLocations } from "../../services/inventoryService";
 import { formatCurrency } from "../../utils/inventory";
+import { useToast } from "../../components/ui/Toast";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 const REASON_OPTIONS = [
   { value: "EXPIRED", label: "Háº¿t háº¡n" },
@@ -19,6 +21,7 @@ const REASON_OPTIONS = [
 
 export default function DisposalCreate() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -34,8 +37,18 @@ export default function DisposalCreate() {
   const [selectedItems, setSelectedItems] = useState([]);
 
   // UI state
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const [errors, setErrors] = useState({});
+
+  const confirmConfigs = {
+    confirmDeduction: {
+      title: "Xác nhận xử lý",
+      message:
+        "Bạn có chắc chắn muốn xác nhận phiếu xử lý này? Tồn kho sẽ bị trừ ngay lập tức và không thể hoàn tác.",
+      confirmText: "Xác nhận",
+      variant: "warning",
+    },
+  };
 
   // Load initial data
   useEffect(() => {
@@ -170,15 +183,16 @@ export default function DisposalCreate() {
   // Confirm and deduct stock
   const handleConfirm = async () => {
     if (!validate()) return;
-    setShowConfirmModal(true);
+    setConfirmState("confirmDeduction");
   };
+
+  const closeConfirm = () => setConfirmState(null);
 
   const confirmDeduction = async () => {
     setSaving(true);
     try {
       const userId = JSON.parse(localStorage.getItem("user"))?.id || 1;
 
-      // Save draft first
       const draft = await saveDisposalDraft(
         {
           locationId: parseInt(locationId),
@@ -193,7 +207,6 @@ export default function DisposalCreate() {
         userId,
       );
 
-      // Then confirm
       await confirmDisposalVoucher(draft.id, userId);
 
       toast.success("XĂ¡c nháº­n thĂ nh cĂ´ng! Tá»“n kho Ä‘Ă£ Ä‘Æ°á»£c trá»«.");
@@ -202,9 +215,18 @@ export default function DisposalCreate() {
       toast.error("Lá»—i xĂ¡c nháº­n: " + err.message);
     } finally {
       setSaving(false);
-      setShowConfirmModal(false);
+      closeConfirm();
     }
   };
+
+  const executeConfirmedAction = async () => {
+    if (confirmState !== "confirmDeduction") return;
+    await confirmDeduction();
+  };
+
+  const activeConfirmConfig = confirmState
+    ? confirmConfigs[confirmState]
+    : null;
 
   if (loading) {
     return (
@@ -512,39 +534,19 @@ export default function DisposalCreate() {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">
-              XĂ¡c nháº­n xá»­ lĂ½
-            </h3>
-            <p className="text-sm text-slate-600 mb-6">
-              Báº¡n cĂ³ cháº¯c cháº¯n muá»‘n xĂ¡c nháº­n phiáº¿u xá»­ lĂ½ nĂ y?
-              <br />
-              <br />
-              <strong className="text-red-600">
-                Tá»“n kho sáº½ bá»‹ trá»« ngay láº­p tá»©c vĂ  khĂ´ng thá»ƒ hoĂ n tĂ¡c!
-              </strong>
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={confirmDeduction}
-                disabled={saving}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-              >
-                {saving ? "Äang xá»­ lĂ½..." : "XĂ¡c nháº­n"}
-              </button>
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                disabled={saving}
-                className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50"
-              >
-                Há»§y
-              </button>
-            </div>
-          </div>
-        </div>
+      <ConfirmDialog
+        open={!!activeConfirmConfig}
+        title={activeConfirmConfig?.title}
+        message={activeConfirmConfig?.message}
+        confirmText={activeConfirmConfig?.confirmText}
+        cancelText="Hủy"
+        variant={activeConfirmConfig?.variant || "warning"}
+        onCancel={closeConfirm}
+        onConfirm={executeConfirmedAction}
+      />
+
+      {saving && !!activeConfirmConfig && (
+        <div className="fixed inset-0 z-[10000] pointer-events-none" />
       )}
     </div>
   );
