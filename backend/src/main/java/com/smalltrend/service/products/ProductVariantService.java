@@ -188,9 +188,8 @@ public class ProductVariantService {
         }
 
         if (request.getCostPrice() != null) {
-            List<ProductBatch> batches = productBatchRepository.findByVariantId(variantId);
-            if (batches != null && !batches.isEmpty()) {
-                ProductBatch latestBatch = batches.get(batches.size() - 1);
+            ProductBatch latestBatch = productBatchRepository.findFirstByVariantIdOrderByIdDesc(variantId).orElse(null);
+            if (latestBatch != null) {
                 latestBatch.setCostPrice(request.getCostPrice());
                 productBatchRepository.save(latestBatch);
             } else {
@@ -491,12 +490,8 @@ public class ProductVariantService {
         response.setStockQuantity(stockQty);
 
         // Get cost price from latest batch
-        List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());
-        if (batches != null && !batches.isEmpty()) {
-            // Get the latest batch's cost price
-            ProductBatch latestBatch = batches.get(batches.size() - 1);
-            response.setCostPrice(latestBatch.getCostPrice());
-        }
+        productBatchRepository.findFirstByVariantIdOrderByIdDesc(variant.getId())
+                .ifPresent(latestBatch -> response.setCostPrice(latestBatch.getCostPrice()));
 
         // Get category and brand names
         if (variant.getProduct().getCategory() != null) {

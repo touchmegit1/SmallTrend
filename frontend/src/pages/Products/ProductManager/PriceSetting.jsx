@@ -30,6 +30,7 @@ import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
  *   profit        = selling_price − cost_price
  */
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
+const PRICE_SYNC_NOTICE_KEY = "priceSyncNotice";
 
 const PriceSetting = () => {
     // ─── Data ────────────────────────────────
@@ -37,6 +38,30 @@ const PriceSetting = () => {
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
+    const [priceSyncNotice, setPriceSyncNotice] = useState(null);
+    const [showSyncedProducts, setShowSyncedProducts] = useState(false);
+
+    const consumePriceSyncNotice = useCallback(() => {
+        try {
+            const rawNotice = sessionStorage.getItem(PRICE_SYNC_NOTICE_KEY);
+            if (!rawNotice) return;
+
+            sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
+            const notice = JSON.parse(rawNotice);
+            const syncedCount = Number(notice?.syncedCount) || 0;
+            if (syncedCount <= 0) return;
+
+            const syncedItems = Array.isArray(notice?.syncedItems) ? notice.syncedItems : [];
+            const orderInfo = notice?.orderNumber ? ` (PO: ${notice.orderNumber})` : "";
+            setPriceSyncNotice({ syncedCount, syncedItems, orderNumber: notice?.orderNumber || null });
+            setShowSyncedProducts(false);
+            setSuccessMsg(`Giá nhập đã được đồng bộ từ phiếu nhập kho cho ${syncedCount} sản phẩm${orderInfo}.`);
+            setTimeout(() => setSuccessMsg(""), 6000);
+        } catch (error) {
+            sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
+            setPriceSyncNotice(null);
+        }
+    }, []);
 
     // ─── Search & Filter ─────────────────────
     const [searchTerm, setSearchTerm] = useState("");
@@ -65,7 +90,10 @@ const PriceSetting = () => {
     // ═══════════════════════════════════════════
     // FETCH
     // ═══════════════════════════════════════════
-    useEffect(() => { fetchVariants(); }, []);
+    useEffect(() => {
+        fetchVariants();
+        consumePriceSyncNotice();
+    }, [consumePriceSyncNotice]);
 
     const toDateOnly = (dateStr) => {
         if (!dateStr) return null;
@@ -414,10 +442,40 @@ const PriceSetting = () => {
                     </div>
                 )}
                 {successMsg && (
-                    <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl flex items-center gap-3 border border-emerald-100 shadow-sm">
-                        <Save className="w-5 h-5 flex-shrink-0" />
-                        <span className="font-medium text-sm flex-1">{successMsg}</span>
-                        <button onClick={() => setSuccessMsg("")} className="text-emerald-400 hover:text-emerald-600 text-lg leading-none">×</button>
+                    <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl border border-emerald-100 shadow-sm space-y-3">
+                        <div className="flex items-center gap-3">
+                            <Save className="w-5 h-5 flex-shrink-0" />
+                            <span className="font-medium text-sm flex-1">{successMsg}</span>
+                            <button onClick={() => setSuccessMsg("")} className="text-emerald-400 hover:text-emerald-600 text-lg leading-none">×</button>
+                        </div>
+
+                        {priceSyncNotice?.syncedItems?.length > 0 && (
+                            <div className="pl-8">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowSyncedProducts((prev) => !prev)}
+                                    className="h-9 px-3 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                                >
+                                    {showSyncedProducts ? "Ẩn sản phẩm đã đổi giá nhập" : "Xem sản phẩm đã đổi giá nhập"}
+                                </Button>
+
+                                {showSyncedProducts && (
+                                    <div className="mt-3 rounded-lg border border-emerald-200 bg-white p-3 max-h-56 overflow-auto">
+                                        <ul className="space-y-2 text-sm text-gray-700">
+                                            {priceSyncNotice.syncedItems.map((item, index) => (
+                                                <li key={`${item.itemId || item.variantId || index}`} className="border-b border-gray-100 pb-2 last:border-b-0">
+                                                    <div className="font-medium text-gray-900">{item.productName || "Sản phẩm"}</div>
+                                                    <div className="text-xs text-gray-500">SKU: {item.sku || "-"}</div>
+                                                    <div className="text-xs text-gray-600">
+                                                        Giá nhập: {Number(item.previousPurchasePrice || 0).toLocaleString("vi-VN")} → {Number(item.purchasePrice || 0).toLocaleString("vi-VN")}
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 

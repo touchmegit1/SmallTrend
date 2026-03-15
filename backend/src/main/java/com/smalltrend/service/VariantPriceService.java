@@ -12,10 +12,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.smalltrend.entity.enums.VariantPriceStatus.ACTIVE;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +46,7 @@ public class VariantPriceService {
 
         // Deactivate all current ACTIVE prices for this variant
         List<VariantPrice> activePrices = variantPriceRepository.findByVariantIdAndStatus(
-                variantId, VariantPriceStatus.ACTIVE);
+                variantId, ACTIVE);
         for (VariantPrice activePrice : activePrices) {
             activePrice.setStatus(VariantPriceStatus.INACTIVE);
             variantPriceRepository.save(activePrice);
@@ -83,9 +86,27 @@ public class VariantPriceService {
      * Lấy giá đang ACTIVE của variant.
      */
     public VariantPriceResponse getActivePrice(Integer variantId) {
-        return variantPriceRepository.findFirstByVariantIdAndStatus(variantId, VariantPriceStatus.ACTIVE)
+        return variantPriceRepository.findFirstByVariantIdAndStatus(variantId, ACTIVE)
                 .map(this::mapToResponse)
                 .orElse(null);
+    }
+
+    @Transactional
+    public boolean syncActivePurchasePrice(Integer variantId, BigDecimal purchasePrice) {
+        if (purchasePrice == null) {
+            return false;
+        }
+
+        VariantPrice activePrice = variantPriceRepository
+                .findFirstByVariantIdAndStatus(variantId, ACTIVE)
+                .orElse(null);
+        if (activePrice == null) {
+            return false;
+        }
+
+        activePrice.setPurchasePrice(purchasePrice);
+        variantPriceRepository.save(activePrice);
+        return true;
     }
 
     /**

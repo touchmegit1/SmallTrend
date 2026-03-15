@@ -22,8 +22,6 @@ import {
   createOrderItem,
   calcOrderFinancials,
   validateDraft,
-  validateConfirm,
-  canTransitionTo,
 } from "../utils/purchaseOrder";
 
 export function usePurchaseOrder(initialId = null) {
@@ -507,9 +505,49 @@ export function usePurchaseOrder(initialId = null) {
             unitCost: toNumber(ri.unitCost),
           })),
         };
-        await receiveGoodsOrder(initialId, receiptData);
+        const response = await receiveGoodsOrder(initialId, receiptData);
 
-        toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
+        const syncedCount = Number(response?.syncedPurchasePriceCount) || 0;
+        const successMessage =
+          syncedCount > 0
+            ? `Đã xác nhận nhập kho thành công! Đã đồng bộ giá nhập cho ${syncedCount} sản phẩm ở Thiết lập giá.`
+            : "Đã xác nhận nhập kho thành công!";
+
+        if (syncedCount > 0) {
+          const previousItemById = new Map(items.map((item) => [item.id, item]));
+          const changedItems = receiptItems
+            .map((ri) => {
+              const prev = previousItemById.get(ri.itemId);
+              const previousCost = toNumber(prev?.unit_price ?? prev?.unitCost);
+              const newCost = toNumber(ri.unitCost);
+
+              if (!prev || newCost <= 0 || newCost === previousCost) {
+                return null;
+              }
+
+              return {
+                itemId: ri.itemId,
+                variantId: ri.variantId ?? prev.variantId ?? prev.variant_id ?? null,
+                sku: prev.sku || "",
+                productName: prev.name || "Sản phẩm",
+                purchasePrice: newCost,
+                previousPurchasePrice: previousCost,
+              };
+            })
+            .filter(Boolean);
+
+          sessionStorage.setItem(
+            "priceSyncNotice",
+            JSON.stringify({
+              syncedCount,
+              orderNumber: response?.orderNumber || order?.po_number || null,
+              syncedItems: changedItems,
+              syncedAt: new Date().toISOString(),
+            }),
+          );
+        }
+
+        toast.success(successMessage);
         if (navigate) navigate("/inventory/purchase-orders");
         return true;
       } catch (err) {
@@ -523,11 +561,13 @@ export function usePurchaseOrder(initialId = null) {
     [
       initialId,
       receiptItems,
+      items,
       order.notes,
       order.supplier_id,
       order.location_id,
       order.tax_percent,
       order.shipping_fee,
+      order.po_number,
       checkingFinancials,
     ],
   );

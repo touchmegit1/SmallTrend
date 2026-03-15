@@ -5,6 +5,7 @@ import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
 import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
+import com.smalltrend.service.VariantPriceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +35,7 @@ public class PurchaseOrderService {
     private final LocationRepository locationRepository;
     private final StockMovementRepository stockMovementRepository;
     private final UnitConversionRepository unitConversionRepository;
+    private final VariantPriceService variantPriceService;
 
     // ═══════════════════════════════════════════════════════════
     // Public API
@@ -284,8 +288,28 @@ public class PurchaseOrderService {
 
         updateStock(order, itemRequests);
 
+        int syncedPurchasePriceCount = 0;
+        Set<Integer> processedVariantIds = new HashSet<>();
+        for (PurchaseOrderItem item : order.getItems()) {
+            if (item.getVariant() == null || item.getVariant().getId() == null || item.getUnitCost() == null) {
+                continue;
+            }
+
+            Integer variantId = item.getVariant().getId();
+            if (!processedVariantIds.add(variantId)) {
+                continue;
+            }
+
+            boolean synced = variantPriceService.syncActivePurchasePrice(variantId, item.getUnitCost());
+            if (synced) {
+                syncedPurchasePriceCount++;
+            }
+        }
+
         log.info("📦 Purchase Order {} RECEIVED. Stock updated.", order.getOrderNumber());
-        return toDetailResponse(order);
+        PurchaseOrderResponse response = toDetailResponse(order);
+        response.setSyncedPurchasePriceCount(syncedPurchasePriceCount);
+        return response;
     }
 
     // ─── Confirm Existing Draft ──────────────────────────────
