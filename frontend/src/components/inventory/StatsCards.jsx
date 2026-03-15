@@ -91,10 +91,11 @@ function Badge({ label, badgeBg, text }) {
 // ─── Modal: Tổng sản phẩm ────────────────────────────────────────
 function ProductsModal({ products, onClose }) {
   const [search, setSearch] = useState("");
+  const normalizedSearch = search.toLowerCase();
   const filtered = products.filter(
     (p) =>
-      (p.name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (p.sku || "").toLowerCase().includes(search.toLowerCase()),
+      p.name?.toLowerCase().includes(normalizedSearch) ||
+      p.sku?.toLowerCase().includes(normalizedSearch),
   );
 
   return (

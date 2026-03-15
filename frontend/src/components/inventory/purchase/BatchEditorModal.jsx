@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Plus, Trash2, Calendar, Package } from "lucide-react";
+import { X, Plus, Trash2, Package } from "lucide-react";
 import { useToast } from "../../ui/Toast";
 
 export default function BatchEditorModal({ item, onSave, onClose }) {
@@ -40,7 +40,7 @@ export default function BatchEditorModal({ item, onSave, onClose }) {
   };
 
   const totalBatchQty = batches.reduce(
-    (s, b) => s + (parseInt(b.quantity) || 0),
+    (s, b) => s + (Number.parseInt(b.quantity, 10) || 0),
     0,
   );
   const qtyDiff = item.quantity - totalBatchQty;
@@ -53,7 +53,9 @@ export default function BatchEditorModal({ item, onSave, onClose }) {
       return;
     }
 
-    const hasZeroQty = batches.some((b) => (parseInt(b.quantity) || 0) <= 0);
+    const hasZeroQty = batches.some(
+      (b) => (Number.parseInt(b.quantity, 10) || 0) <= 0,
+    );
     if (hasZeroQty) {
       toast.warning("Số lượng mỗi lô phải > 0.");
       return;
@@ -62,7 +64,7 @@ export default function BatchEditorModal({ item, onSave, onClose }) {
     // Save batches (strip internal _id)
     const cleanBatches = batches.map(({ _id, ...rest }) => ({
       ...rest,
-      quantity: parseInt(rest.quantity) || 0,
+      quantity: Number.parseInt(rest.quantity, 10) || 0,
     }));
     onSave(item._key, cleanBatches);
     onClose();

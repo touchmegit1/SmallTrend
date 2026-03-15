@@ -93,7 +93,7 @@ export default function DisposalList() {
           <p className="font-semibold text-lg mb-1">Lỗi tải dữ liệu</p>
           <p className="text-sm">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => globalThis.location.reload()}
             className="mt-4 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition"
           >
             Thử lại

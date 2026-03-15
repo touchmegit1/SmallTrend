@@ -63,7 +63,7 @@ function InventoryCountList() {
           <p className="text-red-500 font-medium mb-2">Lỗi tải dữ liệu</p>
           <p className="text-sm text-slate-500 mb-3">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => globalThis.location.reload()}
             className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg"
           >
             Thử lại
