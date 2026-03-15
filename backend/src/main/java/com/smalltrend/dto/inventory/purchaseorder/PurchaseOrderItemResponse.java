@@ -18,7 +18,11 @@ public class PurchaseOrderItemResponse {
     private String sku;
     private String name;
     private String imageUrl;
+    private String unit;
+    private String checkingUnit;
     private Integer quantity;
+    private Integer checkingQuantity;
+    private Integer conversionFactor;
     private BigDecimal unitCost;
     private BigDecimal totalCost;
     private Integer receivedQuantity;

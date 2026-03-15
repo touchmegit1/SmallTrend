@@ -198,6 +198,14 @@ export function createDefaultOrder(code) {
 // ─── Default Item Shape ──────────────────────────────────
 
 export function createOrderItem(product) {
+  const unitPrice = Number(
+    product.unit_price ??
+      product.unitPrice ??
+      product.purchase_price ??
+      product.purchasePrice ??
+      0,
+  );
+
   return {
     _key: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     product_id: product.productId || product.product_id || product.id,
@@ -206,6 +214,7 @@ export function createOrderItem(product) {
     name: product.name,
     unit: product.unit,
     quantity: 1,
+    unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
   };
 }
 

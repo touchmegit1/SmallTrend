@@ -52,7 +52,7 @@ function InventoryDashboard() {
           <p className="text-red-500 font-medium mb-2">Lỗi tải dữ liệu</p>
           <p className="text-sm text-slate-500">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => globalThis.location.reload()}
             className="mt-3 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
           >
             Thử lại
@@ -76,7 +76,7 @@ function InventoryDashboard() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => globalThis.location.reload()}
             className="inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
           >
             <RefreshCw size={16} />

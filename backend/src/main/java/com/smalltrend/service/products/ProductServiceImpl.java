@@ -55,6 +55,7 @@ public class ProductServiceImpl implements ProductService {
 
     // Lấy toàn bộ danh sách sản phẩm và map sang DTO
     @Override
+    @Transactional(readOnly = true)
     public List<ProductResponse> getAll() {
         return productRepository.findAll().stream()
                 .map(this::mapToResponse)
@@ -63,6 +64,7 @@ public class ProductServiceImpl implements ProductService {
 
     // Tìm kiếm và lấy chi tiết một sản phẩm theo khóa chính (ID)
     @Override
+    @Transactional(readOnly = true)
     public ProductResponse getById(Integer id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Box, Clock3 } from "lucide-react";
 import { usePurchaseOrder } from "../../hooks/usePurchaseOrder";
-import { PO_STATUS } from "../../utils/purchaseOrder";
+import { PO_STATUS, PO_STATUS_CONFIG } from "../../utils/purchaseOrder";
 
 import PurchaseHeader from "../../components/inventory/purchase/PurchaseHeader";
 import ProductSearchBar from "../../components/inventory/purchase/ProductSearchBar";
@@ -9,12 +10,14 @@ import PurchaseItemTable from "../../components/inventory/purchase/PurchaseItemT
 import SummaryPanel from "../../components/inventory/purchase/SummaryPanel";
 import ActionButtons from "../../components/inventory/purchase/ActionButtons";
 import RejectionModal from "../../components/ui/RejectionModal";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import GoodsReceiptTable from "../../components/inventory/purchase/GoodsReceiptTable";
 
 function CreatePurchaseOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
 
   const {
     products,
@@ -25,6 +28,8 @@ function CreatePurchaseOrder() {
     error,
     order,
     items,
+    supplierQuery,
+    setSupplierQuery,
     updateOrder,
     addProduct,
     importProducts,
@@ -41,6 +46,81 @@ function CreatePurchaseOrder() {
     rejectOrder,
     deleteOrder,
   } = usePurchaseOrder(id || null);
+
+  const confirmConfigs = {
+    confirmOrder: {
+      title: "Duyệt phiếu nhập",
+      message: "Xác nhận duyệt phiếu nhập? Phiếu sẽ chuyển cho NV kho kiểm kê.",
+      confirmText: "Duyệt phiếu",
+      variant: "info",
+    },
+    startChecking: {
+      title: "Bắt đầu kiểm kê",
+      message: "Xác nhận bắt đầu kiểm kê hàng hóa?",
+      confirmText: "Bắt đầu",
+      variant: "info",
+    },
+    receiveGoods: {
+      title: "Xác nhận nhập kho",
+      message:
+        "Tồn kho sẽ được cập nhật và không thể hoàn tác. Bạn có chắc chắn muốn tiếp tục?",
+      confirmText: "Nhập kho",
+      variant: "warning",
+    },
+    deleteOrder: {
+      title: "Xóa phiếu nháp",
+      message: "Bạn có chắc chắn muốn xóa phiếu nhập tạm này không?",
+      confirmText: "Xóa phiếu",
+      variant: "danger",
+    },
+  };
+
+  const openConfirm = (action) => setConfirmState(action);
+  const closeConfirm = () => setConfirmState(null);
+
+  const executeConfirmedAction = async () => {
+    if (!confirmState) return;
+
+    const actionMap = {
+      confirmOrder: () => confirmOrder(navigate),
+      startChecking,
+      receiveGoods: () => receiveGoods(navigate),
+      deleteOrder: () => deleteOrder(navigate),
+    };
+
+    const action = actionMap[confirmState];
+    if (!action) return;
+
+    const result = await action();
+    if (result) {
+      closeConfirm();
+    }
+  };
+
+  const activeConfirmConfig = confirmState ? confirmConfigs[confirmState] : null;
+
+  const handleSupplierInputChange = (value) => {
+    setSupplierQuery(value);
+  };
+
+  const handleSupplierSelect = (value) => {
+    setSupplierQuery(value);
+  };
+
+  const handleLocationChange = (value) => {
+    updateOrder("location_id", value ? Number.parseInt(value, 10) : null);
+  };
+
+  const handleRejectClick = () => {
+    setShowRejectionModal(true);
+  };
+
+  const handleRejectSubmit = async (reason) => {
+    const result = await rejectOrder(navigate, reason);
+    if (result) {
+      setShowRejectionModal(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -75,85 +155,173 @@ function CreatePurchaseOrder() {
 
   const isEditable =
     order.status === PO_STATUS.DRAFT || order.status === PO_STATUS.REJECTED;
-
   const isChecking = order.status === PO_STATUS.CHECKING;
+  const isReceived = order.status === PO_STATUS.RECEIVED;
+  const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
 
-  const handleRejectClick = () => {
-    setShowRejectionModal(true);
-  };
+  const totalQty = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
-  const handleRejectSubmit = async (reason) => {
-    const result = await rejectOrder(navigate, reason);
-    if (result) {
-      setShowRejectionModal(false);
-    }
-  };
+  let bottomHint = "";
+  if (isEditable) {
+    bottomHint = "Thêm sản phẩm để bắt đầu";
+  } else if (order.status === PO_STATUS.PENDING) {
+    bottomHint = "Phiếu đang chờ duyệt";
+  } else if (order.status === PO_STATUS.CONFIRMED) {
+    bottomHint = "Đã duyệt · Chờ kiểm kê";
+  } else if (isReceived) {
+    bottomHint = "Phiếu đã nhập kho";
+  }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-100 overflow-hidden">
       <div className="flex-1 flex flex-col min-w-0">
         <PurchaseHeader
           order={order}
           onBack={() => navigate("/inventory/purchase-orders")}
         />
 
-        {isEditable && (
-          <ProductSearchBar
-            products={products}
-            onAddProduct={addProduct}
-            onImportProducts={importProducts}
-          />
-        )}
-
-        {/* Bảng kiểm kê cho NV kho (trạng thái CHECKING) */}
-        {isChecking ? (
+        {isChecking || isReceived ? (
           <GoodsReceiptTable
             items={items}
             receiptItems={receiptItems}
             onUpdateReceiptItem={updateReceiptItem}
+            isReadOnly={isReceived}
           />
         ) : (
-          <PurchaseItemTable
-            items={items}
-            isEditable={isEditable}
-            onUpdate={updateItem}
-            onRemove={removeItem}
-          />
+          <div className="flex-1 overflow-auto px-6 py-5">
+            <div className="max-w-[1300px] mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                {isEditable && (
+                  <div className="mb-3 text-xs text-slate-500">
+                    Yêu cầu nhập hàng · thêm sản phẩm và gửi duyệt
+                  </div>
+                )}
+                {order.status === PO_STATUS.PENDING && (
+                  <div className="mb-3 text-xs text-amber-600">
+                    Phiếu đang ở trạng thái chờ duyệt
+                  </div>
+                )}
+                {order.status === PO_STATUS.CONFIRMED && (
+                  <div className="mb-3 text-xs text-blue-600">
+                    Phiếu đã duyệt · chờ bắt đầu kiểm kê
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                      <Box size={16} />
+                    </div>
+                    <span className="font-mono text-base font-semibold text-indigo-600 shrink-0">
+                      {order.po_number || "—"}
+                    </span>
+                    <span className="w-px h-5 bg-slate-200 shrink-0" />
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full ${statusCfg.bg} ${statusCfg.text}`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`}></span>
+                      {statusCfg.label}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-5 text-xs text-slate-500 shrink-0">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock3 size={12} />
+                      {order.created_at
+                        ? new Date(order.created_at).toLocaleDateString("vi-VN")
+                        : "---"}
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 font-semibold text-slate-700">
+                      {items.length} sản phẩm
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isEditable && (
+                <ProductSearchBar
+                  products={products}
+                  onAddProduct={addProduct}
+                  onImportProducts={importProducts}
+                />
+              )}
+
+              <PurchaseItemTable
+                items={items}
+                isEditable={isEditable}
+                onUpdate={updateItem}
+                onRemove={removeItem}
+                totalQty={totalQty}
+              />
+
+              <ActionButtons
+                status={order.status}
+                saving={saving}
+                isEditMode={!!id}
+                layout="inline"
+                footerHint={bottomHint}
+                onSaveDraft={() => saveDraft(navigate)}
+                onSubmitForApproval={() => submitForApproval(navigate)}
+                onConfirm={() => openConfirm("confirmOrder")}
+                onReject={handleRejectClick}
+                onDelete={() => openConfirm("deleteOrder")}
+                onStartChecking={() => openConfirm("startChecking")}
+                onReceiveGoods={() => openConfirm("receiveGoods")}
+              />
+            </div>
+          </div>
         )}
       </div>
 
-      <div className="flex flex-col w-[380px] bg-white border-l border-slate-200 shrink-0 h-full">
-        <SummaryPanel
-          order={order}
-          items={items}
-          suppliers={suppliers}
-          locations={locations}
-          updateOrder={updateOrder}
-          isEditable={isEditable}
-          allowMetaEdit={isChecking}
-          checkingFinancials={checkingFinancials}
-        />
+      {(isChecking || isReceived) && (
+        <div className="flex flex-col w-[340px] xl:w-[360px] bg-white border-l border-slate-200 shrink-0 h-full">
+          <SummaryPanel
+            order={order}
+            items={items}
+            suppliers={suppliers}
+            locations={locations}
+            supplierQuery={supplierQuery}
+            onSupplierQueryChange={handleSupplierInputChange}
+            onSupplierSelect={handleSupplierSelect}
+            onLocationChange={handleLocationChange}
+            updateOrder={updateOrder}
+            isEditable={isEditable}
+            allowMetaEdit={isChecking}
+            checkingFinancials={checkingFinancials}
+          />
 
-        <ActionButtons
-          status={order.status}
-          saving={saving}
-          isEditMode={!!id}
-          onSaveDraft={() => saveDraft(navigate)}
-          onSubmitForApproval={() => submitForApproval(navigate)}
-          onConfirm={() => confirmOrder(navigate)}
-          onReject={handleRejectClick}
-          onDelete={() => deleteOrder(navigate)}
-          onStartChecking={() => startChecking()}
-          onReceiveGoods={() => receiveGoods(navigate)}
-        />
-      </div>
-
+          <div className="mt-0 -translate-y-2">
+            <ActionButtons
+              status={order.status}
+              saving={saving}
+              isEditMode={!!id}
+              onSaveDraft={() => saveDraft(navigate)}
+              onSubmitForApproval={() => submitForApproval(navigate)}
+              onConfirm={() => openConfirm("confirmOrder")}
+              onReject={handleRejectClick}
+              onDelete={() => openConfirm("deleteOrder")}
+              onStartChecking={() => openConfirm("startChecking")}
+              onReceiveGoods={() => openConfirm("receiveGoods")}
+            />
+          </div>
+        </div>
+      )}
 
       <RejectionModal
         isOpen={showRejectionModal}
         onClose={() => setShowRejectionModal(false)}
         onSubmit={handleRejectSubmit}
         isLoading={saving}
+      />
+
+      <ConfirmDialog
+        open={!!activeConfirmConfig}
+        title={activeConfirmConfig?.title}
+        message={activeConfirmConfig?.message}
+        confirmText={activeConfirmConfig?.confirmText}
+        cancelText="Hủy"
+        variant={activeConfirmConfig?.variant || "warning"}
+        onCancel={closeConfirm}
+        onConfirm={executeConfirmedAction}
       />
     </div>
   );

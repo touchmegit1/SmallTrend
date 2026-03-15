@@ -1,4 +1,6 @@
-import { PO_STATUS_CONFIG, formatVND } from "../../../utils/purchaseOrder";
+import { MapPin, Truck } from "lucide-react";
+import { PO_STATUS, PO_STATUS_CONFIG, formatVND } from "../../../utils/purchaseOrder";
+import CustomSelect from "../../common/CustomSelect";
 
 const toNumber = (value) => {
   const num = Number(value);
@@ -10,170 +12,316 @@ export default function SummaryPanel({
   items,
   suppliers = [],
   locations = [],
+  supplierQuery = "",
+  onSupplierQueryChange,
+  onSupplierSelect,
+  onLocationChange,
   updateOrder,
-  isEditable = true,
   allowMetaEdit = false,
   checkingFinancials = null,
 }) {
   const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
+  const isChecking = order.status === PO_STATUS.CHECKING;
+  const isReceived = order.status === PO_STATUS.RECEIVED;
+  const showMetaInfo = allowMetaEdit || isReceived;
+  const showPaymentInfo = isChecking || isReceived;
+
+  const selectedSupplier = suppliers.find(
+    (s) => String(s.id) === String(order.supplier_id),
+  );
+  const selectedLocation = locations.find(
+    (loc) => String(loc.id) === String(order.location_id),
+  );
+
+  const totalAmount = checkingFinancials?.total ?? 0;
+
+  const discountAmount = toNumber(order.discount);
+  const hasDiscount =
+    order.discount !== "" &&
+    order.discount !== null &&
+    order.discount !== undefined &&
+    discountAmount !== 0;
+
+  const shippingAmount = toNumber(order.shipping_fee);
+  const hasShippingFee =
+    order.shipping_fee !== "" &&
+    order.shipping_fee !== null &&
+    order.shipping_fee !== undefined &&
+    shippingAmount !== 0;
+
+  const paidAmount = toNumber(order.paid_amount);
+  const hasPaidAmount =
+    order.paid_amount !== "" &&
+    order.paid_amount !== null &&
+    order.paid_amount !== undefined &&
+    paidAmount !== 0;
+
+  const vatPercent = toNumber(order.tax_percent);
+  const hasVatPercent =
+    order.tax_percent !== "" &&
+    order.tax_percent !== null &&
+    order.tax_percent !== undefined &&
+    vatPercent !== 0;
+
+  const taxAmount = toNumber(checkingFinancials?.taxAmount);
+  const hasTaxAmount = taxAmount !== 0;
+
+  const remainingAmount = Math.max(0, totalAmount - paidAmount);
+
+  const vatDisplay = hasVatPercent
+    ? hasTaxAmount
+      ? `${vatPercent}% (${formatVND(taxAmount)})`
+      : `${vatPercent}%`
+    : hasTaxAmount
+      ? formatVND(taxAmount)
+      : "";
+  const vatAmountDisplay = hasTaxAmount ? formatVND(taxAmount) : "";
+  const vatPercentDisplay = hasVatPercent ? `${vatPercent}%` : "";
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-auto bg-white">
-      <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-indigo-50/30">
+    <div className="flex flex-col bg-white">
+      <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 shrink-0">
         <div className="space-y-2.5 text-sm">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-slate-500">Mã phiếu</span>
-            <span className="font-mono font-bold text-indigo-600">
-              {order.po_number}
+            <span className="font-mono text-lg font-semibold text-indigo-600">
+              {order.po_number || "—"}
             </span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-slate-500">Trạng thái</span>
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full ${statusCfg.bg} ${statusCfg.text}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${statusCfg.bg} ${statusCfg.text}`}
             >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`}
-              ></span>
+              <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`}></span>
               {statusCfg.label}
             </span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <span className="text-slate-500">Sản phẩm</span>
-            <span className="font-semibold text-slate-900">
-              {items.length} mặt hàng
-            </span>
+            <span className="text-xl font-semibold text-slate-900">{items.length} mặt hàng</span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {allowMetaEdit && (
+      <div className="overflow-y-auto">
+        {showMetaInfo && (
           <>
-            <div className="px-5 py-4 border-b border-slate-100">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Nhà cung cấp
+            <div className="px-6 py-3.5 border-b border-slate-200">
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                <Truck size={14} className="text-slate-400" />
+                Nhà cung cấp <span className="text-red-500">*</span>
               </label>
-              <select
-                value={order.supplier_id || ""}
-                onChange={(e) => {
-                  const value = e.target.value
-                    ? Number.parseInt(e.target.value, 10)
-                    : null;
-                  const supplier = suppliers.find((s) => s.id === value);
-                  updateOrder("supplier_id", value);
-                  updateOrder("supplier_name", supplier?.name || "");
+              <CustomSelect
+                value={supplierQuery}
+                onChange={(value) => {
+                  onSupplierQueryChange?.(value);
+                  onSupplierSelect?.(value);
                 }}
-                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              >
-                <option value="">Chọn nhà cung cấp...</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: "Chọn nhà cung cấp..." },
+                  ...suppliers.map((supplier) => ({
+                    value: supplier.name,
+                    label: supplier.name,
+                  })),
+                ]}
+              />
             </div>
 
-            <div className="px-5 py-4 border-b border-slate-100">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Vị trí nhập kho
+            <div className="px-6 py-3.5 border-b border-slate-200">
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                <MapPin size={14} className="text-slate-400" />
+                Vị trí nhập kho <span className="text-red-500">*</span>
               </label>
-              <select
+              <CustomSelect
                 value={order.location_id || ""}
-                onChange={(e) =>
-                  updateOrder(
-                    "location_id",
-                    e.target.value ? Number.parseInt(e.target.value, 10) : null,
-                  )
-                }
-                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              >
-                <option value="">Chọn vị trí...</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.location_name} ({loc.location_code})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="px-5 py-4 border-b border-slate-100">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Thuế VAT (%)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={order.tax_percent ?? ""}
-                onChange={(e) =>
-                  updateOrder(
-                    "tax_percent",
-                    e.target.value === "" ? "" : toNumber(e.target.value),
-                  )
-                }
-                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                placeholder="Nhập % VAT"
+                onChange={(value) => onLocationChange?.(value)}
+                options={[
+                  { value: "", label: "Chọn vị trí..." },
+                  ...locations.map((loc) => ({
+                    value: loc.id,
+                    label: `${loc.location_name} (${loc.location_code})`,
+                  })),
+                ]}
               />
             </div>
 
-            <div className="px-5 py-4 border-b border-slate-100">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Phí vận chuyển
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={order.shipping_fee ?? ""}
-                onChange={(e) =>
-                  updateOrder(
-                    "shipping_fee",
-                    e.target.value === "" ? "" : toNumber(e.target.value),
-                  )
-                }
-                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                placeholder="Nhập phí vận chuyển"
-              />
-            </div>
-
-            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
-              <div className="space-y-2.5 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Tạm tính</span>
-                  <span className="font-semibold text-slate-800">
-                    {formatVND(checkingFinancials?.subtotal || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Tiền VAT</span>
-                  <span className="font-semibold text-slate-800">
-                    {formatVND(checkingFinancials?.taxAmount || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                  <span className="text-slate-700 font-semibold">Tổng cộng</span>
-                  <span className="font-bold text-indigo-600">
-                    {formatVND(checkingFinancials?.total || 0)}
-                  </span>
+            {isReceived && (
+              <div className="px-6 py-3.5 border-b border-slate-200">
+                <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Truck size={14} className="text-slate-400" />
+                  Thông tin phiếu nhập
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Nhà cung cấp</span>
+                    <span className="font-medium text-slate-800 text-right break-all">
+                      {selectedSupplier?.name || order.supplier_name || "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Vị trí nhập kho</span>
+                    <span className="font-medium text-slate-800 text-right break-all">
+                      {selectedLocation
+                        ? `${selectedLocation.location_name} (${selectedLocation.location_code})`
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Thuế VAT</span>
+                    <span className="font-medium text-slate-800">{vatPercentDisplay}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Phí vận chuyển</span>
+                    <span className="font-medium text-slate-800">
+                      {hasShippingFee ? formatVND(shippingAmount) : ""}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {showPaymentInfo && (
+              <div className="px-6 py-3.5 border-b border-slate-200">
+                <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Truck size={14} className="text-slate-400" />
+                  Thông tin thanh toán
+                </h3>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Tiền hàng</span>
+                    <span className="font-semibold text-slate-800">
+                      {formatVND(checkingFinancials?.subtotal ?? 0)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Giảm giá</span>
+                    {isChecking ? (
+                      <div className="relative inline-block">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={hasDiscount ? discountAmount / 1000 : ""}
+                          onChange={(e) =>
+                            updateOrder(
+                              "discount",
+                              e.target.value === "" ? "" : toNumber(e.target.value) * 1000,
+                            )
+                          }
+                          className="w-24 px-2 py-1 pr-9 text-right text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                        />
+                        {hasDiscount && (
+                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-indigo-300">
+                            .000
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-800">
+                        {hasDiscount ? formatVND(discountAmount) : ""}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">VAT (%)</span>
+                    {isChecking ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={hasVatPercent ? vatPercent : ""}
+                          onChange={(e) =>
+                            updateOrder(
+                              "tax_percent",
+                              e.target.value === "" ? "" : toNumber(e.target.value),
+                            )
+                          }
+                          className="w-16 px-2 py-1 text-right text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                        />
+                        <span className="text-slate-400">=</span>
+                        <span className="text-xs font-medium text-slate-600 min-w-[58px] text-right">
+                          {vatAmountDisplay}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-800">{vatDisplay}</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Phí vận chuyển</span>
+                    {isChecking ? (
+                      <div className="relative inline-block">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={hasShippingFee ? shippingAmount / 1000 : ""}
+                          onChange={(e) =>
+                            updateOrder(
+                              "shipping_fee",
+                              e.target.value === "" ? "" : toNumber(e.target.value) * 1000,
+                            )
+                          }
+                          className="w-24 px-2 py-1 pr-9 text-right text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                        />
+                        {hasShippingFee && (
+                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-indigo-300">
+                            .000
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-800">
+                        {hasShippingFee ? formatVND(shippingAmount) : ""}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                    <span className="text-base font-semibold text-slate-800">Tổng cộng</span>
+                    <span className="text-2xl font-bold text-indigo-600">
+                      {formatVND(totalAmount)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Đã thanh toán</span>
+                    <span className="font-medium text-slate-800">
+                      {hasPaidAmount ? formatVND(paidAmount) : ""}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-600">Còn phải trả</span>
+                    <span className="font-semibold text-red-600">{formatVND(remainingAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 
-        <div className="px-5 py-4">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+        <div className="px-6 py-3.5 border-t border-slate-100">
+          <label
+            htmlFor="receipt-note"
+            className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5"
+          >
             Ghi chú
           </label>
           <textarea
+            id="receipt-note"
             value={order.notes || ""}
             onChange={(e) => updateOrder("notes", e.target.value)}
             placeholder="Ghi chú cho phiếu nhập..."
-            rows={3}
-            disabled={!isEditable && !allowMetaEdit}
-            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition disabled:bg-slate-50 disabled:text-slate-500"
+            rows={4}
+            disabled={!allowMetaEdit}
+            className="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
       </div>
