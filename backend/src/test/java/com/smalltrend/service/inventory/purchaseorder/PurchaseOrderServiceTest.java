@@ -4,6 +4,7 @@ import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.ProductResponse;
 import com.smalltrend.entity.*;
 import com.smalltrend.service.inventory.PurchaseOrderService;
+import com.smalltrend.service.VariantPriceService;
 import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,17 +33,30 @@ import static org.mockito.Mockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PurchaseOrderServiceTest {
 
-    @Mock private PurchaseOrderRepository purchaseOrderRepository;
-    @Mock private PurchaseOrderItemRepository purchaseOrderItemRepository;
-    @Mock private SupplierRepository supplierRepository;
-    @Mock private SupplierContractRepository supplierContractRepository;
-    @Mock private ProductVariantRepository productVariantRepository;
-    @Mock private ProductRepository productRepository;
-    @Mock private ProductBatchRepository productBatchRepository;
-    @Mock private InventoryStockRepository inventoryStockRepository;
-    @Mock private LocationRepository locationRepository;
-    @Mock private StockMovementRepository stockMovementRepository;
-    @Mock private UnitConversionRepository unitConversionRepository;
+    @Mock
+    private PurchaseOrderRepository purchaseOrderRepository;
+    @Mock
+    private PurchaseOrderItemRepository purchaseOrderItemRepository;
+    @Mock
+    private SupplierRepository supplierRepository;
+    @Mock
+    private SupplierContractRepository supplierContractRepository;
+    @Mock
+    private ProductVariantRepository productVariantRepository;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private ProductBatchRepository productBatchRepository;
+    @Mock
+    private InventoryStockRepository inventoryStockRepository;
+    @Mock
+    private LocationRepository locationRepository;
+    @Mock
+    private StockMovementRepository stockMovementRepository;
+    @Mock
+    private UnitConversionRepository unitConversionRepository;
+    @Mock
+    private VariantPriceService variantPriceService;
 
     @InjectMocks
     private PurchaseOrderService purchaseOrderService;
@@ -87,6 +101,7 @@ class PurchaseOrderServiceTest {
         when(productVariantRepository.findAll()).thenReturn(List.of(variant));
         when(supplierRepository.findById(1)).thenReturn(Optional.of(supplier));
         when(supplierRepository.findAll()).thenReturn(List.of(supplier));
+        when(variantPriceService.syncActivePurchasePrice(anyInt(), any())).thenReturn(false);
     }
 
     @Test
@@ -94,9 +109,9 @@ class PurchaseOrderServiceTest {
         PurchaseOrder o1 = PurchaseOrder.builder().createdAt(LocalDateTime.now().minusDays(1)).build();
         PurchaseOrder o2 = PurchaseOrder.builder().createdAt(LocalDateTime.now()).build();
         PurchaseOrder o3 = PurchaseOrder.builder().createdAt(null).build();
-        
+
         when(purchaseOrderRepository.findAll()).thenReturn(List.of(o1, o2, o3));
-        
+
         List<PurchaseOrderResponse> results = purchaseOrderService.getAllOrders();
         assertEquals(3, results.size());
     }
@@ -124,9 +139,9 @@ class PurchaseOrderServiceTest {
         req.setLocationId(1);
         req.setStatus("PENDING");
         req.setItems(List.of(PurchaseOrderItemRequest.builder().variantId(1).quantity(10).unitCost(BigDecimal.ONE).build()));
-        
+
         assertNotNull(purchaseOrderService.saveDraft(req));
-        
+
         req.setItems(null);
         req.setStatus(null);
         assertThrows(RuntimeException.class, () -> purchaseOrderService.saveDraft(req));
@@ -136,7 +151,7 @@ class PurchaseOrderServiceTest {
     void confirmExistingOrder_shouldHandleTransitions() {
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         order.setItems(List.of(PurchaseOrderItem.builder().id(1).build()));
-        
+
         // DRAFT -> CONFIRMED
         order.setStatus(PurchaseOrderStatus.DRAFT);
         assertEquals("CONFIRMED", purchaseOrderService.confirmExistingOrder(1).getStatus());
@@ -144,7 +159,7 @@ class PurchaseOrderServiceTest {
         // PENDING -> CONFIRMED
         order.setStatus(PurchaseOrderStatus.PENDING);
         assertEquals("CONFIRMED", purchaseOrderService.confirmExistingOrder(1).getStatus());
-        
+
         // CHECKING -> NOT ALLOWED
         order.setStatus(PurchaseOrderStatus.CHECKING);
         assertThrows(RuntimeException.class, () -> purchaseOrderService.confirmExistingOrder(1));
@@ -156,7 +171,7 @@ class PurchaseOrderServiceTest {
         req.setSupplierId(1);
         req.setLocationId(1);
         req.setItems(List.of(PurchaseOrderItemRequest.builder().variantId(1).quantity(10).unitCost(BigDecimal.ONE).build()));
-        
+
         assertNotNull(purchaseOrderService.confirmOrder(req));
     }
 
@@ -165,7 +180,7 @@ class PurchaseOrderServiceTest {
         order.setStatus(PurchaseOrderStatus.PENDING);
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         assertEquals("CONFIRMED", purchaseOrderService.approveOrder(1).getStatus());
-        
+
         order.setStatus(PurchaseOrderStatus.DRAFT);
         assertThrows(RuntimeException.class, () -> purchaseOrderService.approveOrder(1));
     }
@@ -175,14 +190,23 @@ class PurchaseOrderServiceTest {
         order.setStatus(PurchaseOrderStatus.CHECKING);
         order.setItems(new ArrayList<>());
         order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(10).purchaseOrder(order).build());
-        
+
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         // Mock lookup for existing stock
         when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(new ArrayList<>());
-        
+
         GoodsReceiptRequest req = new GoodsReceiptRequest();
+        req.setSupplierId(1);
+        req.setLocationId(1);
+        req.setTaxPercent(BigDecimal.ZERO);
+        req.setShippingFee(BigDecimal.ZERO);
         req.setItems(List.of(
-            GoodsReceiptRequest.GoodsReceiptItemRequest.builder().itemId(1).receivedQuantity(10).notes("ok").build()
+                GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
+                        .itemId(1)
+                        .receivedQuantity(10)
+                        .unitCost(BigDecimal.ONE)
+                        .notes("ok")
+                        .build()
         ));
 
         assertNotNull(purchaseOrderService.receiveGoods(1, req));
@@ -194,16 +218,24 @@ class PurchaseOrderServiceTest {
     void updateStock_shouldHandleExistingStock() {
         InventoryStock existing = InventoryStock.builder().variant(variant).quantity(5).location(location).build();
         variant.getInventoryStocks().add(existing);
-        
+
         order.setStatus(PurchaseOrderStatus.CHECKING);
         order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(10).purchaseOrder(order).build());
-        
+
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         when(inventoryStockRepository.findByLocationIdWithProduct(any())).thenReturn(List.of(existing));
 
         GoodsReceiptRequest req = new GoodsReceiptRequest();
+        req.setSupplierId(1);
+        req.setLocationId(1);
+        req.setTaxPercent(BigDecimal.ZERO);
+        req.setShippingFee(BigDecimal.ZERO);
         req.setItems(List.of(
-            GoodsReceiptRequest.GoodsReceiptItemRequest.builder().itemId(1).receivedQuantity(10).build()
+                GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
+                        .itemId(1)
+                        .receivedQuantity(10)
+                        .unitCost(BigDecimal.ONE)
+                        .build()
         ));
 
         purchaseOrderService.receiveGoods(1, req);
@@ -216,18 +248,26 @@ class PurchaseOrderServiceTest {
     void updateStock_shouldHandleUnitConversion() {
         Unit fromUnit = Unit.builder().id(2).name("Box").build();
         ProductVariant otherVariant = ProductVariant.builder().id(2).unit(fromUnit).product(product).build();
-        
+
         order.setStatus(PurchaseOrderStatus.CHECKING);
         order.getItems().add(PurchaseOrderItem.builder().id(1).variant(otherVariant).quantity(5).receivedQuantity(5).purchaseOrder(order).build());
-        
+
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         when(productVariantRepository.findById(2)).thenReturn(Optional.of(otherVariant));
         when(unitConversionRepository.findByVariantIdAndToUnitId(any(), any()))
                 .thenReturn(Optional.of(UnitConversion.builder().conversionFactor(new BigDecimal("10")).build()));
 
         GoodsReceiptRequest req = new GoodsReceiptRequest();
+        req.setSupplierId(1);
+        req.setLocationId(1);
+        req.setTaxPercent(BigDecimal.ZERO);
+        req.setShippingFee(BigDecimal.ZERO);
         req.setItems(List.of(
-            GoodsReceiptRequest.GoodsReceiptItemRequest.builder().itemId(1).receivedQuantity(5).build()
+                GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
+                        .itemId(1)
+                        .receivedQuantity(5)
+                        .unitCost(BigDecimal.ONE)
+                        .build()
         ));
 
         purchaseOrderService.receiveGoods(1, req);
@@ -240,7 +280,7 @@ class PurchaseOrderServiceTest {
         order.setStatus(PurchaseOrderStatus.CONFIRMED);
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         assertEquals("CHECKING", purchaseOrderService.startChecking(1).getStatus());
-        
+
         order.setStatus(PurchaseOrderStatus.DRAFT);
         assertThrows(RuntimeException.class, () -> purchaseOrderService.startChecking(1));
     }
@@ -257,7 +297,7 @@ class PurchaseOrderServiceTest {
         order.setStatus(PurchaseOrderStatus.DRAFT);
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         assertEquals("CANCELLED", purchaseOrderService.cancelOrder(1).getStatus());
-        
+
         order.setStatus(PurchaseOrderStatus.CONFIRMED);
         assertThrows(RuntimeException.class, () -> purchaseOrderService.cancelOrder(1));
     }
@@ -271,7 +311,7 @@ class PurchaseOrderServiceTest {
 
         order.setStatus(PurchaseOrderStatus.REJECTED);
         purchaseOrderService.deleteOrder(1);
-        
+
         order.setStatus(PurchaseOrderStatus.CONFIRMED);
         assertThrows(RuntimeException.class, () -> purchaseOrderService.deleteOrder(1));
     }
@@ -292,7 +332,7 @@ class PurchaseOrderServiceTest {
     void getAllProducts_shouldWorkAndCalculateStock() {
         InventoryStock s = InventoryStock.builder().quantity(100).build();
         variant.setInventoryStocks(List.of(s));
-        
+
         List<ProductResponse> res = purchaseOrderService.getAllProducts();
         assertFalse(res.isEmpty());
         assertEquals(100, res.get(0).getStockQuantity());
@@ -302,15 +342,15 @@ class PurchaseOrderServiceTest {
     void updateOrder_shouldWork() {
         order.setStatus(PurchaseOrderStatus.DRAFT);
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
-        
+
         SupplierContract contract = SupplierContract.builder().id(1L).contractNumber("C1").build();
         when(supplierContractRepository.findById(1L)).thenReturn(Optional.of(contract));
-        
+
         PurchaseOrderRequest req = new PurchaseOrderRequest();
         req.setSupplierId(1);
         req.setContractId(1L);
         req.setItems(List.of(PurchaseOrderItemRequest.builder().variantId(1).quantity(10).unitCost(BigDecimal.ONE).build()));
-        
+
         assertNotNull(purchaseOrderService.updateOrder(1, req));
     }
 
@@ -323,7 +363,7 @@ class PurchaseOrderServiceTest {
         req.setItems(List.of(PurchaseOrderItemRequest.builder().variantId(1).quantity(2).unitCost(new BigDecimal("50")).build()));
         req.setSupplierId(1);
         req.setLocationId(1);
-        
+
         PurchaseOrderResponse res = purchaseOrderService.saveDraft(req);
         assertEquals(10.0, res.getTotalAmount().doubleValue());
     }

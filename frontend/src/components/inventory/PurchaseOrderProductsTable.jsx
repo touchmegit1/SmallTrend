@@ -38,7 +38,7 @@ function PurchaseOrderProductsTable({ currentProducts, onUpdateQuantity }) {
         />
       </td>
       <td className="px-4 py-3 text-sm text-right">
-        {Number(product.unit_cost ?? 0).toLocaleString("vi-VN")
+        {Number(product.unit_cost ?? 0).toLocaleString("vi-VN")}
       </td>
       <td className="px-4 py-3 text-sm text-right">0</td>
       <td className="px-4 py-3 text-sm text-right font-semibold">

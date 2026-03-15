@@ -108,7 +108,7 @@ class ProductComboControllerTest {
 
         // Assert: Phải thành công và đúng message
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Combo status toggled", response.getBody());
+        assertEquals("Đã thay đổi trạng thái combo", response.getBody());
         verify(productComboService).toggleStatus(1);
     }
 
@@ -119,7 +119,7 @@ class ProductComboControllerTest {
 
         // Assert: Phản hồi ok 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Combo deleted successfully", response.getBody());
+        assertEquals("Đã xóa combo thành công", response.getBody());
         verify(productComboService).deleteCombo(1);
     }
 }

@@ -34,6 +34,7 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
     return expiryDate <= today;
   };
 
+  // Tải lịch sử giá; nếu phát hiện giá ACTIVE đã hết hạn thì tự chuyển trạng thái rồi tải lại.
   const fetchHistory = async () => {
     setLoading(true);
     try {

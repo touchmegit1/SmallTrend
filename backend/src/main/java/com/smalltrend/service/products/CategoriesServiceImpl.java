@@ -5,7 +5,7 @@ import com.smalltrend.dto.products.CategoriesResponse;
 import com.smalltrend.entity.Category;
 import com.smalltrend.mapper.CategoryMapper;
 import com.smalltrend.repository.CategoryRepository;
-import com.smalltrend.repository.ProductRepository;
+import com.smalltrend.validation.product.CategoryValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +20,7 @@ public class CategoriesServiceImpl implements CategoriesService {
 
     private final CategoryRepository repository;
     private final CategoryMapper mapper;
-    private final ProductRepository productRepository;
+    private final CategoryValidator categoryValidator;
 
     /**
      * Map request thành Category Entity và lưu vào database
@@ -48,16 +48,12 @@ public class CategoriesServiceImpl implements CategoriesService {
      */
     @Override
     public CategoriesResponse update(Integer id, CategoriesRequest request) {
-        // Kiểm tra xem danh mục có tồn tại không
-        Category existingCategory = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục (Category not found)"));
+        Category existingCategory = categoryValidator.requireExistingCategory(id);
 
-        // Cập nhật các trường thông tin
         existingCategory.setCode(request.getCode());
         existingCategory.setName(request.getName());
         existingCategory.setDescription(request.getDescription());
 
-        // Lưu vào database và trả về Response
         Category updatedCategory = repository.save(existingCategory);
         return mapper.toResponse(updatedCategory);
     }
@@ -67,12 +63,7 @@ public class CategoriesServiceImpl implements CategoriesService {
      */
     @Override
     public void delete(Integer id) {
-        // Kiểm tra xem có sản phẩm (Product) nào đang sử dụng Category này không
-        if (productRepository.existsByCategoryId(id)) {
-            // Ném ngoại lệ để dừng việc xoá, tránh lỗi khoá ngoại
-            throw new RuntimeException("Không thể xoá danh mục vì đang có sản phẩm thuộc danh mục này");
-        }
-
+        categoryValidator.validateDeletable(id);
         repository.deleteById(id);
     }
 }

@@ -10,6 +10,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Lưu lịch sử đã gửi email cảnh báo giá sắp hết hiệu lực.
+ * Unique key giúp chống gửi trùng cho cùng variant_price + ngày + email nhận.
+ */
 @Entity
 @Table(
         name = "price_expiry_alert_logs",

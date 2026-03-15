@@ -667,6 +667,24 @@ export function usePurchaseOrder(initialId = null) {
         };
         const response = await receiveGoodsOrder(initialId, receiptData);
 
+        const syncedCount = Number(response?.syncedPurchasePriceCount) || 0;
+        if (syncedCount > 0) {
+          const syncedItems = Array.isArray(response?.syncedPurchasePriceItems)
+            ? response.syncedPurchasePriceItems
+            : [];
+          const noticePayload = {
+            syncedCount,
+            orderNumber: response?.orderNumber || order.po_number || null,
+            syncedItems,
+            createdAt: response?.syncedPurchasePriceAt || new Date().toISOString(),
+          };
+          try {
+            sessionStorage.setItem("priceSyncNotice", JSON.stringify(noticePayload));
+          } catch (storageError) {
+            console.error("Không thể lưu thông báo đồng bộ giá:", storageError);
+          }
+        }
+
         if (response) {
           const { mappedOrder, mappedItems, mappedReceiptItems } =
             mapOrderStateFromResponse(response, products);
@@ -679,6 +697,11 @@ export function usePurchaseOrder(initialId = null) {
           toast.success("Đã nhập kho phần hàng nhận được và chuyển sang chờ NCC giao bù.");
         } else {
           toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
+        }
+        setOrder((prev) => ({ ...prev, status: PO_STATUS.RECEIVED }));
+        toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
+        if (syncedCount > 0) {
+          toast.info(`Đã đồng bộ giá nhập cho ${syncedCount} sản phẩm từ phiếu nhập này.`);
         }
         return true;
       } catch (err) {

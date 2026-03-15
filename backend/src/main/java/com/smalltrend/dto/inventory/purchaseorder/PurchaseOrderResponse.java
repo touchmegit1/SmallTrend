@@ -57,6 +57,8 @@ public class PurchaseOrderResponse {
     private String managerDecisionNote;
     private LocalDateTime managerDecidedAt;
     private Integer syncedPurchasePriceCount;
+    private LocalDateTime syncedPurchasePriceAt;
+    private List<SyncedPurchasePriceItemResponse> syncedPurchasePriceItems;
 
     // Items
     private List<PurchaseOrderItemResponse> items;

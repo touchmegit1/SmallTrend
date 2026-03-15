@@ -1,4 +1,5 @@
 import react from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
   {
@@ -28,6 +29,7 @@ export default [
     },
     plugins: {
       react,
+      "react-hooks": reactHooks,
     },
     settings: {
       react: {
@@ -38,6 +40,10 @@ export default [
       ...react.configs.recommended.rules,
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
+      "react/no-unescaped-entities": "off",
+      "react/display-name": "off",
+      "react/no-unknown-property": "off",
+      "react-hooks/exhaustive-deps": "off",
     },
   },
 ];

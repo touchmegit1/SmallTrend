@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Plus, Search, X, Pencil, Trash2, Users, UserPlus, ChevronLeft, ChevronRight, CalendarRange, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, X, Pencil, Trash2, Users, UserPlus, CalendarRange } from 'lucide-react';
 import api from '../../config/axiosConfig';
 import { shiftService } from '../../services/shiftService';
 import CustomSelect from '../../components/common/CustomSelect';
@@ -102,10 +102,9 @@ const shiftTypePresets = {
     },
 };
 
-const ShiftManagement = ({ viewMode = 'full' }) => {
+const ShiftManagement = () => {
     const navigate = useNavigate();
-    const isCalendarOnly = viewMode === 'calendar-only';
-    const [activeTab, setActiveTab] = useState(isCalendarOnly ? 'calendar' : 'shifts');
+    const [activeTab, setActiveTab] = useState('shifts');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -128,8 +127,6 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
     const [assignmentForm, setAssignmentForm] = useState(defaultAssignmentForm);
     const [assignmentFormErrors, setAssignmentFormErrors] = useState({});
 
-    const [calendarView, setCalendarView] = useState('week');
-    const [anchorDate, setAnchorDate] = useState(new Date());
     const [assignmentFilters, setAssignmentFilters] = useState({ userId: '', shiftId: '' });
 
     const assignmentShiftOptions = useMemo(() => {
@@ -179,10 +176,10 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
     }, [shiftQuery, shiftStatus, includeExpiredShifts]);
 
     useEffect(() => {
-        if (activeTab === 'assignments' || activeTab === 'calendar') {
+        if (activeTab === 'assignments') {
             loadAssignments();
         }
-    }, [activeTab, calendarView, anchorDate, assignmentFilters]);
+    }, [activeTab, assignmentFilters]);
 
     const loadShifts = async () => {
         try {
@@ -210,11 +207,7 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
 
     const loadAssignments = async () => {
         try {
-            const { startDate, endDate } = getRange(calendarView, anchorDate);
-            const params = {
-                startDate: toDateInput(startDate),
-                endDate: toDateInput(endDate),
-            };
+            const params = {};
             if (assignmentFilters.userId) params.userId = assignmentFilters.userId;
             if (assignmentFilters.shiftId) params.shiftId = assignmentFilters.shiftId;
             const data = await shiftService.getAssignments(params);
@@ -354,40 +347,6 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
         }
     };
 
-    const assignmentsByDate = useMemo(() => {
-        return assignments.reduce((acc, item) => {
-            const key = item.shiftDate;
-            if (!acc[key]) acc[key] = [];
-            acc[key].push(item);
-            return acc;
-        }, {});
-    }, [assignments]);
-
-    const handleQuickAttendance = async (assignment) => {
-        try {
-            const userId = assignment?.user?.id;
-            if (!userId || !assignment?.shiftDate) {
-                setError('Thiếu thông tin nhân viên hoặc ngày ca để chấm công.');
-                return;
-            }
-
-            const now = new Date();
-            const hh = String(now.getHours()).padStart(2, '0');
-            const mm = String(now.getMinutes()).padStart(2, '0');
-
-            await shiftService.upsertAttendance({
-                userId,
-                date: assignment.shiftDate,
-                timeIn: `${hh}:${mm}`,
-                status: 'PRESENT',
-            });
-
-            setError('');
-        } catch (err) {
-            setError(err.response?.data?.message || 'Không thể chấm công từ thời gian biểu');
-        }
-    };
-
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[60vh] text-slate-500">
@@ -402,38 +361,34 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                 <div>
                     <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
                         <CalendarRange size={24} className="text-indigo-600" />
-                        {isCalendarOnly ? 'Lịch làm việc' : 'Quản lý ca làm'}
+                        Quản lý ca làm
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        {isCalendarOnly
-                            ? 'Theo dõi lịch ca tuần/tháng của nhân sự.'
-                            : 'Quản trị mẫu ca, phân ca nhân sự và lịch theo tuần/tháng.'}
+                        Quản trị mẫu ca và phân ca nhân sự.
                     </p>
                 </div>
-                {!isCalendarOnly && (
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => navigate('/hr/shift-tickets')}
-                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
-                        >
-                            Ticket đổi ca
-                        </button>
-                        <button
-                            onClick={() => openShiftModal()}
-                            className="inline-flex items-center gap-2 rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
-                        >
-                            <Plus size={16} />
-                            Tạo ca mới
-                        </button>
-                        <button
-                            onClick={() => openAssignmentModal()}
-                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
-                        >
-                            <UserPlus size={16} />
-                            Phân ca
-                        </button>
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => navigate('/hr/shift-tickets')}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
+                    >
+                        Ticket đổi ca
+                    </button>
+                    <button
+                        onClick={() => openShiftModal()}
+                        className="inline-flex items-center gap-2 rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+                    >
+                        <Plus size={16} />
+                        Tạo ca mới
+                    </button>
+                    <button
+                        onClick={() => openAssignmentModal()}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
+                    >
+                        <UserPlus size={16} />
+                        Phân ca
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -442,22 +397,20 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                 </div>
             )}
 
-            {!isCalendarOnly && (
-                <div className="flex flex-wrap items-center gap-2">
-                    {['shifts', 'assignments', 'calendar'].map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab
-                                ? 'bg-slate-900 text-white'
-                                : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                                }`}
-                        >
-                            {tab === 'shifts' ? 'Danh sách ca' : tab === 'assignments' ? 'Phân công' : 'Lịch ca'}
-                        </button>
-                    ))}
-                </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+                {['shifts', 'assignments'].map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                            }`}
+                    >
+                        {tab === 'shifts' ? 'Danh sách ca' : 'Phân công'}
+                    </button>
+                ))}
+            </div>
 
             {activeTab === 'shifts' && (
                 <section className="space-y-4">
@@ -618,73 +571,7 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                 </section>
             )}
 
-            {activeTab === 'calendar' && (
-                <section className="space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setCalendarView('week')}
-                                className={`rounded-lg px-3 py-2 text-xs font-medium ${calendarView === 'week' ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600'
-                                    }`}
-                            >
-                                Tuần
-                            </button>
-                            <button
-                                onClick={() => setCalendarView('month')}
-                                className={`rounded-lg px-3 py-2 text-xs font-medium ${calendarView === 'month' ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-600'
-                                    }`}
-                            >
-                                Tháng
-                            </button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => shiftAnchor(calendarView, anchorDate, -1, setAnchorDate)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600"
-                            >
-                                <ChevronLeft size={14} /> Trước
-                            </button>
-                            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                                <CalendarDays size={16} />
-                                {calendarLabel(calendarView, anchorDate)}
-                            </div>
-                            <button
-                                onClick={() => shiftAnchor(calendarView, anchorDate, 1, setAnchorDate)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600"
-                            >
-                                Sau <ChevronRight size={14} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {calendarView === 'week' ? (
-                        <div className="grid grid-cols-7 gap-3">
-                            {weekDays(anchorDate).map((date) => (
-                                <CalendarColumn
-                                    key={date.toISOString()}
-                                    date={date}
-                                    assignments={assignmentsByDate[toDateInput(date)] || []}
-                                    onQuickAttendance={isCalendarOnly ? null : handleQuickAttendance}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-7 gap-3">
-                            {monthDays(anchorDate).map((date) => (
-                                <CalendarTile
-                                    key={date.toISOString()}
-                                    date={date}
-                                    inMonth={date.getMonth() === anchorDate.getMonth()}
-                                    assignments={assignmentsByDate[toDateInput(date)] || []}
-                                    onQuickAttendance={isCalendarOnly ? null : handleQuickAttendance}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </section>
-            )}
-
-            {!isCalendarOnly && isShiftModalOpen && (
+            {isShiftModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
                     <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
@@ -992,7 +879,7 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
                 </div>
             )}
 
-            {!isCalendarOnly && isAssignmentModalOpen && (
+            {isAssignmentModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
                     <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
@@ -1089,75 +976,6 @@ const ShiftManagement = ({ viewMode = 'full' }) => {
             )}
         </div>
     );
-};
-
-const CalendarColumn = ({ date, assignments, onQuickAttendance }) => {
-    return (
-        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="mb-3">
-                <p className="text-xs uppercase tracking-wide text-slate-400">{weekdayLabel(date)}</p>
-                <p className="text-lg font-semibold text-slate-900">{date.getDate()}</p>
-            </div>
-            <div className="space-y-2">
-                {assignments.map((item) => (
-                    <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
-                        <div className="font-semibold text-slate-800">{item.user?.fullName || 'Unknown'}</div>
-                        <div className="text-slate-500">
-                            {item.shift?.shiftName} ({formatTime(item.shift?.startTime)} - {formatTime(item.shift?.endTime)})
-                        </div>
-                        {onQuickAttendance && (
-                            <button
-                                type="button"
-                                onClick={() => onQuickAttendance(item)}
-                                className="mt-2 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
-                            >
-                                <CheckCircle2 size={12} />
-                                Chấm công
-                            </button>
-                        )}
-                    </div>
-                ))}
-                {assignments.length === 0 && (
-                    <div className="text-xs text-slate-400">Không có phân công</div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-const CalendarTile = ({ date, inMonth, assignments, onQuickAttendance }) => {
-    return (
-        <div className={`min-h-[140px] rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${inMonth ? '' : 'opacity-50'
-            }`}>
-            <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-900">{date.getDate()}</span>
-                <span className="text-[10px] uppercase tracking-wide text-slate-400">{weekdayLabel(date)}</span>
-            </div>
-            <div className="mt-2 space-y-1">
-                {assignments.slice(0, 3).map((item) => (
-                    <div key={item.id} className="rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-700">
-                        <div>{item.shift?.shiftName} - {item.user?.fullName || 'Unknown'}</div>
-                        {onQuickAttendance && (
-                            <button
-                                type="button"
-                                onClick={() => onQuickAttendance(item)}
-                                className="mt-1 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100"
-                            >
-                                <CheckCircle2 size={10} /> Chấm công
-                            </button>
-                        )}
-                    </div>
-                ))}
-                {assignments.length > 3 && (
-                    <div className="text-[11px] text-slate-400">+{assignments.length - 3} more</div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-const weekdayLabel = (date) => {
-    return date.toLocaleDateString('vi-VN', { weekday: 'short' });
 };
 
 const formatTime = (value) => {

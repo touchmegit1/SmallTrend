@@ -38,7 +38,7 @@ export const useFetchVariants = (productId) => {
       setVariants(mappedVariants);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || 'Lỗi khi tải biến thể');
       setVariants([]);
     } finally {
       setLoading(false);

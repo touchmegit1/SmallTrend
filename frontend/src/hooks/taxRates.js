@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../config/axiosConfig';
 
+/**
+ * Hook tải danh sách thuế suất để dùng ở form sản phẩm/biến thể.
+ */
 export function useFetchTaxRates() {
     const [taxRates, setTaxRates] = useState([]);
     const [loading, setLoading] = useState(true);

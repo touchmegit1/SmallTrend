@@ -18,6 +18,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Scheduler gửi email cảnh báo các mức giá sắp hết hiệu lực.
+ * Có cơ chế ghi log để tránh gửi trùng cho cùng variant_price + ngày + người nhận.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
