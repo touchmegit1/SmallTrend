@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Save,
   CheckCircle,
@@ -6,6 +5,8 @@ import {
   Trash2,
   ClipboardCheck,
   PackageCheck,
+  Eye,
+  ShieldCheck,
 } from "lucide-react";
 import { PO_STATUS } from "../../../utils/purchaseOrder";
 import { useAuth } from "../../../context/AuthContext";
@@ -21,6 +22,8 @@ export default function ActionButtons({
   onDelete,
   onStartChecking,
   onReceiveGoods,
+  layout = "panel",
+  footerHint = "",
 }) {
   const { user } = useAuth();
   const userRole = (user?.role || "").toUpperCase();
@@ -42,117 +45,131 @@ export default function ActionButtons({
   const isProcessed =
     status === PO_STATUS.RECEIVED || status === PO_STATUS.CANCELLED;
 
-  return (
-    <div className="border-t border-slate-200 px-5 py-4 bg-slate-50/50">
-      <div className="flex flex-col gap-2.5">
-        {/* Save Draft */}
-        {isDraft && (
+  const renderActionGroup = () => {
+    if (isDraft) {
+      return (
+        <>
           <button
             onClick={onSaveDraft}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            Lưu nháp
+          </button>
+          <button
+            onClick={onSubmitForApproval}
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
           >
             {saving ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
-              <Save size={16} />
-            )}
-            Lưu nháp
-          </button>
-        )}
-
-        {/* Submit For Approval */}
-        {isDraft && (
-          <button
-            onClick={onSubmitForApproval}
-            disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-indigo-200"
-          >
-            {saving ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <CheckCircle size={18} />
+              <CheckCircle size={16} />
             )}
             Gửi yêu cầu duyệt
           </button>
-        )}
+          {isEditMode && (
+            <button
+              onClick={onDelete}
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              <Trash2 size={15} />
+              Xóa
+            </button>
+          )}
+        </>
+      );
+    }
 
-        {/* Delete */}
-        {isDraft && isEditMode && (
+    if (isPending && isManagerOrAdmin) {
+      return (
+        <>
           <button
-            onClick={onDelete}
+            onClick={onReject}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            <Trash2 size={16} />
-            Xóa phiếu nháp
+            <Eye size={16} />
+            Từ chối
           </button>
-        )}
-
-        {/* Manager Actions: Approve & Reject (PENDING → CONFIRMED) */}
-        {isPending && isManagerOrAdmin && (
-          <>
-            <button
-              onClick={onConfirm}
-              disabled={saving}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-200"
-            >
-              {saving ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <CheckCircle size={18} />
-              )}
-              Duyệt phiếu nhập
-            </button>
-            <button
-              onClick={onReject}
-              disabled={saving}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
-            >
-              Từ chối phiếu nhập
-            </button>
-          </>
-        )}
-
-        {/* Manager Actions for Receipt: Start Checking & Confirm Receipt */}
-        {isConfirmed && canCheckAndReceive && (
           <button
-            onClick={onStartChecking}
+            onClick={onConfirm}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-purple-200"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
           >
             {saving ? (
-              <Loader2 size={18} className="animate-spin" />
+              <Loader2 size={16} className="animate-spin" />
             ) : (
-              <ClipboardCheck size={18} />
+              <ShieldCheck size={16} />
             )}
-            Bắt đầu kiểm kê
+            Duyệt phiếu nhập
           </button>
-        )}
+        </>
+      );
+    }
 
-        {/* Warehouse Staff: Confirm Receipt (CHECKING → RECEIVED) */}
-        {isChecking && canCheckAndReceive && (
-          <button
-            onClick={onReceiveGoods}
-            disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-200"
-          >
-            {saving ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <PackageCheck size={18} />
-            )}
-            Xác nhận nhập kho
-          </button>
-        )}
+    if (isConfirmed && canCheckAndReceive) {
+      return (
+        <button
+          onClick={onStartChecking}
+          disabled={saving}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+        >
+          {saving ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <ClipboardCheck size={16} />
+          )}
+          Bắt đầu kiểm kê
+        </button>
+      );
+    }
 
-        {isProcessed && (
-          <div className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-slate-400 rounded-xl shadow-sm">
-            <CheckCircle size={18} />
-            Phiếu đã xử lý xong
-          </div>
-        )}
+    if (isChecking && canCheckAndReceive) {
+      return (
+        <button
+          onClick={onReceiveGoods}
+          disabled={saving}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-2xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+        >
+          {saving ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <PackageCheck size={16} />
+          )}
+          Xác nhận nhập kho
+        </button>
+      );
+    }
+
+    if (isProcessed) {
+      return (
+        <div className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-slate-500 bg-slate-100 rounded-lg border border-slate-200">
+          <CheckCircle size={15} />
+          Phiếu đã xử lý xong
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  if (layout === "inline") {
+    return (
+      <div className="border-t border-slate-200 bg-white px-5 py-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-xs text-slate-400">{footerHint}</p>
+          <div className="flex items-center gap-2.5 flex-wrap">{renderActionGroup()}</div>
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-slate-200 px-4 py-3 bg-slate-50/60">
+      <div className="flex flex-col gap-2">{renderActionGroup()}</div>
     </div>
   );
 }

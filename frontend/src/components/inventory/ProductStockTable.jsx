@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import PropTypes from "prop-types";
 import {
   Search,
   ChevronUp,
@@ -16,8 +17,10 @@ import {
 } from "../../utils/inventory";
 
 function SortIcon({ columnKey, sortConfig }) {
-  if (sortConfig.key !== columnKey)
+  if (sortConfig.key !== columnKey) {
     return <ChevronsUpDown size={14} className="text-slate-300 ml-1" />;
+  }
+
   return sortConfig.direction === "asc" ? (
     <ChevronUp size={14} className="text-indigo-600 ml-1" />
   ) : (
@@ -25,18 +28,31 @@ function SortIcon({ columnKey, sortConfig }) {
   );
 }
 
-export default function ProductStockTable({
-  products,
-  categories,
-  searchQuery,
-  setSearchQuery,
-  categoryFilter,
-  setCategoryFilter,
-  stockFilter,
-  setStockFilter,
-  sortConfig,
-  handleSort,
-}) {
+const getHeaderAlignClass = (align) => {
+  if (align === "right") return "text-right";
+  if (align === "center") return "text-center";
+  return "text-left";
+};
+
+const getStockBarClass = (stockPercent) => {
+  if (stockPercent < 50) return "bg-red-500";
+  if (stockPercent < 100) return "bg-amber-500";
+  return "bg-emerald-500";
+};
+
+export default function ProductStockTable(props) {
+  const {
+    products = [],
+    categories = [],
+    searchQuery = "",
+    setSearchQuery,
+    categoryFilter = "all",
+    setCategoryFilter,
+    stockFilter = "all",
+    setStockFilter,
+    sortConfig,
+    handleSort,
+  } = props;
   const [expandedRow, setExpandedRow] = useState(null);
 
   const stockFilterOptions = [
@@ -124,12 +140,7 @@ export default function ProductStockTable({
                 <th
                   key={col.key}
                   onClick={() => col.sortable && handleSort(col.key)}
-                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap ${col.align === "right"
-                      ? "text-right"
-                      : col.align === "center"
-                        ? "text-center"
-                        : "text-left"
-                    } ${col.sortable ? "cursor-pointer select-none hover:text-indigo-600 transition-colors" : ""}`}
+                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap ${getHeaderAlignClass(col.align)} ${col.sortable ? "cursor-pointer select-none hover:text-indigo-600 transition-colors" : ""}`}
                 >
                   <span className="inline-flex items-center">
                     {col.label}
@@ -166,13 +177,14 @@ export default function ProductStockTable({
                 const isExpanded = expandedRow === product.id;
                 const stockPercent = product.min_stock
                   ? Math.min(
-                    100,
-                    Math.round(
-                      ((product.stock_quantity || 0) / product.min_stock) *
                       100,
-                    ),
-                  )
+                      Math.round(
+                        ((product.stock_quantity ?? 0) / product.min_stock) *
+                          100,
+                      ),
+                    )
                   : 100;
+                const stockBarClass = getStockBarClass(stockPercent);
 
                 return (
                   <React.Fragment key={product.id}>
@@ -203,7 +215,7 @@ export default function ProductStockTable({
                       <td className="px-4 py-3 text-right">
                         <div className="flex flex-col items-end">
                           <span className="font-semibold text-slate-900">
-                            {formatNumber(product.stock_quantity || 0)}
+                            {formatNumber(product.stock_quantity ?? 0)}
                           </span>
                           <span className="text-[10px] text-slate-400 uppercase">
                             {product.unit}
@@ -250,12 +262,7 @@ export default function ProductStockTable({
                               </p>
                               <div className="bg-slate-200 rounded-full h-2 overflow-hidden">
                                 <div
-                                  className={`h-2 rounded-full transition-all ${stockPercent < 50
-                                      ? "bg-red-500"
-                                      : stockPercent < 100
-                                        ? "bg-amber-500"
-                                        : "bg-emerald-500"
-                                    }`}
+                                  className={`h-2 rounded-full transition-all ${stockBarClass}`}
                                   style={{ width: `${stockPercent}%` }}
                                 ></div>
                               </div>
@@ -339,3 +346,19 @@ export default function ProductStockTable({
     </div>
   );
 }
+
+ProductStockTable.propTypes = {
+  products: PropTypes.arrayOf(PropTypes.object),
+  categories: PropTypes.arrayOf(PropTypes.object),
+  searchQuery: PropTypes.string,
+  setSearchQuery: PropTypes.func,
+  categoryFilter: PropTypes.string,
+  setCategoryFilter: PropTypes.func,
+  stockFilter: PropTypes.string,
+  setStockFilter: PropTypes.func,
+  sortConfig: PropTypes.shape({
+    key: PropTypes.string,
+    direction: PropTypes.string,
+  }),
+  handleSort: PropTypes.func,
+};

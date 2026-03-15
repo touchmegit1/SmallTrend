@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useInventoryCount } from "../../hooks/useInventoryCount";
 import { IC_STATUS } from "../../utils/inventoryCount";
@@ -11,6 +11,7 @@ import InventoryCountTable from "../../components/inventory/count/InventoryCount
 import DifferenceReasonModal from "../../components/inventory/count/DifferenceReasonModal";
 import CountSummaryPanel from "../../components/inventory/count/CountSummaryPanel";
 import CountActionButtons from "../../components/inventory/count/CountActionButtons";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 function InventoryCountDetail() {
   const navigate = useNavigate();
@@ -49,6 +50,56 @@ function InventoryCountDetail() {
     cancelCount,
   } = useInventoryCount(id);
 
+  const [confirmState, setConfirmState] = useState(null);
+
+  const confirmConfigs = {
+    confirmCount: {
+      title: "Xác nhận kiểm kho",
+      message: "Xác nhận hoàn tất kiểm kho và cập nhật tồn kho theo số thực tế?",
+      confirmText: "Xác nhận",
+      variant: "warning",
+    },
+    submitForApproval: {
+      title: "Gửi duyệt phiếu",
+      message: `Gửi phiếu kiểm kho ${session?.code || ""} cho Manager duyệt?`,
+      confirmText: "Gửi duyệt",
+      variant: "info",
+    },
+    approveCount: {
+      title: "Duyệt phiếu kiểm kho",
+      message: "Duyệt phiếu kiểm kho và áp dụng kết quả tồn kho?",
+      confirmText: "Duyệt phiếu",
+      variant: "warning",
+    },
+    cancelCount: {
+      title: "Hủy phiên kiểm kho",
+      message: "Xác nhận hủy phiên kiểm kho này?",
+      confirmText: "Hủy phiên",
+      variant: "danger",
+    },
+  };
+
+  const openConfirm = (action) => setConfirmState(action);
+  const closeConfirm = () => setConfirmState(null);
+
+  const executeConfirmedAction = async () => {
+    if (!confirmState) return;
+
+    if (confirmState === "confirmCount") {
+      await confirmCount(navigate);
+    } else if (confirmState === "submitForApproval") {
+      await submitForApproval(navigate);
+    } else if (confirmState === "approveCount") {
+      await approveCount(navigate);
+    } else if (confirmState === "cancelCount") {
+      await cancelCount(navigate);
+    }
+
+    closeConfirm();
+  };
+
+  const activeConfirmConfig = confirmState ? confirmConfigs[confirmState] : null;
+
   // ─── Loading ─────────────────────────────────────
   if (loading) {
     return (
@@ -83,7 +134,7 @@ function InventoryCountDetail() {
               Quay lại danh sách
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => globalThis.location.reload()}
               className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
             >
               Thử lại
@@ -144,13 +195,24 @@ function InventoryCountDetail() {
           status={session?.status}
           saving={saving}
           onSaveDraft={() => saveDraft(navigate)}
-          onConfirm={() => confirmCount(navigate)}
-          onSubmitForApproval={() => submitForApproval(navigate)}
-          onApprove={() => approveCount(navigate)}
+          onConfirm={() => openConfirm("confirmCount")}
+          onSubmitForApproval={() => openConfirm("submitForApproval")}
+          onApprove={() => openConfirm("approveCount")}
           onReject={(reason) => rejectCount(reason, navigate)}
-          onCancel={() => cancelCount(navigate)}
+          onCancel={() => openConfirm("cancelCount")}
         />
       </div>
+
+      <ConfirmDialog
+        open={!!activeConfirmConfig}
+        title={activeConfirmConfig?.title}
+        message={activeConfirmConfig?.message}
+        confirmText={activeConfirmConfig?.confirmText}
+        cancelText="Hủy"
+        variant={activeConfirmConfig?.variant || "warning"}
+        onCancel={closeConfirm}
+        onConfirm={executeConfirmedAction}
+      />
 
       {/* ─── Reason Modal ────────────────────────────── */}
       {reasonModalItem && (
@@ -160,6 +222,7 @@ function InventoryCountDetail() {
           onClose={closeReasonModal}
         />
       )}
+
     </div>
   );
 }

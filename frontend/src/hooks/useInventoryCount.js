@@ -377,15 +377,6 @@ export function useInventoryCount(voucherId) {
         return;
       }
 
-      const confirmMsg =
-        `Xác nhận kiểm kho ${session.code}?\n\n` +
-        `• Khớp: ${stats.matched}\n` +
-        `• Thiếu: ${stats.shortage}\n` +
-        `• Dư: ${stats.overage}\n\n` +
-        `Tồn kho sẽ được cập nhật theo số thực tế.`;
-
-      if (!window.confirm(confirmMsg)) return;
-
       setSaving(true);
       try {
         const request = {
@@ -421,8 +412,6 @@ export function useInventoryCount(voucherId) {
         return;
       }
 
-      if (!window.confirm(`Gửi phiếu kiểm kho ${session.code} cho Manager duyệt?`)) return;
-
       setSaving(true);
       try {
         const request = {
@@ -452,8 +441,6 @@ export function useInventoryCount(voucherId) {
   // ─── Approve (Manager) ────────────────────────
   const approveCount = useCallback(
     async (navigate) => {
-      if (!window.confirm(`Duyệt phiếu kiểm kho ${session.code}? Tồn kho sẽ được cập nhật theo số thực tế.`)) return;
-
       setSaving(true);
       try {
         await approveInventoryCount(voucherId);
@@ -476,8 +463,6 @@ export function useInventoryCount(voucherId) {
         return;
       }
 
-      if (!window.confirm(`Từ chối phiếu kiểm kho ${session.code}?`)) return;
-
       setSaving(true);
       try {
         await rejectInventoryCount(voucherId, rejectionReason);
@@ -495,11 +480,6 @@ export function useInventoryCount(voucherId) {
   // ─── Cancel ──────────────────────────────────────
   const cancelCount = useCallback(
     async (navigate) => {
-      if (
-        !window.confirm("Hủy phiên kiểm kho này? Dữ liệu sẽ không được lưu.")
-      )
-        return;
-
       // If existing voucher, update status
       if (!isCreateMode) {
         try {

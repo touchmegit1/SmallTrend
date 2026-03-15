@@ -12,8 +12,6 @@ import {
   ChevronRight,
   Shield,
   Menu,
-  User,
-  Settings,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -22,6 +20,11 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const role = user?.role;
+  const normalizedRole = String(role || "").toUpperCase();
+  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "ROLE_ADMIN" || normalizedRole.includes("ADMIN");
+  const isManager = normalizedRole === "MANAGER" || normalizedRole === "ROLE_MANAGER" || normalizedRole.includes("MANAGER");
+  const canManageWorkforce = isAdmin || isManager;
 
   const toggleMenu = (label) => {
     setOpenMenus((prev) => ({
@@ -88,12 +91,21 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       icon: Clock,
       label: "Nhân sự & Ca",
       path: "/hr",
-      children: [
-        { label: "Danh sách nhân viên", path: "/hr" },
-        { label: "Phân ca làm việc", path: "/hr/shifts" },
-        { label: "Chấm công", path: "/hr/attendance" },
-        { label: "Tính lương", path: "/hr/payroll" },
-      ],
+      children: canManageWorkforce
+        ? [
+          { label: "Danh sách nhân viên", path: "/hr/workforce" },
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Phân ca làm việc", path: "/hr/shifts" },
+          { label: "Chấm công", path: "/hr/attendance" },
+          { label: "Tính lương", path: "/hr/payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ]
+        : [
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Chấm công", path: "/hr/my-attendance" },
+          { label: "Tính lương", path: "/hr/my-payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ],
     },
     {
       icon: BarChart3,
@@ -111,21 +123,13 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
     },
   ];
 
-  // Admin menu - compatible with new DB role naming
-  const isAdmin = user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
-
   return (
-    <aside
-      className={`${collapsed ? "w-20" : "w-64"} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}
-    >
-      <div
-        className={`${collapsed ? "p-4" : "p-6"} border-b border-slate-100 flex flex-col gap-3`}
-      >
+    <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>
+      <div className={`${collapsed ? 'p-4' : 'p-6'} border-b border-slate-100 flex flex-col gap-3`}>
         <div
-          className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
+          className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
           onClick={() => {
-            const isAdminRole =
-              user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
+            const isAdminRole = isAdmin;
             navigate(isAdminRole ? "/dashboard" : "/pos");
           }}
           title="Về trang chính"
@@ -144,8 +148,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         <button
           type="button"
           onClick={onToggleSidebar}
-          className={`flex items-center ${collapsed ? "justify-center" : "gap-2"} rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors`}
-          title={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
+          className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2'} rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors`}
+          title={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
         >
           <Menu size={20} />
           {!collapsed && <span>Thu gọn</span>}
@@ -157,15 +161,13 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         {isAdmin && (
           <div className="mb-2">
             <div
-              className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === "/dashboard" ||
+              className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === "/dashboard" ||
                 location.pathname.startsWith("/hr/users") ||
                 openMenus["admin"]
                 ? "bg-indigo-50 text-indigo-700"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
-              onClick={() =>
-                collapsed ? navigate("/dashboard") : toggleMenu("admin")
-              }
+              onClick={() => collapsed ? navigate("/dashboard") : toggleMenu("admin")}
               title={collapsed ? "Quản trị" : ""}
             >
               <Shield
@@ -244,13 +246,11 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         {navItems.map((item) => (
           <div key={item.label}>
             <div
-              className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
+              className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith(item.path) || openMenus[item.label]
                 ? "bg-indigo-50 text-indigo-700"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
-              onClick={() =>
-                collapsed ? navigate(item.path) : toggleMenu(item.label)
-              }
+              onClick={() => collapsed ? navigate(item.path) : toggleMenu(item.label)}
               title={collapsed ? item.label.split("(")[0] : ""}
             >
               <item.icon
@@ -304,7 +304,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200`}
+          className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200`}
           title={collapsed ? "Đăng xuất" : ""}
         >
           <LogOut size={20} />
