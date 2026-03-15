@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductBatchRepository extends JpaRepository<ProductBatch, Integer> {
@@ -29,4 +30,6 @@ public interface ProductBatchRepository extends JpaRepository<ProductBatch, Inte
                      @Param("futureDate") LocalDate futureDate);
 
        List<ProductBatch> findByVariantId(Integer variantId);
+
+       Optional<ProductBatch> findFirstByVariantIdOrderByIdDesc(Integer variantId);
 }

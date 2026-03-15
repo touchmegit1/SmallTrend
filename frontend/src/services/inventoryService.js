@@ -148,6 +148,14 @@ export const updatePurchaseOrder = async (id, orderData) => {
 
 // ─── Helper: map frontend → backend request ──────────────
 function mapOrderToBackend(orderData) {
+  const discountAmount = Number(orderData.discountAmount ?? orderData.discount ?? 0);
+  const taxPercent = Number(orderData.taxPercent ?? orderData.tax_percent ?? 0);
+  const shippingFee = Number(orderData.shippingFee ?? orderData.shipping_fee ?? 0);
+  const paidAmount = Number(orderData.paidAmount ?? orderData.paid_amount ?? 0);
+  const subtotal = Number(orderData.subtotal ?? 0);
+  const taxAmount = Number(orderData.taxAmount ?? orderData.tax_amount ?? 0);
+  const totalAmount = Number(orderData.totalAmount ?? orderData.total_amount ?? 0);
+
   return {
     orderNumber:
       orderData.order_number ||
@@ -158,31 +166,39 @@ function mapOrderToBackend(orderData) {
     contractId: orderData.contract_id || orderData.contractId || null,
     locationId: orderData.location_id || orderData.locationId || null,
     status: orderData.status,
-    discountAmount: orderData.discount || orderData.discountAmount || 0,
-    taxAmount: orderData.tax_amount || orderData.taxAmount || 0,
-    taxPercent: orderData.tax_percent || orderData.taxPercent || 0,
-    subtotal: orderData.subtotal || 0,
-    totalAmount: orderData.total_amount || orderData.totalAmount || 0,
-    shippingFee: orderData.shipping_fee || orderData.shippingFee || 0,
-    paidAmount: orderData.paid_amount || orderData.paidAmount || 0,
+    discountAmount: Number.isFinite(discountAmount) ? discountAmount : 0,
+    taxAmount: Number.isFinite(taxAmount) ? taxAmount : 0,
+    taxPercent: Number.isFinite(taxPercent) ? taxPercent : 0,
+    subtotal: Number.isFinite(subtotal) ? subtotal : 0,
+    totalAmount: Number.isFinite(totalAmount) ? totalAmount : 0,
+    shippingFee: Number.isFinite(shippingFee) ? shippingFee : 0,
+    paidAmount: Number.isFinite(paidAmount) ? paidAmount : 0,
     expectedDeliveryDate:
       orderData.expected_delivery_date ||
       orderData.expectedDeliveryDate ||
       null,
     notes: orderData.notes || "",
     createdBy: orderData.created_by || orderData.createdBy || 1,
-    items: (orderData.items || []).map((item) => ({
-      productId: item.product_id || item.productId,
-      variantId: item.variant_id || item.variantId,
-      sku: item.sku || "",
-      name: item.name || "",
-      quantity: item.quantity || 0,
-      unitCost: item.unit_price || item.unitPrice || item.unitCost || 0,
-      totalCost: item.total || item.totalCost || 0,
-      receivedQuantity: item.received_quantity || item.receivedQuantity || 0,
-      expiryDate: item.expiry_date || item.expiryDate || null,
-      notes: item.notes || "",
-    })),
+    items: (orderData.items || []).map((item) => {
+      const quantity = Number(item.quantity ?? 0);
+      const unitCost = Number(item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0);
+      const receivedQuantity = Number(
+        item.receivedQuantity ?? item.received_quantity ?? quantity,
+      );
+      const totalCostRaw = Number(item.totalCost ?? item.total_cost ?? quantity * unitCost);
+      return {
+        productId: item.product_id || item.productId,
+        variantId: item.variant_id || item.variantId,
+        sku: item.sku || "",
+        name: item.name || "",
+        quantity: Number.isFinite(quantity) ? quantity : 0,
+        unitCost: Number.isFinite(unitCost) ? unitCost : 0,
+        totalCost: Number.isFinite(totalCostRaw) ? totalCostRaw : 0,
+        receivedQuantity: Number.isFinite(receivedQuantity) ? receivedQuantity : 0,
+        expiryDate: item.expiryDate || item.expiry_date || null,
+        notes: item.notes || "",
+      };
+    }),
   };
 }
 

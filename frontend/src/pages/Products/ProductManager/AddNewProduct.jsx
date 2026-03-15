@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchTaxRates } from "../../../hooks/taxRates";
+import { useFetchSuppliers } from "../../../hooks/useSuppliers";
 import api from "../../../config/axiosConfig";
 
 /**
@@ -20,6 +21,7 @@ const AddNewProduct = () => {
   const { categories, createCategory } = useFetchCategories();
   const { brands, createBrand } = useFetchBrands();
   const { taxRates } = useFetchTaxRates();
+  const { suppliers } = useFetchSuppliers();
 
   const navigate = useNavigate();
 
@@ -48,7 +50,7 @@ const AddNewProduct = () => {
   const [showBrandModal, setShowBrandModal] = useState(false);
 
   const [newCategory, setNewCategory] = useState({ code: "", name: "", description: "" });
-  const [newBrand, setNewBrand] = useState({ name: "", description: "", country: "", category: null });
+  const [newBrand, setNewBrand] = useState({ name: "", description: "", country: "", category: null, supplier: null });
 
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [creatingBrand, setCreatingBrand] = useState(false);
@@ -148,7 +150,7 @@ const AddNewProduct = () => {
     try {
       const created = await createBrand(newBrand);
       setFormData((prev) => ({ ...prev, brandId: String(created.id) }));
-      setNewBrand({ name: "", description: "", country: "", category: null });
+      setNewBrand({ name: "", description: "", country: "", category: null, supplier: null });
       setShowBrandModal(false);
     } catch (error) {
       console.error("Error creating brand:", error);
@@ -359,7 +361,7 @@ const AddNewProduct = () => {
             {/* CỘT RIGHT: IMAGE UPLOADER UI --- */}
             <div className="h-full">
               <Card className="h-full border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col">
-                <CardHeader classNa me="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-200">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-200">
                   <CardTitle className="text-xl font-bold text-gray-800">
                     Hình ảnh sản phẩm gốc
                   </CardTitle>
@@ -576,10 +578,28 @@ const AddNewProduct = () => {
                 <Label className="text-sm font-semibold text-gray-700">Quốc gia</Label>
                 <Input
                   className="mt-2 h-11 text-base bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={newBrand.country}
+                  value={newBrand.country || ''}
                   onChange={(e) => setNewBrand((prev) => ({ ...prev, country: e.target.value }))}
                   placeholder="VD: Việt Nam, Mỹ, Thái Lan..."
                 />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Nhà cung cấp</Label>
+                <select
+                  className="w-full mt-2 h-11 px-4 text-base bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                  value={newBrand.supplier?.id || ''}
+                  onChange={(e) =>
+                    setNewBrand({
+                      ...newBrand,
+                      supplier: e.target.value ? { id: parseInt(e.target.value) } : null
+                    })
+                  }
+                >
+                  <option value="">-- Chọn nhà cung cấp (Không bắt buộc) --</option>
+                  {suppliers?.map((sup) => (
+                    <option key={sup.id} value={sup.id}>{sup.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <Label className="text-sm font-semibold text-gray-700">Chi tiết bổ sung nhận diện</Label>

@@ -9,14 +9,24 @@ export function useFetchBrands() {
   const fetchBrands = async () => {
     try {
       setLoading(true);
+      console.log('[Brands Hook] Fetching brands from /api/brands...');
       const response = await api.get('/brands');
+      console.log('[Brands Hook] Raw response status:', response.status);
+      console.log('[Brands Hook] Raw response data:', response.data);
       const data = Array.isArray(response.data) ? response.data : [];
+      console.log('[Brands Hook] Parsed brands count:', data.length);
       setBrands(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching brands:', err);
+      console.error('[Brands Hook] Error fetching brands:', err);
+      console.error('[Brands Hook] Error status:', err?.response?.status);
+      console.error('[Brands Hook] Error data:', err?.response?.data);
       setBrands([]);
-      setError(err.message || 'Lỗi khi tải thương hiệu');
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        setError('Phiên đăng nhập hết hạn. Vui lòng đăng xuất và đăng nhập lại.');
+      } else {
+        setError(err.message || 'Lỗi khi tải thương hiệu');
+      }
     } finally {
       setLoading(false);
     }

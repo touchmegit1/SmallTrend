@@ -6,10 +6,7 @@ import {
   getActiveLocations,
   getNextPOCode,
   createPurchaseOrder,
-  confirmPurchaseOrder,
   updatePurchaseOrder,
-  confirmExistingOrder,
-  cancelPurchaseOrder as cancelPurchaseOrderApi,
   deletePurchaseOrder,
   startCheckingOrder,
   receiveGoodsOrder,
@@ -20,12 +17,163 @@ import {
   PO_STATUS,
   createDefaultOrder,
   createOrderItem,
-  calcItemTotal,
   calcOrderFinancials,
   validateDraft,
-  validateConfirm,
-  canTransitionTo,
 } from "../utils/purchaseOrder";
+
+const mapExistingOrderItem = (item, products) => {
+  const unitPrice = Number(item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0);
+  const quantity = Number(item.quantity ?? 0);
+  const checkingQuantityRaw = item.checkingQuantity ?? item.checking_quantity;
+  const checkingQuantity = Number(
+    checkingQuantityRaw ?? item.quantity ?? 0,
+  );
+  const receivedQuantityRaw = item.receivedQuantity ?? item.received_quantity;
+  const receivedQuantity = Number(
+    receivedQuantityRaw ?? checkingQuantityRaw ?? item.quantity ?? 0,
+  );
+
+  const matchedProduct = products.find(
+    (p) => p.id === (item.variantId || item.variant_id),
+  ) || products.find(
+    (p) => p.productId === (item.productId || item.product_id),
+  );
+
+  return {
+    ...item,
+    id: item.id ?? item.itemId ?? item.item_id,
+    _key: Math.random().toString(36).slice(2, 11),
+    product_id: item.productId || item.product_id,
+    variant_id: item.variantId || item.variant_id,
+    unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
+    total: item.totalCost || item.total_cost,
+    quantity: Number.isFinite(quantity) ? quantity : 0,
+    checking_quantity: Number.isFinite(checkingQuantity) ? checkingQuantity : 0,
+    received_quantity: Number.isFinite(receivedQuantity) ? receivedQuantity : 0,
+    conversion_factor: Number(item.conversionFactor ?? item.conversion_factor ?? 1) || 1,
+    expiry_date: item.expiryDate || item.expiry_date || "",
+    unit: item.unit || matchedProduct?.unit || "",
+    checking_unit: item.checkingUnit || item.checking_unit || item.unit || matchedProduct?.unit || "",
+    name: item.name || matchedProduct?.name || "Sản phẩm",
+  };
+};
+
+const toReceiptItem = (item, orderStatus) => {
+  const receivedQuantity = Number(
+    item.received_quantity ?? item.receivedQuantity,
+  );
+  const checkingQuantity = Number(
+    item.checking_quantity ?? item.checkingQuantity ?? item.quantity ?? 0,
+  );
+  const sourceUnitCost = Number(item.unit_price ?? item.unitCost ?? 0);
+  const conversionFactor = Number(item.conversion_factor ?? item.conversionFactor ?? 1);
+  const normalizedFactor = Number.isFinite(conversionFactor) && conversionFactor > 0
+    ? conversionFactor
+    : 1;
+  let checkingUnitCost = sourceUnitCost;
+  if (orderStatus !== PO_STATUS.RECEIVED && normalizedFactor > 1) {
+    checkingUnitCost = sourceUnitCost / normalizedFactor;
+  }
+
+  return {
+    itemId: item.id ?? item._key,
+    variantId: item.variantId || item.variant_id,
+    receivedQuantity:
+      Number.isFinite(receivedQuantity) && receivedQuantity > 0
+        ? receivedQuantity
+        : checkingQuantity,
+    unitCost: Number.isFinite(checkingUnitCost) ? checkingUnitCost : 0,
+    expiryDate: item.expiryDate || item.expiry_date || "",
+    notes: item.notes || "",
+  };
+};
+
+const mapReceiptItemToBaseQuantity = (ri) => Number(ri.receivedQuantity) || 0;
+
+const mapReceiptItemToBaseCost = (ri) => Number(ri.unitCost) || 0;
+
+const buildReceiptPayloadItems = (receiptItems) =>
+  receiptItems.map((ri) => ({
+    ...ri,
+    receivedQuantity: mapReceiptItemToBaseQuantity(ri),
+    unitCost: mapReceiptItemToBaseCost(ri),
+    expiryDate: ri.expiryDate || ri.expiry_date || null,
+  }));
+
+const mergeImportedItems = (prevItems, importedList) => {
+  const newItems = [...prevItems];
+  importedList.forEach((importedInfo) => {
+    const existingIndex = newItems.findIndex(
+      (i) => i.variant_id === importedInfo.product.id,
+    );
+    const importQty = Number(importedInfo.quantity) || 1;
+    const importUnitPrice = Number(importedInfo.unit_price);
+    const hasImportUnitPrice =
+      Number.isFinite(importUnitPrice) && importUnitPrice >= 0;
+
+    if (existingIndex >= 0) {
+      const item = newItems[existingIndex];
+      newItems[existingIndex] = {
+        ...item,
+        quantity: item.quantity + importQty,
+        ...(hasImportUnitPrice ? { unit_price: importUnitPrice } : {}),
+      };
+      return;
+    }
+
+    const newItem = createOrderItem(importedInfo.product);
+    newItem.quantity = importQty;
+    if (hasImportUnitPrice) {
+      newItem.unit_price = importUnitPrice;
+    }
+    newItems.push(newItem);
+  });
+
+  return newItems;
+};
+
+const addOrIncreaseProduct = (prevItems, product) => {
+  const existing = prevItems.find((i) => i.variant_id === product.id);
+  if (existing) {
+    return prevItems.map((i) =>
+      i.variant_id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
+    );
+  }
+  return [...prevItems, createOrderItem(product)];
+};
+
+const removeItemByKey = (prevItems, key) => prevItems.filter((i) => i._key !== key);
+
+const updateItemQuantity = (prevItems, key, field, value) => {
+  if (field !== "quantity") return prevItems;
+  return prevItems.map((item) =>
+    item._key === key ? { ...item, quantity: value } : item,
+  );
+};
+
+const updateItemBatchesByKey = (prevItems, key, batches) =>
+  prevItems.map((item) => (item._key === key ? { ...item, batches } : item));
+
+const upsertReceiptItem = (prevReceiptItems, itemId, field, value) => {
+  const exists = prevReceiptItems.some((ri) => ri.itemId === itemId);
+  if (!exists) {
+    return [
+      ...prevReceiptItems,
+      {
+        itemId,
+        receivedQuantity: 0,
+        unitCost: 0,
+        expiryDate: "",
+        notes: "",
+        [field]: value,
+      },
+    ];
+  }
+
+  return prevReceiptItems.map((ri) =>
+    ri.itemId === itemId ? { ...ri, [field]: value } : ri,
+  );
+};
 
 export function usePurchaseOrder(initialId = null) {
   const toast = useToast();
@@ -44,6 +192,11 @@ export function usePurchaseOrder(initialId = null) {
 
   // State cho kiểm kê (NV kho)
   const [receiptItems, setReceiptItems] = useState([]);
+
+  const toNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -97,37 +250,20 @@ export function usePurchaseOrder(initialId = null) {
           setOrder(mappedOrder);
 
           if (existingOrder.items) {
-            const mappedItems = existingOrder.items.map((item) => ({
-              ...item,
-              _key: Math.random().toString(36).substr(2, 9),
-              product_id: item.productId || item.product_id,
-              unit_price: item.unitCost || item.unit_cost,
-              total: item.totalCost || item.total_cost,
-              quantity: item.quantity,
-              received_quantity:
-                item.receivedQuantity ?? item.received_quantity ?? 0,
-              expiry_date: item.expiryDate || item.expiry_date || "",
-              name:
-                item.name ||
-                results[0].find(
-                  (p) => p.id === (item.productId || item.product_id),
-                )?.name ||
-                "Sản phẩm",
-            }));
+            const mappedItems = existingOrder.items.map((item) =>
+              mapExistingOrderItem(item, results[0]),
+            );
             setItems(mappedItems);
 
             // Khởi tạo receiptItems cho kiểm kê
             setReceiptItems(
-              mappedItems.map((item) => ({
-                itemId: item.id,
-                variantId: item.variantId || item.variant_id,
-                receivedQuantity: item.received_quantity || item.quantity,
-                notes: "",
-              })),
+              mappedItems.map((item) => toReceiptItem(item, mappedOrder.status)),
             );
           }
-          if (existingOrder.supplier_name) {
-            setSupplierQuery(existingOrder.supplier_name);
+          const initialSupplierName =
+            existingOrder.supplierName || existingOrder.supplier_name || "";
+          if (initialSupplierName) {
+            setSupplierQuery(initialSupplierName);
           }
         } else {
           nextCode = results[3];
@@ -159,14 +295,38 @@ export function usePurchaseOrder(initialId = null) {
     order.paid_amount,
   ]);
 
+  const checkingFinancials = useMemo(() => {
+    const subtotal = receiptItems.reduce((sum, ri) => {
+      const qty = toNumber(ri.receivedQuantity);
+      const unitCost = toNumber(ri.unitCost);
+      return sum + qty * unitCost;
+    }, 0);
+    const discount = Math.max(0, toNumber(order.discount));
+    const afterDiscount = Math.max(0, subtotal - discount);
+    const taxPercent = toNumber(order.tax_percent);
+    const shippingFee = toNumber(order.shipping_fee);
+    const taxAmount = Math.round((afterDiscount * taxPercent) / 100);
+    const total = afterDiscount + taxAmount + shippingFee;
+
+    return {
+      subtotal,
+      discount,
+      afterDiscount,
+      taxPercent,
+      shippingFee,
+      taxAmount,
+      total,
+    };
+  }, [receiptItems, order.discount, order.tax_percent, order.shipping_fee]);
+
   const filteredSuppliers = useMemo(() => {
     if (!supplierQuery.trim()) return suppliers;
     const q = supplierQuery.toLowerCase();
     return suppliers.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
-        (s.phone && s.phone.includes(q)) ||
-        (s.contactInfo && s.contactInfo.toLowerCase().includes(q)),
+        s.phone?.includes(q) ||
+        s.contactInfo?.toLowerCase().includes(q),
     );
   }, [suppliers, supplierQuery]);
 
@@ -192,81 +352,70 @@ export function usePurchaseOrder(initialId = null) {
     setSupplierQuery("");
   }, []);
 
+  useEffect(() => {
+    if (!order.location_id) return;
+    const hasLocation = locations.some(
+      (loc) => String(loc.id) === String(order.location_id),
+    );
+    if (!hasLocation) {
+      setOrder((prev) => ({ ...prev, location_id: null }));
+    }
+  }, [locations, order.location_id]);
+
+  useEffect(() => {
+    if (!supplierQuery.trim()) {
+      setOrder((prev) => ({
+        ...prev,
+        supplier_id: null,
+        supplier_name: "",
+      }));
+      return;
+    }
+
+    const matchedSupplier = suppliers.find(
+      (s) => s.name?.trim().toLowerCase() === supplierQuery.trim().toLowerCase(),
+    );
+
+    if (matchedSupplier) {
+      setOrder((prev) => ({
+        ...prev,
+        supplier_id: matchedSupplier.id,
+        supplier_name: matchedSupplier.name,
+      }));
+      return;
+    }
+
+    setOrder((prev) => ({
+      ...prev,
+      supplier_id: null,
+      supplier_name: supplierQuery,
+    }));
+  }, [supplierQuery, suppliers]);
+
+  useEffect(() => {
+    if (!order.supplier_id) return;
+    const matchedSupplier = suppliers.find(
+      (s) => String(s.id) === String(order.supplier_id),
+    );
+    if (matchedSupplier && supplierQuery !== matchedSupplier.name) {
+      setSupplierQuery(matchedSupplier.name);
+    }
+  }, [order.supplier_id, suppliers, supplierQuery]);
+
   const addProduct = useCallback((product) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.variant_id === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.variant_id === product.id
-            ? {
-                ...i,
-                quantity: i.quantity + 1,
-                total: calcItemTotal(i.quantity + 1, i.unit_price, i.discount),
-              }
-            : i,
-        );
-      }
-      return [...prev, createOrderItem(product)];
-    });
+    setItems((prev) => addOrIncreaseProduct(prev, product));
   }, []);
 
   const importProducts = useCallback((importedList) => {
-    setItems((prev) => {
-      const newItems = [...prev];
-      importedList.forEach((importedInfo) => {
-        const existingIndex = newItems.findIndex(
-          (i) => i.variant_id === importedInfo.product.id,
-        );
-        if (existingIndex >= 0) {
-          const item = newItems[existingIndex];
-          const newQty = item.quantity + (importedInfo.quantity || 1);
-          const newPrice =
-            importedInfo.unit_price !== undefined
-              ? importedInfo.unit_price
-              : item.unit_price;
-          newItems[existingIndex] = {
-            ...item,
-            quantity: newQty,
-            unit_price: newPrice,
-            total: calcItemTotal(newQty, newPrice, item.discount),
-          };
-        } else {
-          const newItem = createOrderItem(importedInfo.product);
-          newItem.quantity = importedInfo.quantity || 1;
-          if (importedInfo.unit_price !== undefined) {
-            newItem.unit_price = importedInfo.unit_price;
-          }
-          newItem.total = calcItemTotal(
-            newItem.quantity,
-            newItem.unit_price,
-            newItem.discount,
-          );
-          newItems.push(newItem);
-        }
-      });
-      return newItems;
-    });
+    setItems((prev) => mergeImportedItems(prev, importedList));
   }, []);
 
   const removeItem = useCallback((_key) => {
-    setItems((prev) => prev.filter((i) => i._key !== _key));
+    setItems((prev) => removeItemByKey(prev, _key));
   }, []);
 
   const updateItem = useCallback((_key, field, value) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item._key !== _key) return item;
-        const updated = { ...item, [field]: value };
-        if (["quantity", "unit_price", "discount"].includes(field)) {
-          updated.total = calcItemTotal(
-            updated.quantity,
-            updated.unit_price,
-            updated.discount,
-          );
-        }
-        return updated;
-      }),
-    );
+    setItems((prev) => updateItemQuantity(prev, _key, field, value));
   }, []);
 
   const openBatchEditor = useCallback((_key) => {
@@ -278,9 +427,7 @@ export function usePurchaseOrder(initialId = null) {
   }, []);
 
   const updateItemBatches = useCallback((_key, batches) => {
-    setItems((prev) =>
-      prev.map((item) => (item._key === _key ? { ...item, batches } : item)),
-    );
+    setItems((prev) => updateItemBatchesByKey(prev, _key, batches));
   }, []);
 
   const batchEditData = useMemo(() => {
@@ -290,9 +437,7 @@ export function usePurchaseOrder(initialId = null) {
 
   // ─── Cập nhật số lượng kiểm kê ────────────────────────────
   const updateReceiptItem = useCallback((itemId, field, value) => {
-    setReceiptItems((prev) =>
-      prev.map((ri) => (ri.itemId === itemId ? { ...ri, [field]: value } : ri)),
-    );
+    setReceiptItems((prev) => upsertReceiptItem(prev, itemId, field, value));
   }, []);
 
   const saveDraft = useCallback(
@@ -308,11 +453,15 @@ export function usePurchaseOrder(initialId = null) {
         const orderData = {
           ...order,
           status: PO_STATUS.DRAFT,
+          discount: toNumber(order.discount),
+          tax_percent: toNumber(order.tax_percent),
+          shipping_fee: toNumber(order.shipping_fee),
+          paid_amount: toNumber(order.paid_amount),
           subtotal: financials.subtotal,
           tax_amount: financials.taxAmount,
           total_amount: financials.total,
           remaining_amount: financials.remaining,
-          items: items,
+          items,
         };
 
         if (initialId) {
@@ -348,11 +497,15 @@ export function usePurchaseOrder(initialId = null) {
         const orderData = {
           ...order,
           status: PO_STATUS.PENDING,
+          discount: toNumber(order.discount),
+          tax_percent: toNumber(order.tax_percent),
+          shipping_fee: toNumber(order.shipping_fee),
+          paid_amount: toNumber(order.paid_amount),
           subtotal: financials.subtotal,
           tax_amount: financials.taxAmount,
           total_amount: financials.total,
           remaining_amount: financials.remaining,
-          items: items,
+          items,
         };
 
         if (initialId) {
@@ -380,14 +533,6 @@ export function usePurchaseOrder(initialId = null) {
     async (navigate) => {
       if (!initialId) return false;
 
-      if (
-        !window.confirm(
-          "Xác nhận duyệt phiếu nhập? Phiếu sẽ chuyển cho NV kho kiểm kê.",
-        )
-      ) {
-        return false;
-      }
-
       setSaving(true);
       try {
         await approvePurchaseOrder(initialId);
@@ -410,13 +555,9 @@ export function usePurchaseOrder(initialId = null) {
   const startChecking = useCallback(async () => {
     if (!initialId) return false;
 
-    if (!window.confirm("Bắt đầu kiểm kê hàng hóa?")) {
-      return false;
-    }
-
     setSaving(true);
     try {
-      const updatedOrder = await startCheckingOrder(initialId);
+      await startCheckingOrder(initialId);
       // Cập nhật trạng thái trực tiếp → UI chuyển sang màn hình CHECKING
       setOrder((prev) => ({ ...prev, status: PO_STATUS.CHECKING }));
       toast.success("Đã bắt đầu kiểm kê. Vui lòng nhập số lượng thực nhận cho từng sản phẩm.");
@@ -435,7 +576,7 @@ export function usePurchaseOrder(initialId = null) {
     async (navigate) => {
       if (!initialId) return false;
 
-      // Validate
+      // Validate item-level
       for (const ri of receiptItems) {
         if (
           ri.receivedQuantity === null ||
@@ -445,13 +586,35 @@ export function usePurchaseOrder(initialId = null) {
           toast.warning("Số lượng thực nhận không hợp lệ.");
           return false;
         }
+        if (ri.unitCost === null || ri.unitCost === undefined || ri.unitCost <= 0) {
+          toast.warning("Giá nhập của từng sản phẩm là bắt buộc và phải lớn hơn 0.");
+          return false;
+        }
       }
 
-      if (
-        !window.confirm(
-          "Xác nhận nhập kho? Tồn kho sẽ được cập nhật và không thể hoàn tác.",
-        )
-      ) {
+      // Validate required receipt metadata
+      if (!order.supplier_id) {
+        toast.warning("Vui lòng chọn nhà cung cấp trước khi nhập kho.");
+        return false;
+      }
+      if (!order.location_id) {
+        toast.warning("Vui lòng chọn vị trí nhập kho trước khi nhập kho.");
+        return false;
+      }
+      if (String(order.tax_percent ?? "").trim() === "") {
+        toast.warning("Vui lòng nhập thuế VAT (%).");
+        return false;
+      }
+      if (String(order.shipping_fee ?? "").trim() === "") {
+        toast.warning("Vui lòng nhập phí vận chuyển.");
+        return false;
+      }
+      if (toNumber(order.tax_percent) < 0) {
+        toast.warning("Thuế VAT không được âm.");
+        return false;
+      }
+      if (toNumber(order.shipping_fee) < 0) {
+        toast.warning("Phí vận chuyển không được âm.");
         return false;
       }
 
@@ -459,12 +622,23 @@ export function usePurchaseOrder(initialId = null) {
       try {
         const receiptData = {
           notes: order.notes,
-          items: receiptItems,
+          supplierId: order.supplier_id,
+          locationId: order.location_id,
+          taxPercent: toNumber(order.tax_percent),
+          shippingFee: toNumber(order.shipping_fee),
+          subtotal: checkingFinancials.subtotal,
+          taxAmount: checkingFinancials.taxAmount,
+          totalAmount: checkingFinancials.total,
+          items: buildReceiptPayloadItems(receiptItems).map((ri) => ({
+            ...ri,
+            receivedQuantity: toNumber(ri.receivedQuantity),
+            unitCost: toNumber(ri.unitCost),
+          })),
         };
-        await receiveGoodsOrder(initialId, receiptData);
+        const response = await receiveGoodsOrder(initialId, receiptData);
 
+        setOrder((prev) => ({ ...prev, status: PO_STATUS.RECEIVED }));
         toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
-        if (navigate) navigate("/inventory/purchase-orders");
         return true;
       } catch (err) {
         console.error("Receive goods error:", err);
@@ -474,7 +648,18 @@ export function usePurchaseOrder(initialId = null) {
         setSaving(false);
       }
     },
-    [initialId, receiptItems, order.notes],
+    [
+      initialId,
+      receiptItems,
+      items,
+      order.notes,
+      order.supplier_id,
+      order.location_id,
+      order.tax_percent,
+      order.shipping_fee,
+      order.po_number,
+      checkingFinancials,
+    ],
   );
 
   const rejectOrder = useCallback(
@@ -514,11 +699,6 @@ export function usePurchaseOrder(initialId = null) {
         toast.warning("Chỉ có thể xóa phiếu nháp.");
         return false;
       }
-      if (
-        !window.confirm("Bạn có chắc chắn muốn xóa phiếu nhập tạm này không?")
-      ) {
-        return false;
-      }
       setSaving(true);
       try {
         await deletePurchaseOrder(initialId);
@@ -547,6 +727,7 @@ export function usePurchaseOrder(initialId = null) {
     order,
     items,
     financials,
+    checkingFinancials,
     supplierQuery,
     setSupplierQuery,
     selectSupplier,

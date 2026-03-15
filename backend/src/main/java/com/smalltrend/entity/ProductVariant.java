@@ -82,4 +82,8 @@ public class ProductVariant {
     @OneToMany(mappedBy = "variant")
     @JsonIgnore
     private List<InventoryStock> inventoryStocks;
+
+    @OneToMany(mappedBy = "variant")
+    @JsonIgnore
+    private List<VariantPrice> variantPrices;
 }

@@ -34,28 +34,71 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, r
       alert("Số điện thoại phải có 10-11 số!");
       return;
     }
-
+    
     setLoading(true);
     try {
-      // Chỉ tìm trong backend
-      const customer = await customerService.searchByPhone(phone);
-
-      onSelectCustomer({
-        id: customer.id,
-        phone: customer.phone,
-        name: customer.name,
-        loyaltyPoints: customer.loyaltyPoints || 0,
-        spentAmount: customer.spentAmount || 0,
-        tier: customer.tier || customer.rank || customer.memberTier,
-        isNew: false
-      });
-      setPhone("");
-      setShowRegister(false);
+      // Tìm trong localStorage trước
+      const localCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
+      const localCustomer = localCustomers.find(c => c.phone === phone);
+      
+      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const loyaltyPoints = Math.floor(totalAmount / 10000);
+      
+      if (localCustomer) {
+        // Tìm thấy trong localStorage
+        onSelectCustomer({
+          id: localCustomer.id,
+          phone: localCustomer.phone,
+          name: localCustomer.name,
+          loyaltyPoints,
+          existingPoints: localCustomer.points || localCustomer.existingPoints || 0,
+          isNew: false
+        });
+        setPhone("");
+        setShowRegister(false);
+      } else {
+        // Tìm trong backend
+        try {
+          const customer = await customerService.searchByPhone(phone);
+          
+          onSelectCustomer({
+            id: customer.id,
+            phone: customer.phone,
+            name: customer.name,
+            loyaltyPoints: customer.loyaltyPoints || 0,
+            isNew: false
+          });
+          setPhone("");
+          setShowRegister(false);
+        } catch (error) {
+          // Không tìm thấy -> hiện form đăng ký và focus vào name input
+          setShowRegister(true);
+          setTimeout(() => nameInputRef.current?.focus(), 100);
+        }
+      }
     } catch (error) {
       console.error('Error:', error);
-      // Không tìm thấy tại backend -> hiện form đăng ký
-      setShowRegister(true);
-      setTimeout(() => nameInputRef.current?.focus(), 100);
+      // Nếu lỗi backend, vẫn kiểm tra localStorage
+      const localCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
+      const localCustomer = localCustomers.find(c => c.phone === phone);
+      
+      if (localCustomer) {
+        const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const loyaltyPoints = Math.floor(totalAmount / 10000);
+        onSelectCustomer({
+          id: localCustomer.id,
+          phone: localCustomer.phone,
+          name: localCustomer.name,
+          loyaltyPoints,
+          existingPoints: localCustomer.points || localCustomer.existingPoints || 0,
+          isNew: false
+        });
+        setPhone("");
+        setShowRegister(false);
+      } else {
+        setShowRegister(true);
+        setTimeout(() => nameInputRef.current?.focus(), 100);
+      }
     } finally {
       setLoading(false);
     }
@@ -70,21 +113,20 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, r
       alert("Số điện thoại phải có 10-11 số!");
       return;
     }
-
+    
     setLoading(true);
     try {
       // Lưu vào backend CRM
       const savedCustomer = await customerService.createCustomer(name, phone);
-
+      
       onSelectCustomer({
         id: savedCustomer.id,
         phone: savedCustomer.phone,
         name: savedCustomer.name,
         loyaltyPoints: savedCustomer.loyaltyPoints || 0,
-        spentAmount: savedCustomer.spentAmount || 0,
         isNew: false
       });
-
+      
       setPhone("");
       setName("");
       setShowRegister(false);

@@ -87,15 +87,14 @@ const InventoryCountRow = memo(function InventoryCountRow({
             onChange={(e) => onActualChange(item.product_id, e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="—"
-            className={`w-full px-2.5 py-1.5 text-sm text-right font-mono border rounded-lg transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-              status === COUNT_ITEM_STATUS.UNCHECKED
+            className={`w-full px-2.5 py-1.5 text-sm text-right font-mono border rounded-lg transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${status === COUNT_ITEM_STATUS.UNCHECKED
                 ? "border-slate-200 bg-white"
                 : status === COUNT_ITEM_STATUS.MATCHED
                   ? "border-emerald-200 bg-emerald-50"
                   : status === COUNT_ITEM_STATUS.SHORTAGE
                     ? "border-red-200 bg-red-50"
                     : "border-blue-200 bg-blue-50"
-            }`}
+              }`}
           />
         ) : (
           <span className="block text-sm text-right font-mono text-slate-700">
@@ -109,7 +108,7 @@ const InventoryCountRow = memo(function InventoryCountRow({
         <span className={`text-sm font-bold font-mono ${colors.text}`}>
           {item.actual_quantity !== null
             ? (item.difference_quantity > 0 ? "+" : "") +
-              item.difference_quantity
+            item.difference_quantity
             : "—"}
         </span>
       </td>
@@ -128,11 +127,10 @@ const InventoryCountRow = memo(function InventoryCountRow({
         {hasDifference ? (
           <button
             onClick={() => onOpenReason(item.product_id)}
-            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition w-full ${
-              needsReason
+            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition w-full ${needsReason
                 ? "bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 animate-pulse"
                 : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
-            }`}
+              }`}
           >
             {needsReason && <AlertCircle size={12} />}
             <span className="truncate flex-1 text-left">

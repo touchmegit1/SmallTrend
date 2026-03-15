@@ -51,6 +51,7 @@ public class PurchaseOrderResponse {
 
     private String notes;
     private String rejectionReason;
+    private Integer syncedPurchasePriceCount;
 
     // Items
     private List<PurchaseOrderItemResponse> items;

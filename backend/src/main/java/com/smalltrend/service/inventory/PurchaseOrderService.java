@@ -5,6 +5,7 @@ import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
 import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
+import com.smalltrend.service.VariantPriceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +35,7 @@ public class PurchaseOrderService {
     private final LocationRepository locationRepository;
     private final StockMovementRepository stockMovementRepository;
     private final UnitConversionRepository unitConversionRepository;
+    private final VariantPriceService variantPriceService;
 
     // ═══════════════════════════════════════════════════════════
     // Public API
@@ -184,6 +188,41 @@ public class PurchaseOrderService {
             throw new RuntimeException("Chỉ có thể nhập kho phiếu đang kiểm kê.");
         }
 
+        Integer effectiveSupplierId = receiptRequest.getSupplierId() != null
+                ? receiptRequest.getSupplierId()
+                : (order.getSupplier() != null ? order.getSupplier().getId() : null);
+        Integer effectiveLocationId = receiptRequest.getLocationId() != null
+                ? receiptRequest.getLocationId()
+                : order.getLocationId();
+        BigDecimal effectiveTaxPercent = receiptRequest.getTaxPercent() != null
+                ? receiptRequest.getTaxPercent()
+                : (order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO);
+        BigDecimal effectiveShippingFee = receiptRequest.getShippingFee() != null
+                ? receiptRequest.getShippingFee()
+                : (order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+
+        if (effectiveSupplierId == null) {
+            throw new RuntimeException("Nhà cung cấp là bắt buộc khi xác nhận nhập kho.");
+        }
+        if (effectiveLocationId == null) {
+            throw new RuntimeException("Vị trí nhập kho là bắt buộc khi xác nhận nhập kho.");
+        }
+        if (effectiveTaxPercent.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Thuế VAT (%) không được âm.");
+        }
+        if (effectiveShippingFee.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Phí vận chuyển không được âm.");
+        }
+
+        // Cập nhật receivedQuantity cho từng item
+        if (receiptRequest.getItems() != null) {
+            for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
+                if (receiptItem.getReceivedQuantity() == null || receiptItem.getReceivedQuantity() < 0) {
+                    throw new RuntimeException("Số lượng thực nhận không hợp lệ.");
+                }
+            }
+        }
+
         // Cập nhật receivedQuantity cho từng item
         if (receiptRequest.getItems() != null) {
             for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
@@ -195,6 +234,11 @@ public class PurchaseOrderService {
                 if (orderItem != null) {
                     orderItem.setReceivedQuantity(receiptItem.getReceivedQuantity() != null
                             ? receiptItem.getReceivedQuantity() : 0);
+                    if (receiptItem.getUnitCost() != null) {
+                        orderItem.setUnitCost(receiptItem.getUnitCost());
+                        int receivedQty = orderItem.getReceivedQuantity() != null ? orderItem.getReceivedQuantity() : 0;
+                        orderItem.setTotalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(receivedQty)));
+                    }
                     if (receiptItem.getNotes() != null) {
                         orderItem.setNotes(receiptItem.getNotes());
                     }
@@ -202,6 +246,29 @@ public class PurchaseOrderService {
                 }
             }
         }
+
+        Supplier supplier = supplierRepository.findById(effectiveSupplierId)
+                .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
+        order.setSupplier(supplier);
+        order.setLocationId(effectiveLocationId);
+
+        BigDecimal subtotal = order.getItems().stream()
+                .map(item -> {
+                    int receivedQty = item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0;
+                    BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
+                    return unitCost.multiply(BigDecimal.valueOf(receivedQty));
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal taxPercent = effectiveTaxPercent;
+        BigDecimal taxAmount = subtotal.multiply(taxPercent).divide(BigDecimal.valueOf(100));
+        BigDecimal shippingFee = effectiveShippingFee;
+        BigDecimal totalAmount = subtotal.add(taxAmount).add(shippingFee);
+
+        order.setSubtotal(subtotal);
+        order.setTaxPercent(taxPercent);
+        order.setTaxAmount(taxAmount);
+        order.setShippingFee(shippingFee);
+        order.setTotalAmount(totalAmount);
 
         order.setStatus(PurchaseOrderStatus.RECEIVED);
         order.setActualDeliveryDate(LocalDate.now());
@@ -225,8 +292,28 @@ public class PurchaseOrderService {
 
         updateStock(order, itemRequests);
 
+        int syncedPurchasePriceCount = 0;
+        Set<Integer> processedVariantIds = new HashSet<>();
+        for (PurchaseOrderItem item : order.getItems()) {
+            if (item.getVariant() == null || item.getVariant().getId() == null || item.getUnitCost() == null) {
+                continue;
+            }
+
+            Integer variantId = item.getVariant().getId();
+            if (!processedVariantIds.add(variantId)) {
+                continue;
+            }
+
+            boolean synced = variantPriceService.syncActivePurchasePrice(variantId, item.getUnitCost());
+            if (synced) {
+                syncedPurchasePriceCount++;
+            }
+        }
+
         log.info("📦 Purchase Order {} RECEIVED. Stock updated.", order.getOrderNumber());
-        return toDetailResponse(order);
+        PurchaseOrderResponse response = toDetailResponse(order);
+        response.setSyncedPurchasePriceCount(syncedPurchasePriceCount);
+        return response;
     }
 
     // ─── Confirm Existing Draft ──────────────────────────────
@@ -509,7 +596,7 @@ public class PurchaseOrderService {
             if (itemReq.getVariantId() != null) {
                 ProductVariant variant = productVariantRepository.findById(itemReq.getVariantId())
                         .orElseThrow(() -> new RuntimeException(
-                                "Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
+                        "Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
                 item.setVariant(variant);
             } else if (itemReq.getProductId() != null) {
                 Product product = productRepository.findById(Integer.valueOf(itemReq.getProductId()))
@@ -528,7 +615,6 @@ public class PurchaseOrderService {
 
     // ─── Update Stock (on RECEIVE) ───────────────────────────
     private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests) {
-        // Use the order's location, fallback to first available
         Location targetLocation = null;
         if (order.getLocationId() != null) {
             targetLocation = locationRepository.findById(order.getLocationId()).orElse(null);
@@ -540,7 +626,6 @@ public class PurchaseOrderService {
         }
 
         for (PurchaseOrderItemRequest itemReq : itemRequests) {
-            // 1. Resolve variant
             ProductVariant variant = resolveVariant(itemReq);
             if (variant == null) {
                 continue;
@@ -554,17 +639,21 @@ public class PurchaseOrderService {
             // --- Quy đổi đơn vị (Unit Conversion) ---
             ProductVariant baseVariant = variant;
             int finalQty = qty;
+            String conversionNote = "khong quy doi";
 
             if (variant.getProduct() != null && variant.getProduct().getVariants() != null) {
                 for (ProductVariant bv : variant.getProduct().getVariants()) {
-                    if (bv.getId().equals(variant.getId())) continue;
+                    if (bv.getId().equals(variant.getId())) {
+                        continue;
+                    }
 
                     if (variant.getUnit() != null) {
                         java.util.Optional<UnitConversion> conversionOpt = unitConversionRepository.findByVariantIdAndToUnitId(bv.getId(), variant.getUnit().getId());
                         if (conversionOpt.isPresent()) {
                             UnitConversion conversion = conversionOpt.get();
-                            baseVariant = bv; // Fallback to base variant
+                            baseVariant = bv;
                             finalQty = qty * conversion.getConversionFactor().intValue();
+                            conversionNote = "quy doi x" + conversion.getConversionFactor().intValue();
                             break;
                         }
                     }
@@ -572,10 +661,8 @@ public class PurchaseOrderService {
             }
 
             BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
-
             LocalDate expiryDate = itemReq.getExpiryDate() != null ? itemReq.getExpiryDate() : LocalDate.now().plusYears(1);
 
-            // 3. Create ProductBatch
             String batchNumber = generateBatchNumber(baseVariant);
             ProductBatch batch = ProductBatch.builder()
                     .variant(baseVariant)
@@ -586,7 +673,6 @@ public class PurchaseOrderService {
                     .build();
             batch = productBatchRepository.save(batch);
 
-            // 4. Create or update InventoryStock
             InventoryStock stock = InventoryStock.builder()
                     .variant(baseVariant)
                     .batch(batch)
@@ -595,7 +681,6 @@ public class PurchaseOrderService {
                     .build();
             inventoryStockRepository.save(stock);
 
-            // 5. Create StockMovement for audit
             StockMovement movement = StockMovement.builder()
                     .variant(baseVariant)
                     .batch(batch)
@@ -604,11 +689,15 @@ public class PurchaseOrderService {
                     .quantity(finalQty)
                     .referenceType("purchase_order")
                     .referenceId(order.getId() != null ? order.getId().longValue() : null)
-                    .notes("Nhập hàng từ PO " + order.getOrderNumber() + (finalQty != qty ? " (Quy đổi từ " + qty + " " + variant.getUnit().getName() + ")" : ""))
+                    .notes("Nhập hàng từ PO " + order.getOrderNumber() + " (" + conversionNote + ")")
                     .build();
             stockMovementRepository.save(movement);
 
-            log.info("📦 Stock IN: variant={}, batch={}, qty={}", baseVariant.getSku(), batchNumber, finalQty);
+            log.info("📦 Stock IN: variant={}, batch={}, qty={}, note={}",
+                    baseVariant.getSku(),
+                    batchNumber,
+                    finalQty,
+                    conversionNote);
         }
     }
 
@@ -701,10 +790,14 @@ public class PurchaseOrderService {
                             ? item.getVariant().getProduct().getName() : "")
                     .imageUrl(item.getVariant() != null ? item.getVariant().getImageUrl() : null)
                     .quantity(item.getQuantity())
+                    .unit(item.getVariant() != null && item.getVariant().getUnit() != null
+                            ? item.getVariant().getUnit().getName() : null)
                     .unitCost(item.getUnitCost())
                     .totalCost(item.getTotalCost() != null ? item.getTotalCost() : (item.getUnitCost() != null ? item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO))
                     .receivedQuantity(item.getReceivedQuantity())
-                    .expiryDate(item.getExpiryDate())
+                    .checkingUnit(resolveCheckingUnit(item.getVariant()))
+                    .conversionFactor(resolveConversionFactor(item.getVariant()))
+                    .checkingQuantity(resolveCheckingQuantity(item))
                     .notes(item.getNotes())
                     .build())
                     .collect(Collectors.toList());
@@ -714,5 +807,65 @@ public class PurchaseOrderService {
         }
 
         return response;
+    }
+
+    private String resolveCheckingUnit(ProductVariant variant) {
+        ProductVariant baseVariant = resolveBaseVariant(variant);
+        if (baseVariant != null && baseVariant.getUnit() != null) {
+            return baseVariant.getUnit().getName();
+        }
+        return variant != null && variant.getUnit() != null ? variant.getUnit().getName() : null;
+    }
+
+    private Integer resolveConversionFactor(ProductVariant variant) {
+        if (variant == null) {
+            return 1;
+        }
+        ProductVariant baseVariant = resolveBaseVariant(variant);
+        if (baseVariant == null || baseVariant.getId().equals(variant.getId()) || variant.getUnit() == null) {
+            return 1;
+        }
+        return unitConversionRepository
+                .findByVariantIdAndToUnitId(baseVariant.getId(), variant.getUnit().getId())
+                .map(uc -> uc.getConversionFactor().intValue())
+                .orElse(1);
+    }
+
+    private Integer resolveCheckingQuantity(PurchaseOrderItem item) {
+        if (item == null) {
+            return 0;
+        }
+        int orderedQty = item.getQuantity() != null ? item.getQuantity() : 0;
+        int receivedQty = item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0;
+        ProductVariant variant = item.getVariant();
+        Integer factor = resolveConversionFactor(variant);
+        int conversionFactor = factor != null && factor > 0 ? factor : 1;
+
+        if (conversionFactor <= 1) {
+            return receivedQty > 0 ? receivedQty : orderedQty;
+        }
+
+        int baseQty = orderedQty * conversionFactor;
+        return receivedQty > 0 ? receivedQty : baseQty;
+    }
+
+    private ProductVariant resolveBaseVariant(ProductVariant variant) {
+        if (variant == null || variant.getProduct() == null || variant.getProduct().getVariants() == null) {
+            return variant;
+        }
+
+        for (ProductVariant candidate : variant.getProduct().getVariants()) {
+            if (candidate.getId().equals(variant.getId())) {
+                continue;
+            }
+            if (variant.getUnit() == null) {
+                continue;
+            }
+            if (unitConversionRepository.findByVariantIdAndToUnitId(candidate.getId(), variant.getUnit().getId()).isPresent()) {
+                return candidate;
+            }
+        }
+
+        return variant;
     }
 }

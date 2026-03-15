@@ -32,10 +32,10 @@ export function SuppliersScreen() {
 
   const filteredSuppliers = (suppliers || []).filter((supplier) => {
     const matchesSearch =
-      supplier.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supplier.contact_person?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      supplier.name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
+      supplier.contact_person?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
       supplier.phone?.includes(searchQuery) ||
-      supplier.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      supplier.email?.toLowerCase()?.includes(searchQuery.toLowerCase());
 
     const matchesStatus =
       filterStatus === "all" ||

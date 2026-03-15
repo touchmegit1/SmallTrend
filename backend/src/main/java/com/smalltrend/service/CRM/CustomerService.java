@@ -11,35 +11,39 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
-    
+
     private final CustomerRepository customerRepository;
     private static final long LOYALTY_RATE = 10000L; // 10000 VNĐ = 1 điểm loyalty
 
     public List<CustomerResponse> getAllCustomers() {
         List<CustomerResponse> customers = customerRepository.findAll().stream()
-            .map(this::mapToResponse).toList();
+                .map(this::mapToResponse).toList();
         return customers;
     }
 
     public CustomerResponse getCustomerById(Integer id) {
         Customer customer = customerRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
         return mapToResponse(customer);
     }
 
     public CustomerResponse createCustomer(String name, String phone) {
         Customer customer = Customer.builder()
-            .name(name)
-            .phone(phone)
-            .build();
+                .name(name)
+                .phone(phone)
+                .build();
         Customer savedCustomer = customerRepository.save(customer);
         return mapToResponse(savedCustomer);
     }
 
+    public CustomerResponse updateCustomer(Integer id, String name, String phone, Integer loyaltyPoints) {
+        return updateCustomer(id, name, phone, loyaltyPoints, null);
+    }
+
     public CustomerResponse updateCustomer(Integer id, String name, String phone, Integer loyaltyPoints, Long spentAmount) {
         Customer customer = customerRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Customer not found"));
-        
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
         customer.setName(name);
         customer.setPhone(phone);
         if (loyaltyPoints != null) {
@@ -48,7 +52,7 @@ public class CustomerService {
         if (spentAmount != null) {
             customer.setSpentAmount(spentAmount);
         }
-        
+
         Customer updatedCustomer = customerRepository.save(customer);
         return mapToResponse(updatedCustomer);
     }
@@ -63,7 +67,7 @@ public class CustomerService {
     public CustomerResponse getCustomerByPhone(String phone) {
         String cleanPhone = phone != null ? phone.replaceAll("\\s+", "") : "";
         Customer customer = customerRepository.findByPhoneIgnoreSpaces(cleanPhone)
-            .orElseThrow(() -> new RuntimeException("Customer not found with phone: " + phone));
+                .orElseThrow(() -> new RuntimeException("Customer not found with phone: " + phone));
         return mapToResponse(customer);
     }
 

@@ -1,4 +1,4 @@
-package com.smalltrend.service;
+package com.smalltrend.service.products;
 
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.ProductRepository;
@@ -6,10 +6,13 @@ import com.smalltrend.repository.UnitRepository;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.UnitConversionRepository;
+import com.smalltrend.repository.VariantPriceRepository;
+import com.smalltrend.entity.enums.VariantPriceStatus;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.Unit;
 import com.smalltrend.entity.ProductBatch;
+import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
@@ -20,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class ProductVariantService {
     private final InventoryStockRepository inventoryStockRepository;
     private final ProductBatchRepository productBatchRepository;
     private final UnitConversionRepository unitConversionRepository;
+    private final VariantPriceRepository variantPriceRepository;
 
     public List<ProductVariantRespone> getAllProductVariants(String search, String barcode) {
         List<ProductVariant> variants;
@@ -43,9 +48,9 @@ public class ProductVariantService {
             String searchLower = search.toLowerCase();
             variants = productVariantRepository.findAll().stream()
                     .filter(v -> (v.getProduct().getName() != null
-                            && v.getProduct().getName().toLowerCase().contains(searchLower)) ||
-                            (v.getSku() != null && v.getSku().toLowerCase().contains(searchLower)) ||
-                            (v.getBarcode() != null && v.getBarcode().contains(search)))
+                    && v.getProduct().getName().toLowerCase().contains(searchLower))
+                    || (v.getSku() != null && v.getSku().toLowerCase().contains(searchLower))
+                    || (v.getBarcode() != null && v.getBarcode().contains(search)))
                     .collect(Collectors.toList());
         } else {
             variants = productVariantRepository.findAll();
@@ -112,6 +117,18 @@ public class ProductVariantService {
                 .build();
 
         ProductVariant saved = productVariantRepository.save(variant);
+
+        if (request.getCostPrice() != null) {
+            ProductBatch batch = ProductBatch.builder()
+                    .variant(saved)
+                    .batchNumber("AUTO-" + System.currentTimeMillis())
+                    .mfgDate(LocalDate.now())
+                    .expiryDate(LocalDate.now().plusYears(1))
+                    .costPrice(request.getCostPrice())
+                    .build();
+            productBatchRepository.save(batch);
+        }
+
         return mapToResponse(saved);
     }
 
@@ -162,7 +179,29 @@ public class ProductVariantService {
             variant.setActive(request.getIsActive());
         }
         if (request.getAttributes() != null) {
-            variant.setAttributes(request.getAttributes());
+            if (variant.getAttributes() == null) {
+                variant.setAttributes(new java.util.HashMap<>());
+            } else {
+                variant.getAttributes().clear();
+            }
+            variant.getAttributes().putAll(request.getAttributes());
+        }
+
+        if (request.getCostPrice() != null) {
+            ProductBatch latestBatch = productBatchRepository.findFirstByVariantIdOrderByIdDesc(variantId).orElse(null);
+            if (latestBatch != null) {
+                latestBatch.setCostPrice(request.getCostPrice());
+                productBatchRepository.save(latestBatch);
+            } else {
+                ProductBatch newBatch = ProductBatch.builder()
+                        .variant(variant)
+                        .batchNumber("AUTO-" + System.currentTimeMillis())
+                        .mfgDate(LocalDate.now())
+                        .expiryDate(LocalDate.now().plusYears(1))
+                        .costPrice(request.getCostPrice())
+                        .build();
+                productBatchRepository.save(newBatch);
+            }
         }
 
         ProductVariant saved = productVariantRepository.save(variant);
@@ -170,8 +209,8 @@ public class ProductVariantService {
     }
 
     /**
-     * Generate SKU based on product data.
-     * Format: {CATEGORY_CODE}-{BRAND_SHORT}-{PRODUCT_SHORT}-{UNIT_CODE}
+     * Generate SKU based on product data. Format:
+     * {CATEGORY_CODE}-{BRAND_SHORT}-{PRODUCT_SHORT}-{UNIT_CODE}
      */
     public String generateSku(Integer productId, Integer unitId) {
         Product product = productRepository.findById(productId)
@@ -224,10 +263,10 @@ public class ProductVariantService {
     }
 
     /**
-     * Generate internal barcode for store-created products using EAN-13 standard.
-     * Format: 893 (Country) + 00001 (Company) + XXXX (Product) + C (Check Digit)
-     * Total: 13 digits
-     * Used by the manual "Generate Barcode" button.
+     * Generate internal barcode for store-created products using EAN-13
+     * standard. Format: 893 (Country) + 00001 (Company) + XXXX (Product) + C
+     * (Check Digit) Total: 13 digits Used by the manual "Generate Barcode"
+     * button.
      */
     public String generateInternalBarcode(Integer productId) {
         String countryCode = "893"; // Việt Nam
@@ -250,10 +289,10 @@ public class ProductVariantService {
     }
 
     /**
-     * Generate internal barcode for packaging units (unit conversions).
-     * Format: 20 + ProductID(4 digits) + VariantID(4 digits) + Random(3 digits)
-     * Total: 13 digits
-     * Prefix 20 = store-created product (EAN-13 internal use range 20-29).
+     * Generate internal barcode for packaging units (unit conversions). Format:
+     * 20 + ProductID(4 digits) + VariantID(4 digits) + Random(3 digits) Total:
+     * 13 digits Prefix 20 = store-created product (EAN-13 internal use range
+     * 20-29).
      */
     public String generateInternalBarcodeForPackaging(Integer productId, Integer variantId) {
         String prefix = "20";
@@ -275,8 +314,8 @@ public class ProductVariantService {
     }
 
     /**
-     * Generate SKU for a packaging variant created via unit conversion.
-     * Appends the unit abbreviation + conversion factor to the base variant's SKU.
+     * Generate SKU for a packaging variant created via unit conversion. Appends
+     * the unit abbreviation + conversion factor to the base variant's SKU.
      * Example: BEV-COCA-COLA-LON → BEV-COCA-COLA-LOC6
      */
     public String generateSkuForConversion(ProductVariant baseVariant, Unit toUnit,
@@ -343,11 +382,32 @@ public class ProductVariantService {
             }
         }
 
+        List<InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
+        if (stocks != null && !stocks.isEmpty()) {
+            inventoryStockRepository.deleteAll(stocks);
+        }
+
+        List<ProductBatch> batches = productBatchRepository.findByVariantId(variantId);
+        if (batches != null && !batches.isEmpty()) {
+            productBatchRepository.deleteAll(batches);
+        }
+
+        if (variant.getProduct() != null && variant.getUnit() != null) {
+            List<UnitConversion> conversions = unitConversionRepository.findByProductIdAndToUnitId(
+                    variant.getProduct().getId(),
+                    variant.getUnit().getId());
+            unitConversionRepository.deleteByVariantId(variantId);
+            if (conversions != null && !conversions.isEmpty()) {
+                unitConversionRepository.deleteAll(conversions);
+            }
+        } else {
+            unitConversionRepository.deleteByVariantId(variantId);
+        }
+
         productVariantRepository.deleteById(variantId);
     }
 
     // ─── Validation Helpers ──────────────────────────────────────────────────
-
     private void validateBarcode(String barcode) {
         if (!barcode.matches("^\\d{12,13}$")) {
             throw new RuntimeException("Barcode phải gồm 12-13 chữ số.");
@@ -365,8 +425,9 @@ public class ProductVariantService {
      * uppercase, no spaces.
      */
     private String abbreviate(String input, int maxLen) {
-        if (input == null || input.isEmpty())
+        if (input == null || input.isEmpty()) {
             return "";
+        }
         // Remove Vietnamese diacritics for cleaner codes
         String normalized = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
@@ -377,7 +438,6 @@ public class ProductVariantService {
     }
 
     // ─── Mapper ──────────────────────────────────────────────────────────────
-
     private ProductVariantRespone mapToResponse(ProductVariant variant) {
         ProductVariantRespone response = new ProductVariantRespone();
         response.setId(variant.getId());
@@ -430,12 +490,8 @@ public class ProductVariantService {
         response.setStockQuantity(stockQty);
 
         // Get cost price from latest batch
-        List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());
-        if (batches != null && !batches.isEmpty()) {
-            // Get the latest batch's cost price
-            ProductBatch latestBatch = batches.get(batches.size() - 1);
-            response.setCostPrice(latestBatch.getCostPrice());
-        }
+        productBatchRepository.findFirstByVariantIdOrderByIdDesc(variant.getId())
+                .ifPresent(latestBatch -> response.setCostPrice(latestBatch.getCostPrice()));
 
         // Get category and brand names
         if (variant.getProduct().getCategory() != null) {
@@ -451,6 +507,16 @@ public class ProductVariantService {
                 .map(this::mapConversionToResponse)
                 .collect(Collectors.toList());
         response.setUnitConversions(conversions);
+
+        // Active Variant Price
+        variantPriceRepository.findFirstByVariantIdAndStatus(variant.getId(), VariantPriceStatus.ACTIVE)
+                .ifPresent(activePrice -> {
+                    response.setActivePurchasePrice(activePrice.getPurchasePrice());
+                    response.setActiveSellingPrice(activePrice.getSellingPrice());
+                    response.setActiveTaxPercent(activePrice.getTaxPercent());
+                    response.setActiveEffectiveDate(activePrice.getEffectiveDate());
+                    response.setActiveExpiryDate(activePrice.getExpiryDate());
+                });
 
         return response;
     }

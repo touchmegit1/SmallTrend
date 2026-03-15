@@ -12,8 +12,6 @@ import {
   ChevronRight,
   Shield,
   Menu,
-  User,
-  Settings,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -22,6 +20,11 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const role = user?.role;
+  const normalizedRole = String(role || "").toUpperCase();
+  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "ROLE_ADMIN" || normalizedRole.includes("ADMIN");
+  const isManager = normalizedRole === "MANAGER" || normalizedRole === "ROLE_MANAGER" || normalizedRole.includes("MANAGER");
+  const canManageWorkforce = isAdmin || isManager;
 
   const toggleMenu = (label) => {
     setOpenMenus((prev) => ({
@@ -43,8 +46,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       children: [
         { label: "Giao diện bán hàng", path: "/pos" },
         { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Báo cáo doanh thu", path: "/pos/suspended" },
-        { label: "Khiếu nại", path: "/pos/complain" },
+        { label: "Đơn hàng treo", path: "/pos/suspended" },
+        { label: "Giao ca", path: "/pos/shift-handover" },
       ],
     },
     {
@@ -64,9 +67,9 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       label: "Sản phẩm",
       path: "/products",
       children: [
+        { label: "Danh mục & Thương hiệu", path: "/products/categories" },
+        { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
         { label: "Danh sách sản phẩm", path: "/products" },
-        { label: "Thêm sản phẩm", path: "/products/addproduct" },
-        { label: "Danh mục & Brand", path: "/products/categories" },
         { label: "Thiết lập giá", path: "/products/price" },
         { label: "Combo sản phẩm", path: "/products/combo" },
       ],
@@ -79,6 +82,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         { label: "Danh sách khách hàng", path: "/crm/customer" },
         { label: "Khuyến Mãi", path: "/crm/event" },
         { label: "Kho quà tặng", path: "/crm/loyalty" },
+        { label: "Khiếu nại", path: "/crm/complain" },
+        { label: "Quản lý Quảng cáo", path: "/crm/ads" },
         { label: "Báo Cáo Thống Kê", path: "/crm/report" },
       ],
     },
@@ -86,12 +91,21 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       icon: Clock,
       label: "Nhân sự & Ca",
       path: "/hr",
-      children: [
-        { label: "Danh sách nhân viên", path: "/hr" },
-        { label: "Phân ca làm việc", path: "/hr/shifts" },
-        { label: "Chấm công", path: "/hr/attendance" },
-        { label: "Tính lương", path: "/hr/payroll" },
-      ],
+      children: canManageWorkforce
+        ? [
+          { label: "Danh sách nhân viên", path: "/hr/workforce" },
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Phân ca làm việc", path: "/hr/shifts" },
+          { label: "Chấm công", path: "/hr/attendance" },
+          { label: "Tính lương", path: "/hr/payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ]
+        : [
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Chấm công", path: "/hr/my-attendance" },
+          { label: "Tính lương", path: "/hr/my-payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ],
     },
     {
       icon: BarChart3,
@@ -109,17 +123,13 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
     },
   ];
 
-  // Admin menu - compatible with new DB role naming
-  const isAdmin = user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
-
   return (
     <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>
       <div className={`${collapsed ? 'p-4' : 'p-6'} border-b border-slate-100 flex flex-col gap-3`}>
         <div
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
           onClick={() => {
-            const isAdminRole =
-              user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
+            const isAdminRole = isAdmin;
             navigate(isAdminRole ? "/dashboard" : "/pos");
           }}
           title="Về trang chính"
@@ -133,7 +143,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
             </h1>
           )}
         </div>
-        
+
         {/* Collapse Button */}
         <button
           type="button"

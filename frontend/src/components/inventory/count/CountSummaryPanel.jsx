@@ -30,14 +30,14 @@ export default function CountSummaryPanel({
         </label>
         {isEditable ? (
           <LocationSelect
-            value={session?.location_id || null}
+            value={session?.location_id ?? null}
             onChange={(val) => updateSession({ location_id: val })}
             locations={locations}
           />
         ) : (
           <p className="text-sm text-slate-700 font-medium">
             {locations.find((l) => l.id === session?.location_id)
-              ?.location_name || "Chưa chọn"}
+              ?.location_name ?? "Chưa chọn"}
           </p>
         )}
       </div>
@@ -133,7 +133,7 @@ export default function CountSummaryPanel({
         </label>
         {isEditable ? (
           <textarea
-            value={session?.notes || ""}
+            value={session?.notes ?? ""}
             onChange={(e) => updateSession({ notes: e.target.value })}
             rows={4}
             placeholder="Nhập ghi chú cho phiên kiểm kho..."
@@ -141,7 +141,7 @@ export default function CountSummaryPanel({
           />
         ) : (
           <p className="text-sm text-slate-600">
-            {session?.notes || "Không có ghi chú"}
+            {session?.notes ?? "Không có ghi chú"}
           </p>
         )}
       </div>

@@ -18,6 +18,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
     barcode: "",
     plu_code: "",
     unit_id: "",
+    cost_price: "",
     sell_price: "",
     is_active: true,
   });
@@ -40,8 +41,10 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         barcode: variant.barcode || "",
         plu_code: variant.plu_code || "",
         unit_id: variant.unit_id ? String(variant.unit_id) : "",
+        cost_price:
+          variant.costPrice != null ? String(variant.costPrice) : variant.cost_price != null ? String(variant.cost_price) : "",
         sell_price:
-          variant.sell_price != null ? String(variant.sell_price) : "",
+          variant.sellPrice != null ? String(variant.sellPrice) : variant.sell_price != null ? String(variant.sell_price) : "",
         is_active:
           parentProduct?.is_active === false
             ? false
@@ -190,10 +193,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       setErrorMsg("Vui lòng chọn đơn vị");
       return false;
     }
-    if (!formData.sell_price) {
-      setErrorMsg("Vui lòng nhập giá bán");
-      return false;
-    }
+
     if (formData.barcode.trim() && !/^\d{12,13}$/.test(formData.barcode.trim())) {
       setErrorMsg("Barcode phải gồm 12-13 chữ số.");
       return false;
@@ -237,7 +237,8 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         barcode: formData.barcode || null,
         pluCode: formData.plu_code || null,
         unitId: parseInt(formData.unit_id),
-        sellPrice: parseFloat(formData.sell_price),
+        costPrice: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        sellPrice: formData.sell_price ? parseFloat(formData.sell_price) : 0,
         imageUrl: imageUrl,
         isActive: formData.is_active,
         attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
@@ -249,7 +250,9 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         barcode: formData.barcode,
         plu_code: formData.plu_code,
         unit_id: parseInt(formData.unit_id),
-        sell_price: parseFloat(formData.sell_price),
+        costPrice: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        sellPrice: formData.sell_price ? parseFloat(formData.sell_price) : 0,
+        sell_price: formData.sell_price ? parseFloat(formData.sell_price) : 0,
         image_url: imageUrl,
         is_active: formData.is_active,
         attributes: Object.keys(attributesMap).length > 0 ? attributesMap : null,
@@ -370,14 +373,14 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
 
               <div className="border-t border-gray-100 pt-4" />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>
                     Đơn vị <span className="text-red-600">*</span>
                   </Label>
                   <select
                     name="unit_id"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     value={formData.unit_id}
                     onChange={handleChange}
                     required
@@ -391,46 +394,29 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                   </select>
                 </div>
 
-              </div>
-
-              <div>
-                <Label>
-                  Giá bán <span className="text-red-600">*</span>
-                </Label>
-                <Input
-                  type="number"
-                  step="any"
-                  className="text-md bg-gray-200 border border-gray-200 rounded-lg"
-                  placeholder="93000"
-                  name="sell_price"
-                  value={formData.sell_price}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Trạng thái</Label>
-                <select
-                  name="is_active"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white disabled:bg-gray-100 disabled:text-gray-500"
-                  value={formData.is_active}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      is_active: e.target.value === "true",
-                    }))
-                  }
-                  disabled={parentProduct?.is_active === false}
-                >
-                  <option value="true">Đang bán</option>
-                  <option value="false">Ngưng bán</option>
-                </select>
-                {parentProduct?.is_active === false && (
-                  <p className="text-xs text-red-500 mt-1">
-                    Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt loại sản phẩm.
-                  </p>
-                )}
+                <div>
+                  <Label>Trạng thái</Label>
+                  <select
+                    name="is_active"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                    value={formData.is_active}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        is_active: e.target.value === "true",
+                      }))
+                    }
+                    disabled={parentProduct?.is_active === false}
+                  >
+                    <option value="true">Đang bán</option>
+                    <option value="false">Ngưng bán</option>
+                  </select>
+                  {parentProduct?.is_active === false && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt loại sản phẩm.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Product Code Summary */}
@@ -593,6 +579,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
               <CardContent>
                 <UnitConversionSection
                   variant={variant}
+                  product={parentProduct}
                   units={units}
                   onSuccess={() => { /* nothing to do, state is handled internally */ }}
                 />

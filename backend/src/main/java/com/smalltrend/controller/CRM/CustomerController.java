@@ -15,7 +15,7 @@ import com.smalltrend.service.CRM.CustomerService;
 @RestController
 @RequestMapping("/api/crm")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"})
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -27,13 +27,13 @@ public class CustomerController {
     }
 
     @GetMapping("/customers/{id}")
-    public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable("id") Integer id) {
+    public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Integer id) {
         CustomerResponse customer = customerService.getCustomerById(id);
         return ResponseEntity.ok(customer);
     }
 
     @GetMapping("/customers/phone/{phone}")
-    public ResponseEntity<?> getCustomerByPhone(@PathVariable("phone") String phone) {
+    public ResponseEntity<?> getCustomerByPhone(@PathVariable String phone) {
         try {
             CustomerResponse customer = customerService.getCustomerByPhone(phone);
             return ResponseEntity.ok(customer);
@@ -44,7 +44,7 @@ public class CustomerController {
     }
 
     @GetMapping("/customers/search")
-    public ResponseEntity<CustomerResponse> searchCustomerByPhone(@RequestParam("phone") String phone) {
+    public ResponseEntity<CustomerResponse> searchCustomerByPhone(@RequestParam String phone) {
         CustomerResponse customer = customerService.getCustomerByPhone(phone);
         return ResponseEntity.ok(customer);
     }
@@ -57,19 +57,20 @@ public class CustomerController {
 
     @PutMapping("/customers/{id}")
     public ResponseEntity<CustomerResponse> updateCustomer(
-            @PathVariable("id") Integer id,
+            @PathVariable Integer id,
             @RequestBody UpdateCustomerRequest request) {
         CustomerResponse customer = customerService.updateCustomer(
                 id,
                 request.getName(),
                 request.getPhone(),
                 request.getLoyaltyPoints(),
-                request.getSpentAmount());
+                request.getSpentAmount()
+        );
         return ResponseEntity.ok(customer);
     }
 
     @DeleteMapping("/customers/{id}")
-    public ResponseEntity<Void> deleteCustomer(@PathVariable("id") Integer id) {
+    public ResponseEntity<Void> deleteCustomer(@PathVariable Integer id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.noContent().build();
     }

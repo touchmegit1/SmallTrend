@@ -42,15 +42,20 @@ public class ProductServiceImpl implements ProductService {
                 .category_name(product.getCategory() != null ? product.getCategory().getName() : null)
                 .tax_rate_id(product.getTaxRate() != null ? product.getTaxRate().getId() : null)
                 .tax_rate_name(product.getTaxRate() != null ? product.getTaxRate().getName() : null)
+                .tax_rate_value(product.getTaxRate() != null ? product.getTaxRate().getRate() : null)
                 .is_active(product.getIsActive())
                 .created_at(product.getCreatedAt())
                 .updated_at(product.getUpdatedAt())
                 .variant_count(product.getVariants() != null ? product.getVariants().size() : 0)
+                .supplier_name(product.getBrand() != null && product.getBrand().getSupplier() != null
+                        ? product.getBrand().getSupplier().getName()
+                        : null)
                 .build();
     }
 
     // Lấy toàn bộ danh sách sản phẩm và map sang DTO
     @Override
+    @Transactional(readOnly = true)
     public List<ProductResponse> getAll() {
         return productRepository.findAll().stream()
                 .map(this::mapToResponse)
@@ -59,6 +64,7 @@ public class ProductServiceImpl implements ProductService {
 
     // Tìm kiếm và lấy chi tiết một sản phẩm theo khóa chính (ID)
     @Override
+    @Transactional(readOnly = true)
     public ProductResponse getById(Integer id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
