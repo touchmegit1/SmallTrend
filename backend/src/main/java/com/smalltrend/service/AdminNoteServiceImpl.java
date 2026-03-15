@@ -31,7 +31,6 @@ public class AdminNoteServiceImpl implements AdminNoteService {
     public List<AdminNoteResponse> getAllNotes(NoteTag tag, NoteStatus status) {
         List<AdminNote> notes = adminNoteRepository.findByIsDeletedFalse();
 
-        // Apply filters in memory (assuming moderate size. For millions, move to Specification/QueryDSL)
         if (tag != null) {
             notes = notes.stream().filter(n -> n.getTag() == tag).collect(Collectors.toList());
         }
@@ -98,7 +97,6 @@ public class AdminNoteServiceImpl implements AdminNoteService {
 
         note = adminNoteRepository.save(note);
 
-        // Log the update operation
         auditLogService.logAction(
                 editor,
                 "UPDATE_ADMIN_NOTE",
@@ -118,9 +116,7 @@ public class AdminNoteServiceImpl implements AdminNoteService {
     public void deleteNote(Long id, Integer deleterId) {
         AdminNote note = getAdminNoteById(id);
         
-        // Soft delete
         note.setDeleted(true);
-        // Track who deleted it
         User deleter = userRepository.findById(deleterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Deleter user not found"));
         note.setUpdatedBy(deleter);
@@ -146,30 +142,25 @@ public class AdminNoteServiceImpl implements AdminNoteService {
                 .orElseThrow(() -> new ResourceNotFoundException("AdminNote not found with id: " + id));
     }
 
-    // Custom sorting priority: Tag Importance -> Status -> CreatedAt (desc)
     private Comparator<AdminNote> noteComparator() {
         return (n1, n2) -> {
-            // 1. Tag Importance (ANNOUNCEMENT, POLICY_UPDATE > others)
             int tagPriority1 = getTagPriority(n1.getTag());
             int tagPriority2 = getTagPriority(n2.getTag());
             if (tagPriority1 != tagPriority2) {
                 return Integer.compare(tagPriority1, tagPriority2);
             }
             
-            // 2. Status Priority (OPEN, IN_PROGRESS > DONE)
             int statusPriority1 = getStatusPriority(n1.getStatus());
             int statusPriority2 = getStatusPriority(n2.getStatus());
             if (statusPriority1 != statusPriority2) {
                 return Integer.compare(statusPriority1, statusPriority2);
             }
 
-            // 3. Tag (Alphabetical)
             int tagCompare = n1.getTag().name().compareTo(n2.getTag().name());
             if (tagCompare != 0) {
                 return tagCompare;
             }
 
-            // 4. CreatedAt (desc)
             LocalDateTime date1 = n1.getCreatedAt() != null ? n1.getCreatedAt() : LocalDateTime.MIN;
             LocalDateTime date2 = n2.getCreatedAt() != null ? n2.getCreatedAt() : LocalDateTime.MIN;
             return date2.compareTo(date1);
