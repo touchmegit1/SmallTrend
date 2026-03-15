@@ -311,9 +311,7 @@ const EventManagement = () => {
                       <div className="flex items-center gap-3">
                         {c.bannerImageUrl ? (
                           <img src={c.bannerImageUrl} alt={c.campaignName} className="w-10 h-10 object-cover rounded border flex-shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 bg-blue-50 rounded border flex items-center justify-center text-blue-300 text-lg flex-shrink-0">🎯</div>
-                        )}
+                        ) : null}
                         <div>
                           <div className="font-semibold text-gray-800">{c.campaignName}</div>
                           <div className="text-xs text-gray-400 font-mono">{c.campaignCode}</div>
