@@ -238,7 +238,8 @@ public class ProductController {
         return ResponseEntity.ok(java.util.Map.of(
                 "message", "Price expiry alert email job executed",
                 "sentCount", sentCount,
-                "recipient", priceExpiryAlertEmailScheduler.getRecipientEmail(),
+                "recipients", priceExpiryAlertEmailScheduler.getRecipientEmails(),
+                "recipientCount", priceExpiryAlertEmailScheduler.getRecipientCount(),
                 "sender", priceExpiryAlertEmailScheduler.getSenderEmail(),
                 "daysBeforeExpiry", priceExpiryAlertEmailScheduler.getDaysBeforeExpiry()
         ));

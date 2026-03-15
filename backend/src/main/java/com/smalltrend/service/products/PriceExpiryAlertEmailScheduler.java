@@ -137,6 +137,22 @@ public class PriceExpiryAlertEmailScheduler {
         return getRecipientEmailList();
     }
 
+    public int getRecipientCount() {
+        return getRecipientEmailList().size();
+    }
+
+    public int getDaysBeforeExpiry() {
+        return daysBeforeExpiry;
+    }
+
+    public String getSenderEmail() {
+        return senderEmail;
+    }
+
+    public String getCronExpression() {
+        return "${app.notifications.price-expiry.cron:0 30 7 * * *}";
+    }
+
     private List<String> getRecipientEmailList() {
         if (recipientEmails == null || recipientEmails.isBlank()) {
             return List.of();
@@ -146,42 +162,6 @@ public class PriceExpiryAlertEmailScheduler {
                 .filter(email -> !email.isBlank())
                 .distinct()
                 .collect(Collectors.toList());
-    }
-
-    public int getRecipientCount() {
-        return getRecipientEmailList().size();
-    }
-
-    public String getCronExpression() {
-        return "${app.notifications.price-expiry.cron:0 30 7 * * *}";
-    }
-
-    public String getConfiguredRecipientsRaw() {
-        return recipientEmails;
-    }
-
-    public int getDaysBeforeExpiry() {
-        return daysBeforeExpiry;
-    }
-
-    public String getSenderEmail() {
-        return senderEmail;
-    }
-
-    public String getCronExpressionLegacy() {
-        return "${app.notifications.price-expiry.cron:0 30 7 * * *}";
-    }
-
-    public int getDaysBeforeExpiry() {
-        return daysBeforeExpiry;
-    }
-
-    public String getSenderEmail() {
-        return senderEmail;
-    }
-
-    public String getCronExpression() {
-        return "${app.notifications.price-expiry.cron:0 30 7 * * *}";
     }
 
     private void sendEmail(String recipient, List<PriceExpiryAlertResponse> alerts) throws Exception {
