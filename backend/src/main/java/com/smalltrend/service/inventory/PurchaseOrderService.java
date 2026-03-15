@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -138,7 +139,7 @@ public class PurchaseOrderService {
             saveOrderItems(savedOrder, itemRequests);
         }
 
-        log.info("✅ Purchase Order {} CONFIRMED. Chờ NV kho kiểm kê.", savedOrder.getOrderNumber());
+        log.info("Purchase Order {} CONFIRMED. Chờ NV kho kiểm kê.", savedOrder.getOrderNumber());
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
     }
 
@@ -157,7 +158,7 @@ public class PurchaseOrderService {
         order.setRejectionReason(null);
         purchaseOrderRepository.save(order);
 
-        log.info("✅ Purchase Order {} APPROVED by Manager. Chờ NV kho kiểm kê.", order.getOrderNumber());
+        log.info("Purchase Order {} APPROVED by Manager. Chờ NV kho kiểm kê.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -175,7 +176,7 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.CHECKING);
         purchaseOrderRepository.save(order);
 
-        log.info("📋 Purchase Order {} CHECKING started.", order.getOrderNumber());
+        log.info("Purchase Order {} CHECKING started.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -295,6 +296,8 @@ public class PurchaseOrderService {
         updateStock(order, itemRequests);
 
         int syncedPurchasePriceCount = 0;
+        LocalDateTime syncedPurchasePriceAt = null;
+        List<SyncedPurchasePriceItemResponse> syncedPurchasePriceItems = new ArrayList<>();
         Set<Integer> processedVariantIds = new HashSet<>();
         for (PurchaseOrderItem item : order.getItems()) {
             if (item.getVariant() == null || item.getVariant().getId() == null || item.getUnitCost() == null) {
@@ -309,12 +312,23 @@ public class PurchaseOrderService {
             boolean synced = variantPriceService.syncActivePurchasePrice(variantId, item.getUnitCost());
             if (synced) {
                 syncedPurchasePriceCount++;
+                if (syncedPurchasePriceAt == null) {
+                    syncedPurchasePriceAt = LocalDateTime.now();
+                }
+                syncedPurchasePriceItems.add(SyncedPurchasePriceItemResponse.builder()
+                        .variantId(variantId)
+                        .productName(item.getVariant().getProduct() != null ? item.getVariant().getProduct().getName() : "")
+                        .sku(item.getVariant().getSku())
+                        .purchasePrice(item.getUnitCost())
+                        .build());
             }
         }
 
-        log.info("📦 Purchase Order {} RECEIVED. Stock updated.", order.getOrderNumber());
+        log.info("Purchase Order {} RECEIVED. Stock updated.", order.getOrderNumber());
         PurchaseOrderResponse response = toDetailResponse(order);
         response.setSyncedPurchasePriceCount(syncedPurchasePriceCount);
+        response.setSyncedPurchasePriceAt(syncedPurchasePriceAt);
+        response.setSyncedPurchasePriceItems(syncedPurchasePriceItems);
         return response;
     }
 
@@ -339,7 +353,7 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.CONFIRMED);
         purchaseOrderRepository.save(order);
 
-        log.info("✅ Existing Draft {} CONFIRMED. Chờ NV kho kiểm kê.", order.getOrderNumber());
+        log.info("Existing Draft {} CONFIRMED. Chờ NV kho kiểm kê.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -415,7 +429,7 @@ public class PurchaseOrderService {
         order.setRejectionReason(reason);
         purchaseOrderRepository.save(order);
 
-        log.info("🚫 Purchase Order {} REJECTED. Reason: {}", order.getOrderNumber(), reason);
+        log.info("Purchase Order {} REJECTED. Reason: {}", order.getOrderNumber(), reason);
         return toDetailResponse(order);
     }
 
@@ -432,7 +446,7 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.CANCELLED);
         purchaseOrderRepository.save(order);
 
-        log.info("❌ Purchase Order {} CANCELLED.", order.getOrderNumber());
+        log.info("Purchase Order {} CANCELLED.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -451,7 +465,7 @@ public class PurchaseOrderService {
         }
         purchaseOrderRepository.delete(order);
 
-        log.info("🗑️ Purchase Order {} DELETED.", order.getOrderNumber());
+        log.info("Purchase Order {} DELETED.", order.getOrderNumber());
     }
 
     // ─── Get All Suppliers ───────────────────────────────────

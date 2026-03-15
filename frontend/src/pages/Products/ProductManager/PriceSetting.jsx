@@ -1,14 +1,17 @@
 import {
     AlertCircle,
+    Bell,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    Clock3,
     Filter,
     Percent,
     RefreshCw,
     Save,
     Search,
+    Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
@@ -31,6 +34,8 @@ import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
  */
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 const PRICE_SYNC_NOTICE_KEY = "priceSyncNotice";
+const PRICE_SYNC_HISTORY_KEY = "priceSyncNotifications";
+const MAX_PRICE_SYNC_NOTIFICATIONS = 30;
 
 const PriceSetting = () => {
     // ─── Data ────────────────────────────────
@@ -40,6 +45,37 @@ const PriceSetting = () => {
     const [successMsg, setSuccessMsg] = useState("");
     const [priceSyncNotice, setPriceSyncNotice] = useState(null);
     const [showSyncedProducts, setShowSyncedProducts] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [historyHydrated, setHistoryHydrated] = useState(false);
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(PRICE_SYNC_HISTORY_KEY);
+            if (!raw) {
+                setHistoryHydrated(true);
+                return;
+            }
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                setNotifications(parsed);
+            }
+        } catch {
+            localStorage.removeItem(PRICE_SYNC_HISTORY_KEY);
+        } finally {
+            setHistoryHydrated(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!historyHydrated) return;
+        try {
+            localStorage.setItem(PRICE_SYNC_HISTORY_KEY, JSON.stringify(notifications));
+        } catch {
+            // ignore storage write errors
+        }
+    }, [notifications, historyHydrated]);
 
     const consumePriceSyncNotice = useCallback(() => {
         try {
@@ -48,19 +84,69 @@ const PriceSetting = () => {
 
             sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
             const notice = JSON.parse(rawNotice);
-            const syncedCount = Number(notice?.syncedCount) || 0;
+            const syncedCount = Number(notice?.syncedCount ?? notice?.syncedPurchasePriceCount) || 0;
             if (syncedCount <= 0) return;
 
-            const syncedItems = Array.isArray(notice?.syncedItems) ? notice.syncedItems : [];
-            const orderInfo = notice?.orderNumber ? ` (PO: ${notice.orderNumber})` : "";
-            setPriceSyncNotice({ syncedCount, syncedItems, orderNumber: notice?.orderNumber || null });
+            const syncedItems = Array.isArray(notice?.syncedItems)
+                ? notice.syncedItems.map((item, index) => ({
+                    itemId: item?.itemId || item?.variantId || index,
+                    variantId: item?.variantId || null,
+                    productName: item?.productName || item?.name || "Sản phẩm",
+                    sku: item?.sku || "-",
+                    purchasePrice: Number(item?.purchasePrice ?? item?.unitCost ?? 0),
+                    previousPurchasePrice: Number(item?.previousPurchasePrice ?? 0),
+                }))
+                : [];
+            const orderNumber = notice?.orderNumber || notice?.poNumber || null;
+            const createdAt = notice?.createdAt || new Date().toISOString();
+            const orderInfo = orderNumber ? ` (PO: ${orderNumber})` : "";
+
+            const notificationEntry = {
+                id: Date.now() + Math.random(),
+                syncedCount,
+                syncedItems,
+                orderNumber,
+                createdAt,
+            };
+
+            let nextNotifications = [notificationEntry];
+            try {
+                const existingRaw = localStorage.getItem(PRICE_SYNC_HISTORY_KEY);
+                const existing = existingRaw ? JSON.parse(existingRaw) : [];
+                if (Array.isArray(existing)) {
+                    nextNotifications = [notificationEntry, ...existing].slice(0, MAX_PRICE_SYNC_NOTIFICATIONS);
+                }
+                localStorage.setItem(PRICE_SYNC_HISTORY_KEY, JSON.stringify(nextNotifications));
+            } catch {
+                // keep in-memory fallback only
+            }
+
+            setPriceSyncNotice(notificationEntry);
             setShowSyncedProducts(false);
+            setNotifications(nextNotifications);
+            setUnreadCount((prev) => prev + 1);
             setSuccessMsg(`Giá nhập đã được đồng bộ từ phiếu nhập kho cho ${syncedCount} sản phẩm${orderInfo}.`);
             setTimeout(() => setSuccessMsg(""), 6000);
+            sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
         } catch (error) {
             sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
             setPriceSyncNotice(null);
         }
+    }, []);
+
+    const toggleNotificationPanel = useCallback(() => {
+        setNotificationPanelOpen((prev) => {
+            const next = !prev;
+            if (next) {
+                setUnreadCount(0);
+            }
+            return next;
+        });
+    }, []);
+
+    const clearNotifications = useCallback(() => {
+        setNotifications([]);
+        setUnreadCount(0);
     }, []);
 
     // ─── Search & Filter ─────────────────────
@@ -388,6 +474,78 @@ const PriceSetting = () => {
                         </div>
 
                         <div className="flex flex-wrap gap-3 w-full lg:w-auto">
+                            <div className="relative">
+                                <Button
+                                    variant="ghost"
+                                    onClick={toggleNotificationPanel}
+                                    className="h-11 w-11 p-0 rounded-xl text-gray-600 hover:bg-gray-100 relative"
+                                    title="Thông báo đồng bộ giá"
+                                >
+                                    <Bell className="w-5 h-5" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                                            {unreadCount > 9 ? "9+" : unreadCount}
+                                        </span>
+                                    )}
+                                </Button>
+
+                                {notificationPanelOpen && (
+                                    <div className="absolute right-0 mt-2 w-[360px] max-h-[420px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl z-20">
+                                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                            <div className="font-semibold text-gray-800">Thông báo đồng bộ giá</div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={clearNotifications}
+                                                className="h-8 px-2 text-xs text-red-600 hover:bg-red-50"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                                Xóa hết
+                                            </Button>
+                                        </div>
+
+                                        {notifications.length === 0 ? (
+                                            <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                                                Chưa có thông báo nào.
+                                            </div>
+                                        ) : (
+                                            <div className="max-h-[360px] overflow-auto divide-y divide-gray-100">
+                                                {notifications.map((notice) => {
+                                                    const formattedTime = new Date(notice.createdAt || Date.now()).toLocaleString("vi-VN");
+                                                    return (
+                                                        <div key={notice.id} className="px-4 py-3 space-y-2">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <p className="text-sm font-medium text-gray-800">
+                                                                    Đồng bộ giá nhập cho {notice.syncedCount} sản phẩm
+                                                                    {notice.orderNumber ? ` (PO: ${notice.orderNumber})` : ""}
+                                                                </p>
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 inline-flex items-center gap-1">
+                                                                <Clock3 className="w-3.5 h-3.5" />
+                                                                {formattedTime}
+                                                            </p>
+                                                            {Array.isArray(notice.syncedItems) && notice.syncedItems.length > 0 && (
+                                                                <ul className="space-y-1">
+                                                                    {notice.syncedItems.map((item, index) => (
+                                                                        <li
+                                                                            key={`${notice.id}-${item.variantId || item.itemId || index}`}
+                                                                            className="text-xs text-gray-700 bg-gray-50 rounded-md px-2 py-1"
+                                                                        >
+                                                                            <span className="font-medium text-gray-900">{item.productName || "Sản phẩm"}</span>
+                                                                            <span className="text-gray-500"> · SKU: {item.sku || "-"}</span>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <Button
                                 variant="outline"
                                 onClick={() => setIsTaxModalOpen(true)}
