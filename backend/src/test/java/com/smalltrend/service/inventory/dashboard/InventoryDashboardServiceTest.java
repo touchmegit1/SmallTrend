@@ -159,7 +159,7 @@ class InventoryDashboardServiceTest {
         assertEquals("BATCH-1", response.getBatchCode());
         assertEquals(100, response.getQuantity());
         assertEquals("EXPIRING_SOON", response.getStatus());
-        assertEquals("Location 1", response.getLocationName());
+        assertEquals(batch.getMfgDate(), response.getReceivedDate());
         assertEquals(new BigDecimal("1000.0"), response.getValue());
     }
 

@@ -158,7 +158,6 @@ class InventoryDashboardControllerTest {
                         .status("SAFE")
                         .daysUntilExpiry(111)
                         .value(new BigDecimal("5000000"))
-                        .locationName("Kho A1")
                         .build(),
                 BatchStatusResponse.builder()
                         .batchId(2)
@@ -169,7 +168,6 @@ class InventoryDashboardControllerTest {
                         .status("EXPIRING_SOON")
                         .daysUntilExpiry(4)
                         .value(new BigDecimal("2500000"))
-                        .locationName("Kho B1")
                         .build()
         );
         when(dashboardService.getBatchStatuses()).thenReturn(expected);
