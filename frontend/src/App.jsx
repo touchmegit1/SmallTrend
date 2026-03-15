@@ -135,6 +135,15 @@ function App() {
         <Route path="inventory/disposal" element={<DisposalList />} />
         <Route path="inventory/disposal/create" element={<DisposalDetail />} />
         <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
+        <Route path="inventory/purchase-orders" element={<PurchaseOrderList />} />
+        <Route
+          path="inventory/purchase-orders/create"
+          element={<CreatePurchaseOrder />}
+        />
+        <Route
+          path="inventory/purchase-orders/:id"
+          element={<CreatePurchaseOrder />}
+        />
 
         {/* Module 3: Products (Sản phẩm) */}
         <Route path="products" element={<ProductList />} />
