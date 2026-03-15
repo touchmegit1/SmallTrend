@@ -1,5 +1,18 @@
 import api from '../config/axiosConfig';
 
+const toHms = (value) => {
+    if (value == null || value === '') return null;
+    const text = String(value).trim();
+    return text.length === 5 ? `${text}:00` : text;
+};
+
+const normalizeAttendancePayload = (payload = {}) => ({
+    ...payload,
+    userId: payload.userId != null && payload.userId !== '' ? Number(payload.userId) : payload.userId,
+    timeIn: toHms(payload.timeIn),
+    timeOut: toHms(payload.timeOut),
+});
+
 export const shiftService = {
     async getShifts(params = {}) {
         const res = await api.get('/shifts', { params });
@@ -46,7 +59,7 @@ export const shiftService = {
         return res.data;
     },
     async upsertAttendance(payload) {
-        const res = await api.post('/shifts/attendance', payload);
+        const res = await api.post('/shifts/attendance', normalizeAttendancePayload(payload));
         return res.data;
     },
     async getPayrollSummary(params = {}) {

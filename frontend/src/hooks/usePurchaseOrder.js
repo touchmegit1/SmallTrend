@@ -20,7 +20,6 @@ import {
   PO_STATUS,
   createDefaultOrder,
   createOrderItem,
-  calcItemTotal,
   calcOrderFinancials,
   validateDraft,
   validateConfirm,
@@ -44,6 +43,11 @@ export function usePurchaseOrder(initialId = null) {
 
   // State cho kiểm kê (NV kho)
   const [receiptItems, setReceiptItems] = useState([]);
+
+  const toNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -122,6 +126,7 @@ export function usePurchaseOrder(initialId = null) {
                 itemId: item.id,
                 variantId: item.variantId || item.variant_id,
                 receivedQuantity: item.received_quantity || item.quantity,
+                unitCost: item.unit_price || item.unitCost || 0,
                 notes: "",
               })),
             );
@@ -158,6 +163,26 @@ export function usePurchaseOrder(initialId = null) {
     order.shipping_fee,
     order.paid_amount,
   ]);
+
+  const checkingFinancials = useMemo(() => {
+    const subtotal = receiptItems.reduce((sum, ri) => {
+      const qty = toNumber(ri.receivedQuantity);
+      const unitCost = toNumber(ri.unitCost);
+      return sum + qty * unitCost;
+    }, 0);
+    const taxPercent = toNumber(order.tax_percent);
+    const shippingFee = toNumber(order.shipping_fee);
+    const taxAmount = Math.round((subtotal * taxPercent) / 100);
+    const total = subtotal + taxAmount + shippingFee;
+
+    return {
+      subtotal,
+      taxPercent,
+      shippingFee,
+      taxAmount,
+      total,
+    };
+  }, [receiptItems, order.tax_percent, order.shipping_fee]);
 
   const filteredSuppliers = useMemo(() => {
     if (!supplierQuery.trim()) return suppliers;
@@ -197,13 +222,7 @@ export function usePurchaseOrder(initialId = null) {
       const existing = prev.find((i) => i.variant_id === product.id);
       if (existing) {
         return prev.map((i) =>
-          i.variant_id === product.id
-            ? {
-                ...i,
-                quantity: i.quantity + 1,
-                total: calcItemTotal(i.quantity + 1, i.unit_price, i.discount),
-              }
-            : i,
+          i.variant_id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
         );
       }
       return [...prev, createOrderItem(product)];
@@ -219,28 +238,13 @@ export function usePurchaseOrder(initialId = null) {
         );
         if (existingIndex >= 0) {
           const item = newItems[existingIndex];
-          const newQty = item.quantity + (importedInfo.quantity || 1);
-          const newPrice =
-            importedInfo.unit_price !== undefined
-              ? importedInfo.unit_price
-              : item.unit_price;
           newItems[existingIndex] = {
             ...item,
-            quantity: newQty,
-            unit_price: newPrice,
-            total: calcItemTotal(newQty, newPrice, item.discount),
+            quantity: item.quantity + (importedInfo.quantity || 1),
           };
         } else {
           const newItem = createOrderItem(importedInfo.product);
           newItem.quantity = importedInfo.quantity || 1;
-          if (importedInfo.unit_price !== undefined) {
-            newItem.unit_price = importedInfo.unit_price;
-          }
-          newItem.total = calcItemTotal(
-            newItem.quantity,
-            newItem.unit_price,
-            newItem.discount,
-          );
           newItems.push(newItem);
         }
       });
@@ -256,15 +260,8 @@ export function usePurchaseOrder(initialId = null) {
     setItems((prev) =>
       prev.map((item) => {
         if (item._key !== _key) return item;
-        const updated = { ...item, [field]: value };
-        if (["quantity", "unit_price", "discount"].includes(field)) {
-          updated.total = calcItemTotal(
-            updated.quantity,
-            updated.unit_price,
-            updated.discount,
-          );
-        }
-        return updated;
+        if (field !== "quantity") return item;
+        return { ...item, quantity: value };
       }),
     );
   }, []);
@@ -307,11 +304,15 @@ export function usePurchaseOrder(initialId = null) {
       try {
         const orderData = {
           ...order,
+          discount: 0,
+          tax_percent: 0,
+          shipping_fee: 0,
+          paid_amount: 0,
           status: PO_STATUS.DRAFT,
-          subtotal: financials.subtotal,
-          tax_amount: financials.taxAmount,
-          total_amount: financials.total,
-          remaining_amount: financials.remaining,
+          subtotal: 0,
+          tax_amount: 0,
+          total_amount: 0,
+          remaining_amount: 0,
           items: items,
         };
 
@@ -347,11 +348,15 @@ export function usePurchaseOrder(initialId = null) {
       try {
         const orderData = {
           ...order,
+          discount: 0,
+          tax_percent: 0,
+          shipping_fee: 0,
+          paid_amount: 0,
           status: PO_STATUS.PENDING,
-          subtotal: financials.subtotal,
-          tax_amount: financials.taxAmount,
-          total_amount: financials.total,
-          remaining_amount: financials.remaining,
+          subtotal: 0,
+          tax_amount: 0,
+          total_amount: 0,
+          remaining_amount: 0,
           items: items,
         };
 
@@ -416,7 +421,7 @@ export function usePurchaseOrder(initialId = null) {
 
     setSaving(true);
     try {
-      const updatedOrder = await startCheckingOrder(initialId);
+      await startCheckingOrder(initialId);
       // Cập nhật trạng thái trực tiếp → UI chuyển sang màn hình CHECKING
       setOrder((prev) => ({ ...prev, status: PO_STATUS.CHECKING }));
       toast.success("Đã bắt đầu kiểm kê. Vui lòng nhập số lượng thực nhận cho từng sản phẩm.");
@@ -435,7 +440,7 @@ export function usePurchaseOrder(initialId = null) {
     async (navigate) => {
       if (!initialId) return false;
 
-      // Validate
+      // Validate item-level
       for (const ri of receiptItems) {
         if (
           ri.receivedQuantity === null ||
@@ -445,6 +450,36 @@ export function usePurchaseOrder(initialId = null) {
           toast.warning("Số lượng thực nhận không hợp lệ.");
           return false;
         }
+        if (ri.unitCost === null || ri.unitCost === undefined || ri.unitCost <= 0) {
+          toast.warning("Giá nhập của từng sản phẩm là bắt buộc và phải lớn hơn 0.");
+          return false;
+        }
+      }
+
+      // Validate required receipt metadata
+      if (!order.supplier_id) {
+        toast.warning("Vui lòng chọn nhà cung cấp trước khi nhập kho.");
+        return false;
+      }
+      if (!order.location_id) {
+        toast.warning("Vui lòng chọn vị trí nhập kho trước khi nhập kho.");
+        return false;
+      }
+      if (String(order.tax_percent ?? "").trim() === "") {
+        toast.warning("Vui lòng nhập thuế VAT (%).");
+        return false;
+      }
+      if (String(order.shipping_fee ?? "").trim() === "") {
+        toast.warning("Vui lòng nhập phí vận chuyển.");
+        return false;
+      }
+      if (toNumber(order.tax_percent) < 0) {
+        toast.warning("Thuế VAT không được âm.");
+        return false;
+      }
+      if (toNumber(order.shipping_fee) < 0) {
+        toast.warning("Phí vận chuyển không được âm.");
+        return false;
       }
 
       if (
@@ -459,7 +494,18 @@ export function usePurchaseOrder(initialId = null) {
       try {
         const receiptData = {
           notes: order.notes,
-          items: receiptItems,
+          supplierId: order.supplier_id,
+          locationId: order.location_id,
+          taxPercent: toNumber(order.tax_percent),
+          shippingFee: toNumber(order.shipping_fee),
+          subtotal: checkingFinancials.subtotal,
+          taxAmount: checkingFinancials.taxAmount,
+          totalAmount: checkingFinancials.total,
+          items: receiptItems.map((ri) => ({
+            ...ri,
+            receivedQuantity: toNumber(ri.receivedQuantity),
+            unitCost: toNumber(ri.unitCost),
+          })),
         };
         await receiveGoodsOrder(initialId, receiptData);
 
@@ -474,7 +520,16 @@ export function usePurchaseOrder(initialId = null) {
         setSaving(false);
       }
     },
-    [initialId, receiptItems, order.notes],
+    [
+      initialId,
+      receiptItems,
+      order.notes,
+      order.supplier_id,
+      order.location_id,
+      order.tax_percent,
+      order.shipping_fee,
+      checkingFinancials,
+    ],
   );
 
   const rejectOrder = useCallback(
@@ -547,6 +602,7 @@ export function usePurchaseOrder(initialId = null) {
     order,
     items,
     financials,
+    checkingFinancials,
     supplierQuery,
     setSupplierQuery,
     selectSupplier,

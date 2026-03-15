@@ -184,6 +184,37 @@ public class PurchaseOrderService {
             throw new RuntimeException("Chỉ có thể nhập kho phiếu đang kiểm kê.");
         }
 
+        if (receiptRequest.getSupplierId() == null) {
+            throw new RuntimeException("Nhà cung cấp là bắt buộc khi xác nhận nhập kho.");
+        }
+        if (receiptRequest.getLocationId() == null) {
+            throw new RuntimeException("Vị trí nhập kho là bắt buộc khi xác nhận nhập kho.");
+        }
+        if (receiptRequest.getTaxPercent() == null) {
+            throw new RuntimeException("Thuế VAT (%) là bắt buộc khi xác nhận nhập kho.");
+        }
+        if (receiptRequest.getShippingFee() == null) {
+            throw new RuntimeException("Phí vận chuyển là bắt buộc khi xác nhận nhập kho.");
+        }
+        if (receiptRequest.getTaxPercent().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Thuế VAT (%) không được âm.");
+        }
+        if (receiptRequest.getShippingFee().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Phí vận chuyển không được âm.");
+        }
+
+        // Cập nhật receivedQuantity cho từng item
+        if (receiptRequest.getItems() != null) {
+            for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
+                if (receiptItem.getUnitCost() == null || receiptItem.getUnitCost().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new RuntimeException("Giá nhập từng sản phẩm là bắt buộc và phải lớn hơn 0.");
+                }
+                if (receiptItem.getReceivedQuantity() == null || receiptItem.getReceivedQuantity() < 0) {
+                    throw new RuntimeException("Số lượng thực nhận không hợp lệ.");
+                }
+            }
+        }
+
         // Cập nhật receivedQuantity cho từng item
         if (receiptRequest.getItems() != null) {
             for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
@@ -195,6 +226,11 @@ public class PurchaseOrderService {
                 if (orderItem != null) {
                     orderItem.setReceivedQuantity(receiptItem.getReceivedQuantity() != null
                             ? receiptItem.getReceivedQuantity() : 0);
+                    if (receiptItem.getUnitCost() != null) {
+                        orderItem.setUnitCost(receiptItem.getUnitCost());
+                        int receivedQty = orderItem.getReceivedQuantity() != null ? orderItem.getReceivedQuantity() : 0;
+                        orderItem.setTotalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(receivedQty)));
+                    }
                     if (receiptItem.getNotes() != null) {
                         orderItem.setNotes(receiptItem.getNotes());
                     }
@@ -202,6 +238,29 @@ public class PurchaseOrderService {
                 }
             }
         }
+
+        Supplier supplier = supplierRepository.findById(receiptRequest.getSupplierId())
+                .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
+        order.setSupplier(supplier);
+        order.setLocationId(receiptRequest.getLocationId());
+
+        BigDecimal subtotal = order.getItems().stream()
+                .map(item -> {
+                    int receivedQty = item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0;
+                    BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
+                    return unitCost.multiply(BigDecimal.valueOf(receivedQty));
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal taxPercent = receiptRequest.getTaxPercent();
+        BigDecimal taxAmount = subtotal.multiply(taxPercent).divide(BigDecimal.valueOf(100));
+        BigDecimal shippingFee = receiptRequest.getShippingFee();
+        BigDecimal totalAmount = subtotal.add(taxAmount).add(shippingFee);
+
+        order.setSubtotal(subtotal);
+        order.setTaxPercent(taxPercent);
+        order.setTaxAmount(taxAmount);
+        order.setShippingFee(shippingFee);
+        order.setTotalAmount(totalAmount);
 
         order.setStatus(PurchaseOrderStatus.RECEIVED);
         order.setActualDeliveryDate(LocalDate.now());

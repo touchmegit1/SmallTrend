@@ -361,7 +361,7 @@ const AddNewProduct = () => {
             {/* CỘT RIGHT: IMAGE UPLOADER UI --- */}
             <div className="h-full">
               <Card className="h-full border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col">
-                <CardHeader classNa me="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-200">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-200">
                   <CardTitle className="text-xl font-bold text-gray-800">
                     Hình ảnh sản phẩm gốc
                   </CardTitle>

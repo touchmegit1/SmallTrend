@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePurchaseOrder } from "../../hooks/usePurchaseOrder";
 import { PO_STATUS } from "../../utils/purchaseOrder";
@@ -6,7 +6,6 @@ import { PO_STATUS } from "../../utils/purchaseOrder";
 import PurchaseHeader from "../../components/inventory/purchase/PurchaseHeader";
 import ProductSearchBar from "../../components/inventory/purchase/ProductSearchBar";
 import PurchaseItemTable from "../../components/inventory/purchase/PurchaseItemTable";
-import BatchEditorModal from "../../components/inventory/purchase/BatchEditorModal";
 import SummaryPanel from "../../components/inventory/purchase/SummaryPanel";
 import ActionButtons from "../../components/inventory/purchase/ActionButtons";
 import RejectionModal from "../../components/ui/RejectionModal";
@@ -21,28 +20,19 @@ function CreatePurchaseOrder() {
     products,
     suppliers,
     locations,
-    filteredSuppliers,
     loading,
     saving,
     error,
     order,
     items,
-    financials,
-    supplierQuery,
-    setSupplierQuery,
-    selectSupplier,
-    clearSupplier,
     updateOrder,
     addProduct,
     importProducts,
     removeItem,
     updateItem,
-    batchEditData,
-    openBatchEditor,
-    closeBatchEditor,
-    updateItemBatches,
     receiptItems,
     updateReceiptItem,
+    checkingFinancials,
     saveDraft,
     submitForApproval,
     confirmOrder,
@@ -73,7 +63,7 @@ function CreatePurchaseOrder() {
           <p className="text-red-500 font-medium mb-2">Lỗi tải dữ liệu</p>
           <p className="text-sm text-slate-500 mb-3">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => globalThis.location.reload()}
             className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
           >
             Thử lại
@@ -128,7 +118,6 @@ function CreatePurchaseOrder() {
             isEditable={isEditable}
             onUpdate={updateItem}
             onRemove={removeItem}
-            onOpenBatch={openBatchEditor}
           />
         )}
       </div>
@@ -137,16 +126,12 @@ function CreatePurchaseOrder() {
         <SummaryPanel
           order={order}
           items={items}
-          financials={financials}
           suppliers={suppliers}
-          filteredSuppliers={filteredSuppliers}
           locations={locations}
-          supplierQuery={supplierQuery}
-          setSupplierQuery={setSupplierQuery}
-          selectSupplier={selectSupplier}
-          clearSupplier={clearSupplier}
           updateOrder={updateOrder}
           isEditable={isEditable}
+          allowMetaEdit={isChecking}
+          checkingFinancials={checkingFinancials}
         />
 
         <ActionButtons
@@ -163,13 +148,6 @@ function CreatePurchaseOrder() {
         />
       </div>
 
-      {batchEditData && (
-        <BatchEditorModal
-          item={batchEditData}
-          onSave={updateItemBatches}
-          onClose={closeBatchEditor}
-        />
-      )}
 
       <RejectionModal
         isOpen={showRejectionModal}
