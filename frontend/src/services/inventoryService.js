@@ -739,6 +739,7 @@ export const getInventoryCountById = async (id) => {
     items: (ic.items || []).map((item) => ({
       ...item,
       product_id: item.productId || item.product_id,
+      variant_id: item.variantId || item.variant_id,
       system_quantity: item.systemQuantity ?? item.system_quantity,
       actual_quantity: item.actualQuantity ?? item.actual_quantity,
       difference_quantity: item.differenceQuantity ?? item.difference_quantity,
@@ -748,32 +749,13 @@ export const getInventoryCountById = async (id) => {
 };
 
 export const getInventoryCountNextCode = async () => {
-  try {
-    const response = await fetch(`${SPRING_API}/inventory-counts/next-code`, {
-      headers: getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error("Failed to get next code");
-    const data = await response.json();
-    return data.code;
-  } catch {
-    // Fallback: generate code client-side
-    const counts = await getInventoryCounts();
-    return generateICCode(counts);
-  }
+  const response = await fetch(`${SPRING_API}/inventory-counts/next-code`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to get next code");
+  const data = await response.json();
+  return data.code;
 };
-
-function generateICCode(existingCounts = []) {
-  const prefix = "IC-";
-  let maxNum = 0;
-  for (const count of existingCounts) {
-    const code = count.code || "";
-    if (code.startsWith(prefix)) {
-      const num = parseInt(code.slice(prefix.length), 10);
-      if (!isNaN(num) && num > maxNum) maxNum = num;
-    }
-  }
-  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
-}
 
 export const saveInventoryCountDraft = async (request) => {
   const body = mapCountRequestToBackend(request);
@@ -896,10 +878,13 @@ function mapCountRequestToBackend(request) {
     items: (request.items || [])
       .filter(
         (item) =>
-          item.actual_quantity !== null && item.actual_quantity !== undefined,
+          item.actual_quantity !== null &&
+          item.actual_quantity !== undefined &&
+          (item.variant_id || item.variantId),
       )
       .map((item) => ({
         productId: item.product_id || item.productId,
+        variantId: item.variant_id || item.variantId,
         systemQuantity: item.system_quantity ?? item.systemQuantity,
         actualQuantity: item.actual_quantity ?? item.actualQuantity,
         differenceQuantity: item.difference_quantity ?? item.differenceQuantity,

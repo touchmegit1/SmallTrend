@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class InventoryCountItemRequest {
     private Integer productId;
+    private Integer variantId;
     private Integer systemQuantity;
     private Integer actualQuantity;
     private Integer differenceQuantity;

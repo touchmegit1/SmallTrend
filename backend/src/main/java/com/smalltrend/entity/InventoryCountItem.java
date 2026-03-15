@@ -25,6 +25,7 @@ public class InventoryCountItem {
     private InventoryCount inventoryCount;
 
     private Integer productId;
+    private Integer variantId;
 
     private Integer systemQuantity;
     private Integer actualQuantity;
