@@ -86,14 +86,14 @@ public class ProductController {
     @PutMapping("/variants/{variantId}/toggle-status")
     public ResponseEntity<String> toggleVariantStatus(@PathVariable Integer variantId) {
         productVariantService.toggleVariantStatus(variantId);
-        return ResponseEntity.ok("Variant status toggled");
+        return ResponseEntity.ok("Đã thay đổi trạng thái biến thể");
     }
 
     // Xóa một biến thể (chỉ trong 2 phút đầu sau khi tạo)
     @DeleteMapping("/variants/{variantId}")
     public ResponseEntity<String> deleteVariant(@PathVariable Integer variantId) {
         productVariantService.deleteVariant(variantId);
-        return ResponseEntity.ok("Variant deleted");
+        return ResponseEntity.ok("Đã xóa biến thể");
     }
 
     // Tự động tạo mã SKU dựa trên thông tin sản phẩm
@@ -138,7 +138,7 @@ public class ProductController {
     @DeleteMapping("/conversions/{conversionId}")
     public ResponseEntity<String> deleteConversion(@PathVariable Integer conversionId) {
         unitConversionService.deleteConversion(conversionId);
-        return ResponseEntity.ok("Unit conversion deleted");
+        return ResponseEntity.ok("Đã xóa quy đổi đơn vị");
     }
 
     // Lấy danh sách tất cả các đơn vị tính có trong hệ thống
@@ -165,7 +165,7 @@ public class ProductController {
     @DeleteMapping("/units/{id}")
     public ResponseEntity<String> deleteUnit(@PathVariable Integer id) {
         unitService.deleteUnit(id);
-        return ResponseEntity.ok("Unit deleted");
+        return ResponseEntity.ok("Đã xóa đơn vị tính");
     }
 
     // ─── Variant Prices ──────────────────────────────────────────────────────
@@ -236,7 +236,7 @@ public class ProductController {
     public ResponseEntity<java.util.Map<String, Object>> sendPriceExpiryAlertsNow() {
         int sentCount = priceExpiryAlertEmailScheduler.sendPriceExpiryAlertsNow();
         return ResponseEntity.ok(java.util.Map.of(
-                "message", "Price expiry alert email job executed",
+                "message", "Đã chạy tác vụ gửi email cảnh báo giá sắp hết hạn",
                 "sentCount", sentCount,
                 "recipients", priceExpiryAlertEmailScheduler.getRecipientEmails(),
                 "recipientCount", priceExpiryAlertEmailScheduler.getRecipientCount(),
@@ -260,13 +260,13 @@ public class ProductController {
     @PutMapping("/{id}/toggle-status")
     public ResponseEntity<String> toggleStatus(@PathVariable Integer id) {
         productService.toggleStatus(id);
-        return ResponseEntity.ok("Product status toggled");
+        return ResponseEntity.ok("Đã thay đổi trạng thái sản phẩm");
     }
 
     // Xóa một sản phẩm theo ID
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable Integer id) {
         productService.delete(id);
-        return ResponseEntity.ok("Product deleted");
+        return ResponseEntity.ok("Đã xóa sản phẩm");
     }
 }

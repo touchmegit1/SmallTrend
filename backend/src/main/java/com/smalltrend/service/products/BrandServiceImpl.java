@@ -2,6 +2,7 @@ package com.smalltrend.service.products;
 
 import com.smalltrend.entity.Brand;
 import com.smalltrend.repository.BrandRepository;
+import com.smalltrend.validation.product.BrandValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +16,7 @@ import java.util.List;
 public class BrandServiceImpl implements BrandService {
 
     private final BrandRepository brandRepository;
-    private final com.smalltrend.repository.ProductRepository productRepository;
+    private final BrandValidator brandValidator;
 
     // Lưu mới Thương hiệu vào Database
     @Override
@@ -32,8 +33,7 @@ public class BrandServiceImpl implements BrandService {
     // Tìm Brand theo ID, nếu không tìm thấy sẽ bắn ngoại lệ
     @Override
     public Brand getById(Integer id) {
-        return brandRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Brand not found"));
+        return brandValidator.requireExistingBrand(id);
     }
 
     @Override
@@ -51,9 +51,7 @@ public class BrandServiceImpl implements BrandService {
     // liên kết với Brand này)
     @Override
     public void delete(Integer id) {
-        if (productRepository.existsByBrandId(id)) {
-            throw new RuntimeException("Không thể xoá thương hiệu vì đang có sản phẩm thuộc thương hiệu này");
-        }
+        brandValidator.validateDeletable(id);
         brandRepository.deleteById(id);
     }
 }
