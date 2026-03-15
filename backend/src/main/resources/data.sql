@@ -234,11 +234,11 @@ INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_spending, points_mu
 ('PLATINUM', 'Bạch Kim', 50000000.00, 3.0, 10.00, '#E5E4E2', TRUE, 4);
 
 -- 7. CUSTOMERS
-INSERT IGNORE INTO customers (name, phone, loyalty_points) VALUES
-('Nguyen Van A', '0987654321', 150),
-('Tran Thi B', '0976543210', 800),
-('Le Van C', '0965432109', 2000),
-('Pham Thi D', '0954321098', 6500);
+INSERT IGNORE INTO customers (name, phone, loyalty_points, spent_amount) VALUES
+('Nguyen Van A', '0987654321', 150, 1200000),
+('Tran Thi B', '0976543210', 800, 6200000),
+('Le Van C', '0965432109', 2000, 18000000),
+('Pham Thi D', '0954321098', 6500, 56000000);
 
 -- 8. PRODUCTS
 INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_id, is_active, created_at, updated_at) VALUES

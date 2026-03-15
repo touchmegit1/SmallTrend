@@ -200,6 +200,29 @@ const getCustomerTier = (spentAmount, tiers) => {
     .find(tier => spentAmount >= Number(tier.minSpending)) || null;
 };
 
+const buildUpdatedCustomerAfterPayment = (selectedCustomer, finalTotal, tiers, usePoints, pointsDiscount) => {
+  if (!selectedCustomer || !selectedCustomer.id) return selectedCustomer;
+
+  const currentSpent = Math.max(0, Math.round(Number(selectedCustomer.spentAmount) || 0));
+  const paidAmount = Math.max(0, Math.round(Number(finalTotal) || 0));
+  const newSpent = currentSpent + paidAmount;
+
+  const customerTier = getCustomerTier(currentSpent, tiers);
+  const multiplier = Number(customerTier?.pointsMultiplier) || 1;
+
+  const basePoints = paidAmount / 10000;
+  const earnedPoints = Math.floor(basePoints * multiplier);
+  const pointsUsed = usePoints ? Math.floor(Number(pointsDiscount || 0) / 100) : 0;
+  const currentPoints = Math.max(0, Math.floor(Number(selectedCustomer.loyaltyPoints) || 0));
+  const newPoints = Math.max(0, currentPoints - pointsUsed + earnedPoints);
+
+  return {
+    ...selectedCustomer,
+    loyaltyPoints: newPoints,
+    spentAmount: newSpent,
+  };
+};
+
 export default function PaymentModal({ cart, customer, onClose, onComplete, onStartQRPayment, shortcuts }) {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
@@ -421,36 +444,21 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
 
     // Cập nhật điểm trung thành trong bảng customers
     if (selectedCustomer && selectedCustomer.id) {
+      customerToUpdate = buildUpdatedCustomerAfterPayment(
+        selectedCustomer,
+        finalTotal,
+        tiers,
+        usePoints,
+        pointsDiscount,
+      );
+
       try {
-        const currentSpent = selectedCustomer.spentAmount || 0;
-        const newSpent = currentSpent + finalTotal;
-
-        // Tìm hạng hiện tại của khách (dựa trên spentAmount TRƯỚC giao dịch này)
-        const customerTier = getCustomerTier(currentSpent, tiers);
-        const multiplier = customerTier?.pointsMultiplier || 1;
-
-        // Tích điểm: (finalTotal / 10,000) * hệ số nhân của hạng
-        const basePoints = finalTotal / 10000;
-        const earnedPoints = Math.floor(basePoints * multiplier);
-        const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
-        const currentPoints = selectedCustomer.loyaltyPoints || 0;
-
-        // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
-        const newPoints = currentPoints - pointsUsed + earnedPoints;
-
-        // Lưu vào cột loyalty_points và spent_amount trong bảng customers
         await api.put(`/crm/customers/${selectedCustomer.id}`, {
-          name: selectedCustomer.name,
-          phone: selectedCustomer.phone,
-          loyaltyPoints: newPoints,
-          spentAmount: newSpent,
+          name: customerToUpdate.name,
+          phone: customerToUpdate.phone,
+          loyaltyPoints: customerToUpdate.loyaltyPoints,
+          spentAmount: customerToUpdate.spentAmount,
         });
-
-        customerToUpdate = {
-          ...selectedCustomer,
-          loyaltyPoints: newPoints,
-          spentAmount: newSpent,
-        };
       } catch (error) {
         console.error('Error updating customer loyalty points:', error);
         // Không hiện alert, chỉ log lỗi và tiếp tục thanh toán
@@ -530,23 +538,14 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     } else {
       // Chuyển khoản
       if (onStartQRPayment) {
-         let customerToUpdate = selectedCustomer;
-         if (selectedCustomer && selectedCustomer.id) {
-             const currentSpent = selectedCustomer.spentAmount || 0;
-             const newSpent = currentSpent + finalTotal;
-             const customerTier = getCustomerTier(currentSpent, tiers);
-             const multiplier = customerTier?.pointsMultiplier || 1;
-             const basePoints = finalTotal / 10000;
-             const earnedPoints = Math.floor(basePoints * multiplier);
-             const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0;
-             const currentPoints = selectedCustomer.loyaltyPoints || 0;
-             const newPoints = currentPoints - pointsUsed + earnedPoints;
-             customerToUpdate = {
-                ...selectedCustomer,
-                loyaltyPoints: newPoints,
-                spentAmount: newSpent,
-             };
-         }
+         const customerToUpdate = buildUpdatedCustomerAfterPayment(
+           selectedCustomer,
+           finalTotal,
+           tiers,
+           usePoints,
+           pointsDiscount,
+         );
+
          const orderData = {
             cart,
             customer: customerToUpdate,
