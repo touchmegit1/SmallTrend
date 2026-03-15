@@ -16,6 +16,7 @@ const variantClass = {
   primary: "bg-blue-600 text-white hover:bg-blue-700",
   warning: "bg-yellow-500 text-white hover:bg-yellow-600",
   secondary: "bg-gray-200 text-black hover:bg-gray-300",
+  outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
   danger: "bg-red-600 text-white hover:bg-red-700",
   success: "bg-green-600 text-white hover:bg-green-700",
   ghost: "bg-transparent hover:bg-gray-100 text-gray-700",
@@ -72,7 +73,9 @@ Button.propTypes = {
   children: PropTypes.node,
   variant: PropTypes.oneOf([
     "primary",
+    "warning",
     "secondary",
+    "outline",
     "danger",
     "success",
     "ghost",

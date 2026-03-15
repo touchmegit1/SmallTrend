@@ -55,7 +55,7 @@ public class ProductVariantService {
         } else if (search != null && !search.isEmpty()) {
             String searchLower = search.toLowerCase();
             variants = productVariantRepository.findAll().stream()
-                    .filter(v -> (v.getProduct().getName() != null
+                    .filter(v -> ((v.getProduct() != null && v.getProduct().getName() != null)
                     && v.getProduct().getName().toLowerCase().contains(searchLower))
                     || (v.getSku() != null && v.getSku().toLowerCase().contains(searchLower))
                     || (v.getBarcode() != null && v.getBarcode().contains(search)))
@@ -389,7 +389,8 @@ public class ProductVariantService {
         response.setSku(variant.getSku());
         response.setBarcode(variant.getBarcode());
         response.setPluCode(variant.getPluCode());
-        String productName = variant.getProduct() != null ? variant.getProduct().getName() : "";
+        Product product = variant.getProduct();
+        String productName = product != null ? product.getName() : "";
         StringBuilder nameBuilder = new StringBuilder(productName);
 
         String unitNameStr = variant.getUnit() != null ? variant.getUnit().getName() : "";
@@ -439,11 +440,11 @@ public class ProductVariantService {
                 .ifPresent(latestBatch -> response.setCostPrice(latestBatch.getCostPrice()));
 
         // Get category and brand names
-        if (variant.getProduct().getCategory() != null) {
-            response.setCategoryName(variant.getProduct().getCategory().getName());
+        if (product != null && product.getCategory() != null) {
+            response.setCategoryName(product.getCategory().getName());
         }
-        if (variant.getProduct().getBrand() != null) {
-            response.setBrandName(variant.getProduct().getBrand().getName());
+        if (product != null && product.getBrand() != null) {
+            response.setBrandName(product.getBrand().getName());
         }
 
         // Unit Conversions (inline mapping to avoid circular dependency)
