@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.smalltrend.dto.CRM.CustomerResponse;
 import com.smalltrend.entity.Customer;
+import com.smalltrend.entity.CustomerTier;
 import com.smalltrend.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-    private static final long LOYALTY_RATE = 10000L; // 10000 VNĐ = 1 điểm loyalty
+    private final CustomerTierService customerTierService;
 
     public List<CustomerResponse> getAllCustomers() {
         List<CustomerResponse> customers = customerRepository.findAll().stream()
@@ -91,8 +92,17 @@ public class CustomerService {
         response.setId(customer.getId());
         response.setName(customer.getName());
         response.setPhone(customer.getPhone());
-        response.setLoyaltyPoints(customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0);
+
+        Integer loyaltyPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
+        response.setLoyaltyPoints(loyaltyPoints);
         response.setSpentAmount(customer.getSpentAmount() != null ? customer.getSpentAmount() : 0L);
+
+        CustomerTier tier = customerTierService.resolveTierByPoints(loyaltyPoints);
+        if (tier != null) {
+            response.setTierCode(tier.getTierCode());
+            response.setTierName(tier.getTierName());
+        }
+
         return response;
     }
 }

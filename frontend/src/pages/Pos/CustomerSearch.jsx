@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "re
 import customerService from "../../services/customerService";
 import customerTierService from "../../services/customerTierService";
 
-const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, ref) => {
+const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [showRegister, setShowRegister] = useState(false);
@@ -43,11 +43,27 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, r
     }
   };
 
-  const getCustomerTier = (spentAmount) => {
+  const getCustomerTier = (loyaltyPoints) => {
     if (!tiers || tiers.length === 0) return null;
+    const points = Number(loyaltyPoints) || 0;
+
     return [...tiers]
-      .sort((a, b) => Number(b.minSpending) - Number(a.minSpending))
-      .find(tier => spentAmount >= Number(tier.minSpending)) || null;
+      .sort((a, b) => Number(b.minPoints) - Number(a.minPoints))
+      .find((tier) => {
+        const minPoints = Number(tier.minPoints);
+        const maxPoints = tier.maxPoints == null ? null : Number(tier.maxPoints);
+        if (Number.isNaN(minPoints)) return false;
+        if (maxPoints == null || Number.isNaN(maxPoints)) return points >= minPoints;
+        return points >= minPoints && points <= maxPoints;
+      }) || null;
+  };
+
+  const normalizePhone = (value = "") => {
+    const digits = String(value).replace(/\D/g, "");
+    if (digits.startsWith("84") && digits.length === 11) {
+      return `0${digits.slice(2)}`;
+    }
+    return digits;
   };
 
   const handleSearch = async () => {
@@ -56,87 +72,42 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, r
       return;
     }
 
+    const normalizedPhone = normalizePhone(phone);
     setLoading(true);
     try {
-      // Tìm trong localStorage trước
-      const localCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
-      const localCustomer = localCustomers.find(c => c.phone === phone);
+      let customer = null;
 
-      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-      const baseLoyaltyPoints = Math.floor(totalAmount / 10000);
-
-      if (localCustomer) {
-        // Tìm thấy trong localStorage
-        const spentAmount = localCustomer.spentAmount || 0;
-        const tier = getCustomerTier(spentAmount);
-        const multiplier = tier?.pointsMultiplier || 1;
-
-        onSelectCustomer({
-          id: localCustomer.id,
-          phone: localCustomer.phone,
-          name: localCustomer.name,
-          loyaltyPoints: Math.floor(baseLoyaltyPoints * multiplier),
-          existingPoints: localCustomer.points || localCustomer.existingPoints || 0,
-          spentAmount,
-          tier: tier ? tier.tierName : null,
-          isNew: false
-        });
-        setPhone("");
-        setShowRegister(false);
-      } else {
-        // Tìm trong backend
-        try {
-          const customer = await customerService.searchByPhone(phone);
-          const spentAmount = customer.spentAmount || 0;
-          const tier = getCustomerTier(spentAmount);
-          const multiplier = tier?.pointsMultiplier || 1;
-
-          onSelectCustomer({
-            id: customer.id,
-            phone: customer.phone,
-            name: customer.name,
-            loyaltyPoints: customer.loyaltyPoints || 0,
-            spentAmount,
-            tier: tier ? tier.tierName : null,
-            isNew: false
-          });
-          setPhone("");
-          setShowRegister(false);
-        } catch (error) {
-          // Không tìm thấy -> hiện form đăng ký và focus vào name input
-          setShowRegister(true);
-          setTimeout(() => nameInputRef.current?.focus(), 100);
-        }
+      try {
+        customer = await customerService.searchByPhone(normalizedPhone);
+      } catch {
+        const allCustomers = await customerService.getAllCustomers();
+        const list = Array.isArray(allCustomers) ? allCustomers : [];
+        customer = list.find((c) => normalizePhone(c.phone) === normalizedPhone) || null;
       }
+
+      if (!customer) {
+        throw new Error("Customer not found");
+      }
+
+      const spentAmount = customer.spentAmount || 0;
+      const loyaltyPoints = customer.loyaltyPoints || 0;
+      const tier = getCustomerTier(loyaltyPoints);
+
+      onSelectCustomer({
+        id: customer.id,
+        phone: customer.phone,
+        name: customer.name,
+        loyaltyPoints: customer.loyaltyPoints || 0,
+        existingPoints: customer.loyaltyPoints || 0,
+        spentAmount,
+        tier: tier ? tier.tierName : null,
+        isNew: false
+      });
+      setPhone("");
+      setShowRegister(false);
     } catch (error) {
-      console.error('Error:', error);
-      // Nếu lỗi backend, vẫn kiểm tra localStorage
-      const localCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
-      const localCustomer = localCustomers.find(c => c.phone === phone);
-
-      if (localCustomer) {
-        const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-        const baseLoyaltyPoints = Math.floor(totalAmount / 10000);
-        const spentAmount = localCustomer.spentAmount || 0;
-        const tier = getCustomerTier(spentAmount);
-        const multiplier = tier?.pointsMultiplier || 1;
-
-        onSelectCustomer({
-          id: localCustomer.id,
-          phone: localCustomer.phone,
-          name: localCustomer.name,
-          loyaltyPoints: Math.floor(baseLoyaltyPoints * multiplier),
-          existingPoints: localCustomer.points || localCustomer.existingPoints || 0,
-          spentAmount,
-          tier: tier ? tier.tierName : null,
-          isNew: false
-        });
-        setPhone("");
-        setShowRegister(false);
-      } else {
-        setShowRegister(true);
-        setTimeout(() => nameInputRef.current?.focus(), 100);
-      }
+      setShowRegister(true);
+      setTimeout(() => nameInputRef.current?.focus(), 100);
     } finally {
       setLoading(false);
     }
@@ -162,8 +133,9 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, cart, onNavigateDown }, r
         phone: savedCustomer.phone,
         name: savedCustomer.name,
         loyaltyPoints: savedCustomer.loyaltyPoints || 0,
-        spentAmount: 0,
-        tier: getCustomerTier(0)?.tierName || null,
+        existingPoints: savedCustomer.loyaltyPoints || 0,
+        spentAmount: savedCustomer.spentAmount || 0,
+        tier: getCustomerTier(savedCustomer.loyaltyPoints || 0)?.tierName || null,
         isNew: false
       });
 
