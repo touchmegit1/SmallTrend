@@ -312,7 +312,7 @@ public class PurchaseOrderService {
         }
 
         if (!stockItemRequests.isEmpty()) {
-            updateStock(order, stockItemRequests);
+            updateStock(order, stockItemRequests, false);
         }
 
         int syncedPurchasePriceCount = syncPurchasePrices(order);
@@ -364,17 +364,17 @@ public class PurchaseOrderService {
 
         List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
                 .map(item -> PurchaseOrderItemRequest.builder()
-                        .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
-                        .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                                ? item.getVariant().getProduct().getId().intValue() : null)
-                        .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : item.getQuantity())
-                        .unitCost(item.getUnitCost())
-                        .totalCost(item.getTotalCost())
-                        .expiryDate(item.getExpiryDate())
-                        .build())
+                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                        ? item.getVariant().getProduct().getId().intValue() : null)
+                .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : item.getQuantity())
+                .unitCost(item.getUnitCost())
+                .totalCost(item.getTotalCost())
+                .expiryDate(item.getExpiryDate())
+                .build())
                 .collect(Collectors.toList());
 
-        updateStock(order, itemRequests);
+        updateStock(order, itemRequests, false);
 
         int syncedPurchasePriceCount = syncPurchasePrices(order);
 
@@ -617,7 +617,6 @@ public class PurchaseOrderService {
                 .locationId(request.getLocationId())
                 .notes(request.getNotes())
                 .build();
-
         if (request.getSupplierId() != null) {
             Supplier supplier = supplierRepository.findById(request.getSupplierId())
                     .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
@@ -701,7 +700,7 @@ public class PurchaseOrderService {
     }
 
     // ─── Update Stock (on RECEIVE) ───────────────────────────
-    private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests) {
+    private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests, boolean applyUnitConversion) {
         Location targetLocation = null;
         if (order.getLocationId() != null) {
             targetLocation = locationRepository.findById(order.getLocationId()).orElse(null);
@@ -728,7 +727,7 @@ public class PurchaseOrderService {
             int finalQty = qty;
             String conversionNote = "khong quy doi";
 
-            if (variant.getProduct() != null && variant.getProduct().getVariants() != null) {
+            if (applyUnitConversion && variant.getProduct() != null && variant.getProduct().getVariants() != null) {
                 for (ProductVariant bv : variant.getProduct().getVariants()) {
                     if (bv.getId().equals(variant.getId())) {
                         continue;
@@ -745,6 +744,8 @@ public class PurchaseOrderService {
                         }
                     }
                 }
+            } else if (!applyUnitConversion) {
+                conversionNote = "da nhan so luong quy doi";
             }
 
             BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;

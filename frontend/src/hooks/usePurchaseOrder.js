@@ -699,7 +699,6 @@ export function usePurchaseOrder(initialId = null) {
           toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
         }
         setOrder((prev) => ({ ...prev, status: PO_STATUS.RECEIVED }));
-        toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
         if (syncedCount > 0) {
           toast.info(`Đã đồng bộ giá nhập cho ${syncedCount} sản phẩm từ phiếu nhập này.`);
         }
