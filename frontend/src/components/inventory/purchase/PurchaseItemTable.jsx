@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Trash2, Package } from "lucide-react";
+import { Box, Trash2 } from "lucide-react";
 
 const PurchaseItemRow = memo(function PurchaseItemRow({
   item,
@@ -9,48 +9,53 @@ const PurchaseItemRow = memo(function PurchaseItemRow({
   onRemove,
 }) {
   return (
-    <tr className="group hover:bg-slate-50/80 transition-colors border-b border-slate-100">
-      <td className="px-3 py-3 text-center text-sm text-slate-400 w-12">
+    <tr className="group hover:bg-slate-50/70 transition-colors border-b border-slate-100">
+      <td className="px-6 py-3 text-left text-xs font-semibold text-slate-400 w-14">
         {index + 1}
       </td>
 
-      <td className="px-3 py-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-900 truncate">{item.name}</p>
-          <p className="text-xs font-mono text-indigo-500">{item.sku}</p>
+      <td className="px-6 py-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
+            <Box size={14} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm leading-tight font-semibold text-slate-900 truncate">
+              {item.name}
+            </p>
+            <p className="text-xs text-indigo-500 truncate">{item.sku}</p>
+          </div>
         </div>
       </td>
 
-      <td className="px-3 py-3 text-sm text-slate-500 text-center w-20">
-        {item.unit}
+      <td className="px-6 py-3 text-sm text-slate-600 text-center w-32">
+        <span className="inline-flex px-2.5 py-1 rounded-lg bg-slate-100">{item.unit}</span>
       </td>
 
-      <td className="px-3 py-3 w-32">
+      <td className="px-6 py-3 w-40 text-center">
         <input
           type="number"
           value={item.quantity}
           onChange={(e) =>
-            onUpdate(item._key, "quantity", parseInt(e.target.value) || 0)
+            onUpdate(item._key, "quantity", Number.parseInt(e.target.value, 10) || 0)
           }
           disabled={!isEditable}
           min="1"
-          className="w-full px-2.5 py-1.5 text-sm text-right border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-400"
+          className="w-[68px] px-2 py-1.5 text-sm text-center font-semibold border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-slate-50 disabled:text-slate-400"
         />
       </td>
 
-      <td className="px-3 py-3 w-24">
-        <div className="flex items-center justify-center gap-1">
-          {isEditable && (
-            <button
-              onClick={() => onRemove(item._key)}
-              className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-              title="Xóa"
-            >
-              <Trash2 size={15} />
-            </button>
-          )}
-        </div>
-      </td>
+      {isEditable && (
+        <td className="px-6 py-3 w-28 text-center">
+          <button
+            onClick={() => onRemove(item._key)}
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+            title="Xóa"
+          >
+            <Trash2 size={14} />
+          </button>
+        </td>
+      )}
     </tr>
   );
 });
@@ -60,43 +65,55 @@ export default function PurchaseItemTable({
   isEditable,
   onUpdate,
   onRemove,
+  totalQty = 0,
 }) {
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center py-20 text-center">
-        <div className="bg-slate-100 p-4 rounded-2xl mb-4">
-          <Package size={40} className="text-slate-300" />
+      <div className="flex-1 flex flex-col items-center justify-center py-24 text-center bg-white">
+        <div className="relative mb-5">
+          <div className="bg-indigo-50 p-6 rounded-3xl">
+            <Box size={52} className="text-indigo-300" />
+          </div>
+          {isEditable && (
+            <div className="absolute -right-2 -top-2 w-7 h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center text-sm font-bold">
+              +
+            </div>
+          )}
         </div>
-        <p className="text-slate-500 font-medium mb-1">
-          Chưa có sản phẩm nào trong phiếu nhập
+        <p className="text-xl leading-tight font-semibold text-slate-700 mb-2">
+          Chưa có sản phẩm nào
         </p>
-        <p className="text-xs text-slate-400">
-          Tìm kiếm và click vào sản phẩm ở thanh tìm kiếm phía trên để thêm
+        <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
+          Sử dụng thanh tìm kiếm phía trên để thêm sản phẩm vào
+          <br />
+          phiếu nhập hàng
         </p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto bg-white">
       <table className="w-full">
-        <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+        <thead className="bg-slate-50 border-y border-slate-200 sticky top-0 z-10">
           <tr>
-            <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 w-12">
-              STT
+            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 w-14">
+              #
             </th>
-            <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
               Sản phẩm
             </th>
-            <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 w-20">
+            <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 w-32">
               ĐVT
             </th>
-            <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 w-32">
+            <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 w-40">
               Số lượng
             </th>
-            <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 w-24">
-              Thao tác
-            </th>
+            {isEditable && (
+              <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 w-28">
+                Thao tác
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -112,6 +129,19 @@ export default function PurchaseItemTable({
           ))}
         </tbody>
       </table>
+
+      <div className="px-6 py-4 border-t border-slate-200 bg-slate-50/70">
+        <div className="flex items-center gap-6 text-xs text-slate-600">
+          <span className="inline-flex items-center gap-2">
+            <Box size={16} className="text-slate-400" />
+            {items.length} mặt hàng
+          </span>
+          <span className="w-px h-6 bg-slate-200" />
+          <span>
+            Tổng SL: <strong className="text-slate-800">{totalQty}</strong>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

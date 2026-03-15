@@ -32,6 +32,7 @@ public class GoodsReceiptRequest {
         private Integer variantId;
         private Integer receivedQuantity;
         private java.math.BigDecimal unitCost;
+        private java.time.LocalDate expiryDate;
         private String notes;         // Ghi chú kiểm kê
     }
 }
