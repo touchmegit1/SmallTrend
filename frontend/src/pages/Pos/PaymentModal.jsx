@@ -200,7 +200,7 @@ const getCustomerTier = (spentAmount, tiers) => {
     .find(tier => spentAmount >= Number(tier.minSpending)) || null;
 };
 
-export default function PaymentModal({ cart, customer, onClose, onComplete, shortcuts }) {
+export default function PaymentModal({ cart, customer, onClose, onComplete, onStartQRPayment, shortcuts }) {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
   const [usePoints, setUsePoints] = useState(false);
@@ -528,8 +528,41 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
       }
       completePaymentProcess("cash", parseFloat(cashAmount), change);
     } else {
-      // Chuyển khoản -> mở QR Modal
-      setShowQRModal(true);
+      // Chuyển khoản
+      if (onStartQRPayment) {
+         let customerToUpdate = selectedCustomer;
+         if (selectedCustomer && selectedCustomer.id) {
+             const currentSpent = selectedCustomer.spentAmount || 0;
+             const newSpent = currentSpent + finalTotal;
+             const customerTier = getCustomerTier(currentSpent, tiers);
+             const multiplier = customerTier?.pointsMultiplier || 1;
+             const basePoints = finalTotal / 10000;
+             const earnedPoints = Math.floor(basePoints * multiplier);
+             const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0;
+             const currentPoints = selectedCustomer.loyaltyPoints || 0;
+             const newPoints = currentPoints - pointsUsed + earnedPoints;
+             customerToUpdate = {
+                ...selectedCustomer,
+                loyaltyPoints: newPoints,
+                spentAmount: newSpent,
+             };
+         }
+         const orderData = {
+            cart,
+            customer: customerToUpdate,
+            total: finalTotal,
+            customerMoney: finalTotal,
+            change: 0,
+            pointsDiscount,
+            discount: discountNum + voucherDiscountAmt,
+            notes,
+            paymentMethod: "Chuyển khoản"
+         };
+         const paymentCode = "DH" + Date.now().toString().slice(-6);
+         onStartQRPayment(orderData, finalTotal, paymentCode);
+      } else {
+         setShowQRModal(true);
+      }
     }
   };
 

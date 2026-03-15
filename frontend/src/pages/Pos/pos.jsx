@@ -4,6 +4,7 @@ import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
 import PaymentPanel from "./PaymentPanel";
 import PaymentModal from "./PaymentModal";
+import QRPendingWidget from "./QRPendingWidget";
 import Invoice from "./Invoice";
 import posService from "../../services/posService";
 import api from "../../config/axiosConfig";
@@ -28,6 +29,7 @@ export default function POS() {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [pendingQROrders, setPendingQROrders] = useState([]);
   const [shortcuts, setShortcuts] = useState(() => {
     const saved = localStorage.getItem('posShortcuts');
     const parsed = saved ? JSON.parse(saved) : null;
@@ -531,6 +533,92 @@ export default function POS() {
     }
   };
 
+  const handleStartQRPayment = (orderData, amount, paymentCode) => {
+    setPendingQROrders(prev => [...prev, {
+      id: Date.now(),
+      paymentCode,
+      amount,
+      orderData
+    }]);
+
+    if (orders.length > 1) {
+      const newOrders = orders.filter(order => order.id !== activeOrderId).sort((a, b) => a.id - b.id);
+      setOrders(newOrders);
+      setActiveOrderId(newOrders[0].id);
+    } else {
+      const newId = activeOrderId + 1;
+      setOrders([{ id: newId, cart: [], customer: null, usePoints: false }]);
+      setActiveOrderId(newId);
+    }
+    setShowPaymentModal(false);
+  };
+
+  const handleCompleteQRPayment = async (id, orderData) => {
+    const transaction = {
+      id: `#HD${Date.now().toString().slice(-6)}`,
+      time: new Date().toLocaleString('vi-VN', {
+        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+      }),
+      quantity: `${orderData.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
+      payment: "Chuyển khoản",
+      total: `${orderData.total.toLocaleString()} đ`,
+      status: "Hoàn thành",
+      cart: orderData.cart.map(item => ({ ...item, productId: item.id })),
+      items: orderData.cart,
+      customer: orderData.customer,
+      customerMoney: orderData.customerMoney,
+      change: orderData.change,
+      pointsDiscount: orderData.pointsDiscount,
+      discount: orderData.discount || 0,
+      notes: orderData.notes
+    };
+
+    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    transactions.unshift(transaction);
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+
+    if (transaction.cart && transaction.cart.length > 0) {
+      try {
+        if (transaction.customer && transaction.customer.id) {
+          await api.put(`/crm/customers/${transaction.customer.id}`, {
+            name: transaction.customer.name,
+            phone: transaction.customer.phone,
+            loyaltyPoints: transaction.customer.loyaltyPoints,
+            spentAmount: transaction.customer.spentAmount,
+          });
+        }
+
+        const request = {
+          customerId: transaction.customer?.id || null,
+          customerName: transaction.customer?.name || null,
+          paymentMethod: transaction.payment,
+          items: transaction.cart.map(item => ({
+            productId: (typeof (item.productId || item.id) === 'string' && String(item.productId || item.id).startsWith('combo_')) ? null : (item.productId || item.id),
+            productName: item.name,
+            quantity: item.qty,
+            price: item.price,
+            subtotal: item.price * item.qty
+          }))
+        };
+        await api.post('/pos/purchase-history', request);
+        loadProducts();
+      } catch (error) {
+        console.error('Error saving purchase history:', error);
+      }
+    }
+
+    setShowSuccessNotification(true);
+    setTimeout(() => setShowSuccessNotification(false), 3000);
+    setSelectedTransaction(transaction);
+    setShowInvoice(true);
+
+    setPendingQROrders(prev => prev.filter(o => o.id !== id));
+  };
+
+  const handleCancelQRPayment = (id) => {
+    setPendingQROrders(prev => prev.filter(o => o.id !== id));
+  };
+
   const handlePrintCurrentInvoice = () => {
     const currentOrder = activeOrder;
     if (currentOrder.cart.length === 0) {
@@ -716,6 +804,7 @@ export default function POS() {
             customer={activeOrder.customer}
             onClose={() => setShowPaymentModal(false)}
             onComplete={completeOrder}
+            onStartQRPayment={handleStartQRPayment}
             shortcuts={shortcuts}
           />
         </div>
@@ -801,6 +890,26 @@ export default function POS() {
           </div>
         </div>
       )}
+
+      {/* Cửa sổ QR Pending Widget */}
+      <div style={{
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          zIndex: 1005,
+      }}>
+        {pendingQROrders.map((po) => (
+           <QRPendingWidget
+             key={po.id}
+             pendingOrder={po}
+             onComplete={handleCompleteQRPayment}
+             onCancel={handleCancelQRPayment}
+           />
+        ))}
+      </div>
     </div>
   );
 }
