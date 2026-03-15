@@ -141,7 +141,7 @@ function CreatePurchaseOrder() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
             <div className="w-12 h-12 rounded-full border-4 border-slate-100"></div>
@@ -155,7 +155,7 @@ function CreatePurchaseOrder() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="text-center">
           <p className="text-red-500 font-medium mb-2">Lỗi tải dữ liệu</p>
           <p className="text-sm text-slate-500 mb-3">{error}</p>
@@ -196,7 +196,7 @@ function CreatePurchaseOrder() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden">
+    <div className="flex min-h-screen bg-slate-100 flex-col xl:flex-row">
       <div className="flex-1 flex flex-col min-w-0">
         <PurchaseHeader
           order={order}
@@ -298,7 +298,7 @@ function CreatePurchaseOrder() {
       </div>
 
       {isReceiptView && (
-        <div className="flex flex-col w-[340px] xl:w-[360px] bg-white border-l border-slate-200 shrink-0 h-full">
+        <div className="flex flex-col w-full xl:w-[360px] xl:min-w-[320px] bg-white border-t xl:border-t-0 xl:border-l border-slate-200 shrink-0">
           <SummaryPanel
             order={order}
             items={items}

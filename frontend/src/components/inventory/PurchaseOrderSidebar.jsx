@@ -10,7 +10,7 @@ function PurchaseOrderSidebar({
   saving,
 }) {
   return (
-    <div className="w-[400px] bg-white border-l border-slate-200 flex flex-col">
+    <div className="w-full lg:w-[400px] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col">
       <div className="bg-blue-50 px-6 py-4 border-b border-slate-200">
         <div className="space-y-3 text-sm">
           <div className="flex justify-between items-center">
