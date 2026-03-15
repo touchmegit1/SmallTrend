@@ -41,6 +41,7 @@ public class PurchaseOrderService {
     // Public API
     // ═══════════════════════════════════════════════════════════
     // ─── List All Purchase Orders ────────────────────────────
+    @Transactional(readOnly = true)
     public List<PurchaseOrderResponse> getAllOrders() {
         return purchaseOrderRepository.findAll()
                 .stream()
@@ -55,6 +56,7 @@ public class PurchaseOrderService {
     }
 
     // ─── Get Single Order Detail ─────────────────────────────
+    @Transactional(readOnly = true)
     public PurchaseOrderResponse getOrderById(Integer id) {
         PurchaseOrder order = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + id));
