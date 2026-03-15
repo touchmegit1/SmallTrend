@@ -109,7 +109,7 @@ export default function PriceTable({
                             </th>
                             <SortHeader label="Sản phẩm" sortKey="name" />
                             <SortHeader label="SKU" sortKey="sku" className="w-[80px]" />
-                            <SortHeader label="Giá nhập" sortKey="activePurchasePrice" align="right" className="w-[85px]" />
+                            <SortHeader label="Giá nhập" sortKey="costPrice" align="right" className="w-[85px]" />
                             <th className="px-1 py-2.5 font-semibold text-gray-600 text-[11px] uppercase tracking-wider text-center whitespace-nowrap w-[50px]">
                                 Thuế %
                             </th>
@@ -150,7 +150,7 @@ export default function PriceTable({
                             variants.map((variant) => {
                                 const isEditing = editingId === variant.id;
                                 const isSelected = selectedIds.includes(variant.id);
-                                const costPrice = Number(variant.activePurchasePrice) || Number(variant.costPrice) || 0;
+                                const costPrice = Number(variant.costPrice) || 0;
                                 const taxRate = Number(variant.activeTaxPercent) || Number(variant.taxRate) || 0;
                                 const sellPrice = Number(variant.activeSellingPrice) || Number(variant.sellPrice) || 0;
                                 // Giá bán cho khách = sellPrice

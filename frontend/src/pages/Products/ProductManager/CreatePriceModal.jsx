@@ -4,7 +4,7 @@ import { createVariantPrice } from '../../../hooks/useVariantPrices';
 
 const CreatePriceModal = ({ isOpen, onClose, variant, onPriceCreated }) => {
   const [formData, setFormData] = useState({
-    purchasePrice: variant?.activePurchasePrice || variant?.costPrice || 0,
+    purchasePrice: variant?.costPrice || 0,
     sellingPrice: variant?.activeSellingPrice || variant?.sellPrice || '',
     taxPercent: variant?.activeTaxPercent || variant?.taxRate || '10',
     effectiveDate: new Date().toISOString().split('T')[0],

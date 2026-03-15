@@ -67,12 +67,60 @@ const PriceSetting = () => {
     // ═══════════════════════════════════════════
     useEffect(() => { fetchVariants(); }, []);
 
+    const toDateOnly = (dateStr) => {
+        if (!dateStr) return null;
+        const normalized = String(dateStr).length === 10 ? `${dateStr}T00:00:00` : dateStr;
+        const d = new Date(normalized);
+        if (Number.isNaN(d.getTime())) return null;
+        d.setHours(0, 0, 0, 0);
+        return d;
+    };
+
+    const isExpiryReached = (dateStr) => {
+        const expiryDate = toDateOnly(dateStr);
+        if (!expiryDate) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return expiryDate <= today;
+    };
+
     const fetchVariants = async () => {
         setLoading(true);
         setErrorMsg("");
         try {
             const res = await api.get("/products/variants");
-            setVariants(res.data);
+            const variantsData = res.data || [];
+
+            const expiredActiveVariants = variantsData.filter(
+                (v) => v.activeExpiryDate && isExpiryReached(v.activeExpiryDate)
+            );
+
+            if (expiredActiveVariants.length > 0) {
+                await Promise.all(
+                    expiredActiveVariants.map(async (v) => {
+                        try {
+                            const activePriceRes = await api.get(`/products/variants/${v.id}/prices/active`);
+                            const activePrice = activePriceRes?.data;
+
+                            if (
+                                activePrice?.id &&
+                                activePrice?.status === "ACTIVE" &&
+                                activePrice?.expiryDate &&
+                                isExpiryReached(activePrice.expiryDate)
+                            ) {
+                                await api.put(`/products/prices/${activePrice.id}/toggle-status`);
+                            }
+                        } catch (toggleErr) {
+                            console.error(`Error auto-deactivating expired price for variant ${v.id}:`, toggleErr);
+                        }
+                    })
+                );
+
+                const refreshedRes = await api.get("/products/variants");
+                setVariants(refreshedRes.data || []);
+            } else {
+                setVariants(variantsData);
+            }
         } catch (err) {
             console.error("Error fetching variants:", err);
             setErrorMsg("Không thể tải danh sách sản phẩm.");
