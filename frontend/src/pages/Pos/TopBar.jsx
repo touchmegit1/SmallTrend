@@ -256,20 +256,6 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
 
       <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
         <button
-          onClick={() => setShowQRScanner(true)}
-          style={{
-            padding: "6px 12px",
-            background: "rgba(255,255,255,0.2)",
-            color: "white",
-            border: "none",
-            borderRadius: "15px",
-            cursor: "pointer",
-            fontSize: "12px"
-          }}
-        >
-          Quét QR
-        </button>
-        <button
           onClick={onPrintInvoice}
           style={{
             padding: "6px 12px",

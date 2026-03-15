@@ -735,7 +735,7 @@ export default function CustomerComplaintSystem() {
                   </button>
                 </div>
                 {customerName && !customerNotFound && (
-                  <div className="mt-1.5 flex items-center gap-2">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <p className="text-sm text-blue-700 bg-blue-50 p-2 rounded-lg border border-blue-100 flex items-center gap-2">
                       <UserCircle size={16} /> <b>{customerName}</b>
                     </p>

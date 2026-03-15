@@ -251,10 +251,10 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   useEffect(() => {
     const fetchTiers = async () => {
       try {
-        const data = await customerTierService.getAllTiers();
-        setTiers(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Error fetching tiers in PaymentModal:', err);
+        const response = await customerTierService.getAllTiers();
+        setTiers(Array.isArray(response) ? response : []);
+      } catch (error) {
+        console.error("Error fetching tiers:", error);
       }
     };
     fetchTiers();
