@@ -119,6 +119,7 @@ const PriceSetting = () => {
             const res = await api.get("/products/variants");
             const variantsData = res.data || [];
 
+            // Nếu giá ACTIVE của variant đã tới hạn, tự chuyển về INACTIVE trước khi render bảng.
             const expiredActiveVariants = variantsData.filter(
                 (v) => v.activeExpiryDate && isExpiryReached(v.activeExpiryDate)
             );

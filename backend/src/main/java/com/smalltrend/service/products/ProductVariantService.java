@@ -25,6 +25,10 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.time.LocalDate;
 
+/**
+ * Service xử lý nghiệp vụ cho Product Variant.
+ * Bao gồm: CRUD variant, sinh SKU/Barcode nội bộ, đồng bộ dữ liệu liên quan (batch, tồn kho, quy đổi đơn vị, giá active).
+ */
 @Service
 @RequiredArgsConstructor
 public class ProductVariantService {
@@ -37,6 +41,10 @@ public class ProductVariantService {
     private final VariantPriceRepository variantPriceRepository;
     private final ProductVariantValidator productVariantValidator;
 
+    /**
+     * Lấy danh sách variant theo điều kiện tìm kiếm.
+     * Ưu tiên lọc theo barcode, nếu không có barcode thì lọc theo search text.
+     */
     public List<ProductVariantRespone> getAllProductVariants(String search, String barcode) {
         List<ProductVariant> variants;
 
@@ -69,6 +77,10 @@ public class ProductVariantService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Tạo mới một variant cho product.
+     * Thực hiện đầy đủ validate nghiệp vụ trước khi lưu.
+     */
     public ProductVariantRespone createVariant(Integer productId, CreateVariantRequest request) {
         Product product = productVariantValidator.requireExistingProduct(productId);
         Unit unit = productVariantValidator.requireExistingUnit(request.getUnitId());
@@ -110,6 +122,10 @@ public class ProductVariantService {
         return mapToResponse(saved);
     }
 
+    /**
+     * Cập nhật thông tin variant hiện có.
+     * Nếu có costPrice thì cập nhật batch mới nhất hoặc tạo batch mới khi chưa có dữ liệu batch.
+     */
     public ProductVariantRespone updateVariant(Integer variantId, CreateVariantRequest request) {
         ProductVariant variant = productVariantValidator.requireExistingVariant(variantId);
         Unit unit = productVariantValidator.requireExistingUnit(request.getUnitId());

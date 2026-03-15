@@ -1,6 +1,6 @@
 import api from '../config/axiosConfig';
 
-const API_BASE = '/products'; // backend controller is usually /api/products, interceptor adds /api
+const API_BASE = '/products'; // interceptor axios sẽ tự thêm tiền tố /api
 
 // Tạo giá mới cho variant (giá cũ sẽ chuyển INACTIVE)
 export const createVariantPrice = async (variantId, priceData) => {

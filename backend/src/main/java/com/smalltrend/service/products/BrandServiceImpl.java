@@ -15,6 +15,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BrandServiceImpl implements BrandService {
 
+    // Service này xử lý CRUD thương hiệu và kiểm tra ràng buộc trước khi xóa.
+
     private final BrandRepository brandRepository;
     private final BrandValidator brandValidator;
 
@@ -36,6 +38,7 @@ public class BrandServiceImpl implements BrandService {
         return brandValidator.requireExistingBrand(id);
     }
 
+    // Cập nhật các thông tin chính của thương hiệu theo ID.
     @Override
     public Brand update(Integer id, Brand brand) {
         Brand existing = getById(id);

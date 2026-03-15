@@ -20,6 +20,10 @@ import java.util.stream.Collectors;
 
 import static com.smalltrend.entity.enums.VariantPriceStatus.ACTIVE;
 
+/**
+ * Service quản lý vòng đời giá của Product Variant.
+ * Quy tắc chính: mỗi variant chỉ nên có 1 bản ghi giá ACTIVE tại một thời điểm.
+ */
 @Service
 @RequiredArgsConstructor
 public class VariantPriceService {
@@ -91,6 +95,10 @@ public class VariantPriceService {
                 .orElse(null);
     }
 
+    /**
+     * Đồng bộ giá nhập vào bản ghi giá đang ACTIVE (nếu có).
+     * Trả về false khi thiếu dữ liệu hoặc variant chưa có giá ACTIVE.
+     */
     @Transactional
     public boolean syncActivePurchasePrice(Integer variantId, BigDecimal purchasePrice) {
         if (purchasePrice == null) {
@@ -175,6 +183,9 @@ public class VariantPriceService {
         return mapToResponse(saved);
     }
 
+    /**
+     * Lấy danh sách giá ACTIVE sắp hết hiệu lực theo số ngày cảnh báo.
+     */
     public List<PriceExpiryAlertResponse> getPriceExpiryAlerts(int daysBeforeExpiry) {
         LocalDate today = LocalDate.now();
         LocalDate targetDate = today.plusDays(daysBeforeExpiry);

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../config/axiosConfig';
 
+/**
+ * Hook quản lý danh sách thương hiệu và các thao tác CRUD cơ bản.
+ */
 export function useFetchBrands() {
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
