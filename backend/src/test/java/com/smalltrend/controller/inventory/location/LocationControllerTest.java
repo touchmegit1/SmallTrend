@@ -1,9 +1,10 @@
 package com.smalltrend.controller.inventory.location;
 
+import com.smalltrend.controller.inventory.LocationController;
 import com.smalltrend.dto.inventory.location.FullLocationResponse;
 import com.smalltrend.dto.inventory.location.LocationRequest;
 import com.smalltrend.dto.inventory.location.LocationStockItemResponse;
-import com.smalltrend.controller.inventory.LocationController;
+import com.smalltrend.dto.inventory.location.LocationTransferRequest;
 import com.smalltrend.service.inventory.LocationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,9 +39,8 @@ class LocationControllerTest {
 
     @Test
     void getAllLocations_shouldReturnOk() {
-        List<FullLocationResponse> expected = List.of(
-                FullLocationResponse.builder().id(1).locationName("Kho A").build()
-        );
+        FullLocationResponse location = mock(FullLocationResponse.class);
+        List<FullLocationResponse> expected = List.of(location);
         when(locationService.getAllLocations()).thenReturn(expected);
 
         ResponseEntity<List<FullLocationResponse>> response = controller.getAllLocations();
@@ -50,9 +52,8 @@ class LocationControllerTest {
 
     @Test
     void getActiveLocations_shouldReturnOk() {
-        List<FullLocationResponse> expected = List.of(
-                FullLocationResponse.builder().id(1).locationName("Kho A").status("ACTIVE").build()
-        );
+        FullLocationResponse location = mock(FullLocationResponse.class);
+        List<FullLocationResponse> expected = List.of(location);
         when(locationService.getActiveLocations()).thenReturn(expected);
 
         ResponseEntity<List<FullLocationResponse>> response = controller.getActiveLocations();
@@ -64,7 +65,7 @@ class LocationControllerTest {
 
     @Test
     void getLocationById_shouldReturnOk() {
-        FullLocationResponse expected = FullLocationResponse.builder().id(1).locationName("Kho A").build();
+        FullLocationResponse expected = mock(FullLocationResponse.class);
         when(locationService.getLocationById(1)).thenReturn(expected);
 
         ResponseEntity<FullLocationResponse> response = controller.getLocationById(1);
@@ -76,9 +77,8 @@ class LocationControllerTest {
 
     @Test
     void getLocationStocks_shouldReturnOk() {
-        List<LocationStockItemResponse> expected = List.of(
-                LocationStockItemResponse.builder().variantId(1).productName("A").quantity(100).build()
-        );
+        LocationStockItemResponse stockItem = mock(LocationStockItemResponse.class);
+        List<LocationStockItemResponse> expected = List.of(stockItem);
         when(locationService.getLocationStockItems(1)).thenReturn(expected);
 
         ResponseEntity<List<LocationStockItemResponse>> response = controller.getLocationStocks(1);
@@ -91,7 +91,7 @@ class LocationControllerTest {
     @Test
     void createLocation_shouldReturnCreated() {
         LocationRequest request = new LocationRequest();
-        FullLocationResponse expected = FullLocationResponse.builder().id(1).build();
+        FullLocationResponse expected = mock(FullLocationResponse.class);
         when(locationService.createLocation(request)).thenReturn(expected);
 
         ResponseEntity<FullLocationResponse> response = controller.createLocation(request);
@@ -104,7 +104,7 @@ class LocationControllerTest {
     @Test
     void updateLocation_shouldReturnOk() {
         LocationRequest request = new LocationRequest();
-        FullLocationResponse expected = FullLocationResponse.builder().id(1).build();
+        FullLocationResponse expected = mock(FullLocationResponse.class);
         when(locationService.updateLocation(1, request)).thenReturn(expected);
 
         ResponseEntity<FullLocationResponse> response = controller.updateLocation(1, request);
@@ -125,10 +125,10 @@ class LocationControllerTest {
 
     @Test
     void toggleLocationStatus_shouldReturnOk_whenSuccess() {
-        FullLocationResponse expected = FullLocationResponse.builder().id(1).status("INACTIVE").build();
+        FullLocationResponse expected = mock(FullLocationResponse.class);
         when(locationService.toggleLocationStatus(1)).thenReturn(expected);
 
-        ResponseEntity<?> response = controller.toggleLocationStatus(1);
+        ResponseEntity<FullLocationResponse> response = controller.toggleLocationStatus(1);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(expected, response.getBody());
@@ -136,48 +136,44 @@ class LocationControllerTest {
     }
 
     @Test
-    void toggleLocationStatus_shouldReturnBadRequest_whenExceptionThrown() {
+    void toggleLocationStatus_shouldThrowException_whenServiceThrows() {
         when(locationService.toggleLocationStatus(1)).thenThrow(new RuntimeException("Error toggling"));
 
-        ResponseEntity<?> response = controller.toggleLocationStatus(1);
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> controller.toggleLocationStatus(1));
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("Error toggling", ((Map<?, ?>) response.getBody()).get("message"));
+        assertEquals("Error toggling", ex.getMessage());
         verify(locationService).toggleLocationStatus(1);
     }
 
     @Test
     void transferStock_shouldReturnOk_whenSuccess() {
-        Map<String, Object> requestBody = Map.of(
-                "fromLocationId", 1,
-                "toLocationId", 2,
-                "variantId", 3,
-                "batchId", 4,
-                "quantity", 50
-        );
+        LocationTransferRequest requestBody = new LocationTransferRequest();
+        requestBody.setFromLocationId(1);
+        requestBody.setToLocationId(2);
+        requestBody.setVariantId(3);
+        requestBody.setBatchId(4);
+        requestBody.setQuantity(50);
 
-        ResponseEntity<?> response = controller.transferStock(requestBody);
+        ResponseEntity<Map<String, String>> response = controller.transferStock(requestBody);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Chuyển hàng thành công", ((Map<?, ?>) response.getBody()).get("message"));
+        assertEquals("Chuyển hàng thành công", response.getBody().get("message"));
         verify(locationService).transferStock(1, 2, 3, 4, 50);
     }
 
     @Test
-    void transferStock_shouldReturnBadRequest_whenExceptionThrown() {
-        Map<String, Object> requestBody = Map.of(
-                "fromLocationId", 1,
-                "toLocationId", 2,
-                "variantId", 3,
-                "batchId", 4,
-                "quantity", 50
-        );
+    void transferStock_shouldThrowException_whenServiceThrows() {
+        LocationTransferRequest requestBody = new LocationTransferRequest();
+        requestBody.setFromLocationId(1);
+        requestBody.setToLocationId(2);
+        requestBody.setVariantId(3);
+        requestBody.setBatchId(4);
+        requestBody.setQuantity(50);
         doThrow(new RuntimeException("Insufficient stock")).when(locationService).transferStock(1, 2, 3, 4, 50);
 
-        ResponseEntity<?> response = controller.transferStock(requestBody);
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> controller.transferStock(requestBody));
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("Insufficient stock", ((Map<?, ?>) response.getBody()).get("message"));
+        assertEquals("Insufficient stock", ex.getMessage());
         verify(locationService).transferStock(1, 2, 3, 4, 50);
     }
 }

@@ -52,7 +52,42 @@ export default function SummaryPanel({
     (loc) => String(loc.id) === String(order.location_id),
   );
 
+  const locationCapacity = toNumber(selectedLocation?.capacity);
+  const locationCurrentStock = toNumber(selectedLocation?.total_products);
+  const locationUsagePercent =
+    locationCapacity > 0 ? Math.round((locationCurrentStock / locationCapacity) * 100) : 0;
+  const isLocationFull = locationCapacity > 0 && locationCurrentStock >= locationCapacity;
+  const isLocationNearFull =
+    locationCapacity > 0 && !isLocationFull && locationUsagePercent >= 80;
+
   const totalAmount = checkingFinancials?.total ?? 0;
+
+  const locationCapacityWarning = isLocationFull
+    ? {
+        title: "Kho đã đầy",
+        message:
+          "Kho đã đạt sức chứa cấu hình, nhưng bạn vẫn có thể nhập kho nếu cần.",
+        containerClass: "mt-2 rounded-lg border border-red-200 bg-red-50 p-2.5",
+        titleClass: "text-sm font-semibold text-red-800",
+        messageClass: "mt-0.5 text-xs text-red-700",
+        metaClass: "mt-1 text-xs text-red-600",
+      }
+    : isLocationNearFull
+      ? {
+          title: "Kho sắp đầy",
+          message:
+            "Kho đang gần đầy. Vui lòng kiểm tra lại dung lượng trống trước khi nhập hàng.",
+          containerClass: "mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5",
+          titleClass: "text-sm font-semibold text-amber-800",
+          messageClass: "mt-0.5 text-xs text-amber-700",
+          metaClass: "mt-1 text-xs text-amber-600",
+        }
+      : null;
+
+  const locationCapacityMeta =
+    locationCapacity > 0
+      ? `${locationCurrentStock}/${locationCapacity} (${locationUsagePercent}%)`
+      : "";
 
   const discountAmount = toNumber(order.discount);
   const hasDiscount =
@@ -163,6 +198,13 @@ export default function SummaryPanel({
                   })),
                 ]}
               />
+              {locationCapacityWarning && locationCapacityMeta && (
+                <div role="alert" aria-live="polite" className={locationCapacityWarning.containerClass}>
+                  <p className={locationCapacityWarning.titleClass}>{locationCapacityWarning.title}</p>
+                  <p className={locationCapacityWarning.messageClass}>{locationCapacityWarning.message}</p>
+                  <p className={locationCapacityWarning.metaClass}>Mức sử dụng hiện tại: {locationCapacityMeta}</p>
+                </div>
+              )}
             </div>
 
             {isReceived && (

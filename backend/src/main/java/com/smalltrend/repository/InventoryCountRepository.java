@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface InventoryCountRepository extends JpaRepository<InventoryCount, Integer> {
     Optional<InventoryCount> findTopByOrderByIdDesc();
     Optional<InventoryCount> findByCode(String code);
+    boolean existsByLocationId(Integer locationId);
 }

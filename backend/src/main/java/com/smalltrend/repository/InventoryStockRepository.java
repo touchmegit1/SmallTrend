@@ -46,6 +46,8 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
     @Query("SELECT COALESCE(SUM(i.quantity), 0) FROM InventoryStock i WHERE i.variant.id = :variantId")
     int sumQuantityByVariantId(@Param("variantId") Integer variantId);
 
+    boolean existsByLocationIdAndQuantityGreaterThan(Integer locationId, Integer quantity);
+
     // Tìm stock cụ thể theo variant + batch + location
     Optional<InventoryStock> findByVariantIdAndBatchIdAndLocationId(Integer variantId, Integer batchId,
             Integer locationId);

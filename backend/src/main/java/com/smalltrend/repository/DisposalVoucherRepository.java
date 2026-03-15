@@ -11,9 +11,11 @@ import java.util.Optional;
 
 @Repository
 public interface DisposalVoucherRepository extends JpaRepository<DisposalVoucher, Long> {
-    
+
     List<DisposalVoucher> findByStatus(DisposalStatus status);
-    
+
+    boolean existsByLocationId(Integer locationId);
+
     Optional<DisposalVoucher> findByCode(String code);
     
     @Query("SELECT COALESCE(MAX(CAST(SUBSTRING(d.code, 11) AS int)), 0) FROM DisposalVoucher d WHERE d.code LIKE ?1%")

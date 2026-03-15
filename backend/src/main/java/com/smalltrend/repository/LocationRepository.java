@@ -9,4 +9,8 @@ import java.util.List;
 @Repository
 public interface LocationRepository extends JpaRepository<Location, Integer> {
     List<Location> findByStatus(String status);
+
+    boolean existsByLocationCodeIgnoreCase(String locationCode);
+
+    boolean existsByLocationCodeIgnoreCaseAndIdNot(String locationCode, Integer id);
 }
