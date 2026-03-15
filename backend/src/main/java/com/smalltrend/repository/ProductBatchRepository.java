@@ -23,6 +23,16 @@ public interface ProductBatchRepository extends JpaRepository<ProductBatch, Inte
                      "AND EXISTS (SELECT 1 FROM InventoryStock s WHERE s.batch = pb AND s.quantity > 0)")
        List<ProductBatch> findExpiredBatches(@Param("today") LocalDate today);
 
+       @Query("SELECT DISTINCT pb FROM ProductBatch pb " +
+                     "JOIN FETCH pb.variant v " +
+                     "JOIN FETCH v.product " +
+                     "JOIN FETCH pb.inventoryStocks s " +
+                     "WHERE pb.expiryDate < :today " +
+                     "AND s.quantity > 0 " +
+                     "AND (:locationId IS NULL OR s.location.id = :locationId)")
+       List<ProductBatch> findExpiredBatchesWithStockByLocation(@Param("today") LocalDate today,
+                     @Param("locationId") Integer locationId);
+
        @Query("SELECT pb FROM ProductBatch pb " +
                      "WHERE pb.expiryDate BETWEEN :today AND :futureDate " +
                      "AND EXISTS (SELECT 1 FROM InventoryStock s WHERE s.batch = pb AND s.quantity > 0)")

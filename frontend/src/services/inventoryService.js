@@ -603,6 +603,7 @@ export const getActiveLocations = async () => {
   const data = await response.json();
   return data.map((loc) => ({
     ...loc,
+    id: loc.id ?? loc.locationId ?? loc.location_id,
     location_name: loc.locationName || loc.location_name,
     location_code: loc.locationCode || loc.location_code,
     location_type: loc.locationType || loc.location_type,

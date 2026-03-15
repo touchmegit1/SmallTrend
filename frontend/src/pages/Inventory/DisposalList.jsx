@@ -38,10 +38,6 @@ const STATUS_CONFIG = {
 
 const REASON_CONFIG = {
   EXPIRED: { label: "Hết hạn" },
-  DAMAGED: { label: "Hư hỏng" },
-  LOST: { label: "Thất thoát" },
-  OBSOLETE: { label: "Lỗi thời" },
-  OTHER: { label: "Khác" },
 };
 
 const SortIcon = ({ field, sortField, sortDir }) => (
@@ -251,8 +247,18 @@ export default function DisposalList() {
                 <tbody className="divide-y divide-slate-100">
                   {vouchers.map((v) => {
                     const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
-                    const reason =
-                      REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
+                    const reason = REASON_CONFIG[v.reasonType] || REASON_CONFIG.EXPIRED;
+                    const derivedValue = (v.items || []).reduce(
+                      (sum, item) =>
+                        sum +
+                        Number(
+                          item.total_cost ?? item.totalCost ?? (item.unit_cost ?? item.unitCost ?? 0) * (item.quantity ?? 0)
+                        ),
+                      0
+                    );
+                    const displayedValue =
+                      Number(v.totalValue ?? 0) > 0 ? Number(v.totalValue) : derivedValue;
+
                     return (
                       <tr
                         key={v.id}
@@ -277,7 +283,7 @@ export default function DisposalList() {
                           {v.totalQuantity || 0}
                         </td>
                         <td className="px-4 py-3 text-sm text-right font-medium text-slate-900">
-                          {formatCurrency(v.totalValue || 0)}
+                          {formatCurrency(displayedValue)}
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-500">
                           {formatDate(v.createdAt)}

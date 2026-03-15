@@ -8,30 +8,35 @@ function getAuthHeaders() {
   };
 }
 
+async function parseError(response, fallbackMessage) {
+  const err = await response.json().catch(() => null);
+  throw new Error(err?.message || fallbackMessage);
+}
+
 // Map camelCase from Spring Boot to snake_case for Frontend
 function mapToFrontend(v) {
   if (!v) return v;
   return {
     ...v,
-    location_id: v.locationId || v.location_id,
-    reason_type: v.reasonType || v.reason_type,
-    total_items: v.totalItems || v.total_items || 0,
-    total_quantity: v.totalQuantity || v.total_quantity || 0,
-    total_value: v.totalValue || v.total_value || 0,
-    created_at: v.createdAt || v.created_at,
-    confirmed_at: v.confirmedAt || v.confirmed_at,
-    created_by: v.createdBy || v.created_by,
-    confirmed_by: v.confirmedBy || v.confirmed_by,
-    items: (v.items || []).map(item => ({
+    location_id: v.locationId ?? v.location_id,
+    reason_type: v.reasonType ?? v.reason_type,
+    total_items: v.totalItems ?? v.total_items ?? 0,
+    total_quantity: v.totalQuantity ?? v.total_quantity ?? 0,
+    total_value: v.totalValue ?? v.total_value ?? 0,
+    created_at: v.createdAt ?? v.created_at,
+    confirmed_at: v.confirmedAt ?? v.confirmed_at,
+    created_by: v.createdBy ?? v.created_by,
+    confirmed_by: v.confirmedBy ?? v.confirmed_by,
+    items: (v.items || []).map((item) => ({
       ...item,
-      batch_id: item.batchId || item.batch_id,
-      product_id: item.productId || item.product_id,
-      product_name: item.productName || item.product_name,
-      batch_code: item.batchCode || item.batch_code,
-      unit_cost: item.unitCost || item.unit_cost || 0,
-      total_cost: item.totalCost || item.total_cost || 0,
-      expiry_date: item.expiryDate || item.expiry_date,
-    }))
+      batch_id: item.batchId ?? item.batch_id,
+      product_id: item.productId ?? item.product_id,
+      product_name: item.productName ?? item.product_name,
+      batch_code: item.batchCode ?? item.batch_code,
+      unit_cost: item.unitCost ?? item.unit_cost ?? 0,
+      total_cost: item.totalCost ?? item.total_cost ?? 0,
+      expiry_date: item.expiryDate ?? item.expiry_date,
+    })),
   };
 }
 
@@ -76,12 +81,13 @@ export const getExpiredBatches = async (locationId) => {
 export const saveDisposalDraft = async (voucherData, userId) => {
   // Map frontend state to Spring Boot request exact format
   const payload = {
-    locationId: voucherData.location_id || voucherData.locationId,
-    reasonType: voucherData.reason || voucherData.reason_type || voucherData.reasonType,
+    id: voucherData.id ?? null,
+    locationId: voucherData.location_id ?? voucherData.locationId,
+    reasonType: voucherData.reason ?? voucherData.reason_type ?? voucherData.reasonType,
     notes: voucherData.notes,
     items: (voucherData.items || []).map((item) => ({
-      productId: item.product_id || item.productId,
-      batchId: item.batch_id || item.batchId,
+      productId: item.product_id ?? item.productId,
+      batchId: item.batch_id ?? item.batchId,
       quantity: item.quantity,
     })),
   };
@@ -91,7 +97,7 @@ export const saveDisposalDraft = async (voucherData, userId) => {
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Failed to save draft");
+  if (!response.ok) await parseError(response, "Failed to save draft");
   const data = await response.json();
   return mapToFrontend(data);
 };
@@ -101,7 +107,7 @@ export const submitDisposalVoucher = async (id) => {
     method: "PUT",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to submit disposal voucher");
+  if (!response.ok) await parseError(response, "Failed to submit disposal voucher");
   const data = await response.json();
   return mapToFrontend(data);
 };
@@ -111,7 +117,7 @@ export const approveDisposalVoucher = async (id, userId) => {
     method: "PUT",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to approve disposal voucher");
+  if (!response.ok) await parseError(response, "Failed to approve disposal voucher");
   const data = await response.json();
   return mapToFrontend(data);
 };
@@ -121,7 +127,7 @@ export const rejectDisposalVoucher = async (id, reason) => {
     method: "PUT",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to reject disposal voucher");
+  if (!response.ok) await parseError(response, "Failed to reject disposal voucher");
   const data = await response.json();
   return mapToFrontend(data);
 };
