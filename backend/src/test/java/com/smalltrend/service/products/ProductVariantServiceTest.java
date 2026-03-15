@@ -28,13 +28,20 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ProductVariantServiceTest {
 
-    @Mock private ProductVariantRepository productVariantRepository;
-    @Mock private ProductRepository productRepository;
-    @Mock private UnitRepository unitRepository;
-    @Mock private InventoryStockRepository inventoryStockRepository;
-    @Mock private ProductBatchRepository productBatchRepository;
-    @Mock private UnitConversionRepository unitConversionRepository;
-    @Mock private VariantPriceRepository variantPriceRepository;
+    @Mock
+    private ProductVariantRepository productVariantRepository;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private UnitRepository unitRepository;
+    @Mock
+    private InventoryStockRepository inventoryStockRepository;
+    @Mock
+    private ProductBatchRepository productBatchRepository;
+    @Mock
+    private UnitConversionRepository unitConversionRepository;
+    @Mock
+    private VariantPriceRepository variantPriceRepository;
 
     @InjectMocks
     private ProductVariantService productVariantService;
@@ -59,7 +66,7 @@ class ProductVariantServiceTest {
         testProduct.setIsActive(true);
         testProduct.setCategory(cat);
         testProduct.setBrand(brand);
-        
+
         TaxRate tax = new TaxRate();
         tax.setRate(BigDecimal.valueOf(10));
         tax.setName("VAT");
@@ -99,8 +106,8 @@ class ProductVariantServiceTest {
     void getAllProductVariants_EmptyParams() {
         when(productVariantRepository.findAll()).thenReturn(List.of(testVariant));
         when(inventoryStockRepository.findByVariantId(1)).thenReturn(Collections.emptyList());
-        when(productBatchRepository.findByVariantId(1)).thenReturn(Collections.emptyList());
-        
+        when(productBatchRepository.findFirstByVariantIdOrderByIdDesc(1)).thenReturn(Optional.empty());
+
         List<ProductVariantRespone> result = productVariantService.getAllProductVariants(null, null);
         assertEquals(1, result.size());
         assertEquals("Test Product Box - Red", result.get(0).getName());
@@ -146,7 +153,7 @@ class ProductVariantServiceTest {
         testProduct.setIsActive(false);
         when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
-        
+
         assertThrows(RuntimeException.class, () -> productVariantService.createVariant(10, request));
     }
 
@@ -155,16 +162,16 @@ class ProductVariantServiceTest {
         request.setSku("  ");
         when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
-        
+
         assertThrows(RuntimeException.class, () -> productVariantService.createVariant(10, request));
     }
-    
+
     @Test
     void createVariant_BarcodeValidation() {
         request.setBarcode("invalid");
         when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
-        
+
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productVariantService.createVariant(10, request));
         assertEquals("Barcode phải gồm 12-13 chữ số.", ex.getMessage());
     }
@@ -175,17 +182,17 @@ class ProductVariantServiceTest {
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
         when(productVariantRepository.existsBySku("SKU-123")).thenReturn(false);
         when(productVariantRepository.existsByBarcode("8930000100010")).thenReturn(true);
-        
+
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productVariantService.createVariant(10, request));
         assertEquals("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác.", ex.getMessage());
     }
 
     @Test
     void createVariant_PluValidation() {
-        request.setPluCode("12"); 
+        request.setPluCode("12");
         when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
-        
+
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productVariantService.createVariant(10, request));
         assertEquals("Mã PLU phải gồm 4-5 chữ số.", ex.getMessage());
     }
@@ -196,34 +203,34 @@ class ProductVariantServiceTest {
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
         when(productVariantRepository.existsBySkuAndIdNot("SKU-123", 1)).thenReturn(false);
         when(productVariantRepository.existsByBarcodeAndIdNot("8930000100010", 1)).thenReturn(false);
-        
+
         ProductBatch oldBatch = new ProductBatch();
         oldBatch.setCostPrice(BigDecimal.valueOf(50));
-        when(productBatchRepository.findByVariantId(1)).thenReturn(List.of(oldBatch));
-        
+        when(productBatchRepository.findFirstByVariantIdOrderByIdDesc(1)).thenReturn(Optional.of(oldBatch));
+
         when(productVariantRepository.save(testVariant)).thenReturn(testVariant);
 
-        request.setCostPrice(BigDecimal.valueOf(90)); 
+        request.setCostPrice(BigDecimal.valueOf(90));
         request.setImageUrl("new.png");
         ProductVariantRespone res = productVariantService.updateVariant(1, request);
-        
+
         assertEquals(BigDecimal.valueOf(90), oldBatch.getCostPrice());
         verify(productBatchRepository).save(oldBatch);
     }
-    
+
     @Test
     void updateVariant_CreateNewBatchWhenNoneExist() {
         when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
         when(productVariantRepository.existsBySkuAndIdNot("SKU-123", 1)).thenReturn(false);
         when(productVariantRepository.existsByBarcodeAndIdNot("8930000100010", 1)).thenReturn(false);
-        
-        when(productBatchRepository.findByVariantId(1)).thenReturn(Collections.emptyList());
+
+        when(productBatchRepository.findFirstByVariantIdOrderByIdDesc(1)).thenReturn(Optional.empty());
         when(productVariantRepository.save(testVariant)).thenReturn(testVariant);
 
-        request.setCostPrice(BigDecimal.valueOf(90)); 
+        request.setCostPrice(BigDecimal.valueOf(90));
         productVariantService.updateVariant(1, request);
-        
+
         verify(productBatchRepository, times(1)).save(any(ProductBatch.class));
     }
 
@@ -231,35 +238,35 @@ class ProductVariantServiceTest {
     void generateSku_BaseLogicAndCollision() {
         when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
-        
+
         when(productVariantRepository.existsBySku("CAT-BRAN-TESTPR-BOX")).thenReturn(true);
         when(productVariantRepository.existsBySku("CAT-BRAN-TESTPR-BOX-1")).thenReturn(false);
 
         String sku = productVariantService.generateSku(10, 20);
         assertEquals("CAT-BRAN-TESTPR-BOX-1", sku);
     }
-    
+
     @Test
     void generateInternalBarcode_FormatAndCollision() {
-        when(productVariantRepository.existsByBarcode(anyString())).thenReturn(true).thenReturn(false); 
+        when(productVariantRepository.existsByBarcode(anyString())).thenReturn(true).thenReturn(false);
         String barcode = productVariantService.generateInternalBarcode(10);
         assertEquals(13, barcode.length());
         assertTrue(barcode.startsWith("89300001"));
     }
-    
+
     @Test
     void generateInternalBarcodeForPackaging_FormatAndCollision() {
-        when(productVariantRepository.existsByBarcode(anyString())).thenReturn(true).thenReturn(false); 
+        when(productVariantRepository.existsByBarcode(anyString())).thenReturn(true).thenReturn(false);
         String barcode = productVariantService.generateInternalBarcodeForPackaging(10, 1);
         assertEquals(13, barcode.length());
         assertTrue(barcode.startsWith("2000100001"));
     }
-    
+
     @Test
     void generateSkuForConversion_Collision() {
         when(productVariantRepository.existsBySku("SKU-BOX24")).thenReturn(true);
         when(productVariantRepository.existsBySku("SKU-BOX24-1")).thenReturn(false);
-        
+
         String sku = productVariantService.generateSkuForConversion(testVariant, testUnit, BigDecimal.valueOf(24));
         assertEquals("SKU-BOX24-1", sku);
     }
@@ -276,17 +283,17 @@ class ProductVariantServiceTest {
         testVariant.setActive(false);
         testProduct.setIsActive(false);
         when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
-        
+
         assertThrows(RuntimeException.class, () -> productVariantService.toggleVariantStatus(1));
     }
 
     @Test
     void deleteVariant_Success_Within2Minutes() {
         when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
-        
+
         InventoryStock st = new InventoryStock();
         when(inventoryStockRepository.findByVariantId(1)).thenReturn(List.of(st));
-        
+
         ProductBatch pb = new ProductBatch();
         when(productBatchRepository.findByVariantId(1)).thenReturn(List.of(pb));
 
@@ -294,19 +301,19 @@ class ProductVariantServiceTest {
         when(unitConversionRepository.findByProductIdAndToUnitId(10, 20)).thenReturn(List.of(uc));
 
         productVariantService.deleteVariant(1);
-        
+
         verify(inventoryStockRepository).deleteAll(anyList());
         verify(productBatchRepository).deleteAll(anyList());
         verify(unitConversionRepository).deleteByVariantId(1);
         verify(unitConversionRepository).deleteAll(anyList());
         verify(productVariantRepository).deleteById(1);
     }
-    
+
     @Test
     void deleteVariant_Past2Minutes_ThrowsException() {
         testVariant.setCreatedAt(LocalDateTime.now().minusMinutes(5));
         when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
-        
+
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productVariantService.deleteVariant(1));
         assertEquals("Biến thể đã tạo quá 2 phút, bạn không thể xoá biến thể này nữa!", ex.getMessage());
     }

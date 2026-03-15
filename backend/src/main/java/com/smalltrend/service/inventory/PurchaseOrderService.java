@@ -188,31 +188,35 @@ public class PurchaseOrderService {
             throw new RuntimeException("Chỉ có thể nhập kho phiếu đang kiểm kê.");
         }
 
-        if (receiptRequest.getSupplierId() == null) {
+        Integer effectiveSupplierId = receiptRequest.getSupplierId() != null
+                ? receiptRequest.getSupplierId()
+                : (order.getSupplier() != null ? order.getSupplier().getId() : null);
+        Integer effectiveLocationId = receiptRequest.getLocationId() != null
+                ? receiptRequest.getLocationId()
+                : order.getLocationId();
+        BigDecimal effectiveTaxPercent = receiptRequest.getTaxPercent() != null
+                ? receiptRequest.getTaxPercent()
+                : (order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO);
+        BigDecimal effectiveShippingFee = receiptRequest.getShippingFee() != null
+                ? receiptRequest.getShippingFee()
+                : (order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+
+        if (effectiveSupplierId == null) {
             throw new RuntimeException("Nhà cung cấp là bắt buộc khi xác nhận nhập kho.");
         }
-        if (receiptRequest.getLocationId() == null) {
+        if (effectiveLocationId == null) {
             throw new RuntimeException("Vị trí nhập kho là bắt buộc khi xác nhận nhập kho.");
         }
-        if (receiptRequest.getTaxPercent() == null) {
-            throw new RuntimeException("Thuế VAT (%) là bắt buộc khi xác nhận nhập kho.");
-        }
-        if (receiptRequest.getShippingFee() == null) {
-            throw new RuntimeException("Phí vận chuyển là bắt buộc khi xác nhận nhập kho.");
-        }
-        if (receiptRequest.getTaxPercent().compareTo(BigDecimal.ZERO) < 0) {
+        if (effectiveTaxPercent.compareTo(BigDecimal.ZERO) < 0) {
             throw new RuntimeException("Thuế VAT (%) không được âm.");
         }
-        if (receiptRequest.getShippingFee().compareTo(BigDecimal.ZERO) < 0) {
+        if (effectiveShippingFee.compareTo(BigDecimal.ZERO) < 0) {
             throw new RuntimeException("Phí vận chuyển không được âm.");
         }
 
         // Cập nhật receivedQuantity cho từng item
         if (receiptRequest.getItems() != null) {
             for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
-                if (receiptItem.getUnitCost() == null || receiptItem.getUnitCost().compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new RuntimeException("Giá nhập từng sản phẩm là bắt buộc và phải lớn hơn 0.");
-                }
                 if (receiptItem.getReceivedQuantity() == null || receiptItem.getReceivedQuantity() < 0) {
                     throw new RuntimeException("Số lượng thực nhận không hợp lệ.");
                 }
@@ -230,11 +234,15 @@ public class PurchaseOrderService {
                 if (orderItem != null) {
                     orderItem.setReceivedQuantity(receiptItem.getReceivedQuantity() != null
                             ? receiptItem.getReceivedQuantity() : 0);
-                    if (receiptItem.getUnitCost() != null) {
-                        orderItem.setUnitCost(receiptItem.getUnitCost());
-                        int receivedQty = orderItem.getReceivedQuantity() != null ? orderItem.getReceivedQuantity() : 0;
-                        orderItem.setTotalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(receivedQty)));
+                    BigDecimal effectiveUnitCost = receiptItem.getUnitCost() != null
+                            ? receiptItem.getUnitCost()
+                            : orderItem.getUnitCost();
+                    if (effectiveUnitCost == null || effectiveUnitCost.compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new RuntimeException("Giá nhập từng sản phẩm là bắt buộc và phải lớn hơn 0.");
                     }
+                    orderItem.setUnitCost(effectiveUnitCost);
+                    int receivedQty = orderItem.getReceivedQuantity() != null ? orderItem.getReceivedQuantity() : 0;
+                    orderItem.setTotalCost(effectiveUnitCost.multiply(BigDecimal.valueOf(receivedQty)));
                     if (receiptItem.getNotes() != null) {
                         orderItem.setNotes(receiptItem.getNotes());
                     }
@@ -243,10 +251,10 @@ public class PurchaseOrderService {
             }
         }
 
-        Supplier supplier = supplierRepository.findById(receiptRequest.getSupplierId())
+        Supplier supplier = supplierRepository.findById(effectiveSupplierId)
                 .orElseThrow(() -> new RuntimeException("Nhà cung cấp không tồn tại."));
         order.setSupplier(supplier);
-        order.setLocationId(receiptRequest.getLocationId());
+        order.setLocationId(effectiveLocationId);
 
         BigDecimal subtotal = order.getItems().stream()
                 .map(item -> {
@@ -255,9 +263,9 @@ public class PurchaseOrderService {
                     return unitCost.multiply(BigDecimal.valueOf(receivedQty));
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal taxPercent = receiptRequest.getTaxPercent();
+        BigDecimal taxPercent = effectiveTaxPercent;
         BigDecimal taxAmount = subtotal.multiply(taxPercent).divide(BigDecimal.valueOf(100));
-        BigDecimal shippingFee = receiptRequest.getShippingFee();
+        BigDecimal shippingFee = effectiveShippingFee;
         BigDecimal totalAmount = subtotal.add(taxAmount).add(shippingFee);
 
         order.setSubtotal(subtotal);
@@ -592,7 +600,7 @@ public class PurchaseOrderService {
             if (itemReq.getVariantId() != null) {
                 ProductVariant variant = productVariantRepository.findById(itemReq.getVariantId())
                         .orElseThrow(() -> new RuntimeException(
-                                "Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
+                        "Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
                 item.setVariant(variant);
             } else if (itemReq.getProductId() != null) {
                 Product product = productRepository.findById(Integer.valueOf(itemReq.getProductId()))
@@ -640,7 +648,9 @@ public class PurchaseOrderService {
 
             if (variant.getProduct() != null && variant.getProduct().getVariants() != null) {
                 for (ProductVariant bv : variant.getProduct().getVariants()) {
-                    if (bv.getId().equals(variant.getId())) continue;
+                    if (bv.getId().equals(variant.getId())) {
+                        continue;
+                    }
 
                     if (variant.getUnit() != null) {
                         java.util.Optional<UnitConversion> conversionOpt = unitConversionRepository.findByVariantIdAndToUnitId(bv.getId(), variant.getUnit().getId());

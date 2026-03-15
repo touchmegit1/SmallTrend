@@ -21,8 +21,9 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const role = user?.role;
-  const isAdmin = role === "ADMIN" || role === "ROLE_ADMIN";
-  const isManager = role === "MANAGER" || role === "ROLE_MANAGER";
+  const normalizedRole = String(role || "").toUpperCase();
+  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "ROLE_ADMIN" || normalizedRole.includes("ADMIN");
+  const isManager = normalizedRole === "MANAGER" || normalizedRole === "ROLE_MANAGER" || normalizedRole.includes("MANAGER");
   const canManageWorkforce = isAdmin || isManager;
 
   const toggleMenu = (label) => {
@@ -45,8 +46,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       children: [
         { label: "Giao diện bán hàng", path: "/pos" },
         { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Báo cáo doanh thu", path: "/pos/suspended" },
-        { label: "Khiếu nại", path: "/pos/complain" },
+        { label: "Đơn hàng treo", path: "/pos/suspended" },
+        { label: "Giao ca", path: "/pos/shift-handover" },
       ],
     },
     {
@@ -66,9 +67,9 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       label: "Sản phẩm",
       path: "/products",
       children: [
+        { label: "Danh mục & Thương hiệu", path: "/products/categories" },
+        { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
         { label: "Danh sách sản phẩm", path: "/products" },
-        { label: "Thêm sản phẩm", path: "/products/addproduct" },
-        { label: "Danh mục & Brand", path: "/products/categories" },
         { label: "Thiết lập giá", path: "/products/price" },
         { label: "Combo sản phẩm", path: "/products/combo" },
       ],
@@ -81,7 +82,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         { label: "Danh sách khách hàng", path: "/crm/customer" },
         { label: "Khuyến Mãi", path: "/crm/event" },
         { label: "Kho quà tặng", path: "/crm/loyalty" },
-        { label: "Quảng cáo & Tài trợ", path: "/crm/ads" },
+        { label: "Khiếu nại", path: "/crm/complain" },
+        { label: "Quản lý Quảng cáo", path: "/crm/ads" },
         { label: "Báo Cáo Thống Kê", path: "/crm/report" },
       ],
     },
@@ -127,9 +129,10 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         <div
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
           onClick={() => {
-            navigate("/crm/homepage");
+            const isAdminRole = isAdmin;
+            navigate(isAdminRole ? "/dashboard" : "/pos");
           }}
-          title="Về trang chủ"
+          title="Về trang chính"
         >
           <div className="bg-indigo-600 p-2 rounded-lg">
             <Store className="text-white" size={24} />
@@ -213,7 +216,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   Quản lý người dùng
                 </NavLink>
                 <NavLink
-                  to="/admin/report-center"
+                  to="/admin/ticket-center"
                   className={({ isActive }) =>
                     `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
                       ? "bg-indigo-100 text-indigo-700 font-medium"
@@ -233,17 +236,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   }
                 >
                   Nhật ký Audit
-                </NavLink>
-                <NavLink
-                  to="/admin/ai-settings"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Cài đặt AI
                 </NavLink>
               </div>
             )}
