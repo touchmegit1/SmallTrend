@@ -13,6 +13,8 @@ import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.UnitConversionRepository;
 import com.smalltrend.repository.UnitRepository;
+import com.smalltrend.service.products.ProductVariantService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

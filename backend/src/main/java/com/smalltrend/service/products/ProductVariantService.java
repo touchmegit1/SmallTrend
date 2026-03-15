@@ -1,4 +1,4 @@
-package com.smalltrend.service;
+package com.smalltrend.service.products;
 
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.ProductRepository;

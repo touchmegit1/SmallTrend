@@ -8,11 +8,13 @@ import com.smalltrend.dto.products.UnitConversionRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
 import com.smalltrend.dto.products.UnitRequest;
 import com.smalltrend.dto.products.UnitResponse;
-import com.smalltrend.service.ProductVariantService;
 import com.smalltrend.service.UnitConversionService;
 import com.smalltrend.service.UnitService;
 import com.smalltrend.service.VariantPriceService;
+import com.smalltrend.service.products.PriceExpiryAlertEmailScheduler;
 import com.smalltrend.service.products.ProductService;
+import com.smalltrend.service.products.ProductVariantService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -50,11 +52,21 @@ class ProductControllerTest {
     @Mock
     private VariantPriceService variantPriceService;
 
+    @Mock
+    private PriceExpiryAlertEmailScheduler priceExpiryAlertEmailScheduler;
+
     private ProductController productController;
 
     @BeforeEach
     void setup() {
-        productController = new ProductController(productService, productVariantService, unitConversionService, unitService, variantPriceService);
+        productController = new ProductController(
+                productService,
+                productVariantService,
+                unitConversionService,
+                unitService,
+                variantPriceService,
+                priceExpiryAlertEmailScheduler
+        );
     }
 
     // ==========================================

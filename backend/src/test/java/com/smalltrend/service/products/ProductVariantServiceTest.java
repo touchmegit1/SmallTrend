@@ -4,7 +4,7 @@ import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.entity.*;
 import com.smalltrend.repository.*;
-import com.smalltrend.service.ProductVariantService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

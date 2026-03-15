@@ -11,8 +11,9 @@ import com.smalltrend.dto.products.UnitResponse;
 import com.smalltrend.dto.products.VariantPriceRequest;
 import com.smalltrend.dto.products.VariantPriceResponse;
 import com.smalltrend.dto.pos.ProductVariantRespone;
+import com.smalltrend.service.products.PriceExpiryAlertEmailScheduler;
 import com.smalltrend.service.products.ProductService;
-import com.smalltrend.service.ProductVariantService;
+import com.smalltrend.service.products.ProductVariantService;
 import com.smalltrend.service.UnitConversionService;
 import com.smalltrend.service.UnitService;
 import com.smalltrend.service.VariantPriceService;
@@ -37,6 +38,7 @@ public class ProductController {
     private final UnitConversionService unitConversionService;
     private final UnitService unitService;
     private final VariantPriceService variantPriceService;
+    private final PriceExpiryAlertEmailScheduler priceExpiryAlertEmailScheduler;
 
     // Lấy danh sách tất cả sản phẩm
     @GetMapping
@@ -227,6 +229,19 @@ public class ProductController {
     public ResponseEntity<List<PriceExpiryAlertResponse>> getPriceExpiryAlerts(
             @RequestParam(defaultValue = "1") int days) {
         return ResponseEntity.ok(variantPriceService.getPriceExpiryAlerts(days));
+    }
+
+    // Trigger gửi email cảnh báo ngay lập tức để test
+    @PostMapping("/price-expiry-alerts/send-now")
+    public ResponseEntity<java.util.Map<String, Object>> sendPriceExpiryAlertsNow() {
+        int sentCount = priceExpiryAlertEmailScheduler.sendPriceExpiryAlertsNow();
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Price expiry alert email job executed",
+                "sentCount", sentCount,
+                "recipient", priceExpiryAlertEmailScheduler.getRecipientEmail(),
+                "sender", priceExpiryAlertEmailScheduler.getSenderEmail(),
+                "daysBeforeExpiry", priceExpiryAlertEmailScheduler.getDaysBeforeExpiry()
+        ));
     }
 
     @PostMapping
