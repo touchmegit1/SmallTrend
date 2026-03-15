@@ -75,6 +75,65 @@ const Badge = ({ text, color }) => (
     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>{text}</span>
 );
 
+const AnalyticsPanel = ({ title, subtitle, children, className = '' }) => (
+    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 p-5 ${className}`}>
+        <div className="mb-4">
+            <h3 className="text-base font-bold text-slate-800">{title}</h3>
+            {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+        </div>
+        {children}
+    </div>
+);
+
+const MiniMetric = ({ label, value, sub, tone = 'indigo' }) => {
+    const toneClass = {
+        indigo: 'bg-indigo-50 text-indigo-700',
+        emerald: 'bg-emerald-50 text-emerald-700',
+        amber: 'bg-amber-50 text-amber-700',
+        rose: 'bg-rose-50 text-rose-700',
+        sky: 'bg-sky-50 text-sky-700',
+        slate: 'bg-slate-100 text-slate-700',
+        purple: 'bg-purple-50 text-purple-700',
+    }[tone] || 'bg-slate-100 text-slate-700';
+
+    return (
+        <div className={`rounded-xl px-4 py-3 ${toneClass}`}>
+            <p className="text-xs font-medium opacity-80">{label}</p>
+            <p className="text-xl font-black mt-1">{value}</p>
+            {sub && <p className="text-xs mt-1 opacity-75">{sub}</p>}
+        </div>
+    );
+};
+
+const HorizontalBar = ({ label, value, percent, helper, color = 'indigo' }) => {
+    const colorClass = {
+        indigo: 'bg-indigo-500',
+        emerald: 'bg-emerald-500',
+        amber: 'bg-amber-500',
+        rose: 'bg-rose-500',
+        sky: 'bg-sky-500',
+        purple: 'bg-purple-500',
+    }[color] || 'bg-indigo-500';
+
+    return (
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{label}</p>
+                    {helper && <p className="text-xs text-slate-400 truncate">{helper}</p>}
+                </div>
+                <span className="text-sm font-bold text-slate-700 whitespace-nowrap">{value}</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                    className={`h-full rounded-full ${colorClass}`}
+                    style={{ width: `${Math.max(0, Math.min(100, percent || 0))}%` }}
+                />
+            </div>
+        </div>
+    );
+};
+
 const statusColor = s => ({
     ACTIVE: 'bg-emerald-100 text-emerald-700',
     DRAFT: 'bg-slate-100 text-slate-600',
@@ -136,6 +195,52 @@ export default function CRMReport() {
     const activeCoupons = coupons.filter(c => c.status === 'ACTIVE').length;
     const totalLoyaltyPts = customers.reduce((s, c) => s + (c.loyaltyPoints || 0), 0);
     const activeAds = ads.filter(a => a.isActive).length;
+    const totalSpent = customers.reduce((sum, customer) => sum + (Number(customer.spentAmount) || 0), 0);
+    const avgSpentPerCustomer = customers.length > 0 ? totalSpent / customers.length : 0;
+    const totalGiftStock = gifts.reduce((sum, gift) => sum + (gift.stock || 0), 0);
+    const outOfStockGifts = gifts.filter(gift => (gift.stock || 0) <= 0).length;
+    const totalCouponUsage = coupons.reduce((sum, coupon) => sum + (coupon.currentUsageCount || 0), 0);
+    const couponsWithFiniteLimit = coupons.filter(coupon => coupon.totalUsageLimit != null);
+    const totalCouponCapacity = couponsWithFiniteLimit.reduce((sum, coupon) => sum + (coupon.totalUsageLimit || 0), 0);
+    const couponUsageRate = totalCouponCapacity > 0 ? (totalCouponUsage / totalCouponCapacity) * 100 : 0;
+    const percentageCoupons = coupons.filter(coupon => coupon.couponType === 'PERCENTAGE').length;
+    const fixedCoupons = coupons.filter(coupon => coupon.couponType === 'FIXED_AMOUNT').length;
+    const activeAdSlots = new Set(ads.filter(ad => ad.isActive).map(ad => ad.slot)).size;
+    const draftCampaigns = campaigns.filter(campaign => campaign.status === 'DRAFT').length;
+    const expiredCoupons = coupons.filter(coupon => coupon.status === 'EXPIRED').length;
+    const topLoyaltyCustomer = customers.length > 0
+        ? [...customers].sort((a, b) => (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0))[0]
+        : null;
+    const topSpentCustomer = customers.length > 0
+        ? [...customers].sort((a, b) => (Number(b.spentAmount) || 0) - (Number(a.spentAmount) || 0))[0]
+        : null;
+
+    const topCoupons = [...coupons]
+        .sort((a, b) => (b.currentUsageCount || 0) - (a.currentUsageCount || 0))
+        .slice(0, 5);
+    const maxCouponUsage = Math.max(...topCoupons.map(coupon => coupon.currentUsageCount || 0), 1);
+
+    const topCustomersBySpend = [...customers]
+        .sort((a, b) => (Number(b.spentAmount) || 0) - (Number(a.spentAmount) || 0))
+        .slice(0, 5);
+    const maxCustomerSpend = Math.max(...topCustomersBySpend.map(customer => Number(customer.spentAmount) || 0), 1);
+
+    const topCampaignBudgets = [...campaigns]
+        .filter(campaign => Number(campaign.budget) > 0)
+        .sort((a, b) => (Number(b.budget) || 0) - (Number(a.budget) || 0))
+        .slice(0, 4);
+    const maxCampaignBudget = Math.max(...topCampaignBudgets.map(campaign => Number(campaign.budget) || 0), 1);
+
+    const adSlotRows = ['LEFT', 'RIGHT'].map((slot) => {
+        const slotAds = ads.filter(ad => ad.slot === slot);
+        const activeCount = slotAds.filter(ad => ad.isActive).length;
+        return {
+            slot,
+            total: slotAds.length,
+            active: activeCount,
+            percent: slotAds.length > 0 ? (activeCount / slotAds.length) * 100 : 0,
+        };
+    });
 
     const fmt = v => v != null ? Number(v).toLocaleString('vi-VN') + 'đ' : '-';
 
@@ -147,29 +252,13 @@ export default function CRMReport() {
                 <p className="text-slate-500 mt-1">Tổng quan toàn bộ hệ thống CRM. Nhấn vào thẻ để xem chi tiết.</p>
             </div>
 
-            {/* SUMMARY ROW */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                    { label: 'KH đăng ký', value: customers.length, color: 'bg-indigo-500' },
-                    { label: 'Campaign ACTIVE', value: activeCampaigns, color: 'bg-emerald-500' },
-                    { label: 'Coupon ACTIVE', value: activeCoupons, color: 'bg-purple-500' },
-                    { label: 'Quảng cáo ACTIVE', value: activeAds, color: 'bg-sky-500' },
-                ].map(s => (
-                    <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center">
-                        <div className={`w-2 h-2 rounded-full ${s.color} mx-auto mb-2`} />
-                        <p className="text-2xl font-black text-slate-800">{s.value}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
-                    </div>
-                ))}
-            </div>
-
             {/* REPORT CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <ReportCard
                     icon={Users}
                     label="Khách hàng"
                     value={loadingCustomers ? '...' : customers.length}
-                    sub={`Tổng điểm tích lũy: ${totalLoyaltyPts.toLocaleString()} pts`}
+                    sub={customers.length > 0 ? `Chi tiêu trung bình: ${fmt(avgSpentPerCustomer)}` : 'Chưa có dữ liệu khách hàng'}
                     color="bg-indigo-500"
                     onClick={() => openModal('customers')}
                 />
@@ -177,7 +266,7 @@ export default function CRMReport() {
                     icon={Megaphone}
                     label="Sự kiện / Campaign"
                     value={loadingCampaigns ? '...' : campaigns.length}
-                    sub={`${activeCampaigns} đang ACTIVE`}
+                    sub={`${activeCampaigns} ACTIVE · ${draftCampaigns} draft`}
                     color="bg-blue-500"
                     onClick={() => openModal('campaigns')}
                 />
@@ -185,7 +274,7 @@ export default function CRMReport() {
                     icon={Tag}
                     label="Coupon"
                     value={loadingCoupons ? '...' : coupons.length}
-                    sub={`${activeCoupons} đang ACTIVE`}
+                    sub={`${totalCouponUsage.toLocaleString()} lượt sử dụng · ${activeCoupons} ACTIVE`}
                     color="bg-purple-500"
                     onClick={() => openModal('coupons')}
                 />
@@ -193,7 +282,7 @@ export default function CRMReport() {
                     icon={Gift}
                     label="Kho quà tặng Loyalty"
                     value={loadingGifts ? '...' : gifts.length}
-                    sub={`Tổng tồn: ${gifts.reduce((s, g) => s + (g.stock || 0), 0)} sản phẩm`}
+                    sub={`Tổng tồn: ${totalGiftStock} · Hết hàng: ${outOfStockGifts}`}
                     color="bg-amber-500"
                     onClick={() => openModal('gifts')}
                 />
@@ -201,22 +290,178 @@ export default function CRMReport() {
                     icon={TrendingUp}
                     label="Quảng cáo"
                     value={loadingAds ? '...' : ads.length}
-                    sub={`${activeAds} đang hiển thị`}
+                    sub={`${activeAds} đang hiển thị trên ${activeAdSlots} vị trí`}
                     color="bg-sky-500"
                     onClick={() => openModal('ads')}
                 />
                 <ReportCard
                     icon={Award}
                     label="Top Loyalty khách hàng"
-                    value={customers.length > 0 ? `${Math.max(...customers.map(c => c.loyaltyPoints || 0)).toLocaleString()} pts` : '0'}
-                    sub={(() => {
-                        if (customers.length === 0) return 'Chưa có dữ liệu';
-                        const top = [...customers].sort((a, b) => (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0))[0];
-                        return top ? top.name : '';
-                    })()}
+                    value={topLoyaltyCustomer ? `${(topLoyaltyCustomer.loyaltyPoints || 0).toLocaleString()} pts` : '0'}
+                    sub={topSpentCustomer ? `Chi tiêu cao nhất: ${fmt(topSpentCustomer.spentAmount)}` : 'Chưa có dữ liệu'}
                     color="bg-emerald-500"
                     onClick={() => openModal('customers')}
                 />
+            </div>
+
+            {/* ANALYTICS OVERVIEW */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                <AnalyticsPanel
+                    title="Hiệu suất voucher"
+                >
+                    <div className="grid grid-cols-2 gap-3">
+                        <MiniMetric label="Tổng coupon" value={coupons.length} sub={`${activeCoupons} ACTIVE`} tone="purple" />
+                        <MiniMetric label="Lượt sử dụng" value={totalCouponUsage.toLocaleString()} sub={`${couponUsageRate.toFixed(1)}% trên quota`} tone="emerald" />
+                        <MiniMetric label="Coupon %" value={percentageCoupons} sub="Theo phần trăm" tone="amber" />
+                        <MiniMetric label="Coupon cố định" value={fixedCoupons} sub={`${expiredCoupons} đã hết hạn`} tone="rose" />
+                    </div>
+                </AnalyticsPanel>
+
+                <AnalyticsPanel
+                    title="Giá trị khách hàng"
+                >
+                    <div className="grid grid-cols-2 gap-3">
+                        <MiniMetric label="Total spent" value={fmt(totalSpent)} sub="Toàn bộ khách CRM" tone="indigo" />
+                        <MiniMetric label="Chi tiêu TB" value={fmt(avgSpentPerCustomer)} sub="Mỗi khách đăng ký" tone="sky" />
+                        <MiniMetric label="Tổng loyalty" value={`${totalLoyaltyPts.toLocaleString()} pts`} sub="Điểm đang tích lũy" tone="emerald" />
+                        <MiniMetric label="Top spender" value={topCustomersBySpend[0]?.name || '-'} sub={topCustomersBySpend[0] ? fmt(topCustomersBySpend[0].spentAmount) : 'Chưa có dữ liệu'} tone="amber" />
+                    </div>
+                </AnalyticsPanel>
+
+                <AnalyticsPanel
+                    title="Vận hành CRM"
+                >
+                    <div className="grid grid-cols-2 gap-3">
+                        <MiniMetric label="Campaign active" value={activeCampaigns} sub={`${draftCampaigns} draft`} tone="sky" />
+                        <MiniMetric label="Ads active" value={activeAds} sub={`${activeAdSlots} vị trí có hiển thị`} tone="indigo" />
+                        <MiniMetric label="Tồn quà loyalty" value={totalGiftStock.toLocaleString()} sub={`${outOfStockGifts} quà đã hết`} tone="amber" />
+                        <MiniMetric label="Ngân sách campaign" value={fmt(campaigns.reduce((sum, campaign) => sum + (Number(campaign.budget) || 0), 0))} sub="Tổng ngân sách khai báo" tone="emerald" />
+                    </div>
+                </AnalyticsPanel>
+            </div>
+
+            {/* DETAILED INSIGHTS */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <AnalyticsPanel
+                    title="Biểu đồ sử dụng voucher"
+                >
+                    {topCoupons.length === 0 ? <Empty text="Chưa có dữ liệu coupon để phân tích." /> : (
+                        <div className="space-y-4">
+                            {topCoupons.map((coupon) => (
+                                <HorizontalBar
+                                    key={coupon.id}
+                                    label={coupon.couponName || coupon.couponCode}
+                                    helper={`${coupon.couponCode} · ${coupon.status || 'UNKNOWN'}`}
+                                    value={`${coupon.currentUsageCount ?? 0} lượt`}
+                                    percent={((coupon.currentUsageCount || 0) / maxCouponUsage) * 100}
+                                    color="purple"
+                                />
+                            ))}
+
+                            <div className="mt-5 overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-slate-50 border-b border-slate-100">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Coupon</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Loại</th>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Sử dụng</th>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Đơn tối thiểu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {topCoupons.map((coupon) => (
+                                            <tr key={coupon.id} className="border-b border-slate-50">
+                                                <td className="px-4 py-3">
+                                                    <p className="font-medium text-slate-800">{coupon.couponName}</p>
+                                                    <p className="text-xs text-slate-400 font-mono">{coupon.couponCode}</p>
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600">
+                                                    {coupon.couponType === 'PERCENTAGE'
+                                                        ? `${coupon.discountPercent || 0}%`
+                                                        : fmt(coupon.discountAmount)}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-semibold text-slate-700">
+                                                    {coupon.currentUsageCount ?? 0}
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-slate-500">
+                                                    {fmt(coupon.minPurchaseAmount)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </AnalyticsPanel>
+
+                <AnalyticsPanel
+                    title="Top khách hàng theo chi tiêu"
+                >
+                    {topCustomersBySpend.length === 0 ? <Empty text="Chưa có dữ liệu chi tiêu khách hàng." /> : (
+                        <div className="space-y-4">
+                            {topCustomersBySpend.map((customer) => (
+                                <HorizontalBar
+                                    key={customer.id}
+                                    label={customer.name}
+                                    helper={`${customer.phone || 'Không có SĐT'} · ${(customer.loyaltyPoints || 0).toLocaleString()} pts`}
+                                    value={fmt(customer.spentAmount)}
+                                    percent={((Number(customer.spentAmount) || 0) / maxCustomerSpend) * 100}
+                                    color="emerald"
+                                />
+                            ))}
+                        </div>
+                    )}
+                </AnalyticsPanel>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <AnalyticsPanel
+                    title="Tình trạng campaign"
+                >
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                        <MiniMetric label="ACTIVE" value={activeCampaigns} tone="emerald" />
+                        <MiniMetric label="DRAFT" value={draftCampaigns} tone="slate" />
+                        <MiniMetric label="Khác" value={Math.max(0, campaigns.length - activeCampaigns - draftCampaigns)} tone="sky" />
+                    </div>
+                    {topCampaignBudgets.length === 0 ? <Empty text="Campaign chưa có ngân sách để so sánh." /> : (
+                        <div className="space-y-4">
+                            {topCampaignBudgets.map((campaign) => (
+                                <HorizontalBar
+                                    key={campaign.id}
+                                    label={campaign.campaignName}
+                                    helper={`${campaign.campaignCode} · ${campaign.status}`}
+                                    value={fmt(campaign.budget)}
+                                    percent={((Number(campaign.budget) || 0) / maxCampaignBudget) * 100}
+                                    color="sky"
+                                />
+                            ))}
+                        </div>
+                    )}
+                </AnalyticsPanel>
+
+                <AnalyticsPanel
+                    title="Kho quà và quảng cáo"
+                >
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                        <MiniMetric label="Quà sắp cạn" value={gifts.filter(gift => (gift.stock || 0) > 0 && (gift.stock || 0) <= 5).length} tone="amber" />
+                        <MiniMetric label="Quà hết hàng" value={outOfStockGifts} tone="rose" />
+                        <MiniMetric label="Ads active" value={activeAds} tone="indigo" />
+                        <MiniMetric label="Slot đang dùng" value={activeAdSlots} tone="sky" />
+                    </div>
+                    <div className="space-y-4">
+                        {adSlotRows.map((row) => (
+                            <HorizontalBar
+                                key={row.slot}
+                                label={`Vị trí ${row.slot}`}
+                                helper={`${row.active}/${row.total} quảng cáo đang bật`}
+                                value={row.total > 0 ? `${row.percent.toFixed(0)}%` : '0%'}
+                                percent={row.percent}
+                                color="indigo"
+                            />
+                        ))}
+                    </div>
+                </AnalyticsPanel>
             </div>
 
             {/* ── MODAL: CUSTOMERS ── */}
@@ -401,7 +646,6 @@ export default function CRMReport() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Nhà tài trợ / Tiêu đề</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Vị trí</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Trạng thái</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Liên kết</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -431,13 +675,6 @@ export default function CRMReport() {
                                                 text={a.isActive ? 'ACTIVE' : 'INACTIVE'}
                                                 color={a.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}
                                             />
-                                        </td>
-                                        <td className="px-4 py-3 text-xs text-indigo-600">
-                                            {a.linkUrl ? (
-                                                <a href={a.linkUrl} target="_blank" rel="noreferrer" className="hover:underline">
-                                                    Mở link
-                                                </a>
-                                            ) : '-'}
                                         </td>
                                     </tr>
                                 ))}
