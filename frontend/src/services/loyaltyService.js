@@ -19,6 +19,11 @@ const loyaltyService = {
         return response.data;
     },
 
+    updateGift: async (id, data) => {
+        const response = await api.post(`/crm/loyalty-gifts/${id}/update`, data);
+        return response.data;
+    },
+
     // Remove a gift from the store
     deleteGift: async (id) => {
         const response = await api.delete(`/crm/loyalty-gifts/${id}`);

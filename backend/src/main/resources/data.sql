@@ -174,11 +174,11 @@ working_hours_per_month = VALUES(working_hours_per_month),
 updated_at = NOW();
 
 -- 6. CUSTOMER TIERS
-INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_spending, points_multiplier, discount_rate, color, is_active, priority) VALUES
-('BRONZE', 'Đồng', 0.00, 1.0, 0.00, '#CD7F32', TRUE, 1),
-('SILVER', 'Bạc', 5000000.00, 1.5, 2.00, '#C0C0C0', TRUE, 2),
-('GOLD', 'Vàng', 15000000.00, 2.0, 5.00, '#FFD700', TRUE, 3),
-('PLATINUM', 'Bạch Kim', 50000000.00, 3.0, 10.00, '#E5E4E2', TRUE, 4);
+INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_spending, points_multiplier, color, is_active, priority) VALUES
+('BRONZE', 'Đồng', 0.00, 1.0, '#CD7F32', TRUE, 1),
+('SILVER', 'Bạc', 5000000.00, 1.5, '#C0C0C0', TRUE, 2),
+('GOLD', 'Vàng', 15000000.00, 2.0, '#FFD700', TRUE, 3),
+('PLATINUM', 'Bạch Kim', 50000000.00, 3.0, '#E5E4E2', TRUE, 4);
 
 -- 7. CUSTOMERS
 INSERT IGNORE INTO customers (name, phone, loyalty_points) VALUES
