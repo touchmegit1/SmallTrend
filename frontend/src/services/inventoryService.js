@@ -46,6 +46,8 @@ export const getPurchaseOrders = async () => {
     paid_amount: order.paidAmount || order.paid_amount,
     remaining_amount: order.remainingAmount || order.remaining_amount,
     tax_amount: order.taxAmount || order.tax_amount,
+    shortage_reason: order.shortageReason || order.shortage_reason,
+    manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
   }));
 };
 
@@ -72,6 +74,8 @@ export const getPurchaseOrderById = async (id) => {
     paid_amount: order.paidAmount || order.paid_amount,
     remaining_amount: order.remainingAmount || order.remaining_amount,
     tax_amount: order.taxAmount || order.tax_amount,
+    shortage_reason: order.shortageReason || order.shortage_reason,
+    manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
   };
 };
 
@@ -258,6 +262,35 @@ export const rejectPurchaseOrder = async (id, rejectionReason) => {
   if (!response.ok) {
     const err = await response.json().catch(() => null);
     throw new Error(err?.message || "Lỗi khi từ chối phiếu nhập");
+  }
+  return response.json();
+};
+
+export const closeShortageOrder = async (id, managerDecisionNote) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/shortage/close`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ managerDecisionNote: managerDecisionNote || "" }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi chốt thiếu hàng");
+  }
+  return response.json();
+};
+
+export const requestSupplierSupplementOrder = async (id, managerDecisionNote) => {
+  const response = await fetch(
+    `${SPRING_API}/purchase-orders/${id}/shortage/request-supplement`,
+    {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ managerDecisionNote: managerDecisionNote || "" }),
+    },
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi yêu cầu nhà cung cấp giao bù");
   }
   return response.json();
 };

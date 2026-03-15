@@ -7,6 +7,7 @@ import {
   PackageCheck,
   Eye,
   ShieldCheck,
+  Clock3,
 } from "lucide-react";
 import { PO_STATUS } from "../../../utils/purchaseOrder";
 import { useAuth } from "../../../context/AuthContext";
@@ -22,11 +23,13 @@ export default function ActionButtons({
   onDelete,
   onStartChecking,
   onReceiveGoods,
+  onCloseShortage,
+  onRequestSupplement,
   layout = "panel",
   footerHint = "",
 }) {
   const { user } = useAuth();
-  const userRole = (user?.role || "").toUpperCase();
+  const userRole = String(user?.role?.name || user?.role || "").toUpperCase();
   const isManagerOrAdmin = [
     "MANAGER",
     "ROLE_MANAGER",
@@ -42,8 +45,16 @@ export default function ActionButtons({
   const isPending = status === PO_STATUS.PENDING;
   const isConfirmed = status === PO_STATUS.CONFIRMED;
   const isChecking = status === PO_STATUS.CHECKING;
+  const isShortagePendingApproval =
+    status === PO_STATUS.SHORTAGE_PENDING_APPROVAL;
+  const isSupplierSupplementPending =
+    status === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING;
   const isProcessed =
     status === PO_STATUS.RECEIVED || status === PO_STATUS.CANCELLED;
+  const isManagerActionableShortage =
+    isShortagePendingApproval && isManagerOrAdmin;
+  const canRestartChecking =
+    (isConfirmed || isSupplierSupplementPending) && canCheckAndReceive;
 
   const renderActionGroup = () => {
     if (isDraft) {
@@ -110,7 +121,7 @@ export default function ActionButtons({
       );
     }
 
-    if (isConfirmed && canCheckAndReceive) {
+    if (canRestartChecking) {
       return (
         <button
           onClick={onStartChecking}
@@ -123,6 +134,77 @@ export default function ActionButtons({
             <ClipboardCheck size={16} />
           )}
           Bắt đầu kiểm kê
+        </button>
+      );
+    }
+
+    if (isManagerActionableShortage) {
+      return (
+        <>
+          <button
+            onClick={onRequestSupplement}
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-cyan-700 bg-cyan-50 border border-cyan-200 rounded-xl hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            <PackageCheck size={16} />
+            Yêu cầu NCC giao bù
+          </button>
+          <button
+            onClick={onCloseShortage}
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+          >
+            {saving ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <CheckCircle size={16} />
+            )}
+            Chốt thiếu
+          </button>
+        </>
+      );
+    }
+
+    if (isSupplierSupplementPending && isManagerOrAdmin) {
+      return (
+        <div className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-cyan-700 bg-cyan-50 rounded-lg border border-cyan-200">
+          <Clock3 size={15} />
+          Đang chờ NCC giao bù
+        </div>
+      );
+    }
+
+    if (isShortagePendingApproval && !isManagerOrAdmin) {
+      return (
+        <div className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-orange-700 bg-orange-50 rounded-lg border border-orange-200">
+          <Clock3 size={15} />
+          Chờ quản lý xử lý thiếu hàng
+        </div>
+      );
+    }
+
+    if (isSupplierSupplementPending && !canCheckAndReceive) {
+      return (
+        <div className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-cyan-700 bg-cyan-50 rounded-lg border border-cyan-200">
+          <Clock3 size={15} />
+          Chờ NV kho kiểm kê đợt giao bù
+        </div>
+      );
+    }
+
+    if (isSupplierSupplementPending && isInventoryStaff) {
+      return (
+        <button
+          onClick={onStartChecking}
+          disabled={saving}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+        >
+          {saving ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <ClipboardCheck size={16} />
+          )}
+          Kiểm kê đợt giao bù
         </button>
       );
     }

@@ -23,8 +23,27 @@ export default function SummaryPanel({
   const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
   const isChecking = order.status === PO_STATUS.CHECKING;
   const isReceived = order.status === PO_STATUS.RECEIVED;
-  const showMetaInfo = allowMetaEdit || isReceived;
-  const showPaymentInfo = isChecking || isReceived;
+  const isShortagePendingApproval =
+    order.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL;
+  const isSupplierSupplementPending =
+    order.status === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING;
+  const showMetaInfo =
+    allowMetaEdit ||
+    isReceived ||
+    isShortagePendingApproval ||
+    isSupplierSupplementPending;
+  const showPaymentInfo =
+    isChecking || isReceived || isShortagePendingApproval || isSupplierSupplementPending;
+  const shortageReason =
+    order.shortage_reason || order.shortageReason || "";
+  const managerDecisionNote =
+    order.manager_decision_note || order.managerDecisionNote || "";
+  const showShortageReason =
+    (isShortagePendingApproval || isSupplierSupplementPending) &&
+    String(shortageReason).trim() !== "";
+  const showManagerDecisionNote =
+    (isSupplierSupplementPending || isReceived) &&
+    String(managerDecisionNote).trim() !== "";
 
   const selectedSupplier = suppliers.find(
     (s) => String(s.id) === String(order.supplier_id),
@@ -178,6 +197,28 @@ export default function SummaryPanel({
                     </span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {showShortageReason && (
+              <div className="px-6 py-3.5 border-b border-slate-200 bg-orange-50/60">
+                <h3 className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-2">
+                  Lý do thiếu hàng
+                </h3>
+                <p className="text-sm leading-relaxed text-orange-900 whitespace-pre-wrap">
+                  {shortageReason}
+                </p>
+              </div>
+            )}
+
+            {showManagerDecisionNote && (
+              <div className="px-6 py-3.5 border-b border-slate-200 bg-cyan-50/60">
+                <h3 className="text-xs font-bold text-cyan-700 uppercase tracking-wide mb-2">
+                  Ghi chú quyết định của quản lý
+                </h3>
+                <p className="text-sm leading-relaxed text-cyan-900 whitespace-pre-wrap">
+                  {managerDecisionNote}
+                </p>
               </div>
             )}
 

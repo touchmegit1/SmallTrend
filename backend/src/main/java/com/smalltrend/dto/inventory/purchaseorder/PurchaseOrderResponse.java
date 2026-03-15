@@ -51,6 +51,11 @@ public class PurchaseOrderResponse {
 
     private String notes;
     private String rejectionReason;
+    private String shortageReason;
+    private LocalDateTime shortageSubmittedAt;
+    private String managerDecision;
+    private String managerDecisionNote;
+    private LocalDateTime managerDecidedAt;
     private Integer syncedPurchasePriceCount;
 
     // Items
