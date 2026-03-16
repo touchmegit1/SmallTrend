@@ -1,5 +1,7 @@
-const JSON_API = "http://localhost:3001";
-const SPRING_API = "http://localhost:8081/api/inventory";
+const SPRING_API =
+  import.meta.env.VITE_INVENTORY_API_BASE_URL || "http://localhost:8081/api/inventory";
+
+const JSON_API = import.meta.env.VITE_JSON_API_BASE_URL || "http://localhost:3001";
 
 // ─── Helper: get auth token ──────────────────────────────
 function getAuthHeaders() {
@@ -459,34 +461,6 @@ const getApiErrorMessage = async (response, fallbackMessage) => {
   return err?.message || fallbackMessage;
 };
 
-export const createLocation = async (locationData) => {
-  const response = await fetch(`${SPRING_API}/locations`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      locationName: locationData.location_name,
-      locationCode: locationData.location_code,
-      locationType: locationData.location_type,
-      address: locationData.address,
-      capacity: Number(locationData.capacity ?? 0),
-      description: locationData.description,
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(
-      await getApiErrorMessage(response, "Không thể tạo vị trí"),
-    );
-  }
-  const data = await response.json();
-  return {
-    ...data,
-    location_name: data.locationName,
-    location_code: data.locationCode,
-    location_type: data.locationType,
-    created_at: data.createdAt,
-  };
-};
-
 export const updateLocation = async (id, locationData) => {
   const response = await fetch(`${SPRING_API}/locations/${id}`, {
     method: "PUT",
@@ -651,34 +625,6 @@ export const getLocations = async () => {
   }));
 };
 
-export const toggleLocationStatus = async (id) => {
-  const response = await fetch(`${SPRING_API}/locations/${id}/toggle-status`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) {
-    throw new Error(
-      await getApiErrorMessage(response, "Lỗi khi chuyển trạng thái vị trí"),
-    );
-  }
-  const data = await response.json();
-  return {
-    ...data,
-    location_name: data.locationName || data.location_name,
-    location_code: data.locationCode || data.location_code,
-    location_type: data.locationType || data.location_type,
-    created_at: data.createdAt || data.created_at,
-    total_products: data.totalProducts || data.total_products || 0,
-    stock_items: (data.stockItems || data.stock_items || []).map((item) => ({
-      ...item,
-      variant_id: item.variantId || item.variant_id,
-      product_name: item.productName || item.product_name,
-      variant_unit: item.variantUnit || item.variant_unit,
-      batch_code: item.batchCode || item.batch_code,
-      batch_id: item.batchId || item.batch_id,
-    })),
-  };
-};
 
 export const deleteLocationById = deleteLocation;
 
@@ -686,10 +632,8 @@ export const locationApi = {
   getLocations,
   getActiveLocations,
   getLocationStocks,
-  createLocation,
   updateLocation,
   deleteLocation,
-  toggleLocationStatus,
   transferStock,
   toLocationTransferPayload,
 };

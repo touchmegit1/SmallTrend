@@ -3,6 +3,7 @@ package com.smalltrend.service.inventory.stock;
 import com.smalltrend.dto.inventory.StockAdjustRequest;
 import com.smalltrend.dto.inventory.StockImportRequest;
 import com.smalltrend.entity.*;
+import com.smalltrend.service.inventory.InventoryOutOfStockNotificationService;
 import com.smalltrend.service.inventory.InventoryStockService;
 import com.smalltrend.entity.enums.StockTransactionType;
 import com.smalltrend.repository.*;
@@ -37,6 +38,8 @@ class InventoryStockServiceTest {
     private ProductBatchRepository productBatchRepository;
     @Mock
     private LocationRepository locationRepository;
+    @Mock
+    private InventoryOutOfStockNotificationService outOfStockNotificationService;
 
     private InventoryStockService inventoryStockService;
 
@@ -54,8 +57,11 @@ class InventoryStockServiceTest {
                 productVariantRepository,
                 unitConversionRepository,
                 productBatchRepository,
-                locationRepository
+                locationRepository,
+                outOfStockNotificationService
         );
+        lenient().when(inventoryStockRepository.save(any(InventoryStock.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     // ────────────────────────────────────────────────────────────────────────

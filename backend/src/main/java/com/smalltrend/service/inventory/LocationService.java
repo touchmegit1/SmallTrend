@@ -64,7 +64,9 @@ public class LocationService {
     public FullLocationResponse createLocation(LocationRequest request) {
         String locationName = normalizeRequired(request.getLocationName(), "Tên vị trí không được để trống");
         String locationCode = normalizeRequired(request.getLocationCode(), "Mã vị trí không được để trống");
-        String locationType = normalizeRequired(request.getLocationType(), "Loại vị trí không được để trống");
+        String locationType = normalizeLocationType(
+                normalizeRequired(request.getLocationType(), "Loại vị trí không được để trống")
+        );
 
         if (locationRepository.existsByLocationCodeIgnoreCase(locationCode)) {
             throw conflict("Mã vị trí đã tồn tại");
@@ -89,16 +91,8 @@ public class LocationService {
         Location loc = getLocationOrThrow(id);
 
         String locationName = normalizeRequired(request.getLocationName(), "Tên vị trí không được để trống");
-        String locationCode = normalizeRequired(request.getLocationCode(), "Mã vị trí không được để trống");
-        String locationType = normalizeRequired(request.getLocationType(), "Loại vị trí không được để trống");
-
-        if (locationRepository.existsByLocationCodeIgnoreCaseAndIdNot(locationCode, id)) {
-            throw conflict("Mã vị trí đã tồn tại");
-        }
 
         loc.setName(locationName);
-        loc.setLocationCode(locationCode);
-        loc.setWarehouseType(locationType);
         loc.setAddress(normalizeNullable(request.getAddress()));
         loc.setCapacity(request.getCapacity() != null ? request.getCapacity() : 0);
         loc.setDescription(normalizeNullable(request.getDescription()));
@@ -197,26 +191,6 @@ public class LocationService {
                 .build());
     }
 
-    @Transactional
-    public FullLocationResponse toggleLocationStatus(Integer id) {
-        Location loc = getLocationOrThrow(id);
-
-        boolean isActive = "ACTIVE".equals(loc.getStatus());
-        if (isActive) {
-            int totalQty = inventoryStockRepository.findByLocationIdWithProduct(id).stream()
-                    .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0)
-                    .sum();
-            if (totalQty > 0) {
-                throw conflict("Vui lòng chuyển hết hàng hóa sang vị trí khác trước khi đóng vị trí này");
-            }
-            loc.setStatus("INACTIVE");
-        } else {
-            loc.setStatus("ACTIVE");
-        }
-
-        return toResponseWithStock(locationRepository.save(loc));
-    }
-
     private Location getLocationOrThrow(Integer id) {
         return locationRepository.findById(id).orElseThrow(() -> notFound(id));
     }
@@ -227,6 +201,10 @@ public class LocationService {
             throw invalidRequest(message);
         }
         return normalized;
+    }
+
+    private String normalizeLocationType(String value) {
+        return "SHELF".equalsIgnoreCase(value) ? "DISPLAY" : value;
     }
 
     private String normalizeNullable(String value) {
