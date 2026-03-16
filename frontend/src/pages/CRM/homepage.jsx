@@ -78,7 +78,6 @@ function DiscountBadge({ couponType, discountPercent, discountAmount }) {
 function ProductCard({ v, compact = false, highlight = false }) {
   const productName = getProductName(v);
   const currentPrice = v?.discountedPrice ?? v?.sellPrice;
-  const saving = getSaving(v);
 
   return (
     <div className={`overflow-hidden rounded-3xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${highlight ? "border-amber-300 ring-1 ring-amber-200" : "border-slate-200"}`}>
@@ -122,14 +121,6 @@ function ProductCard({ v, compact = false, highlight = false }) {
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-sm">
-          <span className="text-slate-600">
-            {saving > 0 ? `Tiết kiệm ${fmt(saving)}` : "Giá đang áp dụng tại cửa hàng"}
-          </span>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-            Xem tại quầy
-          </span>
-        </div>
       </div>
     </div>
   );
@@ -266,7 +257,7 @@ export default function EcommerceUI() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-950">SmallTrend</h1>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Local store POS showroom</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Localstore POS</p>
           </div>
           <Link
             to="/login"
