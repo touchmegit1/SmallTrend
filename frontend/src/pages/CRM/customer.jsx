@@ -289,6 +289,9 @@ export default function CustomerManagement() {
   const [editForm, setEditForm] = useState({ name: "", phone: "" });
   const [addForm, setAddForm] = useState({ name: "", phone: "" });
 
+  const normalizePhone = (value) => (value || '').replace(/\D/g, '').slice(0, 11);
+  const isValidPhone = (value) => /^0\d{9,10}$/.test(value || '');
+
   const filteredCustomers = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -359,13 +362,21 @@ export default function CustomerManagement() {
   };
 
   const saveAdd = async () => {
-    if (!addForm.name.trim() || !addForm.phone.trim()) {
+    const normalizedPhone = normalizePhone(addForm.phone);
+
+    if (!addForm.name.trim() || !normalizedPhone) {
       showToast('Vui lòng điền đầy đủ thông tin', 'warning');
       return;
     }
+
+    if (!isValidPhone(normalizedPhone)) {
+      showToast('Số điện thoại không hợp lệ. Vui lòng nhập 10-11 số và bắt đầu bằng 0.', 'warning');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      await customerService.createCustomer(addForm.name, addForm.phone);
+      await customerService.createCustomer(addForm.name.trim(), normalizedPhone);
       await refetch();
       setShowAddModal(false);
       setAddForm({ name: '', phone: '' });
@@ -376,6 +387,8 @@ export default function CustomerManagement() {
       setIsSubmitting(false);
     }
   };
+
+  const isAddPhoneInvalid = addForm.phone.length > 0 && !isValidPhone(addForm.phone);
 
   return (
     <div className="space-y-6">
@@ -651,12 +664,25 @@ export default function CustomerManagement() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Số điện thoại</label>
-                    <input type="tel" className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Nhập số điện thoại" value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} />
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      className={`w-full border rounded-lg p-2.5 text-sm focus:outline-none focus:ring-1 ${isAddPhoneInvalid
+                        ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500'
+                        : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                      placeholder="Nhập số điện thoại (10-11 số)"
+                      value={addForm.phone}
+                      onChange={(e) => setAddForm({ ...addForm, phone: normalizePhone(e.target.value) })}
+                    />
+                    {isAddPhoneInvalid && (
+                      <p className="text-xs text-red-500 mt-1.5">Số điện thoại phải có 10-11 số và bắt đầu bằng 0.</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-3 p-6 border-t border-slate-100">
                   <button className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2.5 rounded-lg transition-colors text-sm" onClick={() => { setShowAddModal(false); setAddForm({ name: "", phone: "" }); }} disabled={isSubmitting}>Hủy</button>
-                  <button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm disabled:bg-indigo-400" onClick={saveAdd} disabled={isSubmitting}>{isSubmitting ? "Đang thêm..." : "Thêm"}</button>
+                  <button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm disabled:bg-indigo-400" onClick={saveAdd} disabled={isSubmitting || isAddPhoneInvalid}>{isSubmitting ? "Đang thêm..." : "Thêm"}</button>
                 </div>
               </div>
             </div>
