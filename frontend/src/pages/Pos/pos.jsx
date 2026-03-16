@@ -8,6 +8,7 @@ import QRPendingWidget from "./QRPendingWidget";
 import Invoice from "./Invoice";
 import posService from "../../services/posService";
 import api from "../../config/axiosConfig";
+import ticketService from "../../services/ticketService";
 
 export default function POS() {
   const searchInputRef = useRef(null);
@@ -29,6 +30,8 @@ export default function POS() {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [suspendedOrderCount, setSuspendedOrderCount] = useState(0);
+  const [unresolvedTicketCount, setUnresolvedTicketCount] = useState(0);
   const [pendingQROrders, setPendingQROrders] = useState(() => {
     const saved = localStorage.getItem('pendingQROrders');
     return saved ? JSON.parse(saved) : [];
@@ -258,6 +261,55 @@ export default function POS() {
   useEffect(() => {
     localStorage.setItem('pendingQROrders', JSON.stringify(pendingQROrders));
   }, [pendingQROrders]);
+
+  useEffect(() => {
+    const refreshSuspendedOrders = () => {
+      const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      const waitingOrders = transactions.filter((t) => t.status === 'Chờ thanh toán');
+      setSuspendedOrderCount(waitingOrders.length);
+    };
+
+    refreshSuspendedOrders();
+    const intervalId = setInterval(refreshSuspendedOrders, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    const refreshUnresolvedTickets = async () => {
+      try {
+        const tickets = await ticketService.getAllTickets();
+        const unresolved = (Array.isArray(tickets) ? tickets : []).filter(
+          (t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS'
+        );
+        setUnresolvedTicketCount(unresolved.length);
+      } catch (error) {
+        console.error('Error fetching unresolved tickets:', error);
+      }
+    };
+
+    refreshUnresolvedTickets();
+    const intervalId = setInterval(refreshUnresolvedTickets, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const notifications = [
+    ...(suspendedOrderCount > 0
+      ? [{
+          id: 'suspended-orders',
+          title: 'Đơn treo chưa thanh toán',
+          description: `Hiện có ${suspendedOrderCount} đơn đang chờ thanh toán.`,
+          path: '/pos/history'
+        }]
+      : []),
+    ...(unresolvedTicketCount > 0
+      ? [{
+          id: 'unresolved-tickets',
+          title: 'Ticket chưa xử lý',
+          description: `Hiện có ${unresolvedTicketCount} ticket đang mở/chưa xử lý.`,
+          path: '/pos/complain'
+        }]
+      : [])
+  ];
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -738,6 +790,7 @@ export default function POS() {
           onKeyDown={handleKeyDown}
           selectedProductIndex={selectedProductIndex}
           setShowShortcuts={setShowShortcuts}
+          notifications={notifications}
         />
       </div>
 

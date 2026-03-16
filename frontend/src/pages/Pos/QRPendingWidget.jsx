@@ -72,15 +72,11 @@ export default function QRPendingWidget({ pendingOrder, onComplete, onCancel }) 
 
   return (
     <div style={{
-      position: "fixed",
-      bottom: "20px",
-      right: "20px",
       background: "white",
       borderRadius: "12px",
       boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
       border: status === "success" ? "2px solid #28a745" : "1px solid #ddd",
       overflow: "hidden",
-      zIndex: 1005,
       width: isMinimized ? "250px" : "320px",
       transition: "all 0.3s ease"
     }}>

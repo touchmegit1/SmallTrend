@@ -46,7 +46,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       children: [
         { label: "Giao diện bán hàng", path: "/pos" },
         { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Đơn hàng treo", path: "/pos/suspended" },
+        { label: "Báo cáo doanh số", path: "/pos/suspended" },
         { label: "Khiếu nại", path: "/pos/complain" },
       ],
     },
@@ -82,7 +82,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         { label: "Danh sách khách hàng", path: "/crm/customer" },
         { label: "Khuyến Mãi", path: "/crm/event" },
         { label: "Kho quà tặng", path: "/crm/loyalty" },
-        { label: "Khiếu nại", path: "/crm/complain" },
         { label: "Quản lý Quảng cáo", path: "/crm/ads" },
         { label: "Báo Cáo Thống Kê", path: "/crm/report" },
       ],
