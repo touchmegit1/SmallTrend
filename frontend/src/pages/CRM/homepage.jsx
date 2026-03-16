@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useActiveCampaigns, useDiscountedVariants, useAllVariants } from '../../hooks/useEventData';
 import { useVouchers } from '../../hooks/useVouchers';
+import { useFetchCategories } from '../../hooks/categories';
 import adService from '../../services/adService';
 
 const PLACEHOLDER = "https://placehold.co/640x480?text=SmallTrend";
@@ -18,12 +19,18 @@ const fmt = (value) => (value != null ? `${Number(value).toLocaleString("vi-VN")
 
 const getProductName = (variant) => variant?.name || variant?.productName || variant?.sku || "Sản phẩm";
 
+const getCategoryName = (variant) =>
+  variant?.categoryName || variant?.category_name || variant?.category?.name || "";
+
+const getCategoryId = (variant) =>
+  variant?.categoryId ?? variant?.category_id ?? variant?.category?.id;
+
 const getSearchText = (variant) => [
   variant?.name,
   variant?.productName,
   variant?.sku,
   variant?.brandName,
-  variant?.categoryName,
+  getCategoryName(variant),
 ].filter(Boolean).join(" ").toLowerCase();
 
 const getSaving = (variant) => {
@@ -106,7 +113,7 @@ function ProductCard({ v, compact = false, highlight = false }) {
         <div>
           <div className="mb-1 flex flex-wrap gap-2 text-xs text-slate-500">
             {v?.brandName && <span>{v.brandName}</span>}
-            {v?.categoryName && <span>• {v.categoryName}</span>}
+            {getCategoryName(v) && <span>• {getCategoryName(v)}</span>}
           </div>
           <h3 className={`font-semibold text-slate-900 ${compact ? "text-base" : "text-lg"}`}>
             {productName}
@@ -198,6 +205,7 @@ export default function EcommerceUI() {
   const { variants: discountedVariants, loading: loadingDiscounted } = useDiscountedVariants();
   const { variants: allVariants, loading: loadingAll } = useAllVariants();
   const { vouchers, loading: loadingVouchers } = useVouchers();
+  const { categories: fetchedCategories } = useFetchCategories();
   const loadingProducts = loadingDiscounted || loadingAll;
 
   const [sliderPage, setSliderPage] = useState(0);
@@ -210,9 +218,14 @@ export default function EcommerceUI() {
   const categoryOptions = useMemo(() => {
     const map = new Map();
 
+    fetchedCategories.forEach((category) => {
+      if (!category?.name || category?.id == null) return;
+      map.set(String(category.id), { key: String(category.id), label: category.name });
+    });
+
     allVariants.forEach((variant) => {
-      const categoryId = variant?.categoryId ?? variant?.category_id ?? variant?.category?.id;
-      const categoryName = variant?.categoryName ?? variant?.category?.name;
+      const categoryId = getCategoryId(variant);
+      const categoryName = getCategoryName(variant);
       if (!categoryName) return;
 
       const key = categoryId != null ? String(categoryId) : `name:${categoryName}`;
@@ -222,7 +235,7 @@ export default function EcommerceUI() {
     });
 
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "vi"));
-  }, [allVariants]);
+  }, [allVariants, fetchedCategories]);
 
   const sortedDiscounted = [...discountedVariants].sort((a, b) => getSaving(b) - getSaving(a));
   const totalPages = Math.max(1, Math.ceil(allVariants.length / PAGE_SIZE));
@@ -240,9 +253,20 @@ export default function EcommerceUI() {
   const catalogItems = allVariants.filter((v) => {
     const kw = catalogSearch.toLowerCase().trim();
     const matchesSearch = !kw || getSearchText(v).includes(kw);
-    const categoryId = v?.categoryId ?? v?.category_id ?? v?.category?.id;
-    const categoryName = v?.categoryName ?? v?.category?.name;
-    const categoryKey = categoryId != null ? String(categoryId) : (categoryName ? `name:${categoryName}` : null);
+    const categoryId = getCategoryId(v);
+    const categoryName = getCategoryName(v);
+    const matchedCategory =
+      categoryId == null && categoryName
+        ? fetchedCategories.find((c) => c?.name === categoryName)
+        : null;
+    const categoryKey =
+      categoryId != null
+        ? String(categoryId)
+        : matchedCategory?.id != null
+          ? String(matchedCategory.id)
+          : categoryName
+            ? `name:${categoryName}`
+            : null;
     const matchesCategory = categoryFilter === "all" || categoryKey === categoryFilter;
 
     if (!matchesSearch) return false;
