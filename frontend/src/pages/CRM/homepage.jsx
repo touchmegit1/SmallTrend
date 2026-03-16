@@ -382,7 +382,7 @@ export default function EcommerceUI() {
                 const items = allVariants.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
 
                 return (
-                  <div key={pageIndex} className="w-full shrink-0">
+                  <div key={pageIndex} className="w-full shrink-0 px-12 sm:px-14 lg:px-16">
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
                       {items.map((v) => (
                         <ProductCard key={v.sku} v={v} highlight={pageIndex === 0} />

@@ -128,8 +128,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         <div
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
           onClick={() => {
-            const isAdminRole = isAdmin;
-            navigate(isAdminRole ? "/dashboard" : "/pos");
+            navigate("/crm/homepage");
           }}
           title="Về trang chính"
         >
