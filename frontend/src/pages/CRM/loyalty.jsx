@@ -46,14 +46,33 @@ const GiftRewardManagement = () => {
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState({ open: false, type: null, payload: null });
 
+  const normalizePhone = (value) => (value || '').replace(/\D/g, '').slice(0, 11);
+  const isValidPhone = (value) => /^0\d{9,10}$/.test(value || '');
+
   const handleSearchCustomer = async (e) => {
     if (e) e.preventDefault();
-    if (!searchPhone) return;
+    const normalizedPhone = normalizePhone(searchPhone);
+    setSearchPhone(normalizedPhone);
+
+    if (!normalizedPhone) {
+      setCurrentCustomer(null);
+      setRedemptionHistory([]);
+      setSearchError('Vui lòng nhập số điện thoại.');
+      return;
+    }
+
+    if (!isValidPhone(normalizedPhone)) {
+      setCurrentCustomer(null);
+      setRedemptionHistory([]);
+      setSearchError('Số điện thoại không hợp lệ. Vui lòng nhập 10-11 số và bắt đầu bằng 0.');
+      return;
+    }
+
     try {
       setSearchingCustomer(true);
       setSearchError('');
-      let customer = findByPhone(searchPhone);
-      if (!customer) customer = await loyaltyService.getCustomerByPhone(searchPhone);
+      let customer = findByPhone(normalizedPhone);
+      if (!customer) customer = await loyaltyService.getCustomerByPhone(normalizedPhone);
       if (!customer) throw new Error('Không tìm thấy khách hàng!');
       setCurrentCustomer(customer);
       const history = await loyaltyService.getCustomerHistory(customer.id);
@@ -207,6 +226,7 @@ const GiftRewardManagement = () => {
       (gift.sku || '').toLowerCase().includes(keyword)
     );
   });
+  const canSearchCustomer = isValidPhone(searchPhone) && !searchingCustomer;
 
   return (
     <div className="space-y-6">
@@ -262,21 +282,31 @@ const GiftRewardManagement = () => {
             </h2>
             <form onSubmit={handleSearchCustomer} className="flex gap-2">
               <input
-                type="text"
-                placeholder="Nhập số điện thoại..."
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                placeholder="Nhập số điện thoại (10-11 số)"
                 value={searchPhone}
-                onChange={(e) => setSearchPhone(e.target.value)}
-                className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                onChange={(e) => {
+                  setSearchPhone(normalizePhone(e.target.value));
+                  if (searchError) setSearchError('');
+                }}
+                className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ${searchPhone && !isValidPhone(searchPhone)
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                  : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'}`}
                 required
               />
               <button
                 type="submit"
-                disabled={searchingCustomer}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60 transition-colors"
+                disabled={!canSearchCustomer}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
                 {searchingCustomer ? '...' : 'Tìm'}
               </button>
             </form>
+            {searchPhone && !isValidPhone(searchPhone) && (
+              <p className="text-red-500 text-xs mt-2">Số điện thoại phải có 10-11 số và bắt đầu bằng 0.</p>
+            )}
             {searchError && (
               <p className="text-red-500 text-xs mt-2 bg-red-50 px-3 py-2 rounded-lg">{searchError}</p>
             )}

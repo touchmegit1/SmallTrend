@@ -4,6 +4,7 @@ import {
     ChevronRight, X, Calendar, Search, BarChart2, Award
 } from 'lucide-react';
 import { useFetchCustomers } from '../../hooks/Customers';
+import { useCustomerTiers } from '../../hooks/useCustomerTiers';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useCoupons } from '../../hooks/useCoupons';
 import { useGifts } from '../../hooks/useGifts';
@@ -105,7 +106,7 @@ const MiniMetric = ({ label, value, sub, tone = 'indigo' }) => {
     );
 };
 
-const HorizontalBar = ({ label, value, percent, helper, color = 'indigo' }) => {
+const HorizontalBar = ({ label, labelTag, value, percent, helper, color = 'indigo' }) => {
     const colorClass = {
         indigo: 'bg-indigo-500',
         emerald: 'bg-emerald-500',
@@ -119,7 +120,14 @@ const HorizontalBar = ({ label, value, percent, helper, color = 'indigo' }) => {
         <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{label}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">{label}</p>
+                        {labelTag ? (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 flex-shrink-0">
+                                {labelTag}
+                            </span>
+                        ) : null}
+                    </div>
                     {helper && <p className="text-xs text-slate-400 truncate">{helper}</p>}
                 </div>
                 <span className="text-sm font-bold text-slate-700 whitespace-nowrap">{value}</span>
@@ -129,6 +137,54 @@ const HorizontalBar = ({ label, value, percent, helper, color = 'indigo' }) => {
                     className={`h-full rounded-full ${colorClass}`}
                     style={{ width: `${Math.max(0, Math.min(100, percent || 0))}%` }}
                 />
+            </div>
+        </div>
+    );
+};
+
+const VerticalBars = ({ rows, valueKey, labelKey, subLabelKey, color = 'indigo', formatter = (v) => v }) => {
+    const max = Math.max(...rows.map(row => Number(row[valueKey]) || 0), 1);
+    const colorClass = {
+        indigo: 'bg-indigo-500',
+        emerald: 'bg-emerald-500',
+        amber: 'bg-amber-500',
+        rose: 'bg-rose-500',
+        sky: 'bg-sky-500',
+        purple: 'bg-purple-500',
+    }[color] || 'bg-indigo-500';
+
+    if (!rows.length) {
+        return <Empty text="Chưa có dữ liệu để vẽ biểu đồ." />;
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="h-56 flex items-end gap-3">
+                {rows.map((row) => {
+                    const raw = Number(row[valueKey]) || 0;
+                    const pct = (raw / max) * 100;
+                    return (
+                        <div key={row[labelKey]} className="flex-1 min-w-0 flex flex-col items-center gap-2">
+                            <div className="text-[11px] font-semibold text-slate-600">{formatter(raw)}</div>
+                            <div className="w-full h-44 flex items-end">
+                                <div
+                                    className={`w-full rounded-t-lg ${colorClass} transition-all duration-300`}
+                                    style={{ height: `${Math.max(4, pct)}%` }}
+                                />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs font-semibold text-slate-700 truncate max-w-[100px]" title={row[labelKey]}>
+                                    {row[labelKey]}
+                                </p>
+                                {subLabelKey && row[subLabelKey] != null ? (
+                                    <p className="text-[11px] text-slate-400 truncate max-w-[100px]" title={row[subLabelKey]}>
+                                        {row[subLabelKey]}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -145,6 +201,7 @@ const statusColor = s => ({
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function CRMReport() {
     const { customers, loading: loadingCustomers } = useFetchCustomers();
+    const { tiers } = useCustomerTiers();
     const { campaigns, loading: loadingCampaigns } = useCampaigns();
     const { coupons, loading: loadingCoupons } = useCoupons();
     const { gifts, loading: loadingGifts } = useGifts();
@@ -153,6 +210,7 @@ export default function CRMReport() {
 
     const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'ads'
     const [search, setSearch] = useState('');
+    const [campaignChartMode, setCampaignChartMode] = useState('monthly');
 
     React.useEffect(() => {
         const loadAds = async () => {
@@ -218,18 +276,51 @@ export default function CRMReport() {
     const topCoupons = [...coupons]
         .sort((a, b) => (b.currentUsageCount || 0) - (a.currentUsageCount || 0))
         .slice(0, 5);
-    const maxCouponUsage = Math.max(...topCoupons.map(coupon => coupon.currentUsageCount || 0), 1);
-
     const topCustomersBySpend = [...customers]
         .sort((a, b) => (Number(b.spentAmount) || 0) - (Number(a.spentAmount) || 0))
         .slice(0, 5);
     const maxCustomerSpend = Math.max(...topCustomersBySpend.map(customer => Number(customer.spentAmount) || 0), 1);
 
-    const topCampaignBudgets = [...campaigns]
+    const eventBudgetComparison = [...campaigns]
         .filter(campaign => Number(campaign.budget) > 0)
         .sort((a, b) => (Number(b.budget) || 0) - (Number(a.budget) || 0))
-        .slice(0, 4);
-    const maxCampaignBudget = Math.max(...topCampaignBudgets.map(campaign => Number(campaign.budget) || 0), 1);
+        .slice(0, 6)
+        .map(campaign => ({
+            name: campaign.campaignName || campaign.campaignCode || `Event ${campaign.id}`,
+            code: campaign.campaignCode,
+            budget: Number(campaign.budget) || 0,
+        }));
+
+    const campaignsByMonthMap = campaigns.reduce((acc, campaign) => {
+        const dateStr = campaign.startDate || campaign.createdAt || campaign.created_at;
+        if (!dateStr) return acc;
+        const dt = new Date(dateStr);
+        if (Number.isNaN(dt.getTime())) return acc;
+
+        const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+        const monthLabel = dt.toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' });
+        const current = acc.get(key) || { monthKey: key, month: monthLabel, total: 0, active: 0 };
+        current.total += 1;
+        if (campaign.status === 'ACTIVE') current.active += 1;
+        acc.set(key, current);
+        return acc;
+    }, new Map());
+
+    const campaignsByMonth = Array.from(campaignsByMonthMap.values())
+        .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+        .slice(-6);
+
+    const campaignStatusRows = [
+        { label: 'ACTIVE', value: activeCampaigns },
+        { label: 'DRAFT', value: draftCampaigns },
+        { label: 'Khác', value: Math.max(0, campaigns.length - activeCampaigns - draftCampaigns) },
+    ];
+
+    const voucherUsageRows = topCoupons.map((coupon) => ({
+        label: coupon.couponName || coupon.couponCode,
+        code: coupon.couponCode,
+        value: coupon.currentUsageCount || 0,
+    }));
 
     const adSlotRows = ['LEFT', 'RIGHT'].map((slot) => {
         const slotAds = ads.filter(ad => ad.slot === slot);
@@ -243,6 +334,20 @@ export default function CRMReport() {
     });
 
     const fmt = v => v != null ? Number(v).toLocaleString('vi-VN') + 'đ' : '-';
+
+    const getCustomerTierLabel = (customer) => {
+        const directTier = customer?.tierName || customer?.tier || customer?.customerTierName || customer?.tierInfo?.tierName;
+        if (directTier) return String(directTier);
+
+        const spent = Number(customer?.spentAmount) || 0;
+        if (!Array.isArray(tiers) || tiers.length === 0) return 'Thường';
+
+        const matchedTier = [...tiers]
+            .sort((a, b) => (Number(b.minSpending) || 0) - (Number(a.minSpending) || 0))
+            .find((tier) => spent >= (Number(tier.minSpending) || 0));
+
+        return matchedTier?.tierName || 'Thường';
+    };
 
     return (
         <div className="space-y-6">
@@ -343,59 +448,6 @@ export default function CRMReport() {
             {/* DETAILED INSIGHTS */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <AnalyticsPanel
-                    title="Biểu đồ sử dụng voucher"
-                >
-                    {topCoupons.length === 0 ? <Empty text="Chưa có dữ liệu coupon để phân tích." /> : (
-                        <div className="space-y-4">
-                            {topCoupons.map((coupon) => (
-                                <HorizontalBar
-                                    key={coupon.id}
-                                    label={coupon.couponName || coupon.couponCode}
-                                    helper={`${coupon.couponCode} · ${coupon.status || 'UNKNOWN'}`}
-                                    value={`${coupon.currentUsageCount ?? 0} lượt`}
-                                    percent={((coupon.currentUsageCount || 0) / maxCouponUsage) * 100}
-                                    color="purple"
-                                />
-                            ))}
-
-                            <div className="mt-5 overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-slate-50 border-b border-slate-100">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Coupon</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Loại</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Sử dụng</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Đơn tối thiểu</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {topCoupons.map((coupon) => (
-                                            <tr key={coupon.id} className="border-b border-slate-50">
-                                                <td className="px-4 py-3">
-                                                    <p className="font-medium text-slate-800">{coupon.couponName}</p>
-                                                    <p className="text-xs text-slate-400 font-mono">{coupon.couponCode}</p>
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-600">
-                                                    {coupon.couponType === 'PERCENTAGE'
-                                                        ? `${coupon.discountPercent || 0}%`
-                                                        : fmt(coupon.discountAmount)}
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-semibold text-slate-700">
-                                                    {coupon.currentUsageCount ?? 0}
-                                                </td>
-                                                <td className="px-4 py-3 text-right text-slate-500">
-                                                    {fmt(coupon.minPurchaseAmount)}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-                </AnalyticsPanel>
-
-                <AnalyticsPanel
                     title="Top khách hàng theo chi tiêu"
                 >
                     {topCustomersBySpend.length === 0 ? <Empty text="Chưa có dữ liệu chi tiêu khách hàng." /> : (
@@ -404,6 +456,7 @@ export default function CRMReport() {
                                 <HorizontalBar
                                     key={customer.id}
                                     label={customer.name}
+                                    labelTag={getCustomerTierLabel(customer)}
                                     helper={`${customer.phone || 'Không có SĐT'} · ${(customer.loyaltyPoints || 0).toLocaleString()} pts`}
                                     value={fmt(customer.spentAmount)}
                                     percent={((Number(customer.spentAmount) || 0) / maxCustomerSpend) * 100}
@@ -413,33 +466,6 @@ export default function CRMReport() {
                         </div>
                     )}
                 </AnalyticsPanel>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <AnalyticsPanel
-                    title="Tình trạng campaign"
-                >
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                        <MiniMetric label="ACTIVE" value={activeCampaigns} tone="emerald" />
-                        <MiniMetric label="DRAFT" value={draftCampaigns} tone="slate" />
-                        <MiniMetric label="Khác" value={Math.max(0, campaigns.length - activeCampaigns - draftCampaigns)} tone="sky" />
-                    </div>
-                    {topCampaignBudgets.length === 0 ? <Empty text="Campaign chưa có ngân sách để so sánh." /> : (
-                        <div className="space-y-4">
-                            {topCampaignBudgets.map((campaign) => (
-                                <HorizontalBar
-                                    key={campaign.id}
-                                    label={campaign.campaignName}
-                                    helper={`${campaign.campaignCode} · ${campaign.status}`}
-                                    value={fmt(campaign.budget)}
-                                    percent={((Number(campaign.budget) || 0) / maxCampaignBudget) * 100}
-                                    color="sky"
-                                />
-                            ))}
-                        </div>
-                    )}
-                </AnalyticsPanel>
-
                 <AnalyticsPanel
                     title="Kho quà và quảng cáo"
                 >
@@ -461,6 +487,92 @@ export default function CRMReport() {
                             />
                         ))}
                     </div>
+                </AnalyticsPanel>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+                <AnalyticsPanel
+                    title="Biểu đồ tổng hợp CRM"
+                    subtitle={campaignChartMode === 'monthly'
+                        ? 'Số lượng campaign được tạo theo tháng (6 tháng gần nhất).'
+                        : campaignChartMode === 'budget'
+                            ? 'Top chiến dịch theo ngân sách khai báo.'
+                            : campaignChartMode === 'voucher'
+                                ? 'Top coupon theo số lượt sử dụng.'
+                                : 'Tương quan số lượng campaign theo trạng thái.'}
+                >
+                    <div className="inline-flex rounded-lg bg-slate-100 p-1 mb-4">
+                        <button
+                            type="button"
+                            onClick={() => setCampaignChartMode('monthly')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${campaignChartMode === 'monthly' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                        >
+                            Theo tháng
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCampaignChartMode('budget')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${campaignChartMode === 'budget' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                        >
+                            Theo ngân sách
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCampaignChartMode('voucher')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${campaignChartMode === 'voucher' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                        >
+                            Voucher
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCampaignChartMode('status')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${campaignChartMode === 'status' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                        >
+                            Trạng thái
+                        </button>
+                    </div>
+
+                    {campaignChartMode === 'monthly' ? (
+                        <>
+                            <VerticalBars
+                                rows={campaignsByMonth}
+                                valueKey="total"
+                                labelKey="month"
+                                subLabelKey="active"
+                                color="indigo"
+                                formatter={(v) => `${v} event`}
+                            />
+                            {campaignsByMonth.length > 0 ? (
+                                <p className="text-xs text-slate-400 mt-2">Dòng phụ dưới cột là số campaign ACTIVE trong tháng đó.</p>
+                            ) : null}
+                        </>
+                    ) : campaignChartMode === 'budget' ? (
+                        <VerticalBars
+                            rows={eventBudgetComparison}
+                            valueKey="budget"
+                            labelKey="name"
+                            subLabelKey="code"
+                            color="sky"
+                            formatter={(v) => fmt(v)}
+                        />
+                    ) : campaignChartMode === 'voucher' ? (
+                        <VerticalBars
+                            rows={voucherUsageRows}
+                            valueKey="value"
+                            labelKey="label"
+                            subLabelKey="code"
+                            color="purple"
+                            formatter={(v) => `${v} lượt`}
+                        />
+                    ) : (
+                        <VerticalBars
+                            rows={campaignStatusRows}
+                            valueKey="value"
+                            labelKey="label"
+                            color="emerald"
+                            formatter={(v) => `${v} campaign`}
+                        />
+                    )}
                 </AnalyticsPanel>
             </div>
 
