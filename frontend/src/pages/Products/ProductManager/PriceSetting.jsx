@@ -37,6 +37,30 @@ const PRICE_SYNC_NOTICE_KEY = "priceSyncNotice";
 const PRICE_SYNC_HISTORY_KEY = "priceSyncNotifications";
 const MAX_PRICE_SYNC_NOTIFICATIONS = 30;
 
+const formatSyncedItemLabel = (item) => {
+    const name = item?.productName || "Sản phẩm";
+    const sku = item?.sku || "-";
+    return `${name} (SKU: ${sku})`;
+};
+
+const buildSyncSummary = (syncedItems = [], syncedCount = 0) => {
+    if (!Array.isArray(syncedItems) || syncedItems.length === 0) {
+        return `Đồng bộ giá nhập cho ${syncedCount} sản phẩm`;
+    }
+
+    if (syncedCount === 1) {
+        return `Đồng bộ giá nhập: ${formatSyncedItemLabel(syncedItems[0])}`;
+    }
+
+    const first = formatSyncedItemLabel(syncedItems[0]);
+    return `Đồng bộ giá nhập cho ${syncedCount} sản phẩm (ví dụ: ${first})`;
+};
+
+const buildSyncSuccessMessage = (syncedItems = [], syncedCount = 0, orderNumber = null) => {
+    const summary = buildSyncSummary(syncedItems, syncedCount);
+    return orderNumber ? `${summary} từ phiếu nhập ${orderNumber}.` : `${summary}.`;
+};
+
 const PriceSetting = () => {
     // ─── Data ────────────────────────────────
     const [variants, setVariants] = useState([]);
@@ -99,7 +123,6 @@ const PriceSetting = () => {
                 : [];
             const orderNumber = notice?.orderNumber || notice?.poNumber || null;
             const createdAt = notice?.createdAt || new Date().toISOString();
-            const orderInfo = orderNumber ? ` (PO: ${orderNumber})` : "";
 
             const notificationEntry = {
                 id: Date.now() + Math.random(),
@@ -125,7 +148,7 @@ const PriceSetting = () => {
             setShowSyncedProducts(false);
             setNotifications(nextNotifications);
             setUnreadCount((prev) => prev + 1);
-            setSuccessMsg(`Giá nhập đã được đồng bộ từ phiếu nhập kho cho ${syncedCount} sản phẩm${orderInfo}.`);
+            setSuccessMsg(buildSyncSuccessMessage(syncedItems, syncedCount, orderNumber));
             setTimeout(() => setSuccessMsg(""), 6000);
             sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
         } catch (error) {
@@ -512,11 +535,12 @@ const PriceSetting = () => {
                                             <div className="max-h-[360px] overflow-auto divide-y divide-gray-100">
                                                 {notifications.map((notice) => {
                                                     const formattedTime = new Date(notice.createdAt || Date.now()).toLocaleString("vi-VN");
+                                                    const summary = buildSyncSummary(notice.syncedItems, Number(notice.syncedCount) || 0);
                                                     return (
                                                         <div key={notice.id} className="px-4 py-3 space-y-2">
                                                             <div className="flex items-start justify-between gap-3">
                                                                 <p className="text-sm font-medium text-gray-800">
-                                                                    Đồng bộ giá nhập cho {notice.syncedCount} sản phẩm
+                                                                    {summary}
                                                                     {notice.orderNumber ? ` (PO: ${notice.orderNumber})` : ""}
                                                                 </p>
                                                             </div>
