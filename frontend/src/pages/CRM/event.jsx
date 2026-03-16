@@ -42,6 +42,8 @@ const voucherTypeBadge = (type) => ({
   FIXED_AMOUNT: 'bg-blue-100 text-blue-700',
 }[type] || 'bg-gray-100 text-gray-600');
 
+const getHomepageBannerFlag = (campaign) => Boolean(campaign?.isHomepageBanner ?? campaign?.homepageBanner);
+
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const EventManagement = () => {
   const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' | 'vouchers'
@@ -53,7 +55,7 @@ const EventManagement = () => {
   const initialCampaignForm = {
     campaignCode: '', campaignName: '', campaignType: 'PROMOTION', description: '',
     bannerImageUrl: '', startDate: '', endDate: '', status: 'DRAFT',
-    budget: '', minPurchaseAmount: '', isPublic: true,
+    budget: '', minPurchaseAmount: '', isPublic: true, isHomepageBanner: false,
   };
   const [campaignForm, setCampaignForm] = useState(initialCampaignForm);
   const [savingCampaign, setSavingCampaign] = useState(false);
@@ -88,6 +90,7 @@ const EventManagement = () => {
         endDate: campaign.endDate || '',
         budget: campaign.budget ?? '',
         minPurchaseAmount: campaign.minPurchaseAmount ?? '',
+        isHomepageBanner: getHomepageBannerFlag(campaign),
       });
       setEditingCampaign(campaign.id);
     } else {
@@ -105,6 +108,7 @@ const EventManagement = () => {
         ...campaignForm,
         budget: campaignForm.budget ? Number(campaignForm.budget) : null,
         minPurchaseAmount: campaignForm.minPurchaseAmount ? Number(campaignForm.minPurchaseAmount) : null,
+        isHomepageBanner: Boolean(campaignForm.isHomepageBanner),
       };
       if (editingCampaign) {
         await eventService.updateCampaign(editingCampaign, payload);
@@ -313,7 +317,15 @@ const EventManagement = () => {
                           <img src={c.bannerImageUrl} alt={c.campaignName} className="w-10 h-10 object-cover rounded border flex-shrink-0" />
                         ) : null}
                         <div>
-                          <div className="font-semibold text-gray-800">{c.campaignName}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold text-gray-800">{c.campaignName}</div>
+                            {getHomepageBannerFlag(c) ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                <IconPin />
+                                Homepage
+                              </span>
+                            ) : null}
+                          </div>
                           <div className="text-xs text-gray-400 font-mono">{c.campaignCode}</div>
                         </div>
                       </div>
@@ -489,7 +501,14 @@ const EventManagement = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
                   <select value={campaignForm.status}
-                    onChange={e => setCampaignForm({ ...campaignForm, status: e.target.value })}
+                    onChange={e => {
+                      const nextStatus = e.target.value;
+                      setCampaignForm({
+                        ...campaignForm,
+                        status: nextStatus,
+                        isHomepageBanner: nextStatus === 'ACTIVE' ? campaignForm.isHomepageBanner : false,
+                      });
+                    }}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     <option value="DRAFT">DRAFT</option>
                     <option value="ACTIVE">ACTIVE</option>
@@ -565,6 +584,19 @@ const EventManagement = () => {
                     onChange={e => setCampaignForm({ ...campaignForm, isPublic: e.target.checked })}
                     className="w-4 h-4 text-indigo-600 rounded border-slate-300" />
                   <label htmlFor="isPublic" className="text-sm font-medium text-slate-700">Hiển thị công khai</label>
+                </div>
+                <div className="col-span-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isHomepageBanner"
+                    checked={Boolean(campaignForm.isHomepageBanner)}
+                    onChange={e => setCampaignForm({ ...campaignForm, isHomepageBanner: e.target.checked })}
+                    disabled={campaignForm.status !== 'ACTIVE'}
+                    className="w-4 h-4 text-indigo-600 rounded border-slate-300"
+                  />
+                  <label htmlFor="isHomepageBanner" className="text-sm font-medium text-slate-700">
+                    Dùng làm banner homepage (chỉ 1 sự kiện)
+                  </label>
                 </div>
               </div>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronLeft,
@@ -192,7 +192,9 @@ function SponsorCard({ ad, fallbackTitle }) {
 
 export default function EcommerceUI() {
   const { campaigns: activeCampaigns } = useActiveCampaigns();
-  const activeCampaign = activeCampaigns.length > 0 ? activeCampaigns[0] : null;
+  const activeCampaign = activeCampaigns.find(
+    (campaign) => Boolean(campaign?.isHomepageBanner ?? campaign?.homepageBanner)
+  ) || activeCampaigns[0] || null;
   const { variants: discountedVariants, loading: loadingDiscounted } = useDiscountedVariants();
   const { variants: allVariants, loading: loadingAll } = useAllVariants();
   const { vouchers, loading: loadingVouchers } = useVouchers();
@@ -202,8 +204,25 @@ export default function EcommerceUI() {
   const [showViewAll, setShowViewAll] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
   const [catalogSearch, setCatalogSearch] = useState("");
-  const [catalogFilter, setCatalogFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [sponsorAds, setSponsorAds] = useState([]);
+
+  const categoryOptions = useMemo(() => {
+    const map = new Map();
+
+    allVariants.forEach((variant) => {
+      const categoryId = variant?.categoryId ?? variant?.category_id ?? variant?.category?.id;
+      const categoryName = variant?.categoryName ?? variant?.category?.name;
+      if (!categoryName) return;
+
+      const key = categoryId != null ? String(categoryId) : `name:${categoryName}`;
+      if (!map.has(key)) {
+        map.set(key, { key, label: categoryName });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "vi"));
+  }, [allVariants]);
 
   const sortedDiscounted = [...discountedVariants].sort((a, b) => getSaving(b) - getSaving(a));
   const totalPages = Math.max(1, Math.ceil(allVariants.length / PAGE_SIZE));
@@ -220,13 +239,14 @@ export default function EcommerceUI() {
 
   const catalogItems = allVariants.filter((v) => {
     const kw = catalogSearch.toLowerCase().trim();
-    const currentPrice = Number(v?.discountedPrice ?? v?.sellPrice ?? 0);
     const matchesSearch = !kw || getSearchText(v).includes(kw);
+    const categoryId = v?.categoryId ?? v?.category_id ?? v?.category?.id;
+    const categoryName = v?.categoryName ?? v?.category?.name;
+    const categoryKey = categoryId != null ? String(categoryId) : (categoryName ? `name:${categoryName}` : null);
+    const matchesCategory = categoryFilter === "all" || categoryKey === categoryFilter;
 
     if (!matchesSearch) return false;
-    if (catalogFilter === "discount") return getSaving(v) > 0 || Boolean(v?.couponCode);
-    if (catalogFilter === "daily") return currentPrice > 0 && currentPrice <= 500000;
-    if (catalogFilter === "featured") return currentPrice >= 500000;
+    if (!matchesCategory) return false;
     return true;
   });
 
@@ -409,20 +429,18 @@ export default function EcommerceUI() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {[
-                { key: "all", label: "Tất cả" },
-                { key: "discount", label: "Đang ưu đãi" },
-                { key: "daily", label: "Giá phổ thông" },
-                { key: "featured", label: "Nhóm nổi bật" },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => setCatalogFilter(item.key)}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${catalogFilter === item.key ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                >
-                  {item.label}
-                </button>
-              ))}
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-950"
+              >
+                <option value="all">Tất cả danh mục</option>
+                {categoryOptions.map((category) => (
+                  <option key={category.key} value={category.key}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

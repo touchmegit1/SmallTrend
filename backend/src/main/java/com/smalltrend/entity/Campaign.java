@@ -81,6 +81,9 @@ public class Campaign {
     @Column
     private Boolean isPublic; // Hiển thị công khai
 
+    @Column(name = "is_homepage_banner", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private Boolean isHomepageBanner; // Chọn banner duy nhất cho homepage
+
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -110,6 +113,9 @@ public class Campaign {
         }
         if (totalOrders == null) {
             totalOrders = 0;
+        }
+        if (isHomepageBanner == null) {
+            isHomepageBanner = false;
         }
     }
 

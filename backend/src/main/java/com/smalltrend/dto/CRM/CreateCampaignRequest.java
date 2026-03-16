@@ -1,5 +1,7 @@
 package com.smalltrend.dto.CRM;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,4 +19,7 @@ public class CreateCampaignRequest {
     private BigDecimal budget;
     private BigDecimal minPurchaseAmount;
     private Boolean isPublic;
+    @JsonProperty("isHomepageBanner")
+    @JsonAlias({"homepageBanner"})
+    private Boolean isHomepageBanner;
 }

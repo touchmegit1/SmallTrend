@@ -6,6 +6,7 @@ import com.smalltrend.entity.Campaign;
 import com.smalltrend.repository.CampaignRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,11 +22,19 @@ public class CampaignService {
     }
 
     public List<CampaignResponse> getActiveCampaigns() {
-        return campaignRepository.findByStatusOrderByStartDateDesc("ACTIVE")
+        return campaignRepository.findByStatusOrderByIsHomepageBannerDescStartDateDesc("ACTIVE")
                 .stream().map(this::mapToResponse).toList();
     }
 
+    @Transactional
     public CampaignResponse createCampaign(CreateCampaignRequest request) {
+        validateHomepageBannerRequest(request.getStatus(), request.getIsHomepageBanner());
+
+        boolean isHomepageBanner = Boolean.TRUE.equals(request.getIsHomepageBanner());
+        if (isHomepageBanner) {
+            campaignRepository.clearHomepageBannerFlag(null);
+        }
+
         Campaign campaign = Campaign.builder()
                 .campaignCode(request.getCampaignCode())
                 .campaignName(request.getCampaignName())
@@ -38,13 +47,23 @@ public class CampaignService {
                 .budget(request.getBudget())
                 .minPurchaseAmount(request.getMinPurchaseAmount())
                 .isPublic(request.getIsPublic() != null ? request.getIsPublic() : false)
+                .isHomepageBanner(isHomepageBanner)
                 .build();
         return mapToResponse(campaignRepository.save(campaign));
     }
 
+    @Transactional
     public CampaignResponse updateCampaign(Integer id, CreateCampaignRequest request) {
         Campaign campaign = campaignRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Campaign not found: " + id));
+
+        validateHomepageBannerRequest(request.getStatus(), request.getIsHomepageBanner());
+
+        boolean isHomepageBanner = Boolean.TRUE.equals(request.getIsHomepageBanner());
+        if (isHomepageBanner) {
+            campaignRepository.clearHomepageBannerFlag(id);
+        }
+
         campaign.setCampaignName(request.getCampaignName());
         campaign.setCampaignType(request.getCampaignType());
         campaign.setDescription(request.getDescription());
@@ -55,6 +74,7 @@ public class CampaignService {
         campaign.setBudget(request.getBudget());
         campaign.setMinPurchaseAmount(request.getMinPurchaseAmount());
         campaign.setIsPublic(request.getIsPublic());
+        campaign.setIsHomepageBanner(isHomepageBanner);
         return mapToResponse(campaignRepository.save(campaign));
     }
 
@@ -78,6 +98,16 @@ public class CampaignService {
         r.setBudget(c.getBudget());
         r.setMinPurchaseAmount(c.getMinPurchaseAmount());
         r.setIsPublic(c.getIsPublic());
+        r.setIsHomepageBanner(Boolean.TRUE.equals(c.getIsHomepageBanner()));
         return r;
+    }
+
+    private void validateHomepageBannerRequest(String status, Boolean isHomepageBanner) {
+        if (Boolean.TRUE.equals(isHomepageBanner)) {
+            String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
+            if (!"ACTIVE".equals(normalizedStatus)) {
+                throw new RuntimeException("Chỉ chiến dịch ACTIVE mới được chọn làm banner homepage");
+            }
+        }
     }
 }
