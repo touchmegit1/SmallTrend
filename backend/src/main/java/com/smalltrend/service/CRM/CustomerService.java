@@ -28,9 +28,14 @@ public class CustomerService {
     }
 
     public CustomerResponse createCustomer(String name, String phone) {
+        String cleanPhone = phone != null ? phone.replaceAll("\\s+", "") : "";
+        if (customerRepository.findByPhoneIgnoreSpaces(cleanPhone).isPresent()) {
+            throw new RuntimeException("Số điện thoại này đã được sử dụng cho một khách hàng khác.");
+        }
+
         Customer customer = Customer.builder()
                 .name(name)
-                .phone(phone)
+                .phone(cleanPhone)
                 .build();
         Customer savedCustomer = customerRepository.save(customer);
         return mapToResponse(savedCustomer);
@@ -44,8 +49,18 @@ public class CustomerService {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
+        if (phone != null && !phone.equals(customer.getPhone())) {
+            String cleanPhone = phone.replaceAll("\\s+", "");
+            customerRepository.findByPhoneIgnoreSpaces(cleanPhone).ifPresent(existing -> {
+                if (!existing.getId().equals(id)) {
+                    throw new RuntimeException("Số điện thoại này đã được sử dụng cho một khách hàng khác.");
+                }
+            });
+            customer.setPhone(cleanPhone);
+        }
+
         customer.setName(name);
-        customer.setPhone(phone);
+
         if (loyaltyPoints != null) {
             customer.setLoyaltyPoints(loyaltyPoints);
         }

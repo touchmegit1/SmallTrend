@@ -1,11 +1,13 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Bell } from "lucide-react";
 
-export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice, onKeyDown, selectedProductIndex, setShowShortcuts }) {
+export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice, onKeyDown, selectedProductIndex, setShowShortcuts, notifications }) {
   const scrollContainerRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
 
   const checkScroll = () => {
@@ -30,8 +32,8 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
       setTimeout(checkScroll, 300);
     }
   };
-
-
+  const notifyItems = notifications || [];
+  const notifyCount = notifyItems.length;
 
   return (
     <div style={{
@@ -256,20 +258,6 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
 
       <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
         <button
-          onClick={() => setShowQRScanner(true)}
-          style={{
-            padding: "6px 12px",
-            background: "rgba(255,255,255,0.2)",
-            color: "white",
-            border: "none",
-            borderRadius: "15px",
-            cursor: "pointer",
-            fontSize: "12px"
-          }}
-        >
-          Quét QR
-        </button>
-        <button
           onClick={onPrintInvoice}
           style={{
             padding: "6px 12px",
@@ -283,9 +271,117 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
         >
           In hóa đơn
         </button>
+
         <div style={{ position: "relative" }}>
           <button
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              setShowSettings(false);
+            }}
+            style={{
+              width: "32px",
+              height: "32px",
+              background: showNotifications ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.2)",
+              color: "white",
+              border: "none",
+              borderRadius: "50%",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative"
+            }}
+            title="Thông báo"
+          >
+            <Bell size={16} />
+            {notifyCount > 0 && (
+              <span style={{
+                position: "absolute",
+                top: "-4px",
+                right: "-4px",
+                minWidth: "16px",
+                height: "16px",
+                borderRadius: "8px",
+                background: "#dc3545",
+                color: "white",
+                fontSize: "10px",
+                lineHeight: "16px",
+                textAlign: "center",
+                padding: "0 4px",
+                fontWeight: "bold"
+              }}>
+                {notifyCount > 9 ? "9+" : notifyCount}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <div style={{
+              position: "absolute",
+              top: "100%",
+              right: 0,
+              marginTop: "8px",
+              background: "white",
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              overflow: "hidden",
+              zIndex: 1001,
+              width: "320px",
+              maxHeight: "320px",
+              overflowY: "auto"
+            }}>
+              <div style={{
+                padding: "10px 12px",
+                borderBottom: "1px solid #eee",
+                fontSize: "13px",
+                fontWeight: "600",
+                color: "#333"
+              }}>
+                Thông báo hệ thống
+              </div>
+              {notifyItems.length === 0 ? (
+                <div style={{ padding: "12px", fontSize: "12px", color: "#6c757d" }}>
+                  Không có thông báo mới
+                </div>
+              ) : (
+                notifyItems.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      if (item.path) {
+                        navigate(item.path);
+                        setShowNotifications(false);
+                      }
+                    }}
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: "1px solid #f5f5f5",
+                      fontSize: "12px",
+                      color: "#333",
+                      cursor: item.path ? "pointer" : "default"
+                    }}
+                    onMouseEnter={(e) => {
+                      if (item.path) e.currentTarget.style.background = "#f8f9fa";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <div style={{ fontWeight: "600", marginBottom: "3px" }}>{item.title}</div>
+                    <div style={{ color: "#6c757d" }}>{item.description}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => {
+              setShowSettings(!showSettings);
+              setShowNotifications(false);
+            }}
             style={{
               padding: "6px 12px",
               background: showSettings ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.2)",

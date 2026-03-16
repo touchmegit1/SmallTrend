@@ -123,6 +123,51 @@ class PurchaseOrderServiceTest {
     }
 
     @Test
+    void getOrderById_shouldHandleNullVariantIdInItem() {
+        PurchaseOrderItem item = PurchaseOrderItem.builder()
+                .id(10)
+                .variant(ProductVariant.builder().id(null).product(product).unit(unit).build())
+                .quantity(1)
+                .unitCost(BigDecimal.ONE)
+                .purchaseOrder(order)
+                .build();
+        order.setItems(new ArrayList<>(List.of(item)));
+
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+
+        PurchaseOrderResponse response = purchaseOrderService.getOrderById(1);
+
+        assertNotNull(response);
+        assertEquals(1, response.getItems().size());
+        assertNull(response.getItems().get(0).getVariantId());
+        assertEquals(product.getId().intValue(), response.getItems().get(0).getProductId());
+    }
+
+    @Test
+    void getOrderById_shouldHandleNullCandidateVariantInProductList() {
+        ProductVariant requestedVariant = ProductVariant.builder().id(10).product(product).unit(unit).build();
+        ProductVariant brokenCandidate = ProductVariant.builder().id(null).product(product).unit(unit).build();
+        product.setVariants(new ArrayList<>(List.of(requestedVariant, brokenCandidate)));
+
+        PurchaseOrderItem item = PurchaseOrderItem.builder()
+                .id(11)
+                .variant(requestedVariant)
+                .quantity(2)
+                .unitCost(BigDecimal.ONE)
+                .purchaseOrder(order)
+                .build();
+        order.setItems(new ArrayList<>(List.of(item)));
+
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+
+        PurchaseOrderResponse response = purchaseOrderService.getOrderById(1);
+
+        assertNotNull(response);
+        assertEquals(1, response.getItems().size());
+        assertEquals(requestedVariant.getId().intValue(), response.getItems().get(0).getVariantId());
+    }
+
+    @Test
     void generateNextPOCode_shouldHandleEmptyAndExisting() {
         when(purchaseOrderRepository.findAll()).thenReturn(new ArrayList<>());
         assertTrue(purchaseOrderService.generateNextPOCode().contains("PO-"));

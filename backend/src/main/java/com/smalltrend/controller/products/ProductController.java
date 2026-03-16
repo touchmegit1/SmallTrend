@@ -48,28 +48,28 @@ public class ProductController {
 
     // Lấy thông tin chi tiết một sản phẩm theo ID
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponse> getById(@PathVariable Integer id) {
+    public ResponseEntity<ProductResponse> getById(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(productService.getById(id));
     }
 
     // Lấy danh sách các biến thể (variants) của một sản phẩm
     @GetMapping("/{id}/variants")
-    public ResponseEntity<List<ProductVariantRespone>> getVariantsByProductId(@PathVariable Integer id) {
+    public ResponseEntity<List<ProductVariantRespone>> getVariantsByProductId(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(productVariantService.getVariantsByProductId(id));
     }
 
     // Lấy danh sách tất cả các biến thể
     @GetMapping("/variants")
     public ResponseEntity<List<ProductVariantRespone>> getAllVariants(
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String barcode) {
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "barcode", required = false) String barcode) {
         return ResponseEntity.ok(productVariantService.getAllProductVariants(search, barcode));
     }
 
     // Tạo mới một biến thể cho sản phẩm
     @PostMapping("/{id}/variants")
     public ResponseEntity<ProductVariantRespone> createVariant(
-            @PathVariable Integer id,
+            @PathVariable("id") Integer id,
             @RequestBody CreateVariantRequest request) {
         return ResponseEntity.ok(productVariantService.createVariant(id, request));
     }
@@ -77,21 +77,21 @@ public class ProductController {
     // Cập nhật thông tin của một biến thể
     @PutMapping("/variants/{variantId}")
     public ResponseEntity<ProductVariantRespone> updateVariant(
-            @PathVariable Integer variantId,
+            @PathVariable("variantId") Integer variantId,
             @RequestBody CreateVariantRequest request) {
         return ResponseEntity.ok(productVariantService.updateVariant(variantId, request));
     }
 
     // Bật/Tắt trạng thái hoạt động (active/inactive) của một biến thể
     @PutMapping("/variants/{variantId}/toggle-status")
-    public ResponseEntity<String> toggleVariantStatus(@PathVariable Integer variantId) {
+    public ResponseEntity<String> toggleVariantStatus(@PathVariable("variantId") Integer variantId) {
         productVariantService.toggleVariantStatus(variantId);
         return ResponseEntity.ok("Đã thay đổi trạng thái biến thể");
     }
 
     // Xóa một biến thể (chỉ trong 2 phút đầu sau khi tạo)
     @DeleteMapping("/variants/{variantId}")
-    public ResponseEntity<String> deleteVariant(@PathVariable Integer variantId) {
+    public ResponseEntity<String> deleteVariant(@PathVariable("variantId") Integer variantId) {
         productVariantService.deleteVariant(variantId);
         return ResponseEntity.ok("Đã xóa biến thể");
     }
@@ -99,7 +99,7 @@ public class ProductController {
     // Tự động tạo mã SKU dựa trên thông tin sản phẩm
     @GetMapping("/{id}/generate-sku")
     public ResponseEntity<java.util.Map<String, String>> generateSku(
-            @PathVariable Integer id,
+            @PathVariable("id") Integer id,
             @RequestParam(required = false) Integer unitId) {
         String sku = productVariantService.generateSku(id, unitId);
         return ResponseEntity.ok(java.util.Map.of("sku", sku));
@@ -107,21 +107,21 @@ public class ProductController {
 
     // Tự động tạo mã Barcode nội bộ (dành cho sản phẩm đóng gói tại cửa hàng)
     @GetMapping("/{id}/generate-barcode")
-    public ResponseEntity<java.util.Map<String, String>> generateBarcode(@PathVariable Integer id) {
+    public ResponseEntity<java.util.Map<String, String>> generateBarcode(@PathVariable("id") Integer id) {
         String barcode = productVariantService.generateInternalBarcode(id);
         return ResponseEntity.ok(java.util.Map.of("barcode", barcode));
     }
 
     // Lấy danh sách quy đổi đơn vị của biến thể
     @GetMapping("/variants/{variantId}/conversions")
-    public ResponseEntity<List<UnitConversionResponse>> getConversionsByVariantId(@PathVariable Integer variantId) {
+    public ResponseEntity<List<UnitConversionResponse>> getConversionsByVariantId(@PathVariable("variantId") Integer variantId) {
         return ResponseEntity.ok(unitConversionService.getConversionsByVariantId(variantId));
     }
 
     // Thêm quy đổi đơn vị mới
     @PostMapping("/variants/{variantId}/conversions")
     public ResponseEntity<UnitConversionResponse> addConversion(
-            @PathVariable Integer variantId,
+            @PathVariable("variantId") Integer variantId,
             @RequestBody UnitConversionRequest request) {
         return ResponseEntity.ok(unitConversionService.addConversion(variantId, request));
     }
@@ -129,14 +129,14 @@ public class ProductController {
     // Cập nhật quy đổi đơn vị
     @PutMapping("/conversions/{conversionId}")
     public ResponseEntity<UnitConversionResponse> updateConversion(
-            @PathVariable Integer conversionId,
+            @PathVariable("conversionId") Integer conversionId,
             @RequestBody UnitConversionRequest request) {
         return ResponseEntity.ok(unitConversionService.updateConversion(conversionId, request));
     }
 
     // Xóa quy đổi đơn vị
     @DeleteMapping("/conversions/{conversionId}")
-    public ResponseEntity<String> deleteConversion(@PathVariable Integer conversionId) {
+    public ResponseEntity<String> deleteConversion(@PathVariable("conversionId") Integer conversionId) {
         unitConversionService.deleteConversion(conversionId);
         return ResponseEntity.ok("Đã xóa quy đổi đơn vị");
     }
@@ -156,14 +156,14 @@ public class ProductController {
     // Cập nhật đơn vị tính
     @PutMapping("/units/{id}")
     public ResponseEntity<UnitResponse> updateUnit(
-            @PathVariable Integer id,
+            @PathVariable("id") Integer id,
             @RequestBody UnitRequest request) {
         return ResponseEntity.ok(unitService.updateUnit(id, request));
     }
 
     // Xóa đơn vị tính
     @DeleteMapping("/units/{id}")
-    public ResponseEntity<String> deleteUnit(@PathVariable Integer id) {
+    public ResponseEntity<String> deleteUnit(@PathVariable("id") Integer id) {
         unitService.deleteUnit(id);
         return ResponseEntity.ok("Đã xóa đơn vị tính");
     }
@@ -172,20 +172,20 @@ public class ProductController {
     // Tạo giá mới cho variant (giá cũ chuyển INACTIVE)
     @PostMapping("/variants/{variantId}/prices")
     public ResponseEntity<VariantPriceResponse> createVariantPrice(
-            @PathVariable Integer variantId,
+            @PathVariable("variantId") Integer variantId,
             @RequestBody VariantPriceRequest request) {
         return ResponseEntity.ok(variantPriceService.createPrice(variantId, request));
     }
 
     // Lấy lịch sử giá của variant
     @GetMapping("/variants/{variantId}/prices")
-    public ResponseEntity<List<VariantPriceResponse>> getVariantPriceHistory(@PathVariable Integer variantId) {
+    public ResponseEntity<List<VariantPriceResponse>> getVariantPriceHistory(@PathVariable("variantId") Integer variantId) {
         return ResponseEntity.ok(variantPriceService.getPriceHistory(variantId));
     }
 
     // Lấy giá ACTIVE hiện tại của variant
     @GetMapping("/variants/{variantId}/prices/active")
-    public ResponseEntity<VariantPriceResponse> getActiveVariantPrice(@PathVariable Integer variantId) {
+    public ResponseEntity<VariantPriceResponse> getActiveVariantPrice(@PathVariable("variantId") Integer variantId) {
         VariantPriceResponse price = variantPriceService.getActivePrice(variantId);
         if (price == null) {
             return ResponseEntity.noContent().build();
@@ -196,7 +196,7 @@ public class ProductController {
     // Cập nhật ngày hiệu lực cho giá ACTIVE hiện tại
     @PutMapping("/variants/{variantId}/prices/active/date")
     public ResponseEntity<VariantPriceResponse> updateActivePriceDate(
-            @PathVariable Integer variantId,
+            @PathVariable("variantId") Integer variantId,
             @RequestBody java.util.Map<String, String> request) {
         String dateStr = request.get("effectiveDate");
         if (dateStr == null) {
@@ -209,7 +209,7 @@ public class ProductController {
     // Cập nhật ngày hết hiệu lực cho giá ACTIVE hiện tại
     @PutMapping("/variants/{variantId}/prices/active/expiry")
     public ResponseEntity<VariantPriceResponse> updateActivePriceExpiry(
-            @PathVariable Integer variantId,
+            @PathVariable("variantId") Integer variantId,
             @RequestBody java.util.Map<String, String> request) {
         String dateStr = request.get("expiryDate");
         java.time.LocalDate newDate = (dateStr != null && !dateStr.isBlank())
@@ -220,14 +220,14 @@ public class ProductController {
 
     // Toggle trạng thái active/inactive của một bản ghi giá
     @PutMapping("/prices/{priceId}/toggle-status")
-    public ResponseEntity<VariantPriceResponse> togglePriceStatus(@PathVariable Integer priceId) {
+    public ResponseEntity<VariantPriceResponse> togglePriceStatus(@PathVariable("priceId") Integer priceId) {
         return ResponseEntity.ok(variantPriceService.togglePriceStatus(priceId));
     }
 
     // Lấy danh sách giá sắp hết hiệu lực theo số ngày cảnh báo
     @GetMapping("/price-expiry-alerts")
     public ResponseEntity<List<PriceExpiryAlertResponse>> getPriceExpiryAlerts(
-            @RequestParam(defaultValue = "1") int days) {
+            @RequestParam(name = "days", defaultValue = "1") int days) {
         return ResponseEntity.ok(variantPriceService.getPriceExpiryAlerts(days));
     }
 
@@ -252,20 +252,20 @@ public class ProductController {
 
     // Cập nhật thông tin của một sản phẩm hiện có
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponse> update(@PathVariable Integer id, @RequestBody CreateProductRequest request) {
+    public ResponseEntity<ProductResponse> update(@PathVariable("id") Integer id, @RequestBody CreateProductRequest request) {
         return ResponseEntity.ok(productService.update(id, request));
     }
 
     // Bật/Tắt trạng thái hoạt động của một sản phẩm
     @PutMapping("/{id}/toggle-status")
-    public ResponseEntity<String> toggleStatus(@PathVariable Integer id) {
+    public ResponseEntity<String> toggleStatus(@PathVariable("id") Integer id) {
         productService.toggleStatus(id);
         return ResponseEntity.ok("Đã thay đổi trạng thái sản phẩm");
     }
 
     // Xóa một sản phẩm theo ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Integer id) {
+    public ResponseEntity<String> delete(@PathVariable("id") Integer id) {
         productService.delete(id);
         return ResponseEntity.ok("Đã xóa sản phẩm");
     }

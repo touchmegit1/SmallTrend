@@ -20,6 +20,7 @@ public class Customer {
 
     private String name;
 
+    @Column(unique = true, length = 15)
     private String phone;
 
     @Builder.Default

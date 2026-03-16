@@ -300,13 +300,9 @@ export default function CustomerManagement() {
   // ─── Tính hạng từ spentAmount ──────────────────────
   const getTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
-    let matched = null;
-    for (const tier of tiers) {
-      if (spentAmount >= Number(tier.minSpending)) {
-        matched = tier;
-      }
-    }
-    return matched;
+    return [...tiers]
+      .sort((a, b) => Number(b.minSpending) - Number(a.minSpending))
+      .find(tier => spentAmount >= Number(tier.minSpending)) || null;
   };
 
   // ─── Báo cáo phân bổ tier ──────────────────────────
