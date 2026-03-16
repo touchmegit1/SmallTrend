@@ -3,6 +3,7 @@ import CustomerSearch from "./CustomerSearch";
 
 import api from "../../config/axiosConfig";
 import customerTierService from "../../services/customerTierService";
+import customerService from "../../services/customerService";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
@@ -200,7 +201,30 @@ const getCustomerTier = (spentAmount, tiers) => {
     .find(tier => spentAmount >= Number(tier.minSpending)) || null;
 };
 
-export default function PaymentModal({ cart, customer, onClose, onComplete, shortcuts }) {
+const buildUpdatedCustomerAfterPayment = (selectedCustomer, finalTotal, tiers, usePoints, pointsDiscount) => {
+  if (!selectedCustomer || !selectedCustomer.id) return selectedCustomer;
+
+  const currentSpent = Math.max(0, Math.round(Number(selectedCustomer.spentAmount) || 0));
+  const paidAmount = Math.max(0, Math.round(Number(finalTotal) || 0));
+  const newSpent = currentSpent + paidAmount;
+
+  const customerTier = getCustomerTier(currentSpent, tiers);
+  const multiplier = Number(customerTier?.pointsMultiplier) || 1;
+
+  const basePoints = paidAmount / 10000;
+  const earnedPoints = Math.floor(basePoints * multiplier);
+  const pointsUsed = usePoints ? Math.floor(Number(pointsDiscount || 0) / 100) : 0;
+  const currentPoints = Math.max(0, Math.floor(Number(selectedCustomer.loyaltyPoints) || 0));
+  const newPoints = Math.max(0, currentPoints - pointsUsed + earnedPoints);
+
+  return {
+    ...selectedCustomer,
+    loyaltyPoints: newPoints,
+    spentAmount: newSpent,
+  };
+};
+
+export default function PaymentModal({ cart, customer, onClose, onComplete, onStartQRPayment, shortcuts }) {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
   const [usePoints, setUsePoints] = useState(false);
@@ -251,10 +275,10 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
   useEffect(() => {
     const fetchTiers = async () => {
       try {
-        const data = await customerTierService.getAllTiers();
-        setTiers(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Error fetching tiers in PaymentModal:', err);
+        const response = await customerTierService.getAllTiers();
+        setTiers(Array.isArray(response) ? response : []);
+      } catch (error) {
+        console.error("Error fetching tiers:", error);
       }
     };
     fetchTiers();
@@ -401,19 +425,19 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
 
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
-    const num = parseInt(cashAmount.replace(/[^0-9]/g, ''));
-    if (isNaN(num)) return [];
 
-    // Nếu người dùng nhập số có 1-3 chữ số, tự động gợi ý thêm các số lớn hơn (x1.000, x10.000, vv...)
-    if (cashAmount.length <= 3) {
-      return [
-        num * 1000,
-        num * 10000,
-        num * 100000
-      ];
-    }
+    const cleanCashAmount = cashAmount.replace(/[^0-9]/g, '');
+    const num = parseInt(cleanCashAmount, 10);
+    if (isNaN(num) || num <= 0) return [];
 
-    return [];
+    const digitCount = cleanCashAmount.length;
+    const startPower = Math.max(0, 4 - digitCount);
+
+    return [
+      num * Math.pow(10, startPower),
+      num * Math.pow(10, startPower + 1),
+      num * Math.pow(10, startPower + 2)
+    ];
   };
 
   const completePaymentProcess = async (method, receivedAmt, changeAmt) => {
@@ -421,36 +445,29 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
 
     // Cập nhật điểm trung thành trong bảng customers
     if (selectedCustomer && selectedCustomer.id) {
+      let latestCustomer = selectedCustomer;
+
       try {
-        const currentSpent = selectedCustomer.spentAmount || 0;
-        const newSpent = currentSpent + finalTotal;
+        latestCustomer = await customerService.getCustomerById(selectedCustomer.id);
+      } catch (error) {
+        console.error('Error fetching latest customer before payment:', error);
+      }
 
-        // Tìm hạng hiện tại của khách (dựa trên spentAmount TRƯỚC giao dịch này)
-        const customerTier = getCustomerTier(currentSpent, tiers);
-        const multiplier = customerTier?.pointsMultiplier || 1;
+      customerToUpdate = buildUpdatedCustomerAfterPayment(
+        latestCustomer,
+        finalTotal,
+        tiers,
+        usePoints,
+        pointsDiscount,
+      );
 
-        // Tích điểm: (finalTotal / 10,000) * hệ số nhân của hạng
-        const basePoints = finalTotal / 10000;
-        const earnedPoints = Math.floor(basePoints * multiplier);
-        const pointsUsed = usePoints ? Math.floor(pointsDiscount / 100) : 0; // Điểm đã dùng
-        const currentPoints = selectedCustomer.loyaltyPoints || 0;
-
-        // Cộng dồn: điểm hiện tại - điểm dùng + điểm mới kiếm
-        const newPoints = currentPoints - pointsUsed + earnedPoints;
-
-        // Lưu vào cột loyalty_points và spent_amount trong bảng customers
+      try {
         await api.put(`/crm/customers/${selectedCustomer.id}`, {
-          name: selectedCustomer.name,
-          phone: selectedCustomer.phone,
-          loyaltyPoints: newPoints,
-          spentAmount: newSpent,
+          name: customerToUpdate.name,
+          phone: customerToUpdate.phone,
+          loyaltyPoints: customerToUpdate.loyaltyPoints,
+          spentAmount: customerToUpdate.spentAmount,
         });
-
-        customerToUpdate = {
-          ...selectedCustomer,
-          loyaltyPoints: newPoints,
-          spentAmount: newSpent,
-        };
       } catch (error) {
         console.error('Error updating customer loyalty points:', error);
         // Không hiện alert, chỉ log lỗi và tiếp tục thanh toán
@@ -515,7 +532,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
     }
   };
 
-  const initiatePayment = () => {
+  const initiatePayment = async () => {
     if (finalTotal === 0) {
       // Đơn 0đ: Hoàn tất ngay không cần nhập tiền
       completePaymentProcess("cash", 0, 0);
@@ -528,8 +545,42 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, shor
       }
       completePaymentProcess("cash", parseFloat(cashAmount), change);
     } else {
-      // Chuyển khoản -> mở QR Modal
-      setShowQRModal(true);
+      // Chuyển khoản
+      if (onStartQRPayment) {
+         let latestCustomer = selectedCustomer;
+
+         if (selectedCustomer?.id) {
+           try {
+             latestCustomer = await customerService.getCustomerById(selectedCustomer.id);
+           } catch (error) {
+             console.error('Error fetching latest customer before QR payment:', error);
+           }
+         }
+
+         const customerToUpdate = buildUpdatedCustomerAfterPayment(
+           latestCustomer,
+           finalTotal,
+           tiers,
+           usePoints,
+           pointsDiscount,
+         );
+
+         const orderData = {
+            cart,
+            customer: customerToUpdate,
+            total: finalTotal,
+            customerMoney: finalTotal,
+            change: 0,
+            pointsDiscount,
+            discount: discountNum + voucherDiscountAmt,
+            notes,
+            paymentMethod: "Chuyển khoản"
+         };
+         const paymentCode = "DH" + Date.now().toString().slice(-6);
+         onStartQRPayment(orderData, finalTotal, paymentCode);
+      } else {
+         setShowQRModal(true);
+      }
     }
   };
 

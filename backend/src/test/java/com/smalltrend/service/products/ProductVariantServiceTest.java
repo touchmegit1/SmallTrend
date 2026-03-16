@@ -11,6 +11,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
+import com.smalltrend.validation.product.ProductVariantValidator;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ProductVariantServiceTest {
 
     @Mock
@@ -42,6 +47,8 @@ class ProductVariantServiceTest {
     private UnitConversionRepository unitConversionRepository;
     @Mock
     private VariantPriceRepository variantPriceRepository;
+    @Mock
+    private ProductVariantValidator productVariantValidator;
 
     @InjectMocks
     private ProductVariantService productVariantService;
@@ -124,8 +131,30 @@ class ProductVariantServiceTest {
     @Test
     void getAllProductVariants_WithSearch() {
         when(productVariantRepository.findAll()).thenReturn(List.of(testVariant));
+        when(inventoryStockRepository.findByVariantId(1)).thenReturn(Collections.emptyList());
+        when(productBatchRepository.findFirstByVariantIdOrderByIdDesc(1)).thenReturn(Optional.empty());
+        when(unitConversionRepository.findByVariantId(1)).thenReturn(Collections.emptyList());
+        when(variantPriceRepository.findFirstByVariantIdAndStatus(anyInt(), any())).thenReturn(Optional.empty());
+
         List<ProductVariantRespone> result = productVariantService.getAllProductVariants("SKU-123", null);
         assertEquals(1, result.size());
+    }
+
+    @Test
+    void getAllProductVariants_WithSearchAndNullProduct_DoesNotThrow() {
+        testVariant.setProduct(null);
+        when(productVariantRepository.findAll()).thenReturn(List.of(testVariant));
+        when(inventoryStockRepository.findByVariantId(1)).thenReturn(Collections.emptyList());
+        when(productBatchRepository.findFirstByVariantIdOrderByIdDesc(1)).thenReturn(Optional.empty());
+        when(unitConversionRepository.findByVariantId(1)).thenReturn(Collections.emptyList());
+        when(variantPriceRepository.findFirstByVariantIdAndStatus(anyInt(), any())).thenReturn(Optional.empty());
+
+        List<ProductVariantRespone> result = productVariantService.getAllProductVariants("SKU-123", null);
+
+        assertEquals(1, result.size());
+        assertNull(result.get(0).getCategoryName());
+        assertNull(result.get(0).getBrandName());
+        assertNull(result.get(0).getTaxRate());
     }
 
     @Test

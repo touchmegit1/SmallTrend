@@ -224,10 +224,16 @@ function TransactionHistory() {
     if (!timeStr) return 0;
     const parts = timeStr.split(/[\s,]+/);
     if (parts.length >= 2) {
-      const dateParts = parts[0].split('/');
+      let dateString = parts[0];
+      let timeString = parts[1];
+      if (parts[1] && parts[1].includes('/')) {
+        dateString = parts[1];
+        timeString = parts[0];
+      }
+      const dateParts = dateString.split('/');
       if (dateParts.length === 3) {
         const [day, month, year] = dateParts;
-        const timeParts = parts[1].split(':');
+        const timeParts = timeString.split(':');
         const hour = timeParts[0] || '0';
         const min = timeParts[1] || '0';
         const sec = timeParts[2] || '0';

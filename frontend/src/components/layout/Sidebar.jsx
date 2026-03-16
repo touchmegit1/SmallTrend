@@ -46,8 +46,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       children: [
         { label: "Giao diện bán hàng", path: "/pos" },
         { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Đơn hàng treo", path: "/pos/suspended" },
-        { label: "Giao ca", path: "/pos/shift-handover" },
+        { label: "Báo cáo doanh số", path: "/pos/suspended" },
+        { label: "Khiếu nại", path: "/pos/complain" },
       ],
     },
     {
