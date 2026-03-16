@@ -3,6 +3,7 @@ import CustomerSearch from "./CustomerSearch";
 
 import api from "../../config/axiosConfig";
 import customerTierService from "../../services/customerTierService";
+import customerService from "../../services/customerService";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
@@ -424,19 +425,19 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
 
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
-    const num = parseInt(cashAmount.replace(/[^0-9]/g, ''));
-    if (isNaN(num)) return [];
 
-    // Nếu người dùng nhập số có 1-3 chữ số, tự động gợi ý thêm các số lớn hơn (x1.000, x10.000, vv...)
-    if (cashAmount.length <= 3) {
-      return [
-        num * 1000,
-        num * 10000,
-        num * 100000
-      ];
-    }
+    const cleanCashAmount = cashAmount.replace(/[^0-9]/g, '');
+    const num = parseInt(cleanCashAmount, 10);
+    if (isNaN(num) || num <= 0) return [];
 
-    return [];
+    const digitCount = cleanCashAmount.length;
+    const startPower = Math.max(0, 4 - digitCount);
+
+    return [
+      num * Math.pow(10, startPower),
+      num * Math.pow(10, startPower + 1),
+      num * Math.pow(10, startPower + 2)
+    ];
   };
 
   const completePaymentProcess = async (method, receivedAmt, changeAmt) => {
@@ -444,8 +445,16 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
 
     // Cập nhật điểm trung thành trong bảng customers
     if (selectedCustomer && selectedCustomer.id) {
+      let latestCustomer = selectedCustomer;
+
+      try {
+        latestCustomer = await customerService.getCustomerById(selectedCustomer.id);
+      } catch (error) {
+        console.error('Error fetching latest customer before payment:', error);
+      }
+
       customerToUpdate = buildUpdatedCustomerAfterPayment(
-        selectedCustomer,
+        latestCustomer,
         finalTotal,
         tiers,
         usePoints,
@@ -523,7 +532,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     }
   };
 
-  const initiatePayment = () => {
+  const initiatePayment = async () => {
     if (finalTotal === 0) {
       // Đơn 0đ: Hoàn tất ngay không cần nhập tiền
       completePaymentProcess("cash", 0, 0);
@@ -538,8 +547,18 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     } else {
       // Chuyển khoản
       if (onStartQRPayment) {
+         let latestCustomer = selectedCustomer;
+
+         if (selectedCustomer?.id) {
+           try {
+             latestCustomer = await customerService.getCustomerById(selectedCustomer.id);
+           } catch (error) {
+             console.error('Error fetching latest customer before QR payment:', error);
+           }
+         }
+
          const customerToUpdate = buildUpdatedCustomerAfterPayment(
-           selectedCustomer,
+           latestCustomer,
            finalTotal,
            tiers,
            usePoints,

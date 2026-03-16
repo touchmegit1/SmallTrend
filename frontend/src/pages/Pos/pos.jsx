@@ -29,7 +29,10 @@ export default function POS() {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const [pendingQROrders, setPendingQROrders] = useState([]);
+  const [pendingQROrders, setPendingQROrders] = useState(() => {
+    const saved = localStorage.getItem('pendingQROrders');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [shortcuts, setShortcuts] = useState(() => {
     const saved = localStorage.getItem('posShortcuts');
     const parsed = saved ? JSON.parse(saved) : null;
@@ -251,6 +254,10 @@ export default function POS() {
     localStorage.setItem('posOrders', JSON.stringify(orders));
     localStorage.setItem('activeOrderId', activeOrderId.toString());
   }, [orders, activeOrderId]);
+
+  useEffect(() => {
+    localStorage.setItem('pendingQROrders', JSON.stringify(pendingQROrders));
+  }, [pendingQROrders]);
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -534,12 +541,49 @@ export default function POS() {
   };
 
   const handleStartQRPayment = (orderData, amount, paymentCode) => {
+    const orderId = `ORDER_${activeOrderId}`;
+    const orderDataWithOrderId = { ...orderData, orderId };
+
     setPendingQROrders(prev => [...prev, {
       id: Date.now(),
       paymentCode,
       amount,
-      orderData
+      orderData: orderDataWithOrderId
     }]);
+
+    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    const pendingQRTransaction = {
+      id: `#HD${Date.now().toString().slice(-6)}`,
+      orderId,
+      time: new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }),
+      quantity: `${orderData.cart.reduce((sum, item) => sum + item.qty, 0)} món`,
+      payment: "Chuyển khoản",
+      total: `${orderData.total.toLocaleString()} đ`,
+      status: "Chờ thanh toán",
+      items: orderData.cart,
+      customer: orderData.customer,
+      customerMoney: 0,
+      change: 0,
+      pointsDiscount: orderData.pointsDiscount || 0,
+      notes: orderData.notes || ""
+    };
+
+    const existingIndex = transactions.findIndex(t => t.orderId === orderId);
+    if (existingIndex >= 0) {
+      transactions[existingIndex] = {
+        ...transactions[existingIndex],
+        ...pendingQRTransaction,
+      };
+    } else {
+      transactions.unshift(pendingQRTransaction);
+    }
+    localStorage.setItem('transactions', JSON.stringify(transactions));
 
     if (orders.length > 1) {
       const newOrders = orders.filter(order => order.id !== activeOrderId).sort((a, b) => a.id - b.id);
@@ -574,8 +618,12 @@ export default function POS() {
     };
 
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    transactions.unshift(transaction);
-    localStorage.setItem('transactions', JSON.stringify(transactions));
+    const filteredTransactions = orderData.orderId
+      ? transactions.filter(t => t.orderId !== orderData.orderId)
+      : transactions;
+
+    filteredTransactions.unshift(transaction);
+    localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
 
     if (transaction.cart && transaction.cart.length > 0) {
       try {

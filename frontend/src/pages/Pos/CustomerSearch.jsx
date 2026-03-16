@@ -77,15 +77,45 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
       return;
     }
 
+    const normalizePhone = (value) => (value || "").replace(/\s+/g, "");
+    const cleanPhone = normalizePhone(phone);
+
     setLoading(true);
     try {
-      const customer = await customerService.searchByPhone(phone);
+      const customer = await customerService.searchByPhone(cleanPhone);
       const selected = mapCustomerForSelect(customer);
       setFoundCustomer(selected);
       setSearched(true);
       setShowRegister(false);
       onSelectCustomer(selected);
     } catch (error) {
+      try {
+        // Fallback: đối chiếu từ danh sách customers (giống màn CRM) để tránh lệch do endpoint search trả lỗi không mong muốn
+        const allCustomers = await customerService.getAllCustomers();
+        const matched = (Array.isArray(allCustomers) ? allCustomers : []).find(
+          (c) => normalizePhone(c.phone) === cleanPhone
+        );
+
+        if (matched) {
+          const selected = mapCustomerForSelect(matched);
+          setFoundCustomer(selected);
+          setSearched(true);
+          setShowRegister(false);
+          onSelectCustomer(selected);
+          return;
+        }
+      } catch (fallbackError) {
+        console.error("Fallback customer search failed:", fallbackError);
+      }
+
+      // Chỉ mở đăng ký khi thật sự không tìm thấy; lỗi khác thì báo rõ
+      if (error?.response?.status && error.response.status !== 404) {
+        alert(error.response?.data?.message || "Không thể tìm khách hàng, vui lòng thử lại.");
+        setSearched(false);
+        setShowRegister(false);
+        return;
+      }
+
       setFoundCustomer(null);
       setSearched(true);
       setShowRegister(true);
@@ -122,8 +152,9 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
         // Not found -> continue create
       }
 
-      const savedCustomer = await customerService.createCustomer(name.trim(), phone);
-      const selected = mapCustomerForSelect(savedCustomer);
+      await customerService.createCustomer(name.trim(), phone);
+      const createdCustomer = await customerService.searchByPhone(phone);
+      const selected = mapCustomerForSelect(createdCustomer);
       setFoundCustomer(selected);
       setShowRegister(false);
       setSearched(true);
@@ -136,13 +167,6 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
     } finally {
       setLoading(false);
     }
-  };
-
-  const getTierStyle = (tierName) => {
-    if (tierName === "Bạch Kim") return { bg: "#E5E4E2", color: "#333" };
-    if (tierName === "Vàng") return { bg: "#FFD700", color: "#333" };
-    if (tierName === "Bạc") return { bg: "#C0C0C0", color: "#333" };
-    return { bg: "#CD7F32", color: "#fff" };
   };
 
   return (
@@ -204,45 +228,6 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
         </button>
       </div>
 
-      {foundCustomer && (() => {
-        const tierStyle = getTierStyle(foundCustomer.tier);
-        return (
-          <div
-            style={{
-              marginTop: "8px",
-              padding: "10px 12px",
-              background: "#e8f5e9",
-              border: "1px solid #a5d6a7",
-              borderRadius: "6px",
-              fontSize: "13px",
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: "4px", color: "#1b5e20" }}>
-              Đã tìm thấy khách hàng trong bảng customers
-            </div>
-            <div><strong>Tên:</strong> {foundCustomer.name}</div>
-            <div><strong>SĐT:</strong> {foundCustomer.phone}</div>
-            <div><strong>Điểm loyalty:</strong> {Number(foundCustomer.loyaltyPoints).toLocaleString("vi-VN")}</div>
-            <div><strong>Chi tiêu:</strong> {Number(foundCustomer.spentAmount).toLocaleString("vi-VN")}đ</div>
-            <div>
-              <strong>Hạng:</strong>{" "}
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "2px 8px",
-                  borderRadius: "10px",
-                  background: tierStyle.bg,
-                  color: tierStyle.color,
-                  fontWeight: 600,
-                  fontSize: "12px",
-                }}
-              >
-                {foundCustomer.tier}
-              </span>
-            </div>
-          </div>
-        );
-      })()}
 
       {showRegister && canRegister && (
         <div
