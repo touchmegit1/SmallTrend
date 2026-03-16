@@ -93,6 +93,16 @@ public class ProductVariantService {
         r.setActive(variant.isActive());
         r.setAttributes(variant.getAttributes());
 
+        if (variant.getProduct() != null) {
+            if (variant.getProduct().getCategory() != null) {
+                r.setCategoryId(variant.getProduct().getCategory().getId());
+                r.setCategoryName(variant.getProduct().getCategory().getName());
+            }
+            if (variant.getProduct().getBrand() != null) {
+                r.setBrandName(variant.getProduct().getBrand().getName());
+            }
+        }
+
         // Cost info (from latest batch)
         List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());
         if (batches != null && !batches.isEmpty()) {

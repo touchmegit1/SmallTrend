@@ -29,7 +29,7 @@ public class PurchaseOrderController {
     }
 
     @GetMapping("/purchase-orders/{id}")
-    public ResponseEntity<PurchaseOrderResponse> getOrderById(@PathVariable Integer id) {
+    public ResponseEntity<PurchaseOrderResponse> getOrderById(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(purchaseOrderService.getOrderById(id));
     }
 
@@ -52,24 +52,24 @@ public class PurchaseOrderController {
 
     @PutMapping("/purchase-orders/{id}/confirm")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
-    public ResponseEntity<PurchaseOrderResponse> confirmExistingOrder(@PathVariable Integer id) {
+    public ResponseEntity<PurchaseOrderResponse> confirmExistingOrder(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(purchaseOrderService.confirmExistingOrder(id));
     }
 
     @PutMapping("/purchase-orders/{id}")
-    public ResponseEntity<PurchaseOrderResponse> updateOrder(@PathVariable Integer id, @RequestBody PurchaseOrderRequest request) {
+    public ResponseEntity<PurchaseOrderResponse> updateOrder(@PathVariable("id") Integer id, @RequestBody PurchaseOrderRequest request) {
         return ResponseEntity.ok(purchaseOrderService.updateOrder(id, request));
     }
 
     @PutMapping("/purchase-orders/{id}/reject")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
-    public ResponseEntity<PurchaseOrderResponse> rejectOrder(@PathVariable Integer id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<PurchaseOrderResponse> rejectOrder(@PathVariable("id") Integer id, @RequestBody Map<String, String> payload) {
         return ResponseEntity.ok(purchaseOrderService.rejectOrder(id, payload.get("rejectionReason")));
     }
 
     @PutMapping("/purchase-orders/{id}/approve")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
-    public ResponseEntity<PurchaseOrderResponse> approveOrder(@PathVariable Integer id) {
+    public ResponseEntity<PurchaseOrderResponse> approveOrder(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(purchaseOrderService.approveOrder(id));
     }
 
@@ -77,13 +77,13 @@ public class PurchaseOrderController {
 
     @PutMapping("/purchase-orders/{id}/start-checking")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'INVENTORY_STAFF', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_INVENTORY_STAFF')")
-    public ResponseEntity<PurchaseOrderResponse> startChecking(@PathVariable Integer id) {
+    public ResponseEntity<PurchaseOrderResponse> startChecking(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(purchaseOrderService.startChecking(id));
     }
 
     @PutMapping("/purchase-orders/{id}/receive")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'INVENTORY_STAFF', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_INVENTORY_STAFF')")
-    public ResponseEntity<PurchaseOrderResponse> receiveGoods(@PathVariable Integer id, @RequestBody GoodsReceiptRequest request) {
+    public ResponseEntity<PurchaseOrderResponse> receiveGoods(@PathVariable("id") Integer id, @RequestBody GoodsReceiptRequest request) {
         return ResponseEntity.ok(purchaseOrderService.receiveGoods(id, request));
     }
 
@@ -96,14 +96,14 @@ public class PurchaseOrderController {
 
     @PutMapping("/purchase-orders/{id}/shortage/close")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
-    public ResponseEntity<PurchaseOrderResponse> closeShortage(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> payload) {
+    public ResponseEntity<PurchaseOrderResponse> closeShortage(@PathVariable("id") Integer id, @RequestBody(required = false) Map<String, String> payload) {
         String note = payload != null ? payload.get("managerDecisionNote") : null;
         return ResponseEntity.ok(purchaseOrderService.closeShortage(id, note));
     }
 
     @PutMapping("/purchase-orders/{id}/shortage/request-supplement")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
-    public ResponseEntity<PurchaseOrderResponse> requestSupplierSupplement(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> payload) {
+    public ResponseEntity<PurchaseOrderResponse> requestSupplierSupplement(@PathVariable("id") Integer id, @RequestBody(required = false) Map<String, String> payload) {
         String note = payload != null ? payload.get("managerDecisionNote") : null;
         return ResponseEntity.ok(purchaseOrderService.requestSupplierSupplement(id, note));
     }
@@ -111,12 +111,12 @@ public class PurchaseOrderController {
     // ─── Cancel & Delete ─────────────────────────────────────
 
     @PutMapping("/purchase-orders/{id}/cancel")
-    public ResponseEntity<PurchaseOrderResponse> cancelOrder(@PathVariable Integer id) {
+    public ResponseEntity<PurchaseOrderResponse> cancelOrder(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(purchaseOrderService.cancelOrder(id));
     }
 
     @DeleteMapping("/purchase-orders/{id}")
-    public ResponseEntity<Void> deleteOrder(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteOrder(@PathVariable("id") Integer id) {
         purchaseOrderService.deleteOrder(id);
         return ResponseEntity.noContent().build();
     }

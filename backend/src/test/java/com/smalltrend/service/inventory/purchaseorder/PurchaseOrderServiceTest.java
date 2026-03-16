@@ -127,32 +127,48 @@ class PurchaseOrderServiceTest {
     }
 
     @Test
-    void notifyManagers_shouldReturnSuccessMessage() {
-        NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
-                .subject("Need decision")
-                .message("Please review shortage")
+    void getOrderById_shouldHandleNullVariantIdInItem() {
+        PurchaseOrderItem item = PurchaseOrderItem.builder()
+                .id(10)
+                .variant(ProductVariant.builder().id(null).product(product).unit(unit).build())
+                .quantity(1)
+                .unitCost(BigDecimal.ONE)
+                .purchaseOrder(order)
                 .build();
+        order.setItems(new ArrayList<>(List.of(item)));
 
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
-        when(inventoryManagerNotificationService.notifyManagers(order, request)).thenReturn(2);
 
-        MessageResponse response = purchaseOrderService.notifyManagers(1, request);
+        PurchaseOrderResponse response = purchaseOrderService.getOrderById(1);
 
-        assertEquals("Đã gửi thông báo cho 2 quản lý.", response.getMessage());
-        verify(inventoryManagerNotificationService).notifyManagers(order, request);
+        assertNotNull(response);
+        assertEquals(1, response.getItems().size());
+        assertNull(response.getItems().get(0).getVariantId());
+        assertEquals(product.getId().intValue(), response.getItems().get(0).getProductId());
     }
 
     @Test
-    void notifyManagers_shouldThrow_whenOrderNotFound() {
-        NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
-                .subject("Need decision")
-                .message("Please review shortage")
+    void getOrderById_shouldHandleNullCandidateVariantInProductList() {
+        ProductVariant requestedVariant = ProductVariant.builder().id(10).product(product).unit(unit).build();
+        ProductVariant brokenCandidate = ProductVariant.builder().id(null).product(product).unit(unit).build();
+        product.setVariants(new ArrayList<>(List.of(requestedVariant, brokenCandidate)));
+
+        PurchaseOrderItem item = PurchaseOrderItem.builder()
+                .id(11)
+                .variant(requestedVariant)
+                .quantity(2)
+                .unitCost(BigDecimal.ONE)
+                .purchaseOrder(order)
                 .build();
+        order.setItems(new ArrayList<>(List.of(item)));
 
-        when(purchaseOrderRepository.findById(999)).thenReturn(Optional.empty());
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
 
-        assertThrows(RuntimeException.class, () -> purchaseOrderService.notifyManagers(999, request));
-        verifyNoInteractions(inventoryManagerNotificationService);
+        PurchaseOrderResponse response = purchaseOrderService.getOrderById(1);
+
+        assertNotNull(response);
+        assertEquals(1, response.getItems().size());
+        assertEquals(requestedVariant.getId().intValue(), response.getItems().get(0).getVariantId());
     }
 
     @Test

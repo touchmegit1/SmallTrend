@@ -10,7 +10,6 @@ public class CustomerTierResponse {
     private String tierName;
     private BigDecimal minSpending;
     private BigDecimal pointsMultiplier;
-    private BigDecimal discountRate;
     private BigDecimal bonusPoints;
     private String color;
     private Boolean isActive;

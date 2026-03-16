@@ -47,7 +47,6 @@ function TierManagementModal({ onClose, showToast }) {
       tierName: tier.tierName || '',
       minSpending: tier.minSpending ?? '',
       pointsMultiplier: tier.pointsMultiplier ?? '',
-      discountRate: tier.discountRate ?? '',
       color: tier.color || '#6366f1',
     });
   };
@@ -64,7 +63,6 @@ function TierManagementModal({ onClose, showToast }) {
         tierName: editForm.tierName,
         minSpending: editForm.minSpending !== '' ? Number(editForm.minSpending) : null,
         pointsMultiplier: editForm.pointsMultiplier !== '' ? Number(editForm.pointsMultiplier) : null,
-        discountRate: editForm.discountRate !== '' ? Number(editForm.discountRate) : null,
         color: editForm.color,
       });
       showToast('Cập nhật hạng thành viên thành công');
@@ -174,7 +172,7 @@ function TierManagementModal({ onClose, showToast }) {
                     </div>
 
                     {/* Tier details */}
-                    <div className="px-5 py-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="px-5 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Chi tiêu tố thiểu — editable */}
                       <div>
                         <p className="text-xs font-medium text-slate-500 mb-1">Chi tiêu tối thiểu để đạt hạng</p>
@@ -222,29 +220,6 @@ function TierManagementModal({ onClose, showToast }) {
                         )}
                       </div>
 
-                      {/* Chiết khấu — editable */}
-                      <div>
-                        <p className="text-xs font-medium text-slate-500 mb-1">Chiết khấu cố định</p>
-                        {isEditing ? (
-                          <div className="relative">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.5"
-                              className={inputCls}
-                              value={editForm.discountRate}
-                              onChange={e => setEditForm({ ...editForm, discountRate: e.target.value })}
-                              placeholder="0"
-                            />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
-                          </div>
-                        ) : (
-                          <p className={`text-sm font-bold ${textCls}`}>
-                            {tier.discountRate != null ? `${Number(tier.discountRate).toFixed(1)}%` : '0%'}
-                          </p>
-                        )}
-                      </div>
                     </div>
 
                     {/* Color picker row — only when editing */}
@@ -325,13 +300,9 @@ export default function CustomerManagement() {
   // ─── Tính hạng từ spentAmount ──────────────────────
   const getTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
-    let matched = null;
-    for (const tier of tiers) {
-      if (spentAmount >= Number(tier.minSpending)) {
-        matched = tier;
-      }
-    }
-    return matched;
+    return [...tiers]
+      .sort((a, b) => Number(b.minSpending) - Number(a.minSpending))
+      .find(tier => spentAmount >= Number(tier.minSpending)) || null;
   };
 
   // ─── Báo cáo phân bổ tier ──────────────────────────

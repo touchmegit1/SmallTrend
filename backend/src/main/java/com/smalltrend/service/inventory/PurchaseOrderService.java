@@ -949,8 +949,10 @@ public class PurchaseOrderService {
             List<PurchaseOrderItemResponse> itemResponses = order.getItems().stream()
                     .map(item -> PurchaseOrderItemResponse.builder()
                     .id(item.getId() != null ? item.getId().intValue() : null)
-                    .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                    .variantId(item.getVariant() != null && item.getVariant().getId() != null
+                            ? item.getVariant().getId().intValue() : null)
                     .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                            && item.getVariant().getProduct().getId() != null
                             ? item.getVariant().getProduct().getId().intValue() : null)
                     .sku(item.getVariant() != null ? item.getVariant().getSku() : "")
                     .name(item.getVariant() != null && item.getVariant().getProduct() != null
@@ -989,11 +991,15 @@ public class PurchaseOrderService {
             return 1;
         }
         ProductVariant baseVariant = resolveBaseVariant(variant);
-        if (baseVariant == null || baseVariant.getId().equals(variant.getId()) || variant.getUnit() == null) {
+        Integer baseVariantId = baseVariant != null ? baseVariant.getId() : null;
+        Integer variantId = variant.getId();
+
+        if (baseVariant == null || baseVariantId == null || variantId == null || baseVariantId.equals(variantId)
+                || variant.getUnit() == null) {
             return 1;
         }
         return unitConversionRepository
-                .findByVariantIdAndToUnitId(baseVariant.getId(), variant.getUnit().getId())
+                .findByVariantIdAndToUnitId(baseVariantId, variant.getUnit().getId())
                 .map(uc -> uc.getConversionFactor().intValue())
                 .orElse(1);
     }
@@ -1021,14 +1027,20 @@ public class PurchaseOrderService {
             return variant;
         }
 
+        Integer variantId = variant.getId();
+        Integer unitId = variant.getUnit() != null ? variant.getUnit().getId() : null;
+
         for (ProductVariant candidate : variant.getProduct().getVariants()) {
-            if (candidate.getId().equals(variant.getId())) {
+            if (candidate == null || candidate.getId() == null) {
                 continue;
             }
-            if (variant.getUnit() == null) {
+            if (variantId != null && candidate.getId().equals(variantId)) {
                 continue;
             }
-            if (unitConversionRepository.findByVariantIdAndToUnitId(candidate.getId(), variant.getUnit().getId()).isPresent()) {
+            if (unitId == null) {
+                continue;
+            }
+            if (unitConversionRepository.findByVariantIdAndToUnitId(candidate.getId(), unitId).isPresent()) {
                 return candidate;
             }
         }

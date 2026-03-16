@@ -42,23 +42,7 @@ function TransactionHistory() {
     const items = transaction.cart || transaction.items || [];
     if (items.length === 0) return;
 
-    try {
-      const request = {
-        customerId: transaction.customer?.id || null,
-        customerName: transaction.customer?.name || null,
-        paymentMethod: transaction.payment,
-        items: items.map(item => ({
-          productId: item.productId || item.id || 0,
-          productName: item.name,
-          quantity: item.qty || item.quantity || 1,
-          price: item.price,
-          subtotal: item.price * (item.qty || item.quantity || 1)
-        }))
-      };
-
-      await api.post('/pos/purchase-history', request);
-
-      // Đánh dấu đã lưu
+    const markTransactionAsSaved = () => {
       const updatedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       const index = updatedTransactions.findIndex(t => t.id === transaction.id);
       if (index !== -1) {
@@ -66,7 +50,32 @@ function TransactionHistory() {
         localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
         setTransactions(updatedTransactions);
       }
+    };
+
+    try {
+      const request = {
+        customerId: transaction.customer?.id || 0,
+        customerName: transaction.customer?.name || "Khách lẻ",
+        paymentMethod: transaction.payment,
+        items: items.map(item => {
+          const productId = item.productId || item.id;
+          return {
+            productId: (typeof productId === 'string' && String(productId).startsWith('combo_')) ? 0 : (productId || 0),
+            productName: item.name,
+            quantity: item.qty || item.quantity || 1,
+            price: item.price,
+            subtotal: item.price * (item.qty || item.quantity || 1)
+          };
+        })
+      };
+
+      await api.post('/pos/purchase-history', request);
+      markTransactionAsSaved();
     } catch (error) {
+      if (error?.response?.status === 409) {
+        markTransactionAsSaved();
+        return;
+      }
       console.error('Error saving purchase history:', error);
     }
   };
@@ -224,10 +233,16 @@ function TransactionHistory() {
     if (!timeStr) return 0;
     const parts = timeStr.split(/[\s,]+/);
     if (parts.length >= 2) {
-      const dateParts = parts[0].split('/');
+      let dateString = parts[0];
+      let timeString = parts[1];
+      if (parts[1] && parts[1].includes('/')) {
+        dateString = parts[1];
+        timeString = parts[0];
+      }
+      const dateParts = dateString.split('/');
       if (dateParts.length === 3) {
         const [day, month, year] = dateParts;
-        const timeParts = parts[1].split(':');
+        const timeParts = timeString.split(':');
         const hour = timeParts[0] || '0';
         const min = timeParts[1] || '0';
         const sec = timeParts[2] || '0';

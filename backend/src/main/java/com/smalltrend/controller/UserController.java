@@ -78,8 +78,8 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> getAllUsers(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
         // Validate pagination
         List<String> errors = validator.validatePagination(page, size);
         if (validator.hasErrors(errors)) {
@@ -99,7 +99,7 @@ public class UserController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
-    public ResponseEntity<?> getUserById(@PathVariable Integer id) {
+    public ResponseEntity<?> getUserById(@PathVariable("id") Integer id) {
         // Validate ID
         List<String> errors = validator.validateId(id, "ID người dùng");
         if (validator.hasErrors(errors)) {
@@ -138,7 +138,7 @@ public class UserController {
 
     @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> uploadUserAvatar(@PathVariable Integer id, @RequestPart("file") MultipartFile file) {
+    public ResponseEntity<?> uploadUserAvatar(@PathVariable("id") Integer id, @RequestPart("file") MultipartFile file) {
         try {
             UserDTO updatedUser = userService.updateUserAvatar(id, file);
             return ResponseEntity.ok(updatedUser);
@@ -163,7 +163,7 @@ public class UserController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<?> updateUser(@PathVariable Integer id, @Valid @RequestBody UserUpdateRequest request) {
+    public ResponseEntity<?> updateUser(@PathVariable("id") Integer id, @Valid @RequestBody UserUpdateRequest request) {
         try {
             // Validate ID
             List<String> errors = validator.validateId(id, "ID người dùng");
@@ -201,7 +201,7 @@ public class UserController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteUser(@PathVariable("id") Integer id) {
         // Validate ID
         List<String> errors = validator.validateId(id, "ID người dùng");
         if (validator.hasErrors(errors)) {
@@ -219,7 +219,7 @@ public class UserController {
      */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateUserStatus(@PathVariable Integer id, @Valid @RequestBody UserStatusRequest request) {
+    public ResponseEntity<?> updateUserStatus(@PathVariable("id") Integer id, @Valid @RequestBody UserStatusRequest request) {
         // Validate ID
         List<String> errors = validator.validateId(id, "ID người dùng");
         if (validator.hasErrors(errors)) {
@@ -244,9 +244,9 @@ public class UserController {
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> searchUsers(
-            @RequestParam String query,
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(name = "query") String query,
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
         // Validate pagination
         List<String> errors = validator.validatePagination(page, size);
         if (validator.hasErrors(errors)) {

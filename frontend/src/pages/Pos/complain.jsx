@@ -672,10 +672,12 @@ export default function CustomerComplaintSystem() {
                     type="text"
                     value={customerPhone}
                     onChange={e => {
-                      setCustomerPhone(e.target.value);
+                      const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                      setCustomerPhone(value);
                       if (customerNotFound) setCustomerNotFound(false);
                     }}
                     placeholder="Nhập số điện thoại (10-11 số)..."
+                    maxLength={11}
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
@@ -708,34 +710,56 @@ export default function CustomerComplaintSystem() {
                         return;
                       }
 
+                      const normalizePhone = (value) => (value || '').replace(/\s+/g, '');
+                      const cleanPhone = normalizePhone(phone);
+
                       try {
                         setLoadingCustomer(true);
                         setCustomerNotFound(false);
-                        const customer = await customerService.searchByPhone(phone);
+
+                        const customer = await customerService.searchByPhone(cleanPhone);
                         if (customer && customer.name) {
                           setCustomerName(customer.name);
                           const t = getTier(customer.spentAmount || 0);
                           setCustomerTier(t ? t.tierName : 'Thường');
-                        } else {
-                          setCustomerName('');
-                          setCustomerTier(null);
-                          setCustomerNotFound(true);
+                          return;
                         }
                       } catch (err) {
-                        console.error(err);
-                        setCustomerName('');
-                        setCustomerTier(null);
-                        setCustomerNotFound(true);
+                        try {
+                          const allCustomers = await customerService.getAllCustomers();
+                          const matched = (Array.isArray(allCustomers) ? allCustomers : []).find(
+                            (c) => normalizePhone(c.phone) === cleanPhone
+                          );
+
+                          if (matched) {
+                            setCustomerName(matched.name || '');
+                            const t = getTier(matched.spentAmount || 0);
+                            setCustomerTier(t ? t.tierName : 'Thường');
+                            setCustomerNotFound(false);
+                            return;
+                          }
+                        } catch (fallbackErr) {
+                          console.error('Fallback customer search failed:', fallbackErr);
+                        }
+
+                        if (err?.response?.status && err.response.status !== 404) {
+                          alert(err.response?.data?.message || 'Không thể tìm khách hàng, vui lòng thử lại.');
+                          return;
+                        }
                       } finally {
                         setLoadingCustomer(false);
                       }
+
+                      setCustomerName('');
+                      setCustomerTier(null);
+                      setCustomerNotFound(true);
                     }}
                   >
                     {loadingCustomer ? 'Đang...' : customerNotFound ? 'Lưu khách' : 'Tìm khách'}
                   </button>
                 </div>
                 {customerName && !customerNotFound && (
-                  <div className="mt-1.5 flex items-center gap-2">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <p className="text-sm text-blue-700 bg-blue-50 p-2 rounded-lg border border-blue-100 flex items-center gap-2">
                       <UserCircle size={16} /> <b>{customerName}</b>
                     </p>

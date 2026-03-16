@@ -30,7 +30,7 @@ const customerService = {
   },
 
   searchByPhone: async (phone) => {
-    const response = await api.get(`/crm/customers/search?phone=${phone}`);
+    const response = await api.get(`/crm/customers/phone/${phone}`);
     return response.data;
   },
 };
