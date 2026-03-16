@@ -74,15 +74,29 @@ public class PurchaseOrderController {
     // ─── New: NV kho kiểm kê ─────────────────────────────────
 
     @PutMapping("/purchase-orders/{id}/start-checking")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'INVENTORY_STAFF', 'ROLE_INVENTORY_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'INVENTORY_STAFF', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_INVENTORY_STAFF')")
     public ResponseEntity<PurchaseOrderResponse> startChecking(@PathVariable Integer id) {
         return ResponseEntity.ok(purchaseOrderService.startChecking(id));
     }
 
     @PutMapping("/purchase-orders/{id}/receive")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'INVENTORY_STAFF', 'ROLE_INVENTORY_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'INVENTORY_STAFF', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_INVENTORY_STAFF')")
     public ResponseEntity<PurchaseOrderResponse> receiveGoods(@PathVariable Integer id, @RequestBody GoodsReceiptRequest request) {
         return ResponseEntity.ok(purchaseOrderService.receiveGoods(id, request));
+    }
+
+    @PutMapping("/purchase-orders/{id}/shortage/close")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
+    public ResponseEntity<PurchaseOrderResponse> closeShortage(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> payload) {
+        String note = payload != null ? payload.get("managerDecisionNote") : null;
+        return ResponseEntity.ok(purchaseOrderService.closeShortage(id, note));
+    }
+
+    @PutMapping("/purchase-orders/{id}/shortage/request-supplement")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
+    public ResponseEntity<PurchaseOrderResponse> requestSupplierSupplement(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> payload) {
+        String note = payload != null ? payload.get("managerDecisionNote") : null;
+        return ResponseEntity.ok(purchaseOrderService.requestSupplierSupplement(id, note));
     }
 
     // ─── Cancel & Delete ─────────────────────────────────────

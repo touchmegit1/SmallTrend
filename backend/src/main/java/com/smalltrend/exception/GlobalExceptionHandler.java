@@ -34,6 +34,31 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(LocationException.class)
+    public ResponseEntity<?> handleLocationException(LocationException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        if (ex.getCode() == LocationException.Code.LOCATION_NOT_FOUND) {
+            status = HttpStatus.NOT_FOUND;
+        } else if (ex.getCode() == LocationException.Code.LOCATION_CONFLICT) {
+            status = HttpStatus.CONFLICT;
+        }
+        return ResponseEntity.status(status).body(new MessageResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InventoryCountException.class)
+    public ResponseEntity<?> handleInventoryCountException(InventoryCountException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        if (ex.getCode() == InventoryCountException.Code.COUNT_NOT_FOUND) {
+            status = HttpStatus.NOT_FOUND;
+        } else if (ex.getCode() == InventoryCountException.Code.INVALID_STATUS_TRANSITION
+                || ex.getCode() == InventoryCountException.Code.COUNT_ALREADY_FINALIZED) {
+            status = HttpStatus.CONFLICT;
+        }
+
+        return ResponseEntity.status(status)
+                .body(new MessageResponse(ex.getCode().name(), ex.getMessage()));
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         String msg = ex.getMostSpecificCause().getMessage();

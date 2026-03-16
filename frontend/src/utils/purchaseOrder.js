@@ -13,6 +13,8 @@ export const PO_STATUS = {
   REJECTED: "REJECTED",
   CONFIRMED: "CONFIRMED",
   CHECKING: "CHECKING",
+  SHORTAGE_PENDING_APPROVAL: "SHORTAGE_PENDING_APPROVAL",
+  SUPPLIER_SUPPLEMENT_PENDING: "SUPPLIER_SUPPLEMENT_PENDING",
   RECEIVED: "RECEIVED",
   CANCELLED: "CANCELLED",
 };
@@ -53,6 +55,20 @@ export const PO_STATUS_CONFIG = {
     border: "border-purple-200",
     dot: "bg-purple-500",
   },
+  [PO_STATUS.SHORTAGE_PENDING_APPROVAL]: {
+    label: "Chờ QL xử lý thiếu",
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+    border: "border-orange-200",
+    dot: "bg-orange-500",
+  },
+  [PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING]: {
+    label: "Chờ NCC giao bù",
+    bg: "bg-cyan-50",
+    text: "text-cyan-700",
+    border: "border-cyan-200",
+    dot: "bg-cyan-500",
+  },
   [PO_STATUS.RECEIVED]: {
     label: "Đã nhập kho",
     bg: "bg-emerald-50",
@@ -73,9 +89,14 @@ export const ALLOWED_TRANSITIONS = {
   [PO_STATUS.DRAFT]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
   [PO_STATUS.PENDING]: [PO_STATUS.CONFIRMED, PO_STATUS.REJECTED, PO_STATUS.CANCELLED],
   [PO_STATUS.REJECTED]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
-  [PO_STATUS.CONFIRMED]: [PO_STATUS.CHECKING],             // QĐ duyệt → NV kho kiểm kê
-  [PO_STATUS.CHECKING]: [PO_STATUS.RECEIVED],               // Kiểm kê xong → nhập kho
-  [PO_STATUS.RECEIVED]: [],  // terminal
+  [PO_STATUS.CONFIRMED]: [PO_STATUS.CHECKING], // QĐ duyệt → NV kho kiểm kê
+  [PO_STATUS.CHECKING]: [PO_STATUS.RECEIVED, PO_STATUS.SHORTAGE_PENDING_APPROVAL],
+  [PO_STATUS.SHORTAGE_PENDING_APPROVAL]: [
+    PO_STATUS.RECEIVED,
+    PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING,
+  ],
+  [PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING]: [PO_STATUS.CHECKING],
+  [PO_STATUS.RECEIVED]: [], // terminal
   [PO_STATUS.CANCELLED]: [], // terminal
 };
 
@@ -141,14 +162,6 @@ export function calcOrderFinancials(items, orderDiscount = 0, taxPercent = 0, sh
 export function validateDraft(order, items) {
   const errors = [];
 
-  if (!order.supplier_id) {
-    errors.push("Vui lòng chọn nhà cung cấp.");
-  }
-
-  if (!order.location_id) {
-    errors.push("Vui lòng chọn vị trí nhập kho.");
-  }
-
   if (!items || items.length === 0) {
     errors.push("Phiếu nhập phải có ít nhất 1 sản phẩm.");
   }
@@ -156,12 +169,6 @@ export function validateDraft(order, items) {
   for (const item of items) {
     if ((item.quantity || 0) <= 0) {
       errors.push(`Sản phẩm "${item.name}": số lượng phải > 0.`);
-    }
-    if ((item.unit_price || 0) < 0) {
-      errors.push(`Sản phẩm "${item.name}": đơn giá không được âm.`);
-    }
-    if (!item.expiry_date) {
-      errors.push(`Sản phẩm "${item.name}": bắt buộc phải nhập hạn sử dụng (HSD).`);
     }
   }
 
@@ -181,14 +188,6 @@ export function validateConfirm(order, items) {
   // Check batches – each item should have batch info for perishable goods
   // (Optional: we make this a warning, not a hard error)
 
-  // Double check item HSD again just in case
-  for (const item of items) {
-    if (!item.expiry_date) {
-      if (!errors.some(e => e.includes(item.name) && e.includes("HSD"))) {
-         errors.push(`Sản phẩm "${item.name}": bắt buộc phải nhập hạn sử dụng (HSD).`);
-      }
-    }
-  }
 
   return { valid: errors.length === 0, errors };
 }
@@ -220,6 +219,14 @@ export function createDefaultOrder(code) {
 // ─── Default Item Shape ──────────────────────────────────
 
 export function createOrderItem(product) {
+  const unitPrice = Number(
+    product.unit_price ??
+      product.unitPrice ??
+      product.purchase_price ??
+      product.purchasePrice ??
+      0,
+  );
+
   return {
     _key: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     product_id: product.productId || product.product_id || product.id,
@@ -228,11 +235,7 @@ export function createOrderItem(product) {
     name: product.name,
     unit: product.unit,
     quantity: 1,
-    unit_price: product.purchase_price || 0,
-    discount: 0,
-    total: product.purchase_price || 0,
-    expiry_date: "",
-    batches: [], // [{ batch_code, expiry_date, quantity }]
+    unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
   };
 }
 

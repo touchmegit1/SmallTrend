@@ -12,8 +12,6 @@ import {
   ChevronRight,
   Shield,
   Menu,
-  User,
-  Settings,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -22,6 +20,11 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const role = user?.role;
+  const normalizedRole = String(role || "").toUpperCase();
+  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "ROLE_ADMIN" || normalizedRole.includes("ADMIN");
+  const isManager = normalizedRole === "MANAGER" || normalizedRole === "ROLE_MANAGER" || normalizedRole.includes("MANAGER");
+  const canManageWorkforce = isAdmin || isManager;
 
   const toggleMenu = (label) => {
     setOpenMenus((prev) => ({
@@ -87,12 +90,21 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       icon: Clock,
       label: "Nhân sự & Ca",
       path: "/hr",
-      children: [
-        { label: "Danh sách nhân viên", path: "/hr" },
-        { label: "Phân ca làm việc", path: "/hr/shifts" },
-        { label: "Chấm công", path: "/hr/attendance" },
-        { label: "Tính lương", path: "/hr/payroll" },
-      ],
+      children: canManageWorkforce
+        ? [
+          { label: "Danh sách nhân viên", path: "/hr/workforce" },
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Phân ca làm việc", path: "/hr/shifts" },
+          { label: "Chấm công", path: "/hr/attendance" },
+          { label: "Tính lương", path: "/hr/payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ]
+        : [
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Chấm công", path: "/hr/my-attendance" },
+          { label: "Tính lương", path: "/hr/my-payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ],
     },
     {
       icon: BarChart3,
@@ -110,17 +122,13 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
     },
   ];
 
-  // Admin menu - compatible with new DB role naming
-  const isAdmin = user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
-
   return (
     <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>
       <div className={`${collapsed ? 'p-4' : 'p-6'} border-b border-slate-100 flex flex-col gap-3`}>
         <div
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
           onClick={() => {
-            const isAdminRole =
-              user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
+            const isAdminRole = isAdmin;
             navigate(isAdminRole ? "/dashboard" : "/pos");
           }}
           title="Về trang chính"

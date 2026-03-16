@@ -13,7 +13,6 @@ import com.smalltrend.repository.UnitConversionRepository;
 import com.smalltrend.repository.UnitRepository;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductBatchRepository;
-import com.smalltrend.service.ProductVariantService;
 import com.smalltrend.service.UnitConversionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -87,23 +87,6 @@ export const DIFFERENCE_REASONS = [
   { value: "OTHER", label: "Lý do khác" },
 ];
 
-// ─── Code Generation ─────────────────────────────────────
-// Format: IC-XXX
-export function generateICCode(existingCounts = []) {
-  const prefix = "IC-";
-
-  let maxNum = 0;
-  for (const count of existingCounts) {
-    const code = count.code || "";
-    if (code.startsWith(prefix)) {
-      const num = parseInt(code.slice(prefix.length), 10);
-      if (!isNaN(num) && num > maxNum) maxNum = num;
-    }
-  }
-
-  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
-}
-
 // ─── Item Classification ─────────────────────────────────
 
 export const COUNT_ITEM_STATUS = {
@@ -262,9 +245,13 @@ export function createDefaultCountSession(code) {
 // ─── Create Count Item From Product ──────────────────────
 
 export function createCountItem(product) {
+  const productId = product.product_id || product.productId || product.id;
+  const variantId = product.variant_id || product.variantId || product.id;
+
   return {
-    _key: `ci_${product.id}_${Date.now()}`,
-    product_id: product.id,
+    _key: `ci_${variantId}_${Date.now()}`,
+    product_id: productId,
+    variant_id: variantId,
     sku: product.sku,
     name: product.name,
     unit: product.unit,

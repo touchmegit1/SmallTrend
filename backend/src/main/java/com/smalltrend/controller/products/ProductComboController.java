@@ -51,13 +51,13 @@ public class ProductComboController {
     @PutMapping("/{id}/toggle-status")
     public ResponseEntity<String> toggleStatus(@PathVariable Integer id) {
         productComboService.toggleStatus(id);
-        return ResponseEntity.ok("Combo status toggled");
+        return ResponseEntity.ok("Đã thay đổi trạng thái combo");
     }
 
     // Xóa một combo theo ID
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable Integer id) {
         productComboService.deleteCombo(id);
-        return ResponseEntity.ok("Combo deleted successfully");
+        return ResponseEntity.ok("Đã xóa combo thành công");
     }
 }

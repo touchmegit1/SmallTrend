@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 public class InventoryCountItemResponse {
     private Integer id;
     private Integer productId;
+    private Integer variantId;
     private Integer systemQuantity;
     private Integer actualQuantity;
     private Integer differenceQuantity;

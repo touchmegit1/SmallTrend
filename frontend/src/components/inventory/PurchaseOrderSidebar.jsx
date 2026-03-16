@@ -46,7 +46,7 @@ function PurchaseOrderSidebar({
           <div className="flex justify-between items-center">
             <span className="text-slate-600">Cần trả nhà cung cấp</span>
             <span className="font-semibold text-blue-600">
-              {totalAmount.toLocaleString()}
+              {Number(totalAmount ?? 0).toLocaleString("vi-VN")}
             </span>
           </div>
         </div>

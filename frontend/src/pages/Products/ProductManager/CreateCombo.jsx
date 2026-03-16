@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Save, Plus, X, Search, Image as ImageIcon, Upload } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, Search, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -331,17 +331,26 @@ const CreateCombo = () => {
                           className="w-full h-full object-contain rounded-2xl bg-white"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 rounded-2xl backdrop-blur-[1px]" />
+
+                        {uploadingImage && (
+                          <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                            <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                          </div>
+                        )}
                         <button
                           type="button"
                           onClick={removeImage}
-                          className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl"
+                          disabled={uploadingImage}
+                          className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <X className="w-5 h-5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="absolute bottom-4 right-4 bg-white hover:bg-slate-50 text-gray-800 rounded-xl px-4 py-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center gap-2"
+                          disabled={uploadingImage}
+                          className="absolute bottom-4 right-4 bg-white hover:bg-slate-50 text-gray-800 rounded-xl px-4 py-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Upload className="w-4 h-4 text-blue-600" />
                           Tìm file khác
@@ -351,9 +360,9 @@ const CreateCombo = () => {
                       <div
                         role="button"
                         tabIndex={0}
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => !uploadingImage && fileInputRef.current?.click()}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
+                          if ((e.key === 'Enter' || e.key === ' ') && !uploadingImage) {
                             e.preventDefault();
                             fileInputRef.current?.click();
                           }
@@ -361,11 +370,17 @@ const CreateCombo = () => {
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer bg-white ${isDragging
+                        className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all bg-white ${uploadingImage ? 'cursor-wait opacity-80' : 'cursor-pointer'} ${isDragging
                           ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50/70 scale-[1.02]'
                           : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'
                           }`}
                       >
+                        {uploadingImage && (
+                          <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                            <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                          </div>
+                        )}
                         <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4 shadow-sm border border-slate-200">
                           <ImageIcon className="w-10 h-10 text-slate-400" />
                         </div>
@@ -503,8 +518,8 @@ const CreateCombo = () => {
               disabled={isSubmitting || uploadingImage}
               className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold disabled:opacity-50"
             >
-              <Save className="w-5 h-5 mr-2" />
-              {isSubmitting || uploadingImage ? "Đang xử lý..." : "Lưu Combo"}
+              {(uploadingImage || isSubmitting) ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+              {uploadingImage ? "Đang tải ảnh..." : isSubmitting ? "Đang lưu..." : "Lưu Combo"}
             </Button>
             <Button
               type="button"

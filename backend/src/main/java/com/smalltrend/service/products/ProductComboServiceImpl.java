@@ -10,6 +10,7 @@ import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.repository.ProductComboItemRepository;
 import com.smalltrend.repository.ProductComboRepository;
 import com.smalltrend.repository.ProductVariantRepository;
+import com.smalltrend.validation.product.ProductComboValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class ProductComboServiceImpl implements ProductComboService {
     private final ProductComboRepository productComboRepository;
     private final ProductComboItemRepository productComboItemRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final ProductComboValidator productComboValidator;
 
     @Override
     public List<ProductComboResponse> getAllCombos() {
@@ -37,8 +39,7 @@ public class ProductComboServiceImpl implements ProductComboService {
 
     @Override
     public ProductComboResponse getComboById(Integer id) {
-        ProductCombo combo = productComboRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Combo not found with id: " + id));
+        ProductCombo combo = productComboValidator.requireExistingCombo(id);
         return mapToResponse(combo);
     }
 
@@ -56,8 +57,9 @@ public class ProductComboServiceImpl implements ProductComboService {
             if (c.getComboCode() != null && c.getComboCode().startsWith(prefix)) {
                 try {
                     int seq = Integer.parseInt(c.getComboCode().substring(prefix.length()));
-                    if (seq > maxSeq)
+                    if (seq > maxSeq) {
                         maxSeq = seq;
+                    }
                 } catch (NumberFormatException ignored) {
                 }
             }
@@ -75,9 +77,7 @@ public class ProductComboServiceImpl implements ProductComboService {
             request.setComboCode(comboCode);
         } else {
             // Chỉ kiểm tra trùng khi user tự nhập comboCode
-            if (productComboRepository.findByComboCode(comboCode).isPresent()) {
-                throw new RuntimeException("Combo Code already exists: " + comboCode);
-            }
+            productComboValidator.validateComboCodeUniqueForCreate(comboCode);
         }
 
         ProductCombo combo = new ProductCombo();
@@ -93,8 +93,7 @@ public class ProductComboServiceImpl implements ProductComboService {
         // Save Items
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (CreateProductComboItemRequest itemReq : request.getItems()) {
-                ProductVariant variant = productVariantRepository.findById(itemReq.getProductVariantId())
-                        .orElseThrow(() -> new RuntimeException("Variant not found: " + itemReq.getProductVariantId()));
+                ProductVariant variant = productComboValidator.requireExistingVariant(itemReq.getProductVariantId());
 
                 ProductComboItem item = new ProductComboItem();
                 item.setCombo(savedCombo);
@@ -113,21 +112,16 @@ public class ProductComboServiceImpl implements ProductComboService {
         }
 
         // Force reload and map
-        ProductCombo reloaded = productComboRepository.findById(savedCombo.getId()).get();
-        return mapToResponse(reloaded);
+        return mapToResponse(savedCombo);
     }
 
     @Override
     @Transactional
     public ProductComboResponse updateCombo(Integer id, CreateProductComboRequest request) {
-        ProductCombo combo = productComboRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Combo not found with id: " + id));
+        ProductCombo combo = productComboValidator.requireExistingCombo(id);
 
         // Check if combo code changing and existing
-        if (!combo.getComboCode().equals(request.getComboCode()) &&
-                productComboRepository.findByComboCode(request.getComboCode()).isPresent()) {
-            throw new RuntimeException("Combo Code already exists: " + request.getComboCode());
-        }
+        productComboValidator.validateComboCodeUniqueForUpdate(combo, request.getComboCode());
 
         applyRequestToCombo(request, combo);
 
@@ -141,8 +135,7 @@ public class ProductComboServiceImpl implements ProductComboService {
 
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (CreateProductComboItemRequest itemReq : request.getItems()) {
-                ProductVariant variant = productVariantRepository.findById(itemReq.getProductVariantId())
-                        .orElseThrow(() -> new RuntimeException("Variant not found: " + itemReq.getProductVariantId()));
+                ProductVariant variant = productComboValidator.requireExistingVariant(itemReq.getProductVariantId());
 
                 ProductComboItem item = new ProductComboItem();
                 item.setCombo(savedCombo);
@@ -160,15 +153,13 @@ public class ProductComboServiceImpl implements ProductComboService {
             }
         }
 
-        ProductCombo reloaded = productComboRepository.findById(savedCombo.getId()).get();
-        return mapToResponse(reloaded);
+        return mapToResponse(savedCombo);
     }
 
     @Override
     @Transactional
     public void deleteCombo(Integer id) {
-        ProductCombo combo = productComboRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Combo not found with id: " + id));
+        ProductCombo combo = productComboValidator.requireExistingCombo(id);
         productComboItemRepository.deleteByComboId(combo.getId());
         productComboRepository.delete(combo);
     }
@@ -176,8 +167,7 @@ public class ProductComboServiceImpl implements ProductComboService {
     @Override
     @Transactional
     public void toggleStatus(Integer id) {
-        ProductCombo combo = productComboRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Combo not found with id: " + id));
+        ProductCombo combo = productComboValidator.requireExistingCombo(id);
         combo.setIsActive(combo.getIsActive() != null ? !combo.getIsActive() : false);
         productComboRepository.save(combo);
     }
@@ -204,13 +194,13 @@ public class ProductComboServiceImpl implements ProductComboService {
     }
 
     private BigDecimal calculateOriginalPrice(List<CreateProductComboItemRequest> items) {
-        if (items == null || items.isEmpty())
+        if (items == null || items.isEmpty()) {
             return BigDecimal.ZERO;
+        }
 
         BigDecimal total = BigDecimal.ZERO;
         for (CreateProductComboItemRequest itemReq : items) {
-            ProductVariant variant = productVariantRepository.findById(itemReq.getProductVariantId())
-                    .orElseThrow(() -> new RuntimeException("Variant not found: " + itemReq.getProductVariantId()));
+            ProductVariant variant = productComboValidator.requireExistingVariant(itemReq.getProductVariantId());
 
             BigDecimal variantPrice = variant.getSellPrice() != null ? variant.getSellPrice() : BigDecimal.ZERO;
             int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 1;

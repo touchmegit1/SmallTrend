@@ -3,7 +3,7 @@ import { X, AlertTriangle } from "lucide-react";
 import { DIFFERENCE_REASONS } from "../../../utils/inventoryCount";
 
 export default function DifferenceReasonModal({ item, onSave, onClose }) {
-  const [reason, setReason] = useState(item?.reason || "");
+  const [reason, setReason] = useState(item?.reason ?? "");
   const [customReason, setCustomReason] = useState("");
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function DifferenceReasonModal({ item, onSave, onClose }) {
   const handleSave = () => {
     const finalReason =
       reason === "OTHER" ? customReason.trim() || "Lý do khác" : reason;
-    onSave(item.product_id, finalReason);
+    onSave(item.variant_id, finalReason);
   };
 
   return (

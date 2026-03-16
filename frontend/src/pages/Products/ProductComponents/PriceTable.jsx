@@ -109,7 +109,7 @@ export default function PriceTable({
                             </th>
                             <SortHeader label="Sản phẩm" sortKey="name" />
                             <SortHeader label="SKU" sortKey="sku" className="w-[80px]" />
-                            <SortHeader label="Giá nhập" sortKey="activePurchasePrice" align="right" className="w-[85px]" />
+                            <SortHeader label="Giá nhập" sortKey="costPrice" align="right" className="w-[85px]" />
                             <th className="px-1 py-2.5 font-semibold text-gray-600 text-[11px] uppercase tracking-wider text-center whitespace-nowrap w-[50px]">
                                 Thuế %
                             </th>
@@ -150,7 +150,7 @@ export default function PriceTable({
                             variants.map((variant) => {
                                 const isEditing = editingId === variant.id;
                                 const isSelected = selectedIds.includes(variant.id);
-                                const costPrice = Number(variant.activePurchasePrice) || Number(variant.costPrice) || 0;
+                                const costPrice = Number(variant.costPrice) || 0;
                                 const taxRate = Number(variant.activeTaxPercent) || Number(variant.taxRate) || 0;
                                 const sellPrice = Number(variant.activeSellingPrice) || Number(variant.sellPrice) || 0;
                                 // Giá bán cho khách = sellPrice
@@ -187,11 +187,11 @@ export default function PriceTable({
                                                         <span className="text-gray-400 font-medium text-[9px]">IMG</span>
                                                     )}
                                                 </div>
-                                                <div className="max-w-[140px] xl:max-w-[200px]">
-                                                    <p className="font-semibold text-gray-900 truncate text-[13px] leading-tight" title={variant.name}>
+                                                <div className="max-w-[180px] sm:max-w-[240px] xl:max-w-[300px]">
+                                                    <p className="font-semibold text-gray-900 text-[13px] leading-tight whitespace-normal break-words" title={variant.name}>
                                                         {variant.name}
                                                     </p>
-                                                    <p className="text-[10px] text-gray-500 truncate mt-0.5" title={variant.brandName || variant.categoryName || "Không phân loại"}>
+                                                    <p className="text-[10px] text-gray-500 mt-0.5 whitespace-normal break-words" title={variant.brandName || variant.categoryName || "Không phân loại"}>
                                                         {variant.brandName || variant.categoryName || "Không phân loại"}
                                                     </p>
                                                 </div>
@@ -200,7 +200,7 @@ export default function PriceTable({
 
                                         {/* SKU */}
                                         <td className="px-2 py-2">
-                                            <span className="font-mono text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 truncate block w-[70px]" title={variant.sku}>
+                                            <span className="inline-block max-w-[140px] sm:max-w-[180px] font-mono text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 whitespace-normal break-all" title={variant.sku}>
                                                 {variant.sku}
                                             </span>
                                         </td>

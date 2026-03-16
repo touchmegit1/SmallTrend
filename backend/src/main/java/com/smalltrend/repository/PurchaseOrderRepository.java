@@ -11,8 +11,10 @@ import java.util.Optional;
 
 @Repository
 public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Integer> {
-    
+
     Optional<PurchaseOrder> findByOrderNumber(String orderNumber);
+
+    boolean existsByLocationId(Integer locationId);
     
     List<PurchaseOrder> findBySupplierId(Integer supplierId);
     

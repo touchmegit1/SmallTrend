@@ -1,5 +1,6 @@
 package com.smalltrend.controller.products;
 
+import com.smalltrend.dto.inventory.dashboard.PriceExpiryAlertResponse;
 import com.smalltrend.dto.products.CreateProductRequest;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.dto.products.ProductResponse;
@@ -10,8 +11,9 @@ import com.smalltrend.dto.products.UnitResponse;
 import com.smalltrend.dto.products.VariantPriceRequest;
 import com.smalltrend.dto.products.VariantPriceResponse;
 import com.smalltrend.dto.pos.ProductVariantRespone;
+import com.smalltrend.service.products.PriceExpiryAlertEmailScheduler;
 import com.smalltrend.service.products.ProductService;
-import com.smalltrend.service.ProductVariantService;
+import com.smalltrend.service.products.ProductVariantService;
 import com.smalltrend.service.UnitConversionService;
 import com.smalltrend.service.UnitService;
 import com.smalltrend.service.VariantPriceService;
@@ -36,6 +38,7 @@ public class ProductController {
     private final UnitConversionService unitConversionService;
     private final UnitService unitService;
     private final VariantPriceService variantPriceService;
+    private final PriceExpiryAlertEmailScheduler priceExpiryAlertEmailScheduler;
 
     // Lấy danh sách tất cả sản phẩm
     @GetMapping
@@ -83,14 +86,14 @@ public class ProductController {
     @PutMapping("/variants/{variantId}/toggle-status")
     public ResponseEntity<String> toggleVariantStatus(@PathVariable Integer variantId) {
         productVariantService.toggleVariantStatus(variantId);
-        return ResponseEntity.ok("Variant status toggled");
+        return ResponseEntity.ok("Đã thay đổi trạng thái biến thể");
     }
 
     // Xóa một biến thể (chỉ trong 2 phút đầu sau khi tạo)
     @DeleteMapping("/variants/{variantId}")
     public ResponseEntity<String> deleteVariant(@PathVariable Integer variantId) {
         productVariantService.deleteVariant(variantId);
-        return ResponseEntity.ok("Variant deleted");
+        return ResponseEntity.ok("Đã xóa biến thể");
     }
 
     // Tự động tạo mã SKU dựa trên thông tin sản phẩm
@@ -135,7 +138,7 @@ public class ProductController {
     @DeleteMapping("/conversions/{conversionId}")
     public ResponseEntity<String> deleteConversion(@PathVariable Integer conversionId) {
         unitConversionService.deleteConversion(conversionId);
-        return ResponseEntity.ok("Unit conversion deleted");
+        return ResponseEntity.ok("Đã xóa quy đổi đơn vị");
     }
 
     // Lấy danh sách tất cả các đơn vị tính có trong hệ thống
@@ -162,7 +165,7 @@ public class ProductController {
     @DeleteMapping("/units/{id}")
     public ResponseEntity<String> deleteUnit(@PathVariable Integer id) {
         unitService.deleteUnit(id);
-        return ResponseEntity.ok("Unit deleted");
+        return ResponseEntity.ok("Đã xóa đơn vị tính");
     }
 
     // ─── Variant Prices ──────────────────────────────────────────────────────
@@ -221,6 +224,27 @@ public class ProductController {
         return ResponseEntity.ok(variantPriceService.togglePriceStatus(priceId));
     }
 
+    // Lấy danh sách giá sắp hết hiệu lực theo số ngày cảnh báo
+    @GetMapping("/price-expiry-alerts")
+    public ResponseEntity<List<PriceExpiryAlertResponse>> getPriceExpiryAlerts(
+            @RequestParam(defaultValue = "1") int days) {
+        return ResponseEntity.ok(variantPriceService.getPriceExpiryAlerts(days));
+    }
+
+    // Trigger gửi email cảnh báo ngay lập tức để test
+    @PostMapping("/price-expiry-alerts/send-now")
+    public ResponseEntity<java.util.Map<String, Object>> sendPriceExpiryAlertsNow() {
+        int sentCount = priceExpiryAlertEmailScheduler.sendPriceExpiryAlertsNow();
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Đã chạy tác vụ gửi email cảnh báo giá sắp hết hạn",
+                "sentCount", sentCount,
+                "recipients", priceExpiryAlertEmailScheduler.getRecipientEmails(),
+                "recipientCount", priceExpiryAlertEmailScheduler.getRecipientCount(),
+                "sender", priceExpiryAlertEmailScheduler.getSenderEmail(),
+                "daysBeforeExpiry", priceExpiryAlertEmailScheduler.getDaysBeforeExpiry()
+        ));
+    }
+
     @PostMapping
     public ResponseEntity<ProductResponse> create(@RequestBody CreateProductRequest request) {
         return ResponseEntity.ok(productService.create(request));
@@ -236,13 +260,13 @@ public class ProductController {
     @PutMapping("/{id}/toggle-status")
     public ResponseEntity<String> toggleStatus(@PathVariable Integer id) {
         productService.toggleStatus(id);
-        return ResponseEntity.ok("Product status toggled");
+        return ResponseEntity.ok("Đã thay đổi trạng thái sản phẩm");
     }
 
     // Xóa một sản phẩm theo ID
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable Integer id) {
         productService.delete(id);
-        return ResponseEntity.ok("Product deleted");
+        return ResponseEntity.ok("Đã xóa sản phẩm");
     }
 }

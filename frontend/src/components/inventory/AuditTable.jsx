@@ -1,5 +1,11 @@
 ﻿import React from "react";
 
+const getDiffClass = (value) => {
+  if (value > 0) return "text-green-600";
+  if (value < 0) return "text-red-600";
+  return "text-slate-900";
+};
+
 function AuditTable({ items, onActualStockChange }) {
   return items.map((item) => (
     <tr key={item.id} className="hover:bg-slate-50">
@@ -18,12 +24,12 @@ function AuditTable({ items, onActualStockChange }) {
         />
       </td>
       <td className="px-4 py-3 text-sm text-right">
-        <span className={`font-medium ${item.difference > 0 ? "text-green-600" : item.difference < 0 ? "text-red-600" : "text-slate-900"}`}>
+        <span className={`font-medium ${getDiffClass(item.difference)}`}>
           {item.actualStock !== null ? item.difference : "---"}
         </span>
       </td>
       <td className="px-4 py-3 text-sm text-right">
-        <span className={`font-medium ${item.valueDifference > 0 ? "text-green-600" : item.valueDifference < 0 ? "text-red-600" : "text-slate-900"}`}>
+        <span className={`font-medium ${getDiffClass(item.valueDifference)}`}>
           {item.actualStock !== null ? item.valueDifference.toLocaleString() : "---"}
         </span>
       </td>

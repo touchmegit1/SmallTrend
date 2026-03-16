@@ -1,26 +1,28 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import api from "../../../config/axiosConfig";
 import {
-    Search,
     AlertCircle,
-    Percent,
-    RefreshCw,
-    Save,
-    Filter,
+    Bell,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    Clock3,
+    Filter,
+    Percent,
+    RefreshCw,
+    Save,
+    Search,
+    Trash2,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
+import api from "../../../config/axiosConfig";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
-import TaxRateManagerModal from "./TaxRateManagerModal";
-import PriceHistoryModal from "./PriceHistoryModal";
-import CreatePriceModal from "./CreatePriceModal";
 import PriceTable from "../ProductComponents/PriceTable";
+import CreatePriceModal from "./CreatePriceModal";
+import PriceHistoryModal from "./PriceHistoryModal";
+import TaxRateManagerModal from "./TaxRateManagerModal";
 import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
-import { calculateProfit } from "../../../utils/priceCalculation";
-import * as XLSX from "xlsx";
 
 /**
  * Thiết lập Giá sản phẩm — phiên bản đơn giản.
@@ -31,6 +33,9 @@ import * as XLSX from "xlsx";
  *   profit        = selling_price − cost_price
  */
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
+const PRICE_SYNC_NOTICE_KEY = "priceSyncNotice";
+const PRICE_SYNC_HISTORY_KEY = "priceSyncNotifications";
+const MAX_PRICE_SYNC_NOTIFICATIONS = 30;
 
 const PriceSetting = () => {
     // ─── Data ────────────────────────────────
@@ -38,6 +43,111 @@ const PriceSetting = () => {
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
+    const [priceSyncNotice, setPriceSyncNotice] = useState(null);
+    const [showSyncedProducts, setShowSyncedProducts] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [historyHydrated, setHistoryHydrated] = useState(false);
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(PRICE_SYNC_HISTORY_KEY);
+            if (!raw) {
+                setHistoryHydrated(true);
+                return;
+            }
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                setNotifications(parsed);
+            }
+        } catch {
+            localStorage.removeItem(PRICE_SYNC_HISTORY_KEY);
+        } finally {
+            setHistoryHydrated(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!historyHydrated) return;
+        try {
+            localStorage.setItem(PRICE_SYNC_HISTORY_KEY, JSON.stringify(notifications));
+        } catch {
+            // ignore storage write errors
+        }
+    }, [notifications, historyHydrated]);
+
+    const consumePriceSyncNotice = useCallback(() => {
+        try {
+            const rawNotice = sessionStorage.getItem(PRICE_SYNC_NOTICE_KEY);
+            if (!rawNotice) return;
+
+            sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
+            const notice = JSON.parse(rawNotice);
+            const syncedCount = Number(notice?.syncedCount ?? notice?.syncedPurchasePriceCount) || 0;
+            if (syncedCount <= 0) return;
+
+            const syncedItems = Array.isArray(notice?.syncedItems)
+                ? notice.syncedItems.map((item, index) => ({
+                    itemId: item?.itemId || item?.variantId || index,
+                    variantId: item?.variantId || null,
+                    productName: item?.productName || item?.name || "Sản phẩm",
+                    sku: item?.sku || "-",
+                    purchasePrice: Number(item?.purchasePrice ?? item?.unitCost ?? 0),
+                    previousPurchasePrice: Number(item?.previousPurchasePrice ?? 0),
+                }))
+                : [];
+            const orderNumber = notice?.orderNumber || notice?.poNumber || null;
+            const createdAt = notice?.createdAt || new Date().toISOString();
+            const orderInfo = orderNumber ? ` (PO: ${orderNumber})` : "";
+
+            const notificationEntry = {
+                id: Date.now() + Math.random(),
+                syncedCount,
+                syncedItems,
+                orderNumber,
+                createdAt,
+            };
+
+            let nextNotifications = [notificationEntry];
+            try {
+                const existingRaw = localStorage.getItem(PRICE_SYNC_HISTORY_KEY);
+                const existing = existingRaw ? JSON.parse(existingRaw) : [];
+                if (Array.isArray(existing)) {
+                    nextNotifications = [notificationEntry, ...existing].slice(0, MAX_PRICE_SYNC_NOTIFICATIONS);
+                }
+                localStorage.setItem(PRICE_SYNC_HISTORY_KEY, JSON.stringify(nextNotifications));
+            } catch {
+                // keep in-memory fallback only
+            }
+
+            setPriceSyncNotice(notificationEntry);
+            setShowSyncedProducts(false);
+            setNotifications(nextNotifications);
+            setUnreadCount((prev) => prev + 1);
+            setSuccessMsg(`Giá nhập đã được đồng bộ từ phiếu nhập kho cho ${syncedCount} sản phẩm${orderInfo}.`);
+            setTimeout(() => setSuccessMsg(""), 6000);
+            sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
+        } catch (error) {
+            sessionStorage.removeItem(PRICE_SYNC_NOTICE_KEY);
+            setPriceSyncNotice(null);
+        }
+    }, []);
+
+    const toggleNotificationPanel = useCallback(() => {
+        setNotificationPanelOpen((prev) => {
+            const next = !prev;
+            if (next) {
+                setUnreadCount(0);
+            }
+            return next;
+        });
+    }, []);
+
+    const clearNotifications = useCallback(() => {
+        setNotifications([]);
+        setUnreadCount(0);
+    }, []);
 
     // ─── Search & Filter ─────────────────────
     const [searchTerm, setSearchTerm] = useState("");
@@ -66,14 +176,66 @@ const PriceSetting = () => {
     // ═══════════════════════════════════════════
     // FETCH
     // ═══════════════════════════════════════════
-    useEffect(() => { fetchVariants(); }, []);
+    useEffect(() => {
+        fetchVariants();
+        consumePriceSyncNotice();
+    }, [consumePriceSyncNotice]);
+
+    const toDateOnly = (dateStr) => {
+        if (!dateStr) return null;
+        const normalized = String(dateStr).length === 10 ? `${dateStr}T00:00:00` : dateStr;
+        const d = new Date(normalized);
+        if (Number.isNaN(d.getTime())) return null;
+        d.setHours(0, 0, 0, 0);
+        return d;
+    };
+
+    const isExpiryReached = (dateStr) => {
+        const expiryDate = toDateOnly(dateStr);
+        if (!expiryDate) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return expiryDate <= today;
+    };
 
     const fetchVariants = async () => {
         setLoading(true);
         setErrorMsg("");
         try {
             const res = await api.get("/products/variants");
-            setVariants(res.data);
+            const variantsData = res.data || [];
+
+            // Nếu giá ACTIVE của variant đã tới hạn, tự chuyển về INACTIVE trước khi render bảng.
+            const expiredActiveVariants = variantsData.filter(
+                (v) => v.activeExpiryDate && isExpiryReached(v.activeExpiryDate)
+            );
+
+            if (expiredActiveVariants.length > 0) {
+                await Promise.all(
+                    expiredActiveVariants.map(async (v) => {
+                        try {
+                            const activePriceRes = await api.get(`/products/variants/${v.id}/prices/active`);
+                            const activePrice = activePriceRes?.data;
+
+                            if (
+                                activePrice?.id &&
+                                activePrice?.status === "ACTIVE" &&
+                                activePrice?.expiryDate &&
+                                isExpiryReached(activePrice.expiryDate)
+                            ) {
+                                await api.put(`/products/prices/${activePrice.id}/toggle-status`);
+                            }
+                        } catch (toggleErr) {
+                            console.error(`Error auto-deactivating expired price for variant ${v.id}:`, toggleErr);
+                        }
+                    })
+                );
+
+                const refreshedRes = await api.get("/products/variants");
+                setVariants(refreshedRes.data || []);
+            } else {
+                setVariants(variantsData);
+            }
         } catch (err) {
             console.error("Error fetching variants:", err);
             setErrorMsg("Không thể tải danh sách sản phẩm.");
@@ -135,8 +297,8 @@ const PriceSetting = () => {
                         bV = Number(b.activeSellingPrice) || 0;
                         break;
                     case "profit":
-                        aV = calculateProfit(Number(a.activePurchasePrice) || 0, Number(a.activeSellingPrice) || 0);
-                        bV = calculateProfit(Number(b.activePurchasePrice) || 0, Number(b.activeSellingPrice) || 0);
+                        aV = calculateProfit(Number(a.costPrice) || 0, Number(a.activeSellingPrice) || 0);
+                        bV = calculateProfit(Number(b.costPrice) || 0, Number(b.activeSellingPrice) || 0);
                         break;
                     default:
                         aV = 0; bV = 0;
@@ -312,6 +474,78 @@ const PriceSetting = () => {
                         </div>
 
                         <div className="flex flex-wrap gap-3 w-full lg:w-auto">
+                            <div className="relative">
+                                <Button
+                                    variant="ghost"
+                                    onClick={toggleNotificationPanel}
+                                    className="h-11 w-11 p-0 rounded-xl text-gray-600 hover:bg-gray-100 relative"
+                                    title="Thông báo đồng bộ giá"
+                                >
+                                    <Bell className="w-5 h-5" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                                            {unreadCount > 9 ? "9+" : unreadCount}
+                                        </span>
+                                    )}
+                                </Button>
+
+                                {notificationPanelOpen && (
+                                    <div className="absolute right-0 mt-2 w-[360px] max-h-[420px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl z-20">
+                                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                            <div className="font-semibold text-gray-800">Thông báo đồng bộ giá</div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={clearNotifications}
+                                                className="h-8 px-2 text-xs text-red-600 hover:bg-red-50"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                                Xóa hết
+                                            </Button>
+                                        </div>
+
+                                        {notifications.length === 0 ? (
+                                            <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                                                Chưa có thông báo nào.
+                                            </div>
+                                        ) : (
+                                            <div className="max-h-[360px] overflow-auto divide-y divide-gray-100">
+                                                {notifications.map((notice) => {
+                                                    const formattedTime = new Date(notice.createdAt || Date.now()).toLocaleString("vi-VN");
+                                                    return (
+                                                        <div key={notice.id} className="px-4 py-3 space-y-2">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <p className="text-sm font-medium text-gray-800">
+                                                                    Đồng bộ giá nhập cho {notice.syncedCount} sản phẩm
+                                                                    {notice.orderNumber ? ` (PO: ${notice.orderNumber})` : ""}
+                                                                </p>
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 inline-flex items-center gap-1">
+                                                                <Clock3 className="w-3.5 h-3.5" />
+                                                                {formattedTime}
+                                                            </p>
+                                                            {Array.isArray(notice.syncedItems) && notice.syncedItems.length > 0 && (
+                                                                <ul className="space-y-1">
+                                                                    {notice.syncedItems.map((item, index) => (
+                                                                        <li
+                                                                            key={`${notice.id}-${item.variantId || item.itemId || index}`}
+                                                                            className="text-xs text-gray-700 bg-gray-50 rounded-md px-2 py-1"
+                                                                        >
+                                                                            <span className="font-medium text-gray-900">{item.productName || "Sản phẩm"}</span>
+                                                                            <span className="text-gray-500"> · SKU: {item.sku || "-"}</span>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <Button
                                 variant="outline"
                                 onClick={() => setIsTaxModalOpen(true)}
@@ -338,7 +572,7 @@ const PriceSetting = () => {
                             <div className="relative flex-1 lg:w-80">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <Input
-                                    placeholder="Tìm theo Tên, SKU, Brand..."
+                                    placeholder="Tìm theo tên, SKU, thương hiệu..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-10 h-11 w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
@@ -367,10 +601,40 @@ const PriceSetting = () => {
                     </div>
                 )}
                 {successMsg && (
-                    <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl flex items-center gap-3 border border-emerald-100 shadow-sm">
-                        <Save className="w-5 h-5 flex-shrink-0" />
-                        <span className="font-medium text-sm flex-1">{successMsg}</span>
-                        <button onClick={() => setSuccessMsg("")} className="text-emerald-400 hover:text-emerald-600 text-lg leading-none">×</button>
+                    <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl border border-emerald-100 shadow-sm space-y-3">
+                        <div className="flex items-center gap-3">
+                            <Save className="w-5 h-5 flex-shrink-0" />
+                            <span className="font-medium text-sm flex-1">{successMsg}</span>
+                            <button onClick={() => setSuccessMsg("")} className="text-emerald-400 hover:text-emerald-600 text-lg leading-none">×</button>
+                        </div>
+
+                        {priceSyncNotice?.syncedItems?.length > 0 && (
+                            <div className="pl-8">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowSyncedProducts((prev) => !prev)}
+                                    className="h-9 px-3 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                                >
+                                    {showSyncedProducts ? "Ẩn sản phẩm đã đổi giá nhập" : "Xem sản phẩm đã đổi giá nhập"}
+                                </Button>
+
+                                {showSyncedProducts && (
+                                    <div className="mt-3 rounded-lg border border-emerald-200 bg-white p-3 max-h-56 overflow-auto">
+                                        <ul className="space-y-2 text-sm text-gray-700">
+                                            {priceSyncNotice.syncedItems.map((item, index) => (
+                                                <li key={`${item.itemId || item.variantId || index}`} className="border-b border-gray-100 pb-2 last:border-b-0">
+                                                    <div className="font-medium text-gray-900">{item.productName || "Sản phẩm"}</div>
+                                                    <div className="text-xs text-gray-500">SKU: {item.sku || "-"}</div>
+                                                    <div className="text-xs text-gray-600">
+                                                        Giá nhập: {Number(item.previousPurchasePrice || 0).toLocaleString("vi-VN")} → {Number(item.purchasePrice || 0).toLocaleString("vi-VN")}
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -477,10 +741,10 @@ const PriceSetting = () => {
                 <TaxRateManagerModal onClose={() => setIsTaxModalOpen(false)} onDataChange={fetchVariants} />
             )}
             {historyVariant && (
-                <PriceHistoryModal 
-                    isOpen={true} 
-                    variant={historyVariant} 
-                    onClose={() => setHistoryVariant(null)} 
+                <PriceHistoryModal
+                    isOpen={true}
+                    variant={historyVariant}
+                    onClose={() => setHistoryVariant(null)}
                     onStatusChanged={fetchVariants}
                 />
             )}

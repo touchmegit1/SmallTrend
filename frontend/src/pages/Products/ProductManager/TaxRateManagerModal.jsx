@@ -5,6 +5,10 @@ import { Input } from '../ProductComponents/input';
 import { Label } from '../ProductComponents/label';
 import api from '../../../config/axiosConfig';
 
+/**
+ * Modal quản lý danh sách thuế suất (thêm/sửa/xóa).
+ * Sau mỗi thao tác thành công sẽ gọi onDataChange để đồng bộ màn hình cha.
+ */
 export default function TaxRateManagerModal({ onClose, onDataChange }) {
     const [taxRates, setTaxRates] = useState([]);
     const [loading, setLoading] = useState(true);

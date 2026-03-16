@@ -48,6 +48,7 @@ const STYLES = {
   },
 };
 
+// Một toast đơn lẻ: tự chạy progress và tự đóng sau duration.
 function ToastItem({ toast, onRemove }) {
   const [isExiting, setIsExiting] = useState(false);
   const [progress, setProgress] = useState(100);
@@ -125,6 +126,7 @@ function ToastItem({ toast, onRemove }) {
   );
 }
 
+// Provider quản lý danh sách toast toàn cục cho toàn ứng dụng.
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 

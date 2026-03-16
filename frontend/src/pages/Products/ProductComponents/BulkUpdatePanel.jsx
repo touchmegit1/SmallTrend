@@ -1,4 +1,4 @@
-﻿/**
+/**
  * BulkUpdatePanel.jsx
  * Bulk actions panel for Price Setting.
  */
@@ -53,11 +53,11 @@ export default function BulkUpdatePanel({
                         <CheckSquare className="w-5 h-5 text-white" />
                     </div>
                     <div className="text-left">
-                        <h3 className="font-bold text-gray-900">Cap nhat hang loat</h3>
+                        <h3 className="font-bold text-gray-900">Cập nhật hàng loạt</h3>
                         <p className="text-xs text-gray-500 mt-0.5">
                             {selectedCount > 0
-                                ? `Da chon ${selectedCount} san pham`
-                                : "Chon san pham trong bang de thao tac"}
+                                ? `Đã chọn ${selectedCount} sản phẩm`
+                                : "Chọn sản phẩm trong bảng để thực hiện thao tác"}
                         </p>
                     </div>
                 </div>
@@ -74,7 +74,7 @@ export default function BulkUpdatePanel({
                     {selectedCount === 0 && (
                         <div className="mb-4 bg-amber-50 text-amber-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm border border-amber-100">
                             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                            <span>Hay chon it nhat 1 san pham de thuc hien thao tac hang loat.</span>
+                            <span>Hay chọn ít nhất 1 sản phẩm để thực hiện thao tác hàng loạt.</span>
                         </div>
                     )}
 
@@ -93,9 +93,9 @@ export default function BulkUpdatePanel({
                             <TrendingUp className={`w-5 h-5 ${selectedCount === 0 ? "text-gray-300" : "text-blue-600"}`} />
                             <div>
                                 <p className={`text-sm font-semibold ${selectedCount === 0 ? "text-gray-400" : "text-gray-800"}`}>
-                                    Tang gia theo %
+                                    Tăng giá theo %
                                 </p>
-                                <p className="text-[11px] text-gray-400 mt-0.5">Tang gia ban cho san pham da chon</p>
+                                <p className="text-[11px] text-gray-400 mt-0.5">Tăng giá bán cho sản phẩm đã chọn</p>
                             </div>
                         </button>
 
@@ -106,8 +106,8 @@ export default function BulkUpdatePanel({
                         >
                             <FileSpreadsheet className="w-5 h-5 text-purple-600" />
                             <div>
-                                <p className="text-sm font-semibold text-gray-800">Import tu Excel</p>
-                                <p className="text-[11px] text-gray-400 mt-0.5">Nhap gia hang loat tu file .xlsx</p>
+                                <p className="text-sm font-semibold text-gray-800">Import từ Excel</p>
+                                <p className="text-[11px] text-gray-400 mt-0.5">Nhập giá hàng loạt từ file .xlsx</p>
                             </div>
                         </button>
                         <input
@@ -140,7 +140,7 @@ export default function BulkUpdatePanel({
                                 disabled={!inputValue || selectedCount === 0}
                                 className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm font-semibold whitespace-nowrap"
                             >
-                                Ap dung
+                                Áp dụng
                             </Button>
                             <Button
                                 variant="ghost"

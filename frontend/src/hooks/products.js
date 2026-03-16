@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import api from '../config/axiosConfig';
 
+/**
+ * Hook quản lý danh sách sản phẩm: tải dữ liệu, trạng thái loading/error và thao tác xóa.
+ */
 export function useFetchProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Tải danh sách sản phẩm từ backend và chuẩn hóa dữ liệu về mảng.
   const fetchProducts = async () => {
     try {
       setLoading(true);
