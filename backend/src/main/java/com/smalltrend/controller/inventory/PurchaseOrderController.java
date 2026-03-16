@@ -1,8 +1,10 @@
 package com.smalltrend.controller.inventory;
 
+import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.service.inventory.PurchaseOrderService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
@@ -83,6 +85,13 @@ public class PurchaseOrderController {
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'INVENTORY_STAFF', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_INVENTORY_STAFF')")
     public ResponseEntity<PurchaseOrderResponse> receiveGoods(@PathVariable Integer id, @RequestBody GoodsReceiptRequest request) {
         return ResponseEntity.ok(purchaseOrderService.receiveGoods(id, request));
+    }
+
+    @PostMapping("/purchase-orders/{id}/notify-manager")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'INVENTORY_STAFF', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_INVENTORY_STAFF')")
+    public ResponseEntity<MessageResponse> notifyManagers(@PathVariable Integer id,
+            @Valid @RequestBody NotifyManagerEmailRequest request) {
+        return ResponseEntity.ok(purchaseOrderService.notifyManagers(id, request));
     }
 
     @PutMapping("/purchase-orders/{id}/shortage/close")

@@ -63,4 +63,7 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
             LIMIT 10
             """, nativeQuery = true)
     List<Object[]> findLowStockSummary(@Param("threshold") int threshold);
+
+    @Query("SELECT i FROM InventoryStock i JOIN FETCH i.variant v JOIN FETCH v.product LEFT JOIN FETCH i.batch LEFT JOIN FETCH i.location WHERE COALESCE(i.quantity, 0) <= 0")
+    List<InventoryStock> findOutOfStockWithDetails();
 }

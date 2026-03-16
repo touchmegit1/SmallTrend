@@ -1,5 +1,6 @@
 package com.smalltrend.service.inventory;
 
+import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
@@ -37,6 +38,7 @@ public class PurchaseOrderService {
     private final StockMovementRepository stockMovementRepository;
     private final UnitConversionRepository unitConversionRepository;
     private final VariantPriceService variantPriceService;
+    private final InventoryManagerNotificationService inventoryManagerNotificationService;
 
     // ═══════════════════════════════════════════════════════════
     // Public API
@@ -63,6 +65,36 @@ public class PurchaseOrderService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + id));
         return toDetailResponse(order);
     }
+
+    @Transactional(readOnly = true)
+    public MessageResponse notifyManagers(Integer orderId, NotifyManagerEmailRequest request) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        int recipientCount = inventoryManagerNotificationService.notifyManagers(order, request);
+        return new MessageResponse("Đã gửi thông báo cho " + recipientCount + " quản lý.");
+    }
+
+    private void notifyManagersOnShortage(PurchaseOrder order) {
+        try {
+            String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
+            String shortageReason = order != null && order.getShortageReason() != null
+                    ? order.getShortageReason()
+                    : "Không có";
+
+            NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
+                    .subject("[PO thiếu hàng] " + orderNumber)
+                    .message("Phiếu nhập " + orderNumber + " đang thiếu hàng.\nLý do thiếu: " + shortageReason)
+                    .build();
+
+            int recipientCount = inventoryManagerNotificationService.notifyManagers(order, request);
+            log.info("Đã tự động gửi thông báo thiếu hàng cho {} quản lý của PO {}.", recipientCount, orderNumber);
+        } catch (Exception ex) {
+            String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
+            log.warn("Không thể tự động gửi email thiếu hàng cho PO {}: {}", orderNumber, ex.getMessage());
+        }
+    }
+
 
     // ─── Generate Next PO Code ───────────────────────────────
     public String generateNextPOCode() {
@@ -327,6 +359,7 @@ public class PurchaseOrderService {
             order.setManagerDecisionNote(null);
             order.setManagerDecidedAt(null);
             order.setStatus(PurchaseOrderStatus.SUPPLIER_SUPPLEMENT_PENDING);
+            notifyManagersOnShortage(order);
         } else {
             order.setStatus(PurchaseOrderStatus.RECEIVED);
             order.setShortageReason(null);

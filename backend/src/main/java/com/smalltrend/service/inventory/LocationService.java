@@ -35,6 +35,7 @@ public class LocationService {
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final InventoryCountRepository inventoryCountRepository;
     private final DisposalVoucherRepository disposalVoucherRepository;
+    private final InventoryOutOfStockNotificationService outOfStockNotificationService;
 
     public List<FullLocationResponse> getAllLocations() {
         return locationRepository.findAll().stream()
@@ -148,18 +149,22 @@ public class LocationService {
 
         int remaining = available - qty;
         if (remaining == 0) {
+            outOfStockNotificationService.handleStockTransition(fromStock, available, 0, "TRANSFER_OUT");
             inventoryStockRepository.delete(fromStock);
         } else {
             fromStock.setQuantity(remaining);
-            inventoryStockRepository.save(fromStock);
+            InventoryStock savedFromStock = inventoryStockRepository.save(fromStock);
+            outOfStockNotificationService.handleStockTransition(savedFromStock, available, savedFromStock.getQuantity(), "TRANSFER_OUT");
         }
 
         Optional<InventoryStock> toStockOpt = inventoryStockRepository
                 .findByVariantIdAndBatchIdAndLocationId(variantId, batchId, toLocationId);
         if (toStockOpt.isPresent()) {
             InventoryStock toStock = toStockOpt.get();
-            toStock.setQuantity((toStock.getQuantity() != null ? toStock.getQuantity() : 0) + qty);
-            inventoryStockRepository.save(toStock);
+            int oldToQty = toStock.getQuantity() != null ? toStock.getQuantity() : 0;
+            toStock.setQuantity(oldToQty + qty);
+            InventoryStock savedToStock = inventoryStockRepository.save(toStock);
+            outOfStockNotificationService.handleStockTransition(savedToStock, oldToQty, savedToStock.getQuantity(), "TRANSFER_IN");
         } else {
             InventoryStock newStock = InventoryStock.builder()
                     .variant(fromStock.getVariant())
@@ -167,7 +172,8 @@ public class LocationService {
                     .location(toLoc)
                     .quantity(qty)
                     .build();
-            inventoryStockRepository.save(newStock);
+            InventoryStock savedNewStock = inventoryStockRepository.save(newStock);
+            outOfStockNotificationService.handleStockTransition(savedNewStock, 0, savedNewStock.getQuantity(), "TRANSFER_IN");
         }
 
         stockMovementRepository.save(StockMovement.builder()

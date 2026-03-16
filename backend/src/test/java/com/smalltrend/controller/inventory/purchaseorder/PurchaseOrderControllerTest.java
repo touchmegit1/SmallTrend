@@ -1,5 +1,6 @@
 package com.smalltrend.controller.inventory.purchaseorder;
 
+import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.controller.inventory.PurchaseOrderController;
@@ -165,6 +166,22 @@ class PurchaseOrderControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(expected, response.getBody());
         verify(purchaseOrderService).receiveGoods(1, request);
+    }
+
+    @Test
+    void notifyManagers_shouldReturnOk() {
+        NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
+                .subject("Need decision")
+                .message("Please review shortage")
+                .build();
+        MessageResponse expected = new MessageResponse("Đã gửi thông báo cho 2 quản lý.");
+        when(purchaseOrderService.notifyManagers(1, request)).thenReturn(expected);
+
+        ResponseEntity<MessageResponse> response = controller.notifyManagers(1, request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).notifyManagers(1, request);
     }
 
     @Test
