@@ -32,9 +32,6 @@ public class CustomerTier {
     @Column(precision = 5, scale = 2, nullable = false)
     private BigDecimal pointsMultiplier; // Hệ số nhân điểm (1.0, 1.5, 2.0)
 
-    @Column(precision = 5, scale = 2)
-    private BigDecimal discountRate; // % chiết khấu cố định cho hạng này
-
     @Column(precision = 10, scale = 2)
     private BigDecimal bonusPoints; // Điểm thưởng khi lên hạng
 

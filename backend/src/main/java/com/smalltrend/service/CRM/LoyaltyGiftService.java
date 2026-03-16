@@ -4,6 +4,7 @@ import com.smalltrend.dto.CRM.CreateLoyaltyGiftRequest;
 import com.smalltrend.dto.CRM.LoyaltyGiftResponse;
 import com.smalltrend.dto.CRM.RedeemGiftRequest;
 import com.smalltrend.dto.CRM.GiftRedemptionHistoryResponse;
+import com.smalltrend.dto.CRM.UpdateLoyaltyGiftRequest;
 import com.smalltrend.entity.Customer;
 import com.smalltrend.entity.GiftRedemptionHistory;
 import com.smalltrend.entity.LoyaltyGift;
@@ -62,6 +63,31 @@ public class LoyaltyGiftService {
                 .orElseThrow(() -> new RuntimeException("Gift not found"));
         gift.setActive(false);
         loyaltyGiftRepository.save(gift);
+    }
+
+    @Transactional
+    public LoyaltyGiftResponse updateGift(Integer id, UpdateLoyaltyGiftRequest request) {
+        LoyaltyGift gift = loyaltyGiftRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Gift not found"));
+
+        if (request.getName() != null && !request.getName().trim().isEmpty()) {
+            gift.setName(request.getName().trim());
+        }
+        if (request.getRequiredPoints() != null) {
+            if (request.getRequiredPoints() <= 0) {
+                throw new RuntimeException("Required points must be greater than 0");
+            }
+            gift.setRequiredPoints(request.getRequiredPoints());
+        }
+        if (request.getStock() != null) {
+            if (request.getStock() < 0) {
+                throw new RuntimeException("Stock cannot be negative");
+            }
+            gift.setStock(request.getStock());
+        }
+
+        LoyaltyGift saved = loyaltyGiftRepository.save(gift);
+        return mapToResponse(saved);
     }
 
     @Transactional

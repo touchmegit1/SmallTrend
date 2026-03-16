@@ -13,6 +13,7 @@ import {
     X,
 } from "lucide-react";
 import adService from "../../services/adService";
+import cloudinaryUploadService from "../../services/cloudinaryUploadService";
 import { useToast, ToastContainer } from "../../hooks/useToast.jsx";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 
@@ -27,12 +28,7 @@ const initialForm = {
     slot: "LEFT",
     sponsorName: "",
     title: "",
-    subtitle: "",
     imageUrl: "",
-    linkUrl: "",
-    ctaText: "",
-    ctaColor: "#4f46e5",
-    bgColor: "#ffffff",
     isActive: true,
 };
 
@@ -71,15 +67,39 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
     const isEdit = !!ad?.id;
     const [form, setForm] = useState(ad ? { ...initialForm, ...ad } : initialForm);
     const [saving, setSaving] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
 
     const setField = (key, value) => {
         setForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handleUploadImage = async (file) => {
+        if (!file) return;
+        if (!file.type?.startsWith("image/")) {
+            showToast("Vui lòng chọn file ảnh hợp lệ", "warning");
+            return;
+        }
+
+        setUploadingImage(true);
+        try {
+            const res = await cloudinaryUploadService.uploadImage(file, "crm/ads");
+            setField("imageUrl", res.url || "");
+            showToast("Upload ảnh quảng cáo thành công");
+        } catch (err) {
+            showToast("Upload ảnh thất bại: " + (err?.response?.data?.error || err.message), "error");
+        } finally {
+            setUploadingImage(false);
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!form.sponsorName.trim() || !form.title.trim() || !form.slot) {
             showToast("Vui lòng nhập đầy đủ nhà tài trợ, tiêu đề và vị trí", "warning");
+            return;
+        }
+        if (!form.imageUrl?.trim()) {
+            showToast("Vui lòng upload ảnh quảng cáo", "warning");
             return;
         }
 
@@ -89,12 +109,7 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
                 slot: form.slot,
                 sponsorName: form.sponsorName.trim(),
                 title: form.title.trim(),
-                subtitle: form.subtitle?.trim() || "",
                 imageUrl: form.imageUrl?.trim() || "",
-                linkUrl: form.linkUrl?.trim() || "",
-                ctaText: form.ctaText?.trim() || "",
-                ctaColor: form.ctaColor || "#4f46e5",
-                bgColor: form.bgColor || "#ffffff",
                 isActive: !!form.isActive,
             };
 
@@ -164,60 +179,39 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
                             />
                         </div>
                         <div>
-                            <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Phụ đề</label>
-                            <input
-                                className={INPUT_CLS}
-                                value={form.subtitle || ""}
-                                onChange={(e) => setField("subtitle", e.target.value)}
-                                placeholder="Mô tả ngắn"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-semibold text-slate-600 mb-1.5 block">URL ảnh</label>
-                            <input
-                                className={INPUT_CLS}
-                                value={form.imageUrl || ""}
-                                onChange={(e) => setField("imageUrl", e.target.value)}
-                                placeholder="https://..."
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-semibold text-slate-600 mb-1.5 block">URL liên kết</label>
-                            <input
-                                className={INPUT_CLS}
-                                value={form.linkUrl || ""}
-                                onChange={(e) => setField("linkUrl", e.target.value)}
-                                placeholder="https://..."
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Nội dung CTA</label>
-                            <input
-                                className={INPUT_CLS}
-                                value={form.ctaText || ""}
-                                onChange={(e) => setField("ctaText", e.target.value)}
-                                placeholder="Mua ngay"
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Màu CTA</label>
-                                <input
-                                    type="color"
-                                    className="h-10 w-full rounded-lg border border-slate-200"
-                                    value={form.ctaColor || "#4f46e5"}
-                                    onChange={(e) => setField("ctaColor", e.target.value)}
-                                />
+                            <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Ảnh quảng cáo *</label>
+                            <div className="flex gap-2 items-center">
+                                <label className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700 cursor-pointer whitespace-nowrap transition-colors">
+                                    {uploadingImage ? "Đang up..." : "Up ảnh"}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        disabled={uploadingImage}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            handleUploadImage(file);
+                                            e.target.value = "";
+                                        }}
+                                    />
+                                </label>
+                                {form.imageUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setField("imageUrl", "")}
+                                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
+                                    >
+                                        Xóa ảnh
+                                    </button>
+                                )}
                             </div>
-                            <div>
-                                <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Màu nền</label>
-                                <input
-                                    type="color"
-                                    className="h-10 w-full rounded-lg border border-slate-200"
-                                    value={form.bgColor || "#ffffff"}
-                                    onChange={(e) => setField("bgColor", e.target.value)}
+                            {form.imageUrl && (
+                                <img
+                                    src={form.imageUrl}
+                                    alt="Preview"
+                                    className="mt-2 h-24 rounded-lg object-cover w-full border border-slate-200"
                                 />
-                            </div>
+                            )}
                         </div>
                     </div>
 
@@ -286,8 +280,7 @@ export default function AdsManagement() {
             const okKeyword =
                 !q ||
                 ad.sponsorName?.toLowerCase().includes(q) ||
-                ad.title?.toLowerCase().includes(q) ||
-                ad.subtitle?.toLowerCase().includes(q);
+                ad.title?.toLowerCase().includes(q);
 
             const okSlot = slotFilter === "ALL" || ad.slot === slotFilter;
             const okStatus =
@@ -528,18 +521,6 @@ export default function AdsManagement() {
                                             >
                                                 <Pencil size={16} />
                                             </button>
-                                            <a
-                                                href={ad.linkUrl || "#"}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                title="Mở liên kết"
-                                                className={`p-1.5 rounded transition-colors ${ad.linkUrl
-                                                    ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
-                                                    : "text-slate-300 cursor-not-allowed pointer-events-none"
-                                                    }`}
-                                            >
-                                                <Image size={16} />
-                                            </a>
                                             <button
                                                 onClick={() => setDeleteId(ad.id)}
                                                 title="Xóa"
