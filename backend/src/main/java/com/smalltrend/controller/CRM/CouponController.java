@@ -38,7 +38,7 @@ public class CouponController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCoupon(@PathVariable Integer id, @RequestBody CreateCouponRequest request) {
+    public ResponseEntity<?> updateCoupon(@PathVariable("id") Integer id, @RequestBody CreateCouponRequest request) {
         try {
             CouponResponse coupon = couponService.updateCoupon(id, request);
             return ResponseEntity.ok(coupon);
@@ -50,8 +50,20 @@ public class CouponController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCoupon(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteCoupon(@PathVariable("id") Integer id) {
         couponService.deleteCoupon(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/redeem")
+    public ResponseEntity<?> redeemCoupon(@PathVariable("id") Integer id) {
+        try {
+            CouponResponse coupon = couponService.redeemCoupon(id);
+            return ResponseEntity.ok(coupon);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
     }
 }

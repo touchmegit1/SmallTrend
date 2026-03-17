@@ -8,7 +8,9 @@ import com.smalltrend.repository.CampaignRepository;
 import com.smalltrend.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -83,6 +85,33 @@ public class CouponService {
         if (!couponRepository.existsById(id))
             throw new RuntimeException("Coupon not found: " + id);
         couponRepository.deleteById(id);
+    }
+
+    @Transactional
+    public CouponResponse redeemCoupon(Integer id) {
+        Coupon coupon = couponRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Coupon not found: " + id));
+
+        if (coupon.getStatus() == null || !"ACTIVE".equalsIgnoreCase(coupon.getStatus())) {
+            throw new RuntimeException("Voucher chưa ở trạng thái hoạt động.");
+        }
+
+        LocalDate today = LocalDate.now();
+        if (coupon.getStartDate() != null && today.isBefore(coupon.getStartDate())) {
+            throw new RuntimeException("Voucher chưa đến thời gian áp dụng.");
+        }
+        if (coupon.getEndDate() != null && today.isAfter(coupon.getEndDate())) {
+            throw new RuntimeException("Voucher đã hết hạn.");
+        }
+
+        int currentUsage = coupon.getCurrentUsageCount() == null ? 0 : coupon.getCurrentUsageCount();
+        Integer totalUsageLimit = coupon.getTotalUsageLimit();
+        if (totalUsageLimit != null && totalUsageLimit > 0 && currentUsage >= totalUsageLimit) {
+            throw new RuntimeException("Voucher đã hết lượt sử dụng.");
+        }
+
+        coupon.setCurrentUsageCount(currentUsage + 1);
+        return mapToResponse(couponRepository.save(coupon));
     }
 
     private CouponResponse mapToResponse(Coupon c) {
