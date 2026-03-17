@@ -6,6 +6,8 @@ import { Badge } from "../ProductComponents/badge";
 import { Plus, Edit, Package, Eye, CheckCircle, Power, Trash2, AlertTriangle, X, Filter, Layers, Tag, Box, Puzzle, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditProductModal from "./EditProductModal";
+import { useAuth } from "../../../context/AuthContext";
+import { isProductReadOnlyRole } from "../../../utils/rolePermissions";
 
 // Dùng CustomSelect có sẵn trong hệ thống
 import CustomSelect from "../../../components/common/CustomSelect";
@@ -189,6 +191,7 @@ export function ProductListScreen() {
   };
 
   const handleToggleStatus = (product) => {
+    if (isReadOnlyRole) return;
     setProductToToggle(product);
     setShowConfirm(true);
   };
@@ -209,6 +212,7 @@ export function ProductListScreen() {
   };
 
   const handleEditClick = (product) => {
+    if (isReadOnlyRole) return;
     setSelectedProduct(product);
     setIsEditModalOpen(true);
   };
@@ -228,6 +232,7 @@ export function ProductListScreen() {
   };
 
   const handleDeleteClick = (product) => {
+    if (isReadOnlyRole) return;
     setProductToDelete(product);
     setShowDeleteConfirm(true);
   };

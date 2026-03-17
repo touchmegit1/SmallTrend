@@ -424,10 +424,17 @@ const PriceSetting = () => {
         if (toUpdate.length === 0) return;
 
         setErrorMsg("");
-        let ok = 0, fail = 0;
+        let ok = 0, fail = 0, invalid = 0;
 
         for (const v of toUpdate) {
             const newPrice = Number(((Number(v.activeSellingPrice) || 0) * (1 + percent / 100)).toFixed(2));
+            const costPrice = Number(v.costPrice) || 0;
+
+            if (newPrice < costPrice) {
+                invalid++;
+                continue;
+            }
+
             try {
                 await api.put(`/products/variants/${v.id}`, {
                     sku: v.sku, barcode: v.barcode, unitId: v.unitId || 1,
@@ -438,8 +445,9 @@ const PriceSetting = () => {
             } catch { fail++; }
         }
 
-        if (fail > 0) {
-            setErrorMsg(`Cập nhật: ${ok} thành công, ${fail} thất bại.`);
+        if (fail > 0 || invalid > 0) {
+            const invalidMsg = invalid > 0 ? `, ${invalid} bỏ qua vì giá bán < giá nhập` : "";
+            setErrorMsg(`Cập nhật: ${ok} thành công, ${fail} thất bại${invalidMsg}.`);
         } else {
             setSuccessMsg(`Đã tăng giá ${ok} sản phẩm thành công!`);
             setTimeout(() => setSuccessMsg(""), 4000);
@@ -459,6 +467,7 @@ const PriceSetting = () => {
                 const rows = XLSX.utils.sheet_to_json(ws);
 
                 let updated = 0;
+                let invalid = 0;
                 setVariants((prev) => {
                     const next = [...prev];
                     rows.forEach((row) => {
@@ -466,12 +475,24 @@ const PriceSetting = () => {
                         const price = parseFloat(row["Selling Price"] || row["sellPrice"] || row["Giá bán"] || 0);
                         if (sku && !isNaN(price) && price >= 0) {
                             const idx = next.findIndex((v) => v.sku === sku);
-                            if (idx !== -1) { next[idx] = { ...next[idx], activeSellingPrice: price }; updated++; }
+                            if (idx !== -1) {
+                                const costPrice = Number(next[idx].costPrice) || 0;
+                                if (price < costPrice) {
+                                    invalid++;
+                                } else {
+                                    next[idx] = { ...next[idx], activeSellingPrice: price };
+                                    updated++;
+                                }
+                            }
                         }
                     });
                     return next;
                 });
-                setSuccessMsg(`Import thành công! Đã cập nhật ${updated} sản phẩm. Nhấn nút Lưu trên từng dòng để xác nhận.`);
+                if (invalid > 0) {
+                    setErrorMsg(`Import hoàn tất: ${updated} sản phẩm hợp lệ, ${invalid} sản phẩm bị bỏ qua vì giá bán < giá nhập.`);
+                } else {
+                    setSuccessMsg(`Import thành công! Đã cập nhật ${updated} sản phẩm. Nhấn nút Lưu trên từng dòng để xác nhận.`);
+                }
                 setTimeout(() => setSuccessMsg(""), 5000);
             } catch (err) {
                 console.error("Excel import error:", err);

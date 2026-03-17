@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import TopBar from "./TopBar";
 import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
@@ -13,6 +14,7 @@ import eventService from "../../services/eventService";
 
 export default function POS() {
   const searchInputRef = useRef(null);
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [combos, setCombos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +33,8 @@ export default function POS() {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showDiscontinuedModal, setShowDiscontinuedModal] = useState(false);
+  const [discontinuedMessage, setDiscontinuedMessage] = useState("");
   const [suspendedOrderCount, setSuspendedOrderCount] = useState(0);
   const [unresolvedTicketCount, setUnresolvedTicketCount] = useState(0);
   const [pendingQROrders, setPendingQROrders] = useState(() => {
@@ -45,6 +49,9 @@ export default function POS() {
       printInvoice: parsed?.printInvoice || 'F9',
       comboFocus: parsed?.comboFocus || 'F11',
       newOrder: parsed?.newOrder || 'F8',
+      loyaltyPage: parsed?.loyaltyPage || 'F6',
+      closePaymentModal: parsed?.closePaymentModal || 'F4',
+      deleteCartItem: parsed?.deleteCartItem || 'F7',
       deleteOrder: parsed?.deleteOrder || 'Delete'
     };
   });
@@ -132,6 +139,14 @@ export default function POS() {
       return;
     }
 
+    if (e.key === shortcuts.deleteCartItem) {
+      e.preventDefault();
+      if (activeOrder.cart.length > 0) {
+        updateCart(activeOrder.cart.slice(0, -1));
+      }
+      return;
+    }
+
     if (filteredProducts.length === 0 && e.key !== 'Enter') return;
 
     if (e.key === 'ArrowDown') {
@@ -195,11 +210,14 @@ export default function POS() {
       } else if (e.key === shortcuts.newOrder) {
         e.preventDefault();
         addNewOrder();
+      } else if (e.key === shortcuts.loyaltyPage) {
+        e.preventDefault();
+        navigate('/crm/loyalty');
       }
     };
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [activeOrder.cart, showPaymentModal, showInvoice, showShortcuts, orders, activeOrderId, shortcuts]);
+  }, [activeOrder.cart, showPaymentModal, showInvoice, showShortcuts, orders, activeOrderId, shortcuts, navigate]);
 
   const loadProducts = async () => {
     try {
@@ -214,7 +232,10 @@ export default function POS() {
         sku: item.sku,
         stock: item.stockQuantity || 0,
         category: item.categoryName,
-        brand: item.brandName
+        brand: item.brandName,
+        isActive: item.isActive,
+        active: item.active,
+        status: item.status
       }));
       setProducts(transformedProducts);
     } catch (error) {
@@ -325,7 +346,57 @@ export default function POS() {
     return 0;
   });
 
+  const closeDiscontinuedModal = () => {
+    setShowDiscontinuedModal(false);
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 0);
+  };
+
+  const showDiscontinuedWarning = (itemName) => {
+    setDiscontinuedMessage(`${itemName || 'Sản phẩm này'} đã ngừng bán. Vui lòng chọn sản phẩm khác.`);
+    setShowDiscontinuedModal(true);
+  };
+
+  useEffect(() => {
+    if (!showDiscontinuedModal) return;
+
+    const handleDiscontinuedModalEnter = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        closeDiscontinuedModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleDiscontinuedModalEnter);
+    return () => window.removeEventListener('keydown', handleDiscontinuedModalEnter);
+  }, [showDiscontinuedModal]);
+
+  useEffect(() => {
+    if (showDiscontinuedModal) return;
+    if (searchInputRef.current && !showPaymentModal && !showInvoice && !showShortcuts) {
+      searchInputRef.current.focus();
+    }
+  }, [showDiscontinuedModal, showPaymentModal, showInvoice, showShortcuts, activeOrderId]);
+
+  const isInactiveStatus = (status) => {
+    if (!status || typeof status !== 'string') return false;
+    const normalized = status.toUpperCase();
+    return ['INACTIVE', 'DISCONTINUED', 'STOP_SELLING', 'STOPPED', 'NGUNG_BAN'].includes(normalized);
+  };
+
+  const isInactiveItem = (item) => {
+    return item?.isActive === false || item?.active === false || isInactiveStatus(item?.status);
+  };
+
   const addToCart = (product) => {
+    if (isInactiveItem(product)) {
+      showDiscontinuedWarning(product.name);
+      return;
+    }
+
     const existingItem = activeOrder.cart.find(item => item.id === product.id);
     let updatedOrders;
     if (existingItem) {
@@ -399,6 +470,21 @@ export default function POS() {
   };
 
   const addComboToCart = (combo) => {
+    if (isInactiveItem(combo)) {
+      showDiscontinuedWarning(combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này');
+      return;
+    }
+
+    const hasInactiveItem = (combo.items || []).some(comboItem => {
+      const productInfo = products.find(p => p.id === comboItem.productVariantId);
+      return isInactiveItem(comboItem) || isInactiveItem(productInfo);
+    });
+
+    if (hasInactiveItem) {
+      showDiscontinuedWarning(combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này');
+      return;
+    }
+
     let currentCart = [...activeOrder.cart];
 
     // Tạo hashmap để kiểm tra và trừ qty
@@ -598,7 +684,10 @@ export default function POS() {
 
     setShowPaymentModal(false);
     setShowSuccessNotification(true);
-    setTimeout(() => setShowSuccessNotification(false), 3000);
+    setTimeout(() => {
+      setShowSuccessNotification(false);
+      setShowInvoice(false);
+    }, 5000);
 
     setSelectedTransaction(transaction);
     setShowInvoice(true);
@@ -742,7 +831,10 @@ export default function POS() {
     }
 
     setShowSuccessNotification(true);
-    setTimeout(() => setShowSuccessNotification(false), 3000);
+    setTimeout(() => {
+      setShowSuccessNotification(false);
+      setShowInvoice(false);
+    }, 5000);
     setSelectedTransaction(transaction);
     setShowInvoice(true);
 
@@ -821,6 +913,7 @@ export default function POS() {
           setActiveOrderId={setActiveOrderId}
           deleteOrder={deleteOrder}
           onPrintInvoice={handlePrintCurrentInvoice}
+          onOpenLoyalty={() => navigate('/crm/loyalty')}
           onKeyDown={handleKeyDown}
           selectedProductIndex={selectedProductIndex}
           setShowShortcuts={setShowShortcuts}
@@ -881,6 +974,30 @@ export default function POS() {
                 <input
                   value={shortcuts.newOrder}
                   onChange={(e) => setShortcuts({ ...shortcuts, newOrder: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Mở trang Đổi quà</span>
+                <input
+                  value={shortcuts.loyaltyPage}
+                  onChange={(e) => setShortcuts({ ...shortcuts, loyaltyPage: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Đóng popup thanh toán (nút X)</span>
+                <input
+                  value={shortcuts.closePaymentModal}
+                  onChange={(e) => setShortcuts({ ...shortcuts, closePaymentModal: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Xóa SP cuối trong giỏ</span>
+                <input
+                  value={shortcuts.deleteCartItem}
+                  onChange={(e) => setShortcuts({ ...shortcuts, deleteCartItem: e.target.value.toUpperCase() })}
                   style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
                 />
               </div>
@@ -948,6 +1065,7 @@ export default function POS() {
       {showInvoice && (
         <Invoice
           transaction={selectedTransaction}
+          shortcuts={shortcuts}
           onClose={() => setShowInvoice(false)}
         />
       )}
@@ -968,16 +1086,76 @@ export default function POS() {
           gap: "10px",
           fontSize: "14px",
           fontWeight: "500",
-          animation: "slideIn 0.3s ease-out"
+          animation: "slideIn 0.3s ease-out",
+          overflow: "hidden"
         }}>
           <style>{`
             @keyframes slideIn {
               from { transform: translateX(400px); opacity: 0; }
               to { transform: translateX(0); opacity: 1; }
             }
+            @keyframes successBorderProgress {
+              from { width: 100%; }
+              to { width: 0%; }
+            }
           `}</style>
           <span style={{ fontSize: "20px" }}>✓</span>
           <span>Thanh toán thành công!</span>
+          <div style={{
+            position: "absolute",
+            left: 0,
+            bottom: 0,
+            height: "3px",
+            background: "rgba(255,255,255,0.95)",
+            animation: "successBorderProgress 5s linear forwards"
+          }} />
+        </div>
+      )}
+
+      {showDiscontinuedModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 3000
+        }}>
+          <div style={{
+            background: "#fff",
+            borderRadius: "10px",
+            width: "380px",
+            maxWidth: "90%",
+            padding: "20px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+          }}>
+            <h3 style={{ margin: "0 0 10px 0", color: "#dc3545", fontSize: "18px" }}>
+              Thông báo
+            </h3>
+            <p style={{ margin: 0, color: "#333", fontSize: "14px", lineHeight: "1.5" }}>
+              {discontinuedMessage}
+            </p>
+            <button
+              onClick={closeDiscontinuedModal}
+              style={{
+                marginTop: "18px",
+                width: "100%",
+                padding: "10px",
+                border: "none",
+                borderRadius: "6px",
+                background: "#007bff",
+                color: "#fff",
+                fontWeight: "600",
+                cursor: "pointer"
+              }}
+            >
+              Đã hiểu
+            </button>
+          </div>
         </div>
       )}
 

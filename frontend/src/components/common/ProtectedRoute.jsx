@@ -1,7 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { isAdminRole, isManagerRole, normalizeRoleName } from '../../utils/roleUtils';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     const { isAuthenticated, user, isLoading } = useAuth();
@@ -20,20 +19,13 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     }
 
     if (allowedRoles.length > 0) {
-        const userRole = normalizeRoleName(user);
-        const hasAccess = allowedRoles
-            .map((role) => String(role || '').toUpperCase())
-            .includes(userRole);
+        const userRole = user?.role;
+        const hasAccess = allowedRoles.includes(userRole);
 
         if (!hasAccess) {
             console.error('Access denied - User role:', userRole, 'Required roles:', allowedRoles);
-            if (isAdminRole(user)) {
-                return <Navigate to="/dashboard" replace />;
-            }
-            if (isManagerRole(user)) {
-                return <Navigate to="/dashboard" replace />;
-            }
-            return <Navigate to="/hr/schedule" replace />;
+            // Redirect non-authorized users to POS (default workspace for staff)
+            return <Navigate to="/pos" replace />;
         }
     }
 

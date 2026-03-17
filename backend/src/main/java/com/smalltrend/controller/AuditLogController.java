@@ -51,10 +51,10 @@ public class AuditLogController {
             @RequestParam(required = false) String ipAddress,
             @RequestParam(required = false) String traceId,
             @RequestParam(required = false) String source,
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "50") Integer size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") String sortDirection
+            @RequestParam(value = "page", defaultValue = "0") Integer page,
+            @RequestParam(value = "size", defaultValue = "50") Integer size,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt") String sortBy,
+            @RequestParam(value = "sortDirection", defaultValue = "DESC") String sortDirection
     ) {
         AuditLogFilterRequest filter = AuditLogFilterRequest.builder()
                 .fromDateTime(fromDateTime)

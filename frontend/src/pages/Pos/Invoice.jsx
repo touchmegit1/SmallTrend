@@ -1,7 +1,12 @@
-export default function Invoice({ transaction, onClose }) {
+import { useEffect } from "react";
+
+export default function Invoice({ transaction, onClose, shortcuts }) {
   const handlePrint = () => {
     window.print();
   };
+
+  const printKey = shortcuts?.printInvoice || "F9";
+  const closeKey = shortcuts?.closePaymentModal || "F4";
 
   if (!transaction) return null;
 
@@ -11,6 +16,21 @@ export default function Invoice({ transaction, onClose }) {
   const pointsDiscount = Number(transaction.pointsDiscount || 0);
   const refundedAmount = Number(transaction.refundedAmount || 0);
   const subTotal = totalAmount + pointsDiscount + refundedAmount;
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === printKey) {
+        e.preventDefault();
+        handlePrint();
+      } else if (e.key === closeKey || e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [printKey, closeKey, onClose]);
+
 
   return (
     <div style={{
@@ -31,7 +51,7 @@ export default function Invoice({ transaction, onClose }) {
         maxHeight: "90vh",
         overflowY: "auto",
         borderRadius: "8px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
+        boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
       }}>
         {/* Header buttons */}
         <div style={{
@@ -49,7 +69,7 @@ export default function Invoice({ transaction, onClose }) {
             borderRadius: "5px",
             cursor: "pointer"
           }}>
-            🖨 In hóa đơn
+            🖨 In hóa đơn ({printKey})
           </button>
           <button onClick={onClose} style={{
             padding: "6px 12px",
@@ -59,7 +79,7 @@ export default function Invoice({ transaction, onClose }) {
             borderRadius: "5px",
             cursor: "pointer"
           }}>
-            ✕ Đóng
+            ✕ Đóng ({closeKey})
           </button>
         </div>
 
@@ -157,8 +177,8 @@ export default function Invoice({ transaction, onClose }) {
           .no-print { display: none !important; }
           body * { visibility: hidden; }
           div[style*="position: fixed"] * { visibility: visible; }
-          div[style*="position: fixed"] { 
-            position: static; 
+          div[style*="position: fixed"] {
+            position: static;
             background: white !important;
           }
         }
