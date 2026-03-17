@@ -211,6 +211,7 @@ export default function CRMReport() {
     const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'ads'
     const [search, setSearch] = useState('');
     const [campaignChartMode, setCampaignChartMode] = useState('monthly');
+    const [giftPage, setGiftPage] = useState(0);
 
     React.useEffect(() => {
         const loadAds = async () => {
@@ -473,30 +474,57 @@ export default function CRMReport() {
                         <MiniMetric label="Quà sắp hết" value={gifts.filter(gift => (gift.stock || 0) > 0 && (gift.stock || 0) <= 5).length} tone="amber" />
                         <MiniMetric label="Tổng số quà" value={gifts.length} tone="indigo" />
                     </div>
-                    <div className="space-y-4">
-                        {gifts.length === 0 ? (
-                            <p className="text-sm text-slate-400 text-center py-4">Chưa có quà trong kho.</p>
-                        ) : (() => {
-                            const maxStock = Math.max(...gifts.map(g => Number(g.stock) || 0), 1);
-                            return gifts
-                                .slice()
-                                .sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))
-                                .map((gift) => {
-                                    const stock = Number(gift.stock) || 0;
-                                    const color = stock === 0 ? 'rose' : stock <= 5 ? 'amber' : 'emerald';
-                                    return (
-                                        <HorizontalBar
-                                            key={gift.id || gift.name}
-                                            label={gift.name || 'Quà'}
-                                            helper={stock === 0 ? 'Hết hàng' : `Cần ${gift.requiredPoints || 0} pts`}
-                                            value={`${stock}`}
-                                            percent={(stock / maxStock) * 100}
-                                            color={color}
-                                        />
-                                    );
-                                });
-                        })()}
-                    </div>
+                    {(() => {
+                        const GIFT_PAGE_SIZE = 3;
+                        const sortedGifts = gifts.slice().sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0));
+                        const maxStock = Math.max(...sortedGifts.map(g => Number(g.stock) || 0), 1);
+                        const totalGiftPages = Math.max(1, Math.ceil(sortedGifts.length / GIFT_PAGE_SIZE));
+                        const safePage = Math.min(giftPage, totalGiftPages - 1);
+                        const pageGifts = sortedGifts.slice(safePage * GIFT_PAGE_SIZE, safePage * GIFT_PAGE_SIZE + GIFT_PAGE_SIZE);
+                        return (
+                            <>
+                                <div className="space-y-4 min-h-[120px]">
+                                    {gifts.length === 0 ? (
+                                        <p className="text-sm text-slate-400 text-center py-4">Chưa có quà trong kho.</p>
+                                    ) : pageGifts.map((gift) => {
+                                        const stock = Number(gift.stock) || 0;
+                                        const color = stock === 0 ? 'rose' : stock <= 5 ? 'amber' : 'emerald';
+                                        return (
+                                            <HorizontalBar
+                                                key={gift.id || gift.name}
+                                                label={gift.name || 'Quà'}
+                                                helper={stock === 0 ? 'Hết hàng' : `Cần ${gift.requiredPoints || 0} pts`}
+                                                value={`${stock}`}
+                                                percent={(stock / maxStock) * 100}
+                                                color={color}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                                {totalGiftPages > 1 && (
+                                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+                                        <button
+                                            onClick={() => setGiftPage(p => Math.max(0, p - 1))}
+                                            disabled={safePage === 0}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            ← Trước
+                                        </button>
+                                        <span className="text-xs text-slate-400">
+                                            {safePage + 1} / {totalGiftPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setGiftPage(p => Math.min(totalGiftPages - 1, p + 1))}
+                                            disabled={safePage >= totalGiftPages - 1}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Sau →
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </AnalyticsPanel>
             </div>
 
