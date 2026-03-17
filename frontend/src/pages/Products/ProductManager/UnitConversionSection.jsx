@@ -15,7 +15,6 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
     const [formData, setFormData] = useState({
         toUnitId: "",
         conversionFactor: "",
-        sellPrice: "",
         description: "",
         isActive: true
     });
@@ -34,7 +33,6 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
         setFormData({
             toUnitId: "",
             conversionFactor: "",
-            sellPrice: "",
             description: "",
             isActive: true
         });
@@ -47,7 +45,6 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
         setFormData({
             toUnitId: conv.toUnitId,
             conversionFactor: conv.conversionFactor,
-            sellPrice: conv.sellPrice,
             description: conv.description || "",
             isActive: conv.isActive
         });
@@ -89,8 +86,8 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
         setErrorMsg("");
         setAutoCreatedInfo(null);
 
-        if (!formData.toUnitId || !formData.conversionFactor || !formData.sellPrice) {
-            setErrorMsg("Vui lòng điền đầy đủ đơn vị đích, hệ số và giá bán");
+        if (!formData.toUnitId || !formData.conversionFactor) {
+            setErrorMsg("Vui lòng điền đầy đủ đơn vị đích và hệ số");
             return;
         }
 
@@ -99,7 +96,6 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
             const payload = {
                 toUnitId: parseInt(formData.toUnitId),
                 conversionFactor: parseFloat(formData.conversionFactor),
-                sellPrice: parseFloat(formData.sellPrice),
                 description: formData.description,
                 isActive: formData.isActive
             };
@@ -212,8 +208,7 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
                                     {!conv.isActive && <Badge variant="destructive" className="text-[10px] px-1.5 bg-red-100 text-red-700 border-red-200">Ngừng kích hoạt</Badge>}
                                 </div>
                                 <div className="flex items-center gap-3 text-xs text-gray-500">
-                                    <span>Giá bán: <strong className="text-emerald-600">{conv.sellPrice?.toLocaleString('vi-VN')} ₫</strong></span>
-                                    {conv.description && <span>• Mô tả: {conv.description}</span>}
+                                    {conv.description && <span>Mô tả: {conv.description}</span>}
                                 </div>
                             </div>
                             <div className="flex items-center gap-1">
@@ -291,26 +286,14 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div>
-                            <Label className="text-xs">Giá bán <span className="text-red-500">*</span></Label>
-                            <Input
-                                type="number" step="any" min="0"
-                                value={formData.sellPrice}
-                                onChange={e => setFormData({ ...formData, sellPrice: e.target.value })}
-                                className="h-9 mt-1 text-sm border-gray-200 rounded-lg"
-                                placeholder="VD: 55000" required
-                            />
-                        </div>
-                        <div>
-                            <Label className="text-xs">Mô tả thêm</Label>
-                            <Input
-                                value={formData.description}
-                                onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                className="h-9 mt-1 text-sm border-gray-200 rounded-lg"
-                                placeholder="VD: Lốc 6 lon"
-                            />
-                        </div>
+                    <div className="mb-4">
+                        <Label className="text-xs">Mô tả thêm</Label>
+                        <Input
+                            value={formData.description}
+                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            className="h-9 mt-1 text-sm border-gray-200 rounded-lg"
+                            placeholder="VD: Lốc 6 lon"
+                        />
                     </div>
 
                     <div className="flex justify-between items-center">
