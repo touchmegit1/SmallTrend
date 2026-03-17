@@ -23,6 +23,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useFetchSuppliers } from "../../../hooks/useSuppliers";
+import { useAuth } from "../../../context/AuthContext";
+import { isProductReadOnlyRole } from "../../../utils/rolePermissions";
 
 const initialFormData = {
   name: "",
@@ -43,6 +45,8 @@ const mapSupplierToFormData = (supplier) => ({
 });
 
 export function SuppliersScreen() {
+  const { user } = useAuth();
+  const isReadOnlyRole = isProductReadOnlyRole(user);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -84,12 +88,14 @@ export function SuppliersScreen() {
   }, [suppliers, searchQuery, filterStatus]);
 
   const handleAdd = () => {
+    if (isReadOnlyRole) return;
     setEditingSupplier(null);
     setFormData(initialFormData);
     setIsModalOpen(true);
   };
 
   const handleEdit = (supplier) => {
+    if (isReadOnlyRole) return;
     setEditingSupplier(supplier);
     setFormData(mapSupplierToFormData(supplier));
     setIsModalOpen(true);
@@ -97,6 +103,7 @@ export function SuppliersScreen() {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (isReadOnlyRole) return;
 
     const payload = {
       ...formData,
@@ -119,7 +126,7 @@ export function SuppliersScreen() {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget?.id) return;
+    if (isReadOnlyRole || !deleteTarget?.id) return;
 
     const result = await deleteSupplier(deleteTarget.id);
     if (result?.success) {
@@ -182,13 +189,15 @@ export function SuppliersScreen() {
               <RotateCcw className="w-4 h-4 mr-2" />
               Làm mới
             </Button>
-            <Button
-              onClick={handleAdd}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Thêm nhà cung cấp
-            </Button>
+            {!isReadOnlyRole && (
+              <Button
+                onClick={handleAdd}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Thêm nhà cung cấp
+              </Button>
+            )}
           </div>
         </div>
 
@@ -303,26 +312,28 @@ export function SuppliersScreen() {
                       </TableCell>
 
                       <TableCell className="text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEdit(supplier)}
-                            title="Chỉnh sửa"
-                            className="hover:bg-blue-100 text-blue-600"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Xóa"
-                            onClick={() => setDeleteTarget(supplier)}
-                            className="hover:bg-red-100 text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {!isReadOnlyRole && (
+                          <div className="flex justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEdit(supplier)}
+                              title="Chỉnh sửa"
+                              className="hover:bg-blue-100 text-blue-600"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Xóa"
+                              onClick={() => setDeleteTarget(supplier)}
+                              className="hover:bg-red-100 text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

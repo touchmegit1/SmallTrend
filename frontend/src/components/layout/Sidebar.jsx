@@ -8,12 +8,18 @@ import {
   Warehouse,
   Users,
   Clock,
-  BarChart3,
   ChevronRight,
   Shield,
   Menu,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import {
+  ADMIN_ROLES,
+  MANAGER_ROLES,
+  CASHIER_ROLES,
+  INVENTORY_ROLES,
+  hasAnyRole,
+} from "../../utils/rolePermissions";
 
 const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const [openMenus, setOpenMenus] = React.useState({ admin: true });
@@ -21,10 +27,108 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const role = user?.role;
-  const normalizedRole = String(role || "").toUpperCase();
-  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "ROLE_ADMIN" || normalizedRole.includes("ADMIN");
-  const isManager = normalizedRole === "MANAGER" || normalizedRole === "ROLE_MANAGER" || normalizedRole.includes("MANAGER");
+  const isAdmin = hasAnyRole(role, ADMIN_ROLES);
+  const isManager = hasAnyRole(role, MANAGER_ROLES);
+  const isCashier = hasAnyRole(role, CASHIER_ROLES);
+  const isInventoryStaff = hasAnyRole(role, INVENTORY_ROLES);
   const canManageWorkforce = isAdmin || isManager;
+  const canAccessCrm = isAdmin || isManager || isCashier;
+
+  const posChildren = [
+    { label: "Giao diện bán hàng", path: "/pos" },
+    { label: "Lịch sử đơn hàng", path: "/pos/history" },
+    { label: "Báo cáo doanh số", path: "/pos/suspended" },
+    { label: "Khiếu nại", path: "/pos/complain" },
+  ];
+
+  const inventoryChildren = isCashier
+    ? [
+      { label: "Tổng quan kho", path: "/inventory" },
+      { label: "Quản lý vị trí", path: "/inventory/locations" },
+    ]
+    : [
+      { label: "Tổng quan kho", path: "/inventory" },
+      { label: "Nhập hàng", path: "/inventory/purchase-orders" },
+      { label: "Kiểm kê kho", path: "/inventory-counts" },
+      { label: "Quản lý vị trí", path: "/inventory/locations" },
+      { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
+    ];
+
+  const productChildren = isCashier
+    ? [
+      { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
+      { label: "Danh sách sản phẩm", path: "/products" },
+      { label: "Combo sản phẩm", path: "/products/combo" },
+    ]
+    : [
+      { label: "Danh mục & Thương hiệu", path: "/products/categories" },
+      { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
+      { label: "Danh sách sản phẩm", path: "/products" },
+      { label: "Thiết lập giá", path: "/products/price" },
+      { label: "Combo sản phẩm", path: "/products/combo" },
+    ];
+
+  const hrChildren = canManageWorkforce
+    ? [
+      { label: "Danh sách nhân viên", path: "/hr/workforce" },
+      { label: "Lịch làm việc", path: "/hr/schedule" },
+      { label: "Phân ca làm việc", path: "/hr/shifts" },
+      { label: "Chấm công", path: "/hr/attendance" },
+      { label: "Tính lương", path: "/hr/payroll" },
+      { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+    ]
+    : [
+      { label: "Lịch làm việc", path: "/hr/schedule" },
+      { label: "Chấm công", path: "/hr/my-attendance" },
+    ];
+
+  const navItems = [
+    ...(!isInventoryStaff
+      ? [{
+        icon: ShoppingCart,
+        label: "Bán hàng (POS)",
+        path: "/pos",
+        children: posChildren,
+      }]
+      : []),
+    {
+      icon: Warehouse,
+      label: "Kho (Inventory)",
+      path: "/inventory",
+      children: inventoryChildren,
+    },
+    {
+      icon: Package,
+      label: "Sản phẩm",
+      path: "/products",
+      children: productChildren,
+    },
+    ...(canAccessCrm
+      ? [{
+        icon: Users,
+        label: "Khách hàng & KM",
+        path: "/crm",
+        children: isCashier
+          ? [
+            { label: "Danh sách khách hàng", path: "/crm/customer" },
+            { label: "Kho quà tặng", path: "/crm/loyalty" },
+          ]
+          : [
+            { label: "Danh sách khách hàng", path: "/crm/customer" },
+            { label: "Khuyến Mãi", path: "/crm/event" },
+            { label: "Kho quà tặng", path: "/crm/loyalty" },
+            { label: "Quản lý Quảng cáo", path: "/crm/ads" },
+            { label: "Báo Cáo Thống Kê", path: "/crm/report" },
+          ],
+      }]
+      : []),
+    {
+      icon: Clock,
+      label: "Nhân sự & Ca",
+      path: "/hr",
+      children: hrChildren,
+    },
+  ];
 
   const toggleMenu = (label) => {
     setOpenMenus((prev) => ({
@@ -37,76 +141,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
     await logout();
     navigate("/login");
   };
-
-  const navItems = [
-    {
-      icon: ShoppingCart,
-      label: "Bán hàng (POS)",
-      path: "/pos",
-      children: [
-        { label: "Giao diện bán hàng", path: "/pos" },
-        { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Báo cáo doanh số", path: "/pos/suspended" },
-        { label: "Khiếu nại", path: "/pos/complain" },
-      ],
-    },
-    {
-      icon: Warehouse,
-      label: "Kho (Inventory)",
-      path: "/inventory",
-      children: [
-        { label: "Tổng quan kho", path: "/inventory" },
-        { label: "Nhập hàng", path: "/inventory/purchase-orders" },
-        { label: "Kiểm kê kho", path: "/inventory-counts" },
-        { label: "Quản lý vị trí", path: "/inventory/locations" },
-        { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
-      ],
-    },
-    {
-      icon: Package,
-      label: "Sản phẩm",
-      path: "/products",
-      children: [
-        { label: "Danh mục & Thương hiệu", path: "/products/categories" },
-        { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
-        { label: "Danh sách sản phẩm", path: "/products" },
-        { label: "Thiết lập giá", path: "/products/price" },
-        { label: "Combo sản phẩm", path: "/products/combo" },
-      ],
-    },
-    {
-      icon: Users,
-      label: "Khách hàng & KM",
-      path: "/crm",
-      children: [
-        { label: "Danh sách khách hàng", path: "/crm/customer" },
-        { label: "Khuyến Mãi", path: "/crm/event" },
-        { label: "Kho quà tặng", path: "/crm/loyalty" },
-        { label: "Quản lý Quảng cáo", path: "/crm/ads" },
-        { label: "Báo Cáo Thống Kê", path: "/crm/report" },
-      ],
-    },
-    {
-      icon: Clock,
-      label: "Nhân sự & Ca",
-      path: "/hr",
-      children: canManageWorkforce
-        ? [
-          { label: "Danh sách nhân viên", path: "/hr/workforce" },
-          { label: "Lịch làm việc", path: "/hr/schedule" },
-          { label: "Phân ca làm việc", path: "/hr/shifts" },
-          { label: "Chấm công", path: "/hr/attendance" },
-          { label: "Tính lương", path: "/hr/payroll" },
-          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
-        ]
-        : [
-          { label: "Lịch làm việc", path: "/hr/schedule" },
-          { label: "Chấm công", path: "/hr/my-attendance" },
-          { label: "Tính lương", path: "/hr/my-payroll" },
-          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
-        ],
-    },
-  ];
 
   return (
     <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>

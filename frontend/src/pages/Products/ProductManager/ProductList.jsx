@@ -6,6 +6,8 @@ import { Badge } from "../ProductComponents/badge";
 import { Plus, Edit, Package, Eye, CheckCircle, Power, Trash2, AlertTriangle, X, Filter, Layers, Tag, Box, Puzzle, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditProductModal from "./EditProductModal";
+import { useAuth } from "../../../context/AuthContext";
+import { isProductReadOnlyRole } from "../../../utils/rolePermissions";
 
 // Dùng CustomSelect có sẵn trong hệ thống
 import CustomSelect from "../../../components/common/CustomSelect";
@@ -25,6 +27,8 @@ import api from "../../../config/axiosConfig";
 export function ProductListScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const isReadOnlyRole = isProductReadOnlyRole(user);
 
   // --- STATE QUẢN LÝ FILTER PHÂN CẤP ---
   const [filterCategory, setFilterCategory] = useState(null);
@@ -185,6 +189,7 @@ export function ProductListScreen() {
   };
 
   const handleToggleStatus = (product) => {
+    if (isReadOnlyRole) return;
     setProductToToggle(product);
     setShowConfirm(true);
   };
@@ -205,6 +210,7 @@ export function ProductListScreen() {
   };
 
   const handleEditClick = (product) => {
+    if (isReadOnlyRole) return;
     setSelectedProduct(product);
     setIsEditModalOpen(true);
   };
@@ -224,6 +230,7 @@ export function ProductListScreen() {
   };
 
   const handleDeleteClick = (product) => {
+    if (isReadOnlyRole) return;
     setProductToDelete(product);
     setShowDeleteConfirm(true);
   };
@@ -421,13 +428,15 @@ export function ProductListScreen() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button
-              onClick={() => navigate("/products/addproduct")}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 border border-transparent"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Thêm sản phẩm mới
-            </Button>
+            {!isReadOnlyRole && (
+              <Button
+                onClick={() => navigate("/products/addproduct")}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 border border-transparent"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Thêm sản phẩm mới
+              </Button>
+            )}
           </div>
         </div>
 
@@ -905,31 +914,35 @@ export function ProductListScreen() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm" variant="ghost"
-                            onClick={() => handleToggleStatus(product)}
-                            className={`hover:bg-amber-100 rounded-lg p-1 ${product.is_active ? 'text-green-600 hover:text-amber-600' : 'text-gray-400 hover:text-green-600'}`}
-                            title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
-                          >
-                            <Power className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm" variant="ghost"
-                            onClick={() => handleEditClick(product)}
-                            className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg p-1"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          {canDeleteProduct(product.created_at) && (
-                            <Button
-                              size="sm" variant="ghost"
-                              onClick={() => handleDeleteClick(product)}
-                              className="hover:bg-red-100 hover:text-red-600 rounded-lg p-1 text-red-500"
-                              title="Xóa sản phẩm (Trong vòng 2 phút)"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                          {!isReadOnlyRole && (
+                            <>
+                              <Button
+                                size="sm" variant="ghost"
+                                onClick={() => handleToggleStatus(product)}
+                                className={`hover:bg-amber-100 rounded-lg p-1 ${product.is_active ? 'text-green-600 hover:text-amber-600' : 'text-gray-400 hover:text-green-600'}`}
+                                title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
+                              >
+                                <Power className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm" variant="ghost"
+                                onClick={() => handleEditClick(product)}
+                                className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg p-1"
+                                title="Chỉnh sửa"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              {canDeleteProduct(product.created_at) && (
+                                <Button
+                                  size="sm" variant="ghost"
+                                  onClick={() => handleDeleteClick(product)}
+                                  className="hover:bg-red-100 hover:text-red-600 rounded-lg p-1 text-red-500"
+                                  title="Xóa sản phẩm (Trong vòng 2 phút)"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </TableCell>
