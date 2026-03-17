@@ -44,6 +44,19 @@ const AddNewProduct = () => {
   // State Loading Block Form Button (Chống submit spam 2 lần)
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const nextErrors = {};
+
+    if (!formData.name.trim()) nextErrors.name = "Vui lòng nhập tên sản phẩm";
+    if (!formData.categoryId) nextErrors.categoryId = "Vui lòng chọn danh mục";
+    if (!formData.taxRateId) nextErrors.taxRateId = "Vui lòng chọn thuế";
+    if (!formData.brandId) nextErrors.brandId = "Vui lòng chọn thương hiệu";
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   // --- STATE & DATA CHO QUICK-CREATE MODAL CATEGORY & BRAND ---
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -59,6 +72,7 @@ const AddNewProduct = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   /**
@@ -163,6 +177,11 @@ const AddNewProduct = () => {
   // --- HANDLER SUBMIT TỔNG CHÍNH ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -195,7 +214,11 @@ const AddNewProduct = () => {
       });
     } catch (error) {
       console.error("Error creating product:", error);
-      alert("Lưu sản phẩm thất bại!");
+      const errorMessage = error?.response?.data?.message || "Lưu sản phẩm thất bại!";
+      if (errorMessage.toLowerCase().includes("tên sản phẩm đã tồn tại")) {
+        setErrors((prev) => ({ ...prev, name: "Tên sản phẩm đã tồn tại" }));
+      }
+      alert(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -244,13 +267,14 @@ const AddNewProduct = () => {
                       Tên sản phẩm <span className="text-red-500">*</span>
                     </Label>
                     <Input
-                      className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`mt-2 h-11 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.name ? "border-red-500" : "border-gray-200"}`}
                       placeholder="Nhập tên sản phẩm (Vd: Áo Vest đen nhám)"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
                       required
                     />
+                    {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                   </div>
 
                   {/* Ngành Hàng (Category) Selector + Nút Gọi Modal New */}
@@ -261,7 +285,7 @@ const AddNewProduct = () => {
                     <div className="flex gap-2 mt-2">
                       <select
                         name="categoryId"
-                        className="flex-1 h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`flex-1 h-11 px-4 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
                         value={formData.categoryId}
                         onChange={handleChange}
                         required
@@ -281,35 +305,41 @@ const AddNewProduct = () => {
                         Thêm mới
                       </button>
                     </div>
+                    {errors.categoryId && <p className="mt-1 text-sm text-red-600">{errors.categoryId}</p>}
                   </div>
 
                   {/* Thuế - Chạy theo cấu hình Tax Rate DB */}
                   <div>
                     <Label className="text-sm font-semibold text-gray-700">
-                      Thuế nhập/xuất áp dụng mặc định
+                      Thuế nhập/xuất áp dụng mặc định <span className="text-red-500">*</span>
                     </Label>
                     <select
                       name="taxRateId"
-                      className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`mt-2 w-full h-11 px-4 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.taxRateId ? "border-red-500" : "border-gray-200"}`}
                       value={formData.taxRateId}
                       onChange={handleChange}
+                      required
                     >
                       <option value="">(Non-Tax) Trống</option>
                       {taxRates.map((tax) => (
                         <option key={tax.id} value={tax.id}>{tax.name} ({tax.rate}%)</option>
                       ))}
                     </select>
+                    {errors.taxRateId && <p className="mt-1 text-sm text-red-600">{errors.taxRateId}</p>}
                   </div>
 
                   {/* Nhãn hiệu - Brand Picker Component */}
                   <div>
-                    <Label className="text-sm font-semibold text-gray-700">Thương hiệu</Label>
+                    <Label className="text-sm font-semibold text-gray-700">
+                      Thương hiệu <span className="text-red-500">*</span>
+                    </Label>
                     <div className="flex gap-2 mt-2">
                       <select
                         name="brandId"
-                        className="flex-1 h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`flex-1 h-11 px-4 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.brandId ? "border-red-500" : "border-gray-200"}`}
                         value={formData.brandId}
                         onChange={handleChange}
+                        required
                       >
                         <option value="">Loại nhãn hàng nội địa/Trống</option>
                         {brands.map((brand) => (
@@ -326,6 +356,7 @@ const AddNewProduct = () => {
                         Thêm mới
                       </button>
                     </div>
+                    {errors.brandId && <p className="mt-1 text-sm text-red-600">{errors.brandId}</p>}
                   </div>
 
                   {/* Status Toggle Switch */}

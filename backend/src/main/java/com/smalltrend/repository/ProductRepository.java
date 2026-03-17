@@ -2,14 +2,15 @@ package com.smalltrend.repository;
 
 import com.smalltrend.entity.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
     boolean existsByCategoryId(Integer categoryId);
 
     boolean existsByBrandId(Integer brandId);
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Integer id);
 }

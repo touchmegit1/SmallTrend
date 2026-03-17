@@ -348,6 +348,7 @@ const ComboManage = () => {
 
       <EditComboModal
         combo={selectedCombo}
+        combos={combos}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleSaveCombo}

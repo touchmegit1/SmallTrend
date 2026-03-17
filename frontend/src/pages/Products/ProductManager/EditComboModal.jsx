@@ -8,7 +8,7 @@ import axios from "../../../config/axiosConfig";
 
 // Modal Popup dùng chung để sửa thông tin của một Combo đã tồn tại
 // Nhận vào state combo được chọn từ component cha và gọi hàm onSave khi hoàn thành
-const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
+const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     comboName: "",
     description: "",
@@ -19,6 +19,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   const [availableVariants, setAvailableVariants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showVariantPicker, setShowVariantPicker] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Thêm state upload image
   const [imageFile, setImageFile] = useState(null);
@@ -70,6 +71,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   }, [isOpen]);
 
   const addVariant = (variant) => {
+    setErrorMsg("");
     const existing = selectedVariants.find((v) => v.id === variant.id);
     if (existing) {
       setSelectedVariants(
@@ -85,11 +87,13 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   };
 
   const removeVariant = (variantId) => {
+    setErrorMsg("");
     setSelectedVariants(selectedVariants.filter((v) => v.id !== variantId));
   };
 
   const updateQuantity = (variantId, quantity) => {
     if (quantity < 1) return;
+    setErrorMsg("");
     setSelectedVariants(
       selectedVariants.map((v) => (v.id === variantId ? { ...v, quantity } : v))
     );
@@ -158,18 +162,64 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   // Hàm cập nhật state nội bộ khi người dùng gõ vào form chỉnh sửa
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setErrorMsg("");
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
   };
 
+  const validateForm = () => {
+    const normalizedName = (formData.comboName || "").trim();
+    const parsedComboPrice = Number(formData.comboPrice);
+
+    if (!normalizedName) {
+      return "Vui lòng nhập tên combo";
+    }
+
+    if (!Number.isFinite(parsedComboPrice) || parsedComboPrice <= 0) {
+      return "Giá combo phải lớn hơn 0";
+    }
+
+    if (selectedVariants.length === 0) {
+      return "Vui lòng chọn ít nhất 1 sản phẩm";
+    }
+
+    const seen = new Set();
+    for (const variant of selectedVariants) {
+      if (!variant?.id) {
+        return "Sản phẩm trong combo không hợp lệ";
+      }
+      if (variant.quantity < 1) {
+        return "Số lượng sản phẩm trong combo phải lớn hơn 0";
+      }
+      if (seen.has(variant.id)) {
+        return "Không được thêm trùng sản phẩm trong combo";
+      }
+      seen.add(variant.id);
+    }
+
+    const duplicateName = combos.some(
+      (item) => item.id !== combo?.id
+        && (item.comboName || "").trim().toLowerCase() === normalizedName.toLowerCase(),
+    );
+
+    if (duplicateName) {
+      return "Tên combo đã tồn tại";
+    }
+
+    return null;
+  };
+
   // Hàm chặn submit mặc định và đẩy dữ liệu chỉnh sửa lên component cha
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-    if (selectedVariants.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 sản phẩm!");
+    setErrorMsg("");
+
+    const validationError = validateForm();
+    if (validationError) {
+      setErrorMsg(validationError);
       return;
     }
 
@@ -185,9 +235,10 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
         quantity: v.quantity,
       }));
 
-      onSave({
+      await onSave({
         ...combo,
         ...formData,
+        comboName: formData.comboName.trim(),
         imageUrl: imageUrl || null,
         comboPrice: Number(formData.comboPrice),
         originalPrice: totalPrice,
@@ -195,7 +246,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
       });
     } catch (error) {
       console.error("Error saving combo:", error);
-      alert("Có lỗi xảy ra khi xử lý ảnh");
+      setErrorMsg(error.message || "Có lỗi xảy ra khi lưu combo");
     } finally {
       setIsSubmitting(false);
     }
@@ -232,6 +283,11 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {errorMsg && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-medium">
+              {errorMsg}
+            </div>
+          )}
           <div>
             <Label className="text-sm font-semibold text-gray-700">
               Tên Combo <span className="text-red-500">*</span>
@@ -274,6 +330,8 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
               <Input
                 className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 type="number"
+                min="0.01"
+                step="0.01"
                 placeholder="0"
                 name="comboPrice"
                 value={formData.comboPrice}

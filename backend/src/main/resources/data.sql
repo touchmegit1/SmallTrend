@@ -108,7 +108,12 @@ VALUES
 
 ('CP Vietnam Corporation', '3600235308', 'Bien Hoa Industrial Zone, Dong Nai, Vietnam', 'info@cp.com.vn', '0251-3836-501', 'Somchai CP', NULL, '2023-06-01', '2025-06-01', TRUE, 'Meat and food products'),
 
-('Perfetti Van Melle Vietnam', '0300588569', 'VSIP Industrial Park, Binh Duong, Vietnam', 'info@perfettivanmelle.com', '0274-376-8586', 'Marco Perfetti', NULL, '2023-06-10', '2025-06-10', TRUE, 'Candy supplier (Chupa Chups)')
+('Perfetti Van Melle Vietnam Co., Ltd', '0300588569', 'VSIP Industrial Park, Binh Duong, Vietnam', 'info.vn@perfettivanmelle.com', '0274-376-8586', 'Marco Perfetti', NULL, '2023-06-10', '2025-06-10', TRUE, 'Confectionery supplier (Chupa Chups, Alpenliebe, Mentos)'),
+
+('Vifon Joint Stock Company', '0300391836', '913 Truong Chinh Street, Tan Phu District, Ho Chi Minh City, Vietnam', 'info@vifon.com.vn', '028-3815-4368', 'Nguyen Bich Lam', NULL, '2023-06-10', '2025-06-10', TRUE, 'Instant food supplier (Pho, noodles, vermicelli)')
+
+
+
 ON DUPLICATE KEY UPDATE
 name = VALUES(name),
 address = VALUES(address),
@@ -123,40 +128,54 @@ notes = VALUES(notes),
 updated_at = NOW();
 
 -- 2. BRANDS & CATEGORIES
-INSERT IGNORE INTO brands (name, country, supplier_id) VALUES
-('Vinamilk', 'Việt Nam', 1),
-('Nestle', 'Thuỵ Sĩ', 3),
-('Coca-Cola', 'Hoa Kỳ', 4),
-('P&G', 'Hoa Kỳ', 2),
-('Kinh Do', 'Việt Nam', 7),
-('Oishi', 'Philippines', 13),
+INSERT IGNORE INTO categories 
+(name, code, description, created_at, updated_at) 
+VALUES
+('Đồ uống', 'BEVERAGE', 'Các loại nước uống, giải khát', NOW(6), NOW(6)),
+('Sữa & Sản phẩm từ sữa', 'DAIRY', 'Sữa, sữa chua, sữa đặc', NOW(6), NOW(6)),
+('Chăm sóc cá nhân', 'PERSONAL_CARE', 'Sản phẩm vệ sinh cá nhân', NOW(6), NOW(6)),
+('Đồ dùng gia đình', 'HOUSEHOLD', 'Sản phẩm dùng trong gia đình', NOW(6), NOW(6)),
+('Bánh kẹo ăn vặt', 'SNACK', 'Snack, bánh kẹo', NOW(6), NOW(6)),
+('Chăm sóc sức khỏe', 'HEALTHCARE', 'Sản phẩm chăm sóc sức khỏe', NOW(6), NOW(6)),
+('Đồ hộp', 'CANNED_FOOD', 'Thực phẩm đóng hộp', NOW(6), NOW(6)),
+('Bánh ngọt', 'BAKERY', 'Bánh ngọt, bánh mì', NOW(6), NOW(6)),
+('Thịt & Hải sản', 'MEAT_SEAFOOD', 'Thịt, cá, hải sản', NOW(6), NOW(6)),
+('Gia vị & Nước chấm', 'CONDIMENT', 'Gia vị, nước mắm, nước tương', NOW(6), NOW(6)),
+('Mì ăn liền', 'INSTANT_FOOD', 'Mì, phở, hủ tiếu ăn liền', NOW(6), NOW(6));
 
-('Cholimex', 'Việt Nam', 14),
-('CP', 'Thái Lan', 15),
-('Vissan', 'Việt Nam', 15),
-('Orion', 'Hàn Quốc', 12),
-('Chupa Chups', 'Tây Ban Nha', 16),
-('Vifon', 'Việt Nam', 11),
-('Acecook', 'Nhật Bản', 10),
 
-('Masan', 'Việt Nam', 5),
-('TH True Milk', 'Việt Nam', 9),
-('Pepsico', 'Hoa Kỳ', 8),
-('Maggi', 'Thụy Sĩ', 3),
+INSERT IGNORE INTO brands 
+(name, country, supplier_id, description, category_id, created_at, updated_at) 
+VALUES
+('Vinamilk', 'Việt Nam', 1, 'Sản phẩm sữa', 2, NOW(6), NOW(6)),
+('Nestle', 'Thuỵ Sĩ', 3, 'Thực phẩm và đồ uống', NULL, NOW(6), NOW(6)),
+('Coca-Cola', 'Hoa Kỳ', 4, 'Nước giải khát', 1, NOW(6), NOW(6)),
+('P&G', 'Hoa Kỳ', 2, 'Hàng tiêu dùng', NULL, NOW(6), NOW(6)),
+('Kinh Do', 'Việt Nam', 7, 'Bánh kẹo', 5, NOW(6), NOW(6)),
+('Oishi', 'Philippines', 13, 'Snack ăn vặt', 5, NOW(6), NOW(6)),
 
-('Dove', 'Vương Quốc Anh', 2),
-('Knorr', 'Đức', 2),
-('Lifebuoy', 'Vương Quốc Anh', 2),
-('OMO', 'Vương Quốc Anh', 2),
-('Sunsilk', 'Vương Quốc Anh', 2),
+('Cholimex', 'Việt Nam', 14, 'Gia vị và nước chấm', 10, NOW(6), NOW(6)),
+('CP', 'Thái Lan', 15, 'Thực phẩm thịt', 9, NOW(6), NOW(6)),
+('Vissan', 'Việt Nam', 15, 'Thịt chế biến', 9, NOW(6), NOW(6)),
+('Orion', 'Hàn Quốc', 12, 'Bánh kẹo', 5, NOW(6), NOW(6)),
+('Chupa Chups', 'Tây Ban Nha', 16, 'Kẹo', 5, NOW(6), NOW(6)),
+('Vifon', 'Việt Nam', 11, 'Mì/phở ăn liền', 11, NOW(6), NOW(6)),
+('Acecook', 'Nhật Bản', 10, 'Mì ăn liền', 11, NOW(6), NOW(6)),
 
-('Heineken', 'Hà Lan', 6),
-('Tiger', 'Singapore', 6),
-('Tường An', 'Việt Nam', 7);
+('Masan', 'Việt Nam', 5, 'Hàng tiêu dùng', 10, NOW(6), NOW(6)),
+('TH True Milk', 'Việt Nam', 9, 'Sữa', 2, NOW(6), NOW(6)),
+('Pepsico', 'Hoa Kỳ', 8, 'Nước uống & snack', 1, NOW(6), NOW(6)),
+('Maggi', 'Thụy Sĩ', 3, 'Gia vị', 10, NOW(6), NOW(6)),
 
-INSERT IGNORE INTO categories (name) VALUES
-('Đồ uống'), ('Sữa & Sản phẩm từ sữa'), ('Chăm sóc cá nhân'), ('Đồ dùng gia đình'), ('Bánh kẹo ăn vặt'), ('Chăm sóc sức khỏe'),
-('Đồ hộp'), ('Bánh ngọt'), ('Thịt & Hải sản'), ('Gia vị & Nước chấm'), ('Mì ăn liền');
+('Dove', 'Vương Quốc Anh', 2, 'Chăm sóc cá nhân', 3, NOW(6), NOW(6)),
+('Knorr', 'Đức', 2, 'Gia vị', 10, NOW(6), NOW(6)),
+('Lifebuoy', 'Vương Quốc Anh', 2, 'Chăm sóc cá nhân', 3, NOW(6), NOW(6)),
+('OMO', 'Vương Quốc Anh', 2, 'Giặt tẩy', 4, NOW(6), NOW(6)),
+('Sunsilk', 'Vương Quốc Anh', 2, 'Chăm sóc tóc', 3, NOW(6), NOW(6)),
+
+('Heineken', 'Hà Lan', 6, 'Bia', 1, NOW(6), NOW(6)),
+('Tiger', 'Singapore', 6, 'Bia', 1, NOW(6), NOW(6)),
+('Tường An', 'Việt Nam', 7, 'Dầu ăn', 10, NOW(6), NOW(6));
 
 -- 2.1 SUPPLIER CONTRACTS
 INSERT IGNORE INTO supplier_contracts (
@@ -253,10 +272,10 @@ INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_
 ('Đồ hộp Vissan', 'Thịt heo hầm ', 10, 7, 1, TRUE, NOW(6), NOW(6)),
 ('Bánh Chocopie', 'Bánh chocopie Orion hộp 12 cái', 11, 8, 1, TRUE, NOW(6), NOW(6)),
 ('Kẹo mút Chupa Chups', 'Kẹo mút hương trái cây', 12, 5, 1, TRUE, NOW(6), NOW(6)),
-('Phở sắn Vifon', 'Phở hương vị bò ', 13, 11, 1, TRUE, NOW(6), NOW(6)),
-('Mì Hảo Hảo', 'Mì tôm chua cay ', 14, 11, 1, TRUE, NOW(6), NOW(6)),
-('Mì Omachi', 'Mì khoai tây sườn hầm ', 15, 11, 1, TRUE, NOW(6), NOW(6)),
-('Nước tương Chin-su', 'Nước tương tỏi ớt ', 15, 10, 1, TRUE, NOW(6), NOW(6)),
+('Phở gói Vifon', 'Phở các loại ', 14, 11, 1, TRUE, NOW(6), NOW(6)),
+('Mì Hảo Hảo', 'Mì tôm chua cay ', 13, 11, 1, TRUE, NOW(6), NOW(6)),
+('Mì Omachi', 'Mì khoai tây sườn hầm ', 14, 11, 1, TRUE, NOW(6), NOW(6)),
+('Nước tương Chin-su', 'Nước tương tỏi ớt ', 14, 10, 1, TRUE, NOW(6), NOW(6)),
 ('Sữa chua TH True Milk', 'Sữa chua nha đam ', 16, 2, 2, TRUE, NOW(6), NOW(6)),
 ('Sữa tươi TH True Milk', 'Sữa tươi ít đường ', 16, 2, 2, TRUE, NOW(6), NOW(6)),
 ('Snack Lays', 'Snack khoai tây tự nhiên ', 17, 5, 1, TRUE, NOW(6), NOW(6)),

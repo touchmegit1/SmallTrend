@@ -4,6 +4,7 @@ import com.smalltrend.dto.supplier.SupplierDTO;
 import com.smalltrend.entity.Supplier;
 import com.smalltrend.repository.SupplierRepository;
 import com.smalltrend.service.SupplierService;
+import com.smalltrend.validation.supplier.SupplierValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 public class SupplierServiceImpl implements SupplierService {
 
     private final SupplierRepository supplierRepository;
+    private final SupplierValidator supplierValidator;
 
     @Override
     public List<SupplierDTO> getAllSuppliers() {
@@ -32,6 +34,7 @@ public class SupplierServiceImpl implements SupplierService {
 
     @Override
     public SupplierDTO createSupplier(SupplierDTO dto) {
+        supplierValidator.validateNameUniqueForCreate(dto.getName());
         Supplier supplier = new Supplier();
         mapToEntity(dto, supplier);
         supplier = supplierRepository.save(supplier);
@@ -40,6 +43,7 @@ public class SupplierServiceImpl implements SupplierService {
 
     @Override
     public SupplierDTO updateSupplier(Integer id, SupplierDTO dto) {
+        supplierValidator.validateNameUniqueForUpdate(dto.getName(), id);
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Nhà cung cấp: " + id));
         mapToEntity(dto, supplier);

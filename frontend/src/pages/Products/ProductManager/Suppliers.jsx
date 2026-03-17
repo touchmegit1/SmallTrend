@@ -49,6 +49,7 @@ export function SuppliersScreen() {
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
   const [toast, setToast] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const {
     suppliers,
@@ -117,16 +118,18 @@ export function SuppliersScreen() {
     showToast(result?.error || "Không thể lưu nhà cung cấp");
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa nhà cung cấp này?")) return;
+  const handleDelete = async () => {
+    if (!deleteTarget?.id) return;
 
-    const result = await deleteSupplier(id);
+    const result = await deleteSupplier(deleteTarget.id);
     if (result?.success) {
       showToast("Xóa nhà cung cấp thành công!");
+      setDeleteTarget(null);
       return;
     }
 
     showToast(result?.error || "Không thể xóa nhà cung cấp");
+    setDeleteTarget(null);
   };
 
   const handleChange = (e) => {
@@ -314,7 +317,7 @@ export function SuppliersScreen() {
                             size="sm"
                             variant="ghost"
                             title="Xóa"
-                            onClick={() => handleDelete(supplier.id)}
+                            onClick={() => setDeleteTarget(supplier)}
                             className="hover:bg-red-100 text-red-600"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -328,6 +331,39 @@ export function SuppliersScreen() {
             )}
           </CardContent>
         </Card>
+
+        {deleteTarget && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
+              <div className="p-6 bg-gradient-to-r from-red-50 to-orange-50 rounded-t-2xl">
+                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-7 h-7 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-center text-gray-900 mb-2">Xác nhận xóa nhà cung cấp</h3>
+                <p className="text-center text-gray-600">
+                  Bạn có chắc muốn xóa <span className="font-bold text-gray-900">{deleteTarget?.name}</span>?
+                </p>
+              </div>
+
+              <div className="p-6 bg-gray-50 rounded-b-2xl flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-11 rounded-xl font-semibold"
+                  onClick={() => setDeleteTarget(null)}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="danger"
+                  className="flex-1 h-11 rounded-xl font-semibold bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md"
+                  onClick={handleDelete}
+                >
+                  Xóa ngay
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
