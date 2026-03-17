@@ -170,6 +170,7 @@ export function validateDraft(order, items) {
     if ((item.quantity || 0) <= 0) {
       errors.push(`Sản phẩm "${item.name}": số lượng phải > 0.`);
     }
+
   }
 
   return { valid: errors.length === 0, errors };
@@ -205,9 +206,9 @@ export function createDefaultOrder(code) {
     location_id: null,
     status: PO_STATUS.DRAFT,
     discount: 0,
-    tax_percent: 0,
-    shipping_fee: 0,
-    paid_amount: 0,
+    tax_percent: "",
+    shipping_fee: "",
+    paid_amount: "",
     expiry_date: "",
     notes: "",
     created_by: 1, // TODO: get from auth context
@@ -236,8 +237,10 @@ export function createOrderItem(product) {
     unit: product.unit,
     quantity: 1,
     unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
+    expiry_date: "",
   };
 }
+
 
 // ─── Formatters ──────────────────────────────────────────
 

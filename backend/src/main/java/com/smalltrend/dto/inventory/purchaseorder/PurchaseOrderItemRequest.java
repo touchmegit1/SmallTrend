@@ -1,13 +1,10 @@
 package com.smalltrend.dto.inventory.purchaseorder;
 
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-
-import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -45,9 +42,4 @@ public class PurchaseOrderItemRequest {
     private String notes;
 
     private java.time.LocalDate expiryDate;
-
-    @AssertTrue(message = "Hạn sử dụng phải còn ít nhất 6 tháng")
-    public boolean isExpiryDateAtLeastSixMonths() {
-        return expiryDate == null || !expiryDate.isBefore(LocalDate.now().plusMonths(6));
-    }
 }
