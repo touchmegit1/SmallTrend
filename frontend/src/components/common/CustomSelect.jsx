@@ -24,9 +24,18 @@ const STATUS_COLORS = {
   COUNTING: { bg: "#f3e8ff", color: "#6b21a8", label: "Đang kiểm" },
 };
 
-const CustomSelect = ({ value, onChange, options, className = '', variant = 'default', disabled = false }) => {
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  className = "",
+  variant = "default",
+  disabled = false,
+  dropdownPosition = "fixed",
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const isInlineDropdown = dropdownPosition === "inline";
 
     const selectedOption = options.find(opt => opt.value === value);
 
@@ -88,21 +97,25 @@ const CustomSelect = ({ value, onChange, options, className = '', variant = 'def
 
       {isOpen && (
         <div
-          className="fixed bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-fadeIn"
-          style={{
-            zIndex: 9999,
-            minWidth: dropdownRef.current?.offsetWidth || 200,
-            maxWidth: 400,
-            top: dropdownRef.current
-              ? dropdownRef.current.getBoundingClientRect().bottom +
-                window.scrollY +
-                8
-              : 0,
-            left: dropdownRef.current
-              ? dropdownRef.current.getBoundingClientRect().left +
-                window.scrollX
-              : 0,
-          }}
+          className={`${isInlineDropdown ? "absolute top-full left-0 mt-2 w-full z-50" : "fixed"} bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-fadeIn`}
+          style={
+            isInlineDropdown
+              ? undefined
+              : {
+                  zIndex: 9999,
+                  minWidth: dropdownRef.current?.offsetWidth || 200,
+                  maxWidth: 400,
+                  top: dropdownRef.current
+                    ? dropdownRef.current.getBoundingClientRect().bottom +
+                      window.scrollY +
+                      8
+                    : 0,
+                  left: dropdownRef.current
+                    ? dropdownRef.current.getBoundingClientRect().left +
+                      window.scrollX
+                    : 0,
+                }
+          }
         >
           <div className="py-1 max-h-60 overflow-y-auto custom-scrollbar">
             {options.map((option) => {

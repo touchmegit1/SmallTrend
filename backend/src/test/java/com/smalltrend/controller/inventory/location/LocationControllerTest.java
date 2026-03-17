@@ -124,28 +124,6 @@ class LocationControllerTest {
     }
 
     @Test
-    void toggleLocationStatus_shouldReturnOk_whenSuccess() {
-        FullLocationResponse expected = mock(FullLocationResponse.class);
-        when(locationService.toggleLocationStatus(1)).thenReturn(expected);
-
-        ResponseEntity<FullLocationResponse> response = controller.toggleLocationStatus(1);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(expected, response.getBody());
-        verify(locationService).toggleLocationStatus(1);
-    }
-
-    @Test
-    void toggleLocationStatus_shouldThrowException_whenServiceThrows() {
-        when(locationService.toggleLocationStatus(1)).thenThrow(new RuntimeException("Error toggling"));
-
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> controller.toggleLocationStatus(1));
-
-        assertEquals("Error toggling", ex.getMessage());
-        verify(locationService).toggleLocationStatus(1);
-    }
-
-    @Test
     void transferStock_shouldReturnOk_whenSuccess() {
         LocationTransferRequest requestBody = new LocationTransferRequest();
         requestBody.setFromLocationId(1);

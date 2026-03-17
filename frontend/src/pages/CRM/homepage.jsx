@@ -9,10 +9,13 @@ import {
 } from "lucide-react";
 import { useActiveCampaigns, useDiscountedVariants, useAllVariants } from '../../hooks/useEventData';
 import { useVouchers } from '../../hooks/useVouchers';
+import { useGifts } from '../../hooks/useGifts';
+import { useProductCombos } from '../../hooks/product_combos';
 import { useFetchCategories } from '../../hooks/categories';
 import adService from '../../services/adService';
 
 const PLACEHOLDER = "https://placehold.co/640x480?text=SmallTrend";
+const COMBO_PLACEHOLDER = "https://placehold.co/640x480?text=Combo";
 const PAGE_SIZE = 3;
 
 const fmt = (value) => (value != null ? `${Number(value).toLocaleString("vi-VN")}đ` : "-");
@@ -133,6 +136,96 @@ function ProductCard({ v, compact = false, highlight = false }) {
   );
 }
 
+function GiftCard({ gift }) {
+  const giftName = gift?.name || "Quà loyalty";
+  const requiredPoints = Number(gift?.requiredPoints || 0);
+  const stock = Number(gift?.stock || 0);
+
+  return (
+    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+      <div className="relative">
+        <img
+          src={gift?.image || "https://placehold.co/640x480?text=Gift"}
+          className="h-56 w-full object-cover"
+          alt={giftName}
+          onError={(e) => {
+            e.target.src = "https://placehold.co/640x480?text=Gift";
+          }}
+        />
+        <span className="absolute left-3 top-3 rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow">
+          {requiredPoints.toLocaleString("vi-VN")} pts
+        </span>
+        <span className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-semibold shadow ${stock > 0 ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}`}>
+          {stock > 0 ? `Còn ${stock}` : "Hết quà"}
+        </span>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">{giftName}</h3>
+          {gift?.sku && <p className="mt-1 text-xs font-mono text-slate-400">SKU: {gift.sku}</p>}
+        </div>
+
+        <p className="text-sm font-medium text-slate-700">Đổi ngay tại quầy với điểm tích lũy</p>
+      </div>
+    </div>
+  );
+}
+
+const getComboImage = (combo) => {
+  if (!combo?.imageUrl) return COMBO_PLACEHOLDER;
+  if (combo.imageUrl.startsWith("http")) return combo.imageUrl;
+  return `http://localhost:8081${combo.imageUrl.startsWith("/") ? "" : "/"}${combo.imageUrl}`;
+};
+
+function ComboCard({ combo }) {
+  const originalPrice = Number(combo?.originalPrice || 0);
+  const comboPrice = Number(combo?.comboPrice || 0);
+  const discountPercent = originalPrice > 0
+    ? Math.max(0, Math.round((1 - (comboPrice / originalPrice)) * 100))
+    : 0;
+
+  return (
+    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+      <div className="relative">
+        <img
+          src={getComboImage(combo)}
+          className="h-56 w-full object-cover"
+          alt={combo?.comboName || "Combo ưu đãi"}
+          onError={(e) => {
+            e.target.src = COMBO_PLACEHOLDER;
+          }}
+        />
+        {discountPercent > 0 && (
+          <span className="absolute left-3 top-3 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
+            Giảm {discountPercent}%
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div>
+          <h3 className="line-clamp-2 text-lg font-semibold text-slate-900">{combo?.comboName || "Combo"}</h3>
+          {combo?.description && (
+            <p className="mt-1 line-clamp-2 text-sm text-slate-500">{combo.description}</p>
+          )}
+        </div>
+
+        <div className="flex items-end gap-2">
+          <span className="text-2xl font-bold text-slate-950">{fmt(comboPrice)}</span>
+          {originalPrice > comboPrice && (
+            <span className="pb-0.5 text-sm text-slate-400 line-through">{fmt(originalPrice)}</span>
+          )}
+        </div>
+
+        <p className="text-xs text-slate-500">
+          {Array.isArray(combo?.items) ? `${combo.items.length} sản phẩm trong combo` : "Combo ưu đãi tại cửa hàng"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function SectionTitle({ title, description, action }) {
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -205,10 +298,13 @@ export default function EcommerceUI() {
   const { variants: discountedVariants, loading: loadingDiscounted } = useDiscountedVariants();
   const { variants: allVariants, loading: loadingAll } = useAllVariants();
   const { vouchers, loading: loadingVouchers } = useVouchers();
+  const { gifts, loading: loadingGifts } = useGifts();
+  const { combos, loading: loadingCombos } = useProductCombos();
   const { categories: fetchedCategories } = useFetchCategories();
   const loadingProducts = loadingDiscounted || loadingAll;
 
-  const [sliderPage, setSliderPage] = useState(0);
+  const [comboSliderPage, setComboSliderPage] = useState(0);
+  const [giftSliderPage, setGiftSliderPage] = useState(0);
   const [showViewAll, setShowViewAll] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
   const [catalogSearch, setCatalogSearch] = useState("");
@@ -238,12 +334,23 @@ export default function EcommerceUI() {
   }, [allVariants, fetchedCategories]);
 
   const sortedDiscounted = [...discountedVariants].sort((a, b) => getSaving(b) - getSaving(a));
-  const totalPages = Math.max(1, Math.ceil(allVariants.length / PAGE_SIZE));
-  const visibleItems = allVariants.slice(
-    sliderPage * PAGE_SIZE,
-    sliderPage * PAGE_SIZE + PAGE_SIZE
+  const activeCombos = [...combos]
+    .filter((combo) => Boolean(combo?.isActive ?? true))
+    .sort((a, b) => Number(a?.comboPrice || 0) - Number(b?.comboPrice || 0));
+  const totalComboPages = Math.max(1, Math.ceil(activeCombos.length / PAGE_SIZE));
+  const visibleComboItems = activeCombos.slice(
+    comboSliderPage * PAGE_SIZE,
+    comboSliderPage * PAGE_SIZE + PAGE_SIZE
   );
   const availableVouchers = vouchers.filter(isVoucherCurrentlyActive).slice(0, 6);
+  const redeemableGifts = [...gifts]
+    .filter((gift) => Number(gift?.stock || 0) > 0)
+    .sort((a, b) => Number(a?.requiredPoints || 0) - Number(b?.requiredPoints || 0));
+  const totalGiftPages = Math.max(1, Math.ceil(redeemableGifts.length / PAGE_SIZE));
+  const visibleGiftItems = redeemableGifts.slice(
+    giftSliderPage * PAGE_SIZE,
+    giftSliderPage * PAGE_SIZE + PAGE_SIZE
+  );
 
   const modalItems = sortedDiscounted.filter((v) => {
     const kw = modalSearch.toLowerCase().trim();
@@ -274,8 +381,18 @@ export default function EcommerceUI() {
     return true;
   });
 
-  const prevSlide = () => setSliderPage((p) => Math.max(0, p - 1));
-  const nextSlide = () => setSliderPage((p) => Math.min(totalPages - 1, p + 1));
+  const prevComboSlide = () => setComboSliderPage((p) => Math.max(0, p - 1));
+  const nextComboSlide = () => setComboSliderPage((p) => Math.min(totalComboPages - 1, p + 1));
+  const prevGiftSlide = () => setGiftSliderPage((p) => Math.max(0, p - 1));
+  const nextGiftSlide = () => setGiftSliderPage((p) => Math.min(totalGiftPages - 1, p + 1));
+
+  useEffect(() => {
+    setComboSliderPage(0);
+  }, [activeCombos.length]);
+
+  useEffect(() => {
+    setGiftSliderPage(0);
+  }, [redeemableGifts.length]);
 
   useEffect(() => {
     let active = true;
@@ -378,30 +495,30 @@ export default function EcommerceUI() {
 
       <div className="mx-auto max-w-7xl px-4 pb-4">
         <SectionTitle
-          title="Bestseller tại cửa hàng"
+          title="Combo ưu đãi"
           description=""
         />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-4">
-        {loadingProducts ? (
-          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">Đang tải bestseller...</div>
-        ) : visibleItems.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">Chưa có sản phẩm để hiển thị.</div>
+        {loadingCombos ? (
+          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">Đang tải combo ưu đãi...</div>
+        ) : visibleComboItems.length === 0 ? (
+          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">Chưa có combo ưu đãi để hiển thị.</div>
         ) : (
           <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
-            {totalPages > 1 && (
+            {totalComboPages > 1 && (
               <>
                 <button
-                  onClick={prevSlide}
-                  disabled={sliderPage === 0}
+                  onClick={prevComboSlide}
+                  disabled={comboSliderPage === 0}
                   className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:border-slate-950 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={nextSlide}
-                  disabled={sliderPage >= totalPages - 1}
+                  onClick={nextComboSlide}
+                  disabled={comboSliderPage >= totalComboPages - 1}
                   className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:border-slate-950 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -411,16 +528,71 @@ export default function EcommerceUI() {
 
             <div
               className="flex transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${sliderPage * 100}%)` }}
+              style={{ transform: `translateX(-${comboSliderPage * 100}%)` }}
             >
-              {Array.from({ length: totalPages }).map((_, pageIndex) => {
-                const items = allVariants.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
+              {Array.from({ length: totalComboPages }).map((_, pageIndex) => {
+                const items = activeCombos.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
 
                 return (
                   <div key={pageIndex} className="w-full shrink-0 px-12 sm:px-14 lg:px-16">
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                      {items.map((v) => (
-                        <ProductCard key={v.sku} v={v} highlight={pageIndex === 0} />
+                      {items.map((combo) => (
+                        <ComboCard key={combo?.id || combo?.comboName} combo={combo} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 pt-6">
+        <SectionTitle
+          title="Quà có thể đổi"
+          description=""
+        />
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 py-4">
+        {loadingGifts ? (
+          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">Đang tải ...</div>
+        ) : visibleGiftItems.length === 0 ? (
+          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">Chưa có quà khả dụng để đổi.</div>
+        ) : (
+          <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+            {totalGiftPages > 1 && (
+              <>
+                <button
+                  onClick={prevGiftSlide}
+                  disabled={giftSliderPage === 0}
+                  className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:border-slate-950 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={nextGiftSlide}
+                  disabled={giftSliderPage >= totalGiftPages - 1}
+                  className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:border-slate-950 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
+
+            <div
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${giftSliderPage * 100}%)` }}
+            >
+              {Array.from({ length: totalGiftPages }).map((_, pageIndex) => {
+                const items = redeemableGifts.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
+
+                return (
+                  <div key={pageIndex} className="w-full shrink-0 px-12 sm:px-14 lg:px-16">
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                      {items.map((gift) => (
+                        <GiftCard key={gift?.id || gift?.sku || gift?.name} gift={gift} />
                       ))}
                     </div>
                   </div>

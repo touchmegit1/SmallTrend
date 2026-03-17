@@ -26,6 +26,7 @@ public class DisposalVoucherService {
     private final InventoryStockRepository inventoryStockRepository;
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
+    private final InventoryOutOfStockNotificationService outOfStockNotificationService;
 
     // Get all disposal vouchers
     public List<DisposalVoucherResponse> getAllDisposalVouchers() {
@@ -226,8 +227,10 @@ public class DisposalVoucherService {
             throw new RuntimeException("Insufficient stock. Available: " + stock.getQuantity() + ", Required: " + quantity);
         }
 
-        stock.setQuantity(stock.getQuantity() - quantity);
-        inventoryStockRepository.save(stock);
+        int oldQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+        stock.setQuantity(oldQty - quantity);
+        InventoryStock savedStock = inventoryStockRepository.save(stock);
+        outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "DISPOSAL_VOUCHER");
     }
 
     private void validateDraftRequest(DisposalVoucherRequest request) {

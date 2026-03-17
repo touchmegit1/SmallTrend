@@ -32,8 +32,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -54,6 +56,8 @@ class LocationServiceTest {
     private InventoryCountRepository inventoryCountRepository;
     @Mock
     private DisposalVoucherRepository disposalVoucherRepository;
+    @Mock
+    private com.smalltrend.service.inventory.InventoryOutOfStockNotificationService outOfStockNotificationService;
 
     @InjectMocks
     private LocationService locationService;
@@ -170,12 +174,9 @@ class LocationServiceTest {
     void updateLocation_shouldUpdateExistingLocation() {
         LocationRequest request = new LocationRequest();
         request.setLocationName("Kho A Updated");
-        request.setLocationCode("LOC-A-UPD");
-        request.setLocationType("WAREHOUSE");
         request.setCapacity(1000);
 
         when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
-        when(locationRepository.existsByLocationCodeIgnoreCaseAndIdNot("LOC-A-UPD", 1)).thenReturn(false);
         when(locationRepository.save(any(Location.class))).thenReturn(activeLocation);
         when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(List.of());
 
@@ -183,6 +184,8 @@ class LocationServiceTest {
 
         assertEquals("Kho A Updated", response.getLocationName());
         assertEquals(1000, response.getCapacity());
+        assertEquals("LOC-A", response.getLocationCode());
+        assertEquals("WAREHOUSE", response.getLocationType());
         verify(locationRepository).save(activeLocation);
     }
 
@@ -220,6 +223,7 @@ class LocationServiceTest {
                 .thenReturn(Optional.of(stock));
         when(inventoryStockRepository.findByVariantIdAndBatchIdAndLocationId(variant.getId(), batch.getId(), 2))
                 .thenReturn(Optional.empty());
+        when(inventoryStockRepository.save(any(InventoryStock.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         locationService.transferStock(1, 2, variant.getId(), batch.getId(), 20);
 
@@ -238,26 +242,206 @@ class LocationServiceTest {
         assertEquals("IN", savedMovements.get(1).getType());
         assertEquals(20, savedMovements.get(1).getQuantity());
         assertEquals(2, savedMovements.get(1).getLocation().getId());
+        verify(outOfStockNotificationService).handleStockTransition(any(InventoryStock.class), eq(50), eq(30), eq("TRANSFER_OUT"));
+        verify(outOfStockNotificationService).handleStockTransition(any(InventoryStock.class), eq(0), eq(20), eq("TRANSFER_IN"));
     }
 
     @Test
-    void toggleLocationStatus_shouldDeactivate_whenActiveAndEmpty() {
+    void getLocationById_shouldThrow_whenNotFound() {
+        when(locationRepository.findById(999)).thenReturn(Optional.empty());
+
+        assertThrows(LocationException.class, () -> locationService.getLocationById(999));
+    }
+
+    @Test
+    void getLocationStockItems_shouldMapNullFieldsToDefaults() {
+        InventoryStock stockWithNulls = InventoryStock.builder()
+                .id(99)
+                .variant(null)
+                .batch(null)
+                .location(activeLocation)
+                .quantity(null)
+                .build();
+
         when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
-        when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(List.of());
-        when(locationRepository.save(any(Location.class))).thenReturn(activeLocation);
+        when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(List.of(stockWithNulls));
 
-        FullLocationResponse response = locationService.toggleLocationStatus(1);
+        List<LocationStockItemResponse> responses = locationService.getLocationStockItems(1);
 
-        assertEquals("INACTIVE", response.getStatus());
-        verify(locationRepository).save(activeLocation);
+        assertEquals(1, responses.size());
+        assertNull(responses.get(0).getVariantId());
+        assertEquals("", responses.get(0).getSku());
+        assertEquals("", responses.get(0).getProductName());
+        assertEquals("", responses.get(0).getVariantUnit());
+        assertEquals("", responses.get(0).getBatchCode());
+        assertNull(responses.get(0).getBatchId());
+        assertEquals(0, responses.get(0).getQuantity());
     }
 
     @Test
-    void toggleLocationStatus_shouldThrowException_whenActiveAndNotEmpty() {
+    void createLocation_shouldMapShelfTypeToDisplayAndTrimNullableFields() {
+        LocationRequest request = new LocationRequest();
+        request.setLocationName("  Kho D  ");
+        request.setLocationCode("  LOC-D  ");
+        request.setLocationType("SHELF");
+        request.setAddress("   ");
+        request.setDescription("  note  ");
+
+        when(locationRepository.existsByLocationCodeIgnoreCase("LOC-D")).thenReturn(false);
+        when(locationRepository.save(any(Location.class))).thenAnswer(i -> {
+            Location loc = i.getArgument(0);
+            loc.setId(10);
+            return loc;
+        });
+        when(inventoryStockRepository.findByLocationIdWithProduct(10)).thenReturn(List.of());
+
+        FullLocationResponse response = locationService.createLocation(request);
+
+        assertEquals("Kho D", response.getLocationName());
+        assertEquals("DISPLAY", response.getLocationType());
+        assertEquals("", response.getAddress());
+        assertEquals("note", response.getDescription());
+    }
+
+    @Test
+    void deleteLocation_shouldThrowConflict_whenReferencedByBusiness() {
+        when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
+        when(inventoryStockRepository.existsByLocationIdAndQuantityGreaterThan(1, 0)).thenReturn(false);
+        when(purchaseOrderRepository.existsByLocationId(1)).thenReturn(true);
+
+        assertThrows(LocationException.class, () -> locationService.deleteLocation(1));
+        verify(locationRepository, never()).deleteById(1);
+    }
+
+    @Test
+    void transferStock_shouldThrowInvalid_whenMissingInformation() {
+        assertThrows(LocationException.class, () -> locationService.transferStock(null, 2, 1, 1, 1));
+    }
+
+    @Test
+    void transferStock_shouldThrowInvalid_whenFromEqualsTo() {
+        assertThrows(LocationException.class, () -> locationService.transferStock(1, 1, 1, 1, 1));
+    }
+
+    @Test
+    void transferStock_shouldThrowInvalid_whenQtyNotPositive() {
+        assertThrows(LocationException.class, () -> locationService.transferStock(1, 2, 1, 1, 0));
+    }
+
+    @Test
+    void transferStock_shouldThrowConflict_whenSourceStockMissing() {
+        when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
+        when(locationRepository.findById(2)).thenReturn(Optional.of(inactiveLocation));
+        when(inventoryStockRepository.findByVariantIdAndBatchIdAndLocationId(1, 1, 1)).thenReturn(Optional.empty());
+
+        assertThrows(LocationException.class, () -> locationService.transferStock(1, 2, 1, 1, 10));
+    }
+
+    @Test
+    void transferStock_shouldThrowConflict_whenQtyExceedsAvailable() {
+        when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
+        when(locationRepository.findById(2)).thenReturn(Optional.of(inactiveLocation));
+        when(inventoryStockRepository.findByVariantIdAndBatchIdAndLocationId(1, 1, 1)).thenReturn(Optional.of(stock));
+
+        assertThrows(LocationException.class, () -> locationService.transferStock(1, 2, 1, 1, 60));
+    }
+
+    @Test
+    void transferStock_shouldDeleteSourceAndIncreaseExistingDestination_whenRemainingBecomesZero() {
+        stock.setQuantity(20);
+        InventoryStock destination = InventoryStock.builder()
+                .id(2)
+                .variant(variant)
+                .batch(batch)
+                .location(inactiveLocation)
+                .quantity(null)
+                .build();
+
+        when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
+        when(locationRepository.findById(2)).thenReturn(Optional.of(inactiveLocation));
+        when(inventoryStockRepository.findByVariantIdAndBatchIdAndLocationId(1, 1, 1)).thenReturn(Optional.of(stock));
+        when(inventoryStockRepository.findByVariantIdAndBatchIdAndLocationId(1, 1, 2)).thenReturn(Optional.of(destination));
+        when(inventoryStockRepository.save(any(InventoryStock.class))).thenAnswer(i -> i.getArgument(0));
+
+        locationService.transferStock(1, 2, 1, 1, 20);
+
+        verify(inventoryStockRepository).delete(stock);
+        verify(inventoryStockRepository).save(stockCaptor.capture());
+        assertEquals(20, stockCaptor.getValue().getQuantity());
+        verify(outOfStockNotificationService).handleStockTransition(stock, 20, 0, "TRANSFER_OUT");
+        verify(outOfStockNotificationService).handleStockTransition(destination, 0, 20, "TRANSFER_IN");
+    }
+
+    @Test
+    void getLocationById_shouldReturnLocation() {
         when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
         when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(List.of(stock));
 
-        LocationException ex = assertThrows(LocationException.class, () -> locationService.toggleLocationStatus(1));
-        assertEquals("Vui lòng chuyển hết hàng hóa sang vị trí khác trước khi đóng vị trí này", ex.getMessage());
+        FullLocationResponse response = locationService.getLocationById(1);
+
+        assertEquals(1, response.getId());
+        assertEquals("Kho A", response.getLocationName());
     }
+
+    @Test
+    void createLocation_shouldThrowConflict_whenCodeExists() {
+        LocationRequest request = new LocationRequest();
+        request.setLocationName("Kho X");
+        request.setLocationCode("LOC-X");
+        request.setLocationType("WAREHOUSE");
+
+        when(locationRepository.existsByLocationCodeIgnoreCase("LOC-X")).thenReturn(true);
+
+        assertThrows(LocationException.class, () -> locationService.createLocation(request));
+    }
+
+    @Test
+    void updateLocation_shouldThrowInvalid_whenNameBlank() {
+        LocationRequest request = new LocationRequest();
+        request.setLocationName("   ");
+
+        when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
+
+        assertThrows(LocationException.class, () -> locationService.updateLocation(1, request));
+    }
+
+    @Test
+    void deleteLocation_shouldThrowConflict_whenReferencedByInventoryCount() {
+        when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
+        when(inventoryStockRepository.existsByLocationIdAndQuantityGreaterThan(1, 0)).thenReturn(false);
+        when(purchaseOrderRepository.existsByLocationId(1)).thenReturn(false);
+        when(inventoryCountRepository.existsByLocationId(1)).thenReturn(true);
+
+        assertThrows(LocationException.class, () -> locationService.deleteLocation(1));
+    }
+
+    @Test
+    void transferStock_shouldThrowConflict_whenSourceQuantityNull() {
+        stock.setQuantity(null);
+        when(locationRepository.findById(1)).thenReturn(Optional.of(activeLocation));
+        when(locationRepository.findById(2)).thenReturn(Optional.of(inactiveLocation));
+        when(inventoryStockRepository.findByVariantIdAndBatchIdAndLocationId(1, 1, 1)).thenReturn(Optional.of(stock));
+
+        assertThrows(LocationException.class, () -> locationService.transferStock(1, 2, 1, 1, 1));
+    }
+
+    @Test
+    void getAllLocations_shouldMapDefaultValues_whenLocationFieldsNull() {
+        Location nullLoc = Location.builder().id(77).name("N").warehouseType("WAREHOUSE").build();
+        InventoryStock nullQtyStock = InventoryStock.builder().id(5).quantity(null).location(nullLoc).variant(null).batch(null).build();
+
+        when(locationRepository.findAll()).thenReturn(List.of(nullLoc));
+        when(inventoryStockRepository.findByLocationIdWithProduct(77)).thenReturn(List.of(nullQtyStock));
+
+        FullLocationResponse response = locationService.getAllLocations().get(0);
+
+        assertEquals("", response.getLocationCode());
+        assertEquals("", response.getAddress());
+        assertEquals(0, response.getCapacity());
+        assertEquals("", response.getDescription());
+        assertEquals("ACTIVE", response.getStatus());
+        assertNull(response.getCreatedAt());
+        assertEquals(0, response.getTotalProducts());
+    }
+
 }

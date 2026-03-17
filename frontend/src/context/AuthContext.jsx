@@ -51,18 +51,53 @@ const getAttendanceErrorMessage = (error) => {
     return error?.message || 'Unknown attendance error';
 };
 
+const shouldAutoSyncAttendance = (userData) => {
+    const role = String(userData?.role?.name || userData?.role || '').toUpperCase();
+    return role !== 'ADMIN' && role !== 'ROLE_ADMIN' && role !== 'MANAGER' && role !== 'ROLE_MANAGER';
+};
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const attendanceTimerRef = useRef(null);
-    const attendanceStateRef = useRef({ userId: null, date: null, timeIn: null, allowedClockInAt: null });
+    const attendanceStateRef = useRef({ userId: null, date: null, timeIn: null, allowedClockInAt: null, disabled: false });
 
     const clearAttendanceTimer = () => {
         if (attendanceTimerRef.current) {
             clearInterval(attendanceTimerRef.current);
             attendanceTimerRef.current = null;
         }
+    };
+
+    const disableAttendanceSync = () => {
+        attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null, disabled: true };
+    };
+
+    const resetAttendanceSync = () => {
+        attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null, disabled: false };
+    };
+
+    const isAttendanceSyncEnabled = (userData) => {
+        if (attendanceStateRef.current.disabled) {
+            return false;
+        }
+        return shouldAutoSyncAttendance(userData);
+    };
+
+    const handleAttendanceSyncError = (error) => {
+        if (!isExpectedAttendanceError(error)) {
+            return false;
+        }
+
+        const message = getAttendanceErrorMessage(error).toLowerCase();
+        if (message.includes('not assigned') || message.includes('không được phân công') || message.includes('khong duoc phan cong')) {
+            disableAttendanceSync();
+            clearAttendanceTimer();
+            return true;
+        }
+
+        return false;
     };
 
     const resolveAllowedClockInTime = async (userId, date) => {
@@ -133,6 +168,10 @@ export const AuthProvider = ({ children }) => {
     };
 
     const syncAttendanceSession = async (userData, mode) => {
+        if (!isAttendanceSyncEnabled(userData)) {
+            return;
+        }
+
         const fallbackUser = authService.getCurrentUser();
         const rawUserId = userData?.id || userData?.userId || fallbackUser?.id || fallbackUser?.userId;
         const userId = Number(rawUserId);
@@ -215,12 +254,15 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
 
             clearAttendanceTimer();
+            resetAttendanceSync();
 
             // Auto attendance on login (start/re-open session)
             try {
                 await syncAttendanceSession(data, 'LOGIN');
             } catch (clockinError) {
-                console.warn('Failed to start attendance session:', clockinError?.message || clockinError);
+                if (!handleAttendanceSyncError(clockinError)) {
+                    console.warn('Failed to start attendance session:', clockinError?.message || clockinError);
+                }
             }
 
             return data;
@@ -243,7 +285,7 @@ export const AuthProvider = ({ children }) => {
             await authService.logout();
         } finally {
             clearAttendanceTimer();
-            attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null };
+            attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null, disabled: false };
             setUser(null);
             setIsAuthenticated(false);
         }
@@ -259,7 +301,7 @@ export const AuthProvider = ({ children }) => {
             try {
                 await syncAttendanceSession(user, 'LOGIN');
             } catch (error) {
-                if (!isExpectedAttendanceError(error)) {
+                if (!handleAttendanceSyncError(error) && !isExpectedAttendanceError(error)) {
                     console.warn('Failed to initialize attendance session:', getAttendanceErrorMessage(error));
                 }
             }
@@ -270,6 +312,9 @@ export const AuthProvider = ({ children }) => {
             try {
                 await syncAttendanceSession(user, 'HEARTBEAT');
             } catch (error) {
+                if (handleAttendanceSyncError(error)) {
+                    return;
+                }
                 if (isExpectedAttendanceError(error)) {
                     clearAttendanceTimer();
                     return;

@@ -57,11 +57,6 @@ export function useInventoryDashboard() {
             getRecentActivities().catch(() => []),
           ]);
 
-        console.log("📊 Dashboard Summary:", summaryData);
-        console.log("📦 Products:", productsData.length);
-        console.log("🏷️ Batches:", batchesData.length);
-        console.log("📋 Activities:", activitiesData.length);
-
         setProducts(productsData);
         setBatches(batchesData);
         setCategories(categoriesData);

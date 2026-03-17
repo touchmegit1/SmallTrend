@@ -6,6 +6,7 @@ export default function GoodsReceiptTable({
   receiptItems,
   onUpdateReceiptItem,
   isReadOnly = false,
+  lockExpiryDate = false,
 }) {
   const getItemIdentity = (item) => item.id ?? item._key;
 
@@ -148,7 +149,7 @@ export default function GoodsReceiptTable({
                         e.target.value,
                       )
                     }
-                    disabled={isReadOnly}
+                    disabled={isReadOnly || lockExpiryDate}
                     className="w-36 px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </td>
