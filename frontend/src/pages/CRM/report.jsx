@@ -467,25 +467,35 @@ export default function CRMReport() {
                     )}
                 </AnalyticsPanel>
                 <AnalyticsPanel
-                    title="Kho quà và quảng cáo"
+                    title="Kho quà loyalty"
                 >
                     <div className="grid grid-cols-2 gap-3 mb-4">
-                        <MiniMetric label="Quà sắp cạn" value={gifts.filter(gift => (gift.stock || 0) > 0 && (gift.stock || 0) <= 5).length} tone="amber" />
-                        <MiniMetric label="Quà hết hàng" value={outOfStockGifts} tone="rose" />
-                        <MiniMetric label="Ads active" value={activeAds} tone="indigo" />
-                        <MiniMetric label="Slot đang dùng" value={activeAdSlots} tone="sky" />
+                        <MiniMetric label="Quà sắp hết" value={gifts.filter(gift => (gift.stock || 0) > 0 && (gift.stock || 0) <= 5).length} tone="amber" />
+                        <MiniMetric label="Tổng số quà" value={gifts.length} tone="indigo" />
                     </div>
                     <div className="space-y-4">
-                        {adSlotRows.map((row) => (
-                            <HorizontalBar
-                                key={row.slot}
-                                label={`Vị trí ${row.slot}`}
-                                helper={`${row.active}/${row.total} quảng cáo đang bật`}
-                                value={row.total > 0 ? `${row.percent.toFixed(0)}%` : '0%'}
-                                percent={row.percent}
-                                color="indigo"
-                            />
-                        ))}
+                        {gifts.length === 0 ? (
+                            <p className="text-sm text-slate-400 text-center py-4">Chưa có quà trong kho.</p>
+                        ) : (() => {
+                            const maxStock = Math.max(...gifts.map(g => Number(g.stock) || 0), 1);
+                            return gifts
+                                .slice()
+                                .sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))
+                                .map((gift) => {
+                                    const stock = Number(gift.stock) || 0;
+                                    const color = stock === 0 ? 'rose' : stock <= 5 ? 'amber' : 'emerald';
+                                    return (
+                                        <HorizontalBar
+                                            key={gift.id || gift.name}
+                                            label={gift.name || 'Quà'}
+                                            helper={stock === 0 ? 'Hết hàng' : `Cần ${gift.requiredPoints || 0} pts`}
+                                            value={`${stock}`}
+                                            percent={(stock / maxStock) * 100}
+                                            color={color}
+                                        />
+                                    );
+                                });
+                        })()}
                     </div>
                 </AnalyticsPanel>
             </div>
