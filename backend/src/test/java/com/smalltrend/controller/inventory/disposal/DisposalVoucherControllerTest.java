@@ -106,6 +106,18 @@ class DisposalVoucherControllerTest {
     }
 
     @Test
+    void submitForApproval_shouldReturnOk() {
+        DisposalVoucherResponse expected = new DisposalVoucherResponse();
+        when(disposalVoucherService.submitForApproval(1L)).thenReturn(expected);
+
+        ResponseEntity<DisposalVoucherResponse> response = controller.submitForApproval(1L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(disposalVoucherService).submitForApproval(1L);
+    }
+
+    @Test
     void approveVoucher_shouldReturnOk() {
         DisposalVoucherResponse expected = new DisposalVoucherResponse();
         when(disposalVoucherService.approveVoucher(1L, 2L)).thenReturn(expected);

@@ -185,6 +185,54 @@ class PurchaseOrderControllerTest {
     }
 
     @Test
+    void closeShortage_shouldPassManagerDecisionNoteWhenPayloadProvided() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.closeShortage(1, "Đóng thiếu hàng")).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.closeShortage(1, Map.of("managerDecisionNote", "Đóng thiếu hàng"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).closeShortage(1, "Đóng thiếu hàng");
+    }
+
+    @Test
+    void closeShortage_shouldPassNullWhenPayloadIsNull() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.closeShortage(1, null)).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.closeShortage(1, null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).closeShortage(1, null);
+    }
+
+    @Test
+    void requestSupplierSupplement_shouldPassManagerDecisionNoteWhenPayloadProvided() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.requestSupplierSupplement(1, "Yêu cầu bù hàng")).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.requestSupplierSupplement(1, Map.of("managerDecisionNote", "Yêu cầu bù hàng"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).requestSupplierSupplement(1, "Yêu cầu bù hàng");
+    }
+
+    @Test
+    void requestSupplierSupplement_shouldPassNullWhenPayloadIsNull() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.requestSupplierSupplement(1, null)).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.requestSupplierSupplement(1, null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).requestSupplierSupplement(1, null);
+    }
+
+    @Test
     void cancelOrder_shouldReturnOk() {
         PurchaseOrderResponse expected = new PurchaseOrderResponse();
         when(purchaseOrderService.cancelOrder(1)).thenReturn(expected);
