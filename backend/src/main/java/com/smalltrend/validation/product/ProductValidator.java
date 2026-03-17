@@ -52,6 +52,24 @@ public class ProductValidator {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thuế suất với id: " + taxRateId));
     }
 
+    public void validateNameForCreate(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return;
+        }
+        if (productRepository.existsByNameIgnoreCase(name.trim())) {
+            throw new RuntimeException("Tên sản phẩm đã tồn tại!");
+        }
+    }
+
+    public void validateNameForUpdate(String name, Integer currentId) {
+        if (name == null || name.trim().isEmpty()) {
+            return;
+        }
+        if (productRepository.existsByNameIgnoreCaseAndIdNot(name.trim(), currentId)) {
+            throw new RuntimeException("Tên sản phẩm đã tồn tại!");
+        }
+    }
+
     public void validateDeletableWithinTwoMinutes(Product product) {
         LocalDateTime createdAt = product.getCreatedAt();
         if (createdAt == null) {

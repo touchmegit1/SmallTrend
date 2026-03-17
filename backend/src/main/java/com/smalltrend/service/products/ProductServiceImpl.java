@@ -67,6 +67,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse create(CreateProductRequest request) {
+        productValidator.validateNameForCreate(request.getName());
+
         Product product = new Product();
         applyRequestToProduct(request, product);
         Product saved = productRepository.save(product);
@@ -79,6 +81,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponse update(Integer id, CreateProductRequest request) {
         Product existing = productValidator.requireExistingProduct(id);
+        productValidator.validateNameForUpdate(request.getName(), id);
 
         boolean oldStatus = existing.getIsActive() != null ? existing.getIsActive() : true;
         applyRequestToProduct(request, existing);
@@ -94,7 +97,7 @@ public class ProductServiceImpl implements ProductService {
 
     // Hàm tiện ích map các trường từ Request form sang Entity để lưu
     private void applyRequestToProduct(CreateProductRequest request, Product product) {
-        product.setName(request.getName());
+        product.setName(request.getName() != null ? request.getName().trim() : null);
         product.setDescription(request.getDescription());
         product.setImageUrl(request.getImageUrl());
         product.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);

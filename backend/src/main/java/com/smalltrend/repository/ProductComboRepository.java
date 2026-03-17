@@ -9,4 +9,8 @@ import java.util.Optional;
 @Repository
 public interface ProductComboRepository extends JpaRepository<ProductCombo, Integer> {
     Optional<ProductCombo> findByComboCode(String comboCode);
+
+    boolean existsByComboNameIgnoreCase(String comboName);
+
+    boolean existsByComboNameIgnoreCaseAndIdNot(String comboName, Integer id);
 }

@@ -353,8 +353,4 @@ ProductSearchBar.propTypes = {
   onImportProducts: PropTypes.func,
 };
 
-ProductSearchBar.defaultProps = {
-  suggestedProducts: [],
-};
-
 export default ProductSearchBar;

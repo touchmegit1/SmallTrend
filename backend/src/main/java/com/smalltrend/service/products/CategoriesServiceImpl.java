@@ -27,6 +27,8 @@ public class CategoriesServiceImpl implements CategoriesService {
      */
     @Override
     public CategoriesResponse create(CategoriesRequest request) {
+        categoryValidator.validateNameUniqueForCreate(request.getName());
+        categoryValidator.validateCodeUniqueForCreate(request.getCode());
         Category category = mapper.toEntity(request);
         Category savedCategory = repository.save(category);
         return mapper.toResponse(savedCategory);
@@ -49,6 +51,8 @@ public class CategoriesServiceImpl implements CategoriesService {
     @Override
     public CategoriesResponse update(Integer id, CategoriesRequest request) {
         Category existingCategory = categoryValidator.requireExistingCategory(id);
+        categoryValidator.validateNameUniqueForUpdate(request.getName(), id);
+        categoryValidator.validateCodeUniqueForUpdate(request.getCode(), id);
 
         existingCategory.setCode(request.getCode());
         existingCategory.setName(request.getName());

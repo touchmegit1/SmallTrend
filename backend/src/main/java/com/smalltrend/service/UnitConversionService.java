@@ -88,7 +88,7 @@ public class UnitConversionService {
                 baseVariant, toUnit, request.getConversionFactor());
 
         // Tạo variant mới với đơn vị đích.
-        // Không copy attributes của base variant để tránh xung đột key trong bảng variant_attributes.
+        // Copy attributes từ base variant (mỗi variant có variant_id riêng nên không xung đột key).
         ProductVariant packagingVariant = ProductVariant.builder()
                 .product(product)
                 .sku(autoSku)
@@ -96,7 +96,9 @@ public class UnitConversionService {
                 .sellPrice(request.getSellPrice())
                 .isActive(baseVariant.isActive())
                 .imageUrl(baseVariant.getImageUrl()) // Kế thừa ảnh từ variant gốc
-                .attributes(new java.util.HashMap<>())
+                .attributes(baseVariant.getAttributes() != null
+                        ? new java.util.HashMap<>(baseVariant.getAttributes())
+                        : new java.util.HashMap<>())
                 .build();
 
         ProductVariant savedVariant = productVariantRepository.saveAndFlush(packagingVariant); // cần id ngay để sinh barcode

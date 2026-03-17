@@ -53,12 +53,17 @@ class TaxRateControllerTest {
         TaxRate request = buildTaxRate(null, "VAT 8%", BigDecimal.valueOf(8), true);
         TaxRate saved = buildTaxRate(1, "VAT 8%", BigDecimal.valueOf(8), true);
 
+        when(taxRateValidator.validateAndNormalizeName("VAT 8%")).thenReturn("VAT 8%");
+        when(taxRateValidator.validateRate(BigDecimal.valueOf(8))).thenReturn(BigDecimal.valueOf(8));
         when(taxRateRepository.save(request)).thenReturn(saved);
 
         ResponseEntity<TaxRate> response = taxRateController.create(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(saved, response.getBody());
+        verify(taxRateValidator).validateAndNormalizeName("VAT 8%");
+        verify(taxRateValidator).validateRate(BigDecimal.valueOf(8));
+        verify(taxRateValidator).validateNameUniqueForCreate("VAT 8%");
         verify(taxRateRepository).save(request);
     }
 
@@ -69,6 +74,8 @@ class TaxRateControllerTest {
         TaxRate savedUpdated = buildTaxRate(1, "VAT 8%", BigDecimal.valueOf(8), false);
 
         when(taxRateValidator.requireExistingTaxRate(1)).thenReturn(existing);
+        when(taxRateValidator.validateAndNormalizeName("VAT 8%")).thenReturn("VAT 8%");
+        when(taxRateValidator.validateRate(BigDecimal.valueOf(8))).thenReturn(BigDecimal.valueOf(8));
         when(taxRateRepository.save(existing)).thenReturn(savedUpdated);
 
         ResponseEntity<TaxRate> response = taxRateController.update(1, updateData);
@@ -76,6 +83,9 @@ class TaxRateControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(savedUpdated, response.getBody());
         verify(taxRateValidator).requireExistingTaxRate(1);
+        verify(taxRateValidator).validateAndNormalizeName("VAT 8%");
+        verify(taxRateValidator).validateRate(BigDecimal.valueOf(8));
+        verify(taxRateValidator).validateNameUniqueForUpdate("VAT 8%", 1);
         verify(taxRateRepository).save(existing);
         assertEquals("VAT 8%", existing.getName());
         assertEquals(BigDecimal.valueOf(8), existing.getRate());
