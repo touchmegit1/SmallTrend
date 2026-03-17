@@ -100,7 +100,6 @@ public class PurchaseOrderService {
         });
     }
 
-
     // ─── Generate Next PO Code ───────────────────────────────
     public String generateNextPOCode() {
         int year = LocalDate.now().getYear();
@@ -244,6 +243,9 @@ public class PurchaseOrderService {
         BigDecimal effectiveShippingFee = receiptRequest.getShippingFee() != null
                 ? receiptRequest.getShippingFee()
                 : (order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+        BigDecimal effectivePaidAmount = receiptRequest.getPaidAmount() != null
+                ? receiptRequest.getPaidAmount()
+                : (order.getPaidAmount() != null ? order.getPaidAmount() : BigDecimal.ZERO);
 
         if (effectiveSupplierId == null) {
             throw new RuntimeException("Nhà cung cấp là bắt buộc khi xác nhận nhập kho.");
@@ -256,6 +258,9 @@ public class PurchaseOrderService {
         }
         if (effectiveShippingFee.compareTo(BigDecimal.ZERO) < 0) {
             throw new RuntimeException("Phí vận chuyển không được âm.");
+        }
+        if (effectivePaidAmount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Số tiền đã thanh toán không được âm.");
         }
 
         boolean hasShortage = false;
@@ -358,6 +363,7 @@ public class PurchaseOrderService {
         order.setTaxPercent(taxPercent);
         order.setTaxAmount(taxAmount);
         order.setShippingFee(shippingFee);
+        order.setPaidAmount(effectivePaidAmount);
         order.setTotalAmount(totalAmount);
         order.setActualDeliveryDate(LocalDate.now());
         if (receiptRequest.getNotes() != null) {

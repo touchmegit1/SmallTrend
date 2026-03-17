@@ -7,6 +7,8 @@ const toNumber = (value) => {
   return Number.isFinite(num) ? num : 0;
 };
 
+const hasValue = (value) => value !== "" && value !== null && value !== undefined;
+
 export default function SummaryPanel({
   order,
   items,
@@ -98,25 +100,13 @@ export default function SummaryPanel({
     discountAmount !== 0;
 
   const shippingAmount = toNumber(order.shipping_fee);
-  const hasShippingFee =
-    order.shipping_fee !== "" &&
-    order.shipping_fee !== null &&
-    order.shipping_fee !== undefined &&
-    shippingAmount !== 0;
+  const hasShippingFee = hasValue(order.shipping_fee);
 
   const paidAmount = toNumber(order.paid_amount);
-  const hasPaidAmount =
-    order.paid_amount !== "" &&
-    order.paid_amount !== null &&
-    order.paid_amount !== undefined &&
-    paidAmount !== 0;
+  const hasPaidAmount = hasValue(order.paid_amount);
 
   const vatPercent = toNumber(order.tax_percent);
-  const hasVatPercent =
-    order.tax_percent !== "" &&
-    order.tax_percent !== null &&
-    order.tax_percent !== undefined &&
-    vatPercent !== 0;
+  const hasVatPercent = hasValue(order.tax_percent);
 
   const taxAmount = toNumber(checkingFinancials?.taxAmount);
   const hasTaxAmount = taxAmount !== 0;
@@ -378,9 +368,32 @@ export default function SummaryPanel({
 
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Đã thanh toán</span>
-                    <span className="font-medium text-slate-800">
-                      {hasPaidAmount ? formatVND(paidAmount) : ""}
-                    </span>
+                    {isChecking ? (
+                      <div className="relative inline-block">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={hasPaidAmount ? paidAmount / 1000 : ""}
+                          onChange={(e) =>
+                            updateOrder(
+                              "paid_amount",
+                              e.target.value === "" ? "" : toNumber(e.target.value) * 1000,
+                            )
+                          }
+                          className="w-24 px-2 py-1 pr-9 text-right text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                        />
+                        {hasPaidAmount && (
+                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-indigo-300">
+                            .000
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-800">
+                        {hasPaidAmount ? formatVND(paidAmount) : ""}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between">

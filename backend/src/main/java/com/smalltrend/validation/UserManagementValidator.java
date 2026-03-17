@@ -65,7 +65,7 @@ public class UserManagementValidator {
 
         // Validate status
         if (status != null && !status.trim().isEmpty() && !isValidUserStatus(status)) {
-            errors.add("Trạng thái không hợp lệ (ACTIVE, INACTIVE, PENDING, LOCKED)");
+            errors.add("Trạng thái không hợp lệ (ACTIVE, INACTIVE, LOCKED)");
         }
 
         return errors;
@@ -227,7 +227,6 @@ public class UserManagementValidator {
         String normalized = status == null ? "" : status.trim().toUpperCase();
         return "ACTIVE".equals(normalized)
                 || "INACTIVE".equals(normalized)
-                || "PENDING".equals(normalized)
                 || "LOCKED".equals(normalized);
     }
 

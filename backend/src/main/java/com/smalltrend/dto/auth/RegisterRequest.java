@@ -40,7 +40,7 @@ public class RegisterRequest {
     private String address;
     private Integer roleId;
 
-    @Pattern(regexp = "^(ACTIVE|INACTIVE|PENDING|LOCKED)$", message = "Trạng thái không hợp lệ")
+    @Pattern(regexp = "^(ACTIVE|INACTIVE|LOCKED)$", message = "Trạng thái không hợp lệ")
     private String status;
 
     // Salary-related fields

@@ -28,11 +28,16 @@ public class GoodsReceiptRequest {
     private Integer supplierId;
     private Integer locationId;
 
+    @NotNull(message = "Thuế VAT (%) là bắt buộc")
     @DecimalMin(value = "0", message = "Thuế VAT (%) không được âm")
     private BigDecimal taxPercent;
 
+    @NotNull(message = "Phí vận chuyển là bắt buộc")
     @DecimalMin(value = "0", message = "Phí vận chuyển không được âm")
     private BigDecimal shippingFee;
+
+    @DecimalMin(value = "0", message = "Số tiền đã thanh toán không được âm")
+    private BigDecimal paidAmount;
 
     @DecimalMin(value = "0", message = "Tạm tính không được âm")
     private BigDecimal subtotal;
@@ -67,6 +72,7 @@ public class GoodsReceiptRequest {
         @DecimalMin(value = "0", message = "Đơn giá nhập không được âm")
         private java.math.BigDecimal unitCost;
 
+        @NotNull(message = "Hạn sử dụng là bắt buộc")
         private java.time.LocalDate expiryDate;
 
         @AssertTrue(message = "Hạn sử dụng phải còn ít nhất 6 tháng")
