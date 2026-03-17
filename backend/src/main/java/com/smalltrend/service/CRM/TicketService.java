@@ -145,7 +145,6 @@ public class TicketService {
 
         // Auto-resolve functionality for REFUND has been removed.
         // Refunds must be manually reviewed and resolved.
-
         Ticket saved = ticketRepository.save(ticket);
         return mapToResponse(saved);
     }
