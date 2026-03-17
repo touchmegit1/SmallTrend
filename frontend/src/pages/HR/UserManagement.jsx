@@ -90,36 +90,83 @@ const UserManagement = () => {
 
   const validateForm = () => {
     const errors = {};
+    const trimmedUsername = formData.username.trim();
+    const trimmedFullName = formData.fullName.trim();
+    const trimmedEmail = formData.email.trim();
+    const trimmedPhone = formData.phone.trim();
+    const trimmedAddress = formData.address.trim();
+    const normalizedEmail = trimmedEmail.toLowerCase();
+    const normalizedUsername = trimmedUsername.toLowerCase();
+    const currentUserId = selectedUser?.id;
 
     if (isCreate) {
       const usernameRegex = /^[a-zA-Z0-9_]+$/;
       if (
-        !formData.username ||
-        formData.username.length < 3 ||
-        formData.username.length > 50 ||
-        !usernameRegex.test(formData.username)
+        !trimmedUsername ||
+        trimmedUsername.length < 3 ||
+        trimmedUsername.length > 50 ||
+        !usernameRegex.test(trimmedUsername)
       ) {
         errors.username = "Username 3-50 ký tự, chỉ a-z, 0-9, _";
+      } else if (
+        users.some(
+          (user) =>
+            user.id !== currentUserId &&
+            String(user.username || "").trim().toLowerCase() === normalizedUsername,
+        )
+      ) {
+        errors.username = "Username đã tồn tại";
       }
       if (!formData.password || formData.password.length < 6) {
         errors.password = "Mật khẩu tối thiểu 6 ký tự";
       }
-      if (formData.password !== formData.confirmPassword) {
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = "Xác nhận mật khẩu không được để trống";
+      } else if (formData.password !== formData.confirmPassword) {
         errors.confirmPassword = "Mật khẩu xác nhận không khớp";
       }
     }
 
-    if (!formData.fullName || formData.fullName.trim().length < 2) {
+    if (!trimmedFullName || trimmedFullName.length < 2) {
       errors.fullName = "Họ tên phải có ít nhất 2 ký tự";
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email || !emailRegex.test(formData.email)) {
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
       errors.email = "Email không hợp lệ";
+    } else if (
+      users.some(
+        (user) =>
+          user.id !== currentUserId &&
+          String(user.email || "").trim().toLowerCase() === normalizedEmail,
+      )
+    ) {
+      errors.email = "Email đã tồn tại";
     }
 
-    if (formData.phone && !/^[0-9]{10,11}$/.test(formData.phone)) {
+    if (!trimmedPhone) {
+      errors.phone = "Số điện thoại không được để trống";
+    } else if (!/^[0-9]{10,11}$/.test(trimmedPhone)) {
       errors.phone = "Số điện thoại phải có 10-11 chữ số";
+    } else if (
+      users.some(
+        (user) =>
+          user.id !== currentUserId && String(user.phone || "").trim() === trimmedPhone,
+      )
+    ) {
+      errors.phone = "Số điện thoại đã tồn tại";
+    }
+
+    if (!trimmedAddress) {
+      errors.address = "Địa chỉ không được để trống";
+    }
+
+    if (!formData.roleId) {
+      errors.roleId = "Vai trò không được để trống";
+    }
+
+    if (!formData.status) {
+      errors.status = "Trạng thái không được để trống";
     }
 
     setValidationErrors(errors);
@@ -256,12 +303,12 @@ const UserManagement = () => {
     try {
       if (isCreate) {
         const payload = {
-          username: formData.username,
+          username: formData.username.trim(),
           password: formData.password,
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || undefined,
-          address: formData.address || undefined,
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
           roleId: formData.roleId,
           status: (formData.status || "active").toUpperCase(),
         };
@@ -274,10 +321,10 @@ const UserManagement = () => {
         }
       } else {
         const updatePayload = {
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || undefined,
-          address: formData.address || undefined,
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
           roleId: formData.roleId,
           status: (formData.status || "active").toUpperCase(),
         };
@@ -659,6 +706,7 @@ const UserManagement = () => {
                             onChange={(e) =>
                               setFormData({ ...formData, username: e.target.value })
                             }
+                            required
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.username ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                             placeholder="nhap_username"
                           />
@@ -678,6 +726,7 @@ const UserManagement = () => {
                             onChange={(e) =>
                               setFormData({ ...formData, password: e.target.value })
                             }
+                            required
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.password ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                             placeholder="••••••"
                           />
@@ -700,6 +749,7 @@ const UserManagement = () => {
                                 confirmPassword: e.target.value,
                               })
                             }
+                            required
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.confirmPassword ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                             placeholder="••••••"
                           />
@@ -724,6 +774,7 @@ const UserManagement = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, fullName: e.target.value })
                           }
+                          required
                           className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.fullName ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                           placeholder="Nhập họ tên đầy đủ"
                         />
@@ -743,6 +794,7 @@ const UserManagement = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, email: e.target.value })
                           }
+                          required
                           className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.email ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                           placeholder="example@email.com"
                         />
@@ -758,7 +810,7 @@ const UserManagement = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Số điện thoại
+                          Số điện thoại <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -766,6 +818,7 @@ const UserManagement = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, phone: e.target.value })
                           }
+                          required
                           className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.phone ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                           placeholder="0123456789"
                         />
@@ -777,7 +830,7 @@ const UserManagement = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Địa chỉ
+                          Địa chỉ <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -785,9 +838,15 @@ const UserManagement = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, address: e.target.value })
                           }
-                          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          required
+                          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.address ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                           placeholder="Nhập địa chỉ"
                         />
+                        {validationErrors.address && (
+                          <p className="text-red-600 text-xs mt-1.5">
+                            {validationErrors.address}
+                          </p>
+                        )}
                       </div>
                     </div>
 
