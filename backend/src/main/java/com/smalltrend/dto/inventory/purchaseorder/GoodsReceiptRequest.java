@@ -36,7 +36,6 @@ public class GoodsReceiptRequest {
     @DecimalMin(value = "0", message = "Phí vận chuyển không được âm")
     private BigDecimal shippingFee;
 
-    @NotNull(message = "Số tiền đã thanh toán là bắt buộc")
     @DecimalMin(value = "0", message = "Số tiền đã thanh toán không được âm")
     private BigDecimal paidAmount;
 

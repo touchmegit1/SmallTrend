@@ -736,10 +736,6 @@ export function usePurchaseOrder(initialId = null) {
         toast.warning("Vui lòng nhập phí vận chuyển.");
         return false;
       }
-      if (String(order.paid_amount ?? "").trim() === "") {
-        toast.warning("Vui lòng nhập số tiền đã thanh toán.");
-        return false;
-      }
       if (toNumber(order.tax_percent) < 0) {
         toast.warning("Thuế VAT không được âm.");
         return false;
@@ -840,6 +836,7 @@ export function usePurchaseOrder(initialId = null) {
       order.location_id,
       order.tax_percent,
       order.shipping_fee,
+      order.paid_amount,
       order.po_number,
       checkingFinancials,
     ],
