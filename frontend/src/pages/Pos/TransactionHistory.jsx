@@ -94,7 +94,7 @@ function TransactionHistory() {
 
       const customerId = Number(transaction.customer?.id);
       const request = {
-        customerId: Number.isInteger(customerId) && customerId > 0 ? customerId : null,
+        customerId: Number.isInteger(customerId) && customerId > 0 ? customerId : 0,
         customerName: transaction.customer?.name || "Khách lẻ",
         paymentMethod: transaction.payment,
         items: validItems

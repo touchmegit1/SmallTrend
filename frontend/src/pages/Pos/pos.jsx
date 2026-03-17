@@ -563,19 +563,30 @@ export default function POS() {
     // Lưu ngay vào database
     if (transaction.cart && transaction.cart.length > 0) {
       try {
-        const request = {
-          customerId: transaction.customer?.id || null,
-          customerName: transaction.customer?.name || null,
-          paymentMethod: transaction.payment,
-          items: transaction.cart.map(item => ({
-            productId: (typeof (item.productId || item.id) === 'string' && String(item.productId || item.id).startsWith('combo_')) ? null : (item.productId || item.id),
-            productName: item.name,
-            quantity: item.qty,
-            price: item.price,
-            subtotal: item.price * item.qty
-          }))
-        };
-        await api.post('/pos/purchase-history', request);
+        const validItems = transaction.cart
+          .map(item => {
+            const rawProductId = item.productId || item.id;
+            const productId = Number(rawProductId);
+            if (!Number.isInteger(productId) || productId <= 0) return null;
+            return {
+              productId,
+              productName: item.name,
+              quantity: item.qty,
+              price: item.price,
+              subtotal: item.price * item.qty
+            };
+          })
+          .filter(Boolean);
+
+        if (validItems.length > 0) {
+          const request = {
+            customerId: transaction.customer?.id || 0,
+            customerName: transaction.customer?.name || "Khách lẻ",
+            paymentMethod: transaction.payment,
+            items: validItems
+          };
+          await api.post('/pos/purchase-history', request);
+        }
         await redeemVoucherUsageIfNeeded(orderData.selectedVoucherId);
 
         // Đồng bộ lại danh sách sản phẩm để cập nhật tồn kho
@@ -699,19 +710,30 @@ export default function POS() {
           });
         }
 
-        const request = {
-          customerId: transaction.customer?.id || null,
-          customerName: transaction.customer?.name || null,
-          paymentMethod: transaction.payment,
-          items: transaction.cart.map(item => ({
-            productId: (typeof (item.productId || item.id) === 'string' && String(item.productId || item.id).startsWith('combo_')) ? null : (item.productId || item.id),
-            productName: item.name,
-            quantity: item.qty,
-            price: item.price,
-            subtotal: item.price * item.qty
-          }))
-        };
-        await api.post('/pos/purchase-history', request);
+        const validItems = transaction.cart
+          .map(item => {
+            const rawProductId = item.productId || item.id;
+            const productId = Number(rawProductId);
+            if (!Number.isInteger(productId) || productId <= 0) return null;
+            return {
+              productId,
+              productName: item.name,
+              quantity: item.qty,
+              price: item.price,
+              subtotal: item.price * item.qty
+            };
+          })
+          .filter(Boolean);
+
+        if (validItems.length > 0) {
+          const request = {
+            customerId: transaction.customer?.id || 0,
+            customerName: transaction.customer?.name || "Khách lẻ",
+            paymentMethod: transaction.payment,
+            items: validItems
+          };
+          await api.post('/pos/purchase-history', request);
+        }
         await redeemVoucherUsageIfNeeded(orderData.selectedVoucherId);
         loadProducts();
       } catch (error) {
