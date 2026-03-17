@@ -43,7 +43,7 @@ public class CampaignController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCampaign(@PathVariable Integer id, @RequestBody CreateCampaignRequest request) {
+    public ResponseEntity<?> updateCampaign(@PathVariable("id") Integer id, @RequestBody CreateCampaignRequest request) {
         try {
             CampaignResponse campaign = campaignService.updateCampaign(id, request);
             return ResponseEntity.ok(campaign);
@@ -55,7 +55,7 @@ public class CampaignController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCampaign(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteCampaign(@PathVariable("id") Integer id) {
         campaignService.deleteCampaign(id);
         return ResponseEntity.noContent().build();
     }

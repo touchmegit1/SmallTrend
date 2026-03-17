@@ -9,6 +9,7 @@ import Invoice from "./Invoice";
 import posService from "../../services/posService";
 import api from "../../config/axiosConfig";
 import ticketService from "../../services/ticketService";
+import eventService from "../../services/eventService";
 
 export default function POS() {
   const searchInputRef = useRef(null);
@@ -514,6 +515,15 @@ export default function POS() {
     }
   };
 
+  const redeemVoucherUsageIfNeeded = async (voucherId) => {
+    if (!voucherId) return;
+    try {
+      await eventService.redeemVoucher(voucherId);
+    } catch (error) {
+      console.error('Error redeeming voucher usage:', error);
+    }
+  };
+
   const completeOrder = async (orderData) => {
     // Xóa đơn chờ thanh toán
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
@@ -566,6 +576,7 @@ export default function POS() {
           }))
         };
         await api.post('/pos/purchase-history', request);
+        await redeemVoucherUsageIfNeeded(orderData.selectedVoucherId);
 
         // Đồng bộ lại danh sách sản phẩm để cập nhật tồn kho
         loadProducts();
@@ -701,6 +712,7 @@ export default function POS() {
           }))
         };
         await api.post('/pos/purchase-history', request);
+        await redeemVoucherUsageIfNeeded(orderData.selectedVoucherId);
         loadProducts();
       } catch (error) {
         console.error('Error saving purchase history:', error);

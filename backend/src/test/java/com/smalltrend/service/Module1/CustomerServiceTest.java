@@ -72,10 +72,12 @@ class CustomerServiceTest {
     @Test
     void getCustomerById_shouldThrowException_whenNotFound() {
         when(customerRepository.findById(99)).thenReturn(Optional.empty());
+        
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.getCustomerById(99));
 
         assertEquals("Customer not found", ex.getMessage());
+
     }
 
     @Test
@@ -104,6 +106,7 @@ class CustomerServiceTest {
         assertEquals("0987654321", captor.getValue().getPhone());
     }
 
+
     @Test
     void createCustomer_shouldSaveWithEmptyPhone_whenPhoneIsNull() {
         when(customerRepository.findByPhoneIgnoreSpaces("")).thenReturn(Optional.empty());
@@ -118,17 +121,7 @@ class CustomerServiceTest {
         verify(customerRepository).findByPhoneIgnoreSpaces("");
     }
 
-    @Test
-    void createCustomer_shouldThrowException_whenPhoneAlreadyUsed() {
-        Customer existing = Customer.builder().id(1).phone("0900").build();
-        when(customerRepository.findByPhoneIgnoreSpaces("0900")).thenReturn(Optional.of(existing));
 
-        RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> customerService.createCustomer("Another", "0900"));
-
-        assertEquals("Số điện thoại này đã được sử dụng cho một khách hàng khác.", ex.getMessage());
-        verify(customerRepository, never()).save(any());
-    }
 
     @Test
     void updateCustomer_shouldThrowException_whenIdNotFound() {

@@ -48,6 +48,11 @@ const eventService = {
         return response.data;
     },
 
+    redeemCoupon: async (id) => {
+        const response = await api.post(`/crm/coupons/${id}/redeem`);
+        return response.data;
+    },
+
     // ======= VOUCHERS (aliases for coupons) =======
     getAllVouchers: async () => {
         const response = await api.get('/crm/coupons');
@@ -66,6 +71,11 @@ const eventService = {
 
     deleteVoucher: async (id) => {
         const response = await api.delete(`/crm/coupons/${id}`);
+        return response.data;
+    },
+
+    redeemVoucher: async (id) => {
+        const response = await api.post(`/crm/coupons/${id}/redeem`);
         return response.data;
     },
 
