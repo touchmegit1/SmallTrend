@@ -291,7 +291,7 @@ class PurchaseOrderServiceTest {
         PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
 
         assertEquals("SHORTAGE_PENDING_APPROVAL", response.getStatus());
-        verify(inventoryManagerNotificationService, times(1)).notifyManagers(any(), any());
+        verify(inventoryManagerNotificationService, timeout(1000).times(1)).notifyManagers(any(), any());
     }
 
     @Test
@@ -322,7 +322,7 @@ class PurchaseOrderServiceTest {
         PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
 
         assertEquals("SHORTAGE_PENDING_APPROVAL", response.getStatus());
-        verify(inventoryManagerNotificationService, times(1)).notifyManagers(any(), any());
+        verify(inventoryManagerNotificationService, timeout(1000).times(1)).notifyManagers(any(), any());
     }
 
     @Test

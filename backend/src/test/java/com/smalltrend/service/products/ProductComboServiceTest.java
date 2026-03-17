@@ -124,7 +124,6 @@ class ProductComboServiceTest {
         // mock to simulate empty repo for code generation
         when(productComboRepository.findAll()).thenReturn(Collections.emptyList());
         when(productComboRepository.save(any(ProductCombo.class))).thenReturn(savedCombo);
-        when(productComboRepository.findById(2)).thenReturn(Optional.of(savedCombo));
         when(productComboItemRepository.findByComboId(2)).thenReturn(Collections.emptyList());
 
         // Act
