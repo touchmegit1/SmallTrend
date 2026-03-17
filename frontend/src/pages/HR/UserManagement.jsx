@@ -660,9 +660,9 @@ const UserManagement = () => {
                               onDrop={handleDrop}
                               onClick={() => !uploadingImage && fileInputRef.current?.click()}
                               className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition ${uploadingImage ? "border-slate-300 bg-slate-100 opacity-50" :
-                                  isDragging
-                                    ? "border-indigo-500 bg-indigo-50"
-                                    : "border-slate-300 bg-white hover:bg-slate-50"
+                                isDragging
+                                  ? "border-indigo-500 bg-indigo-50"
+                                  : "border-slate-300 bg-white hover:bg-slate-50"
                                 }`}
                               style={{ pointerEvents: uploadingImage ? "none" : "auto" }}
                             >
