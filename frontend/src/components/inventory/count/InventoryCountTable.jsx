@@ -84,7 +84,7 @@ const InventoryCountRow = memo(function InventoryCountRow({
             type="number"
             min={0}
             value={item.actual_quantity === null ? "" : item.actual_quantity}
-            onChange={(e) => onActualChange(item.product_id, e.target.value)}
+            onChange={(e) => onActualChange(item.variant_id, e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="—"
             className={`w-full px-2.5 py-1.5 text-sm text-right font-mono border rounded-lg transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${status === COUNT_ITEM_STATUS.UNCHECKED
@@ -126,7 +126,7 @@ const InventoryCountRow = memo(function InventoryCountRow({
       <td className="px-3 py-2.5 w-36">
         {hasDifference ? (
           <button
-            onClick={() => onOpenReason(item.product_id)}
+            onClick={() => onOpenReason(item.variant_id)}
             className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition w-full ${needsReason
                 ? "bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 animate-pulse"
                 : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
@@ -201,7 +201,7 @@ export default function InventoryCountTable({
         <tbody>
           {items.map((item, idx) => (
             <InventoryCountRow
-              key={item._key || item.product_id}
+              key={item._key || item.variant_id}
               item={item}
               index={idx}
               isEditable={isEditable}

@@ -12,6 +12,7 @@ import com.smalltrend.repository.BrandRepository;
 import com.smalltrend.repository.CategoryRepository;
 import com.smalltrend.repository.ProductRepository;
 import com.smalltrend.repository.TaxRateRepository;
+import com.smalltrend.validation.product.ProductValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -60,7 +61,8 @@ class ProductServiceTest {
 
     @BeforeEach
     void setUp() {
-        productService = new ProductServiceImpl(productRepository, brandRepository, categoryRepository, taxRateRepository);
+        ProductValidator productValidator = new ProductValidator(productRepository, brandRepository, categoryRepository, taxRateRepository);
+        productService = new ProductServiceImpl(productRepository, productValidator);
     }
 
     // ========== GET ALL TESTS ==========
@@ -183,7 +185,7 @@ class ProductServiceTest {
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.getById(999));
 
-        assertEquals("Product not found with id: 999", ex.getMessage());
+        assertEquals("Không tìm thấy sản phẩm với id: 999", ex.getMessage());
     }
 
     // ========== CREATE TESTS ==========
@@ -297,7 +299,7 @@ class ProductServiceTest {
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.create(request));
 
-        assertEquals("Category not found with id: 999", ex.getMessage());
+        assertEquals("Không tìm thấy danh mục với id: 999", ex.getMessage());
         verify(productRepository, never()).save(any());
     }
 
@@ -314,7 +316,7 @@ class ProductServiceTest {
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.create(request));
 
-        assertEquals("Brand not found with id: 999", ex.getMessage());
+        assertEquals("Không tìm thấy thương hiệu với id: 999", ex.getMessage());
         verify(productRepository, never()).save(any());
     }
 
@@ -331,7 +333,7 @@ class ProductServiceTest {
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.create(request));
 
-        assertEquals("TaxRate not found with id: 999", ex.getMessage());
+        assertEquals("Không tìm thấy thuế suất với id: 999", ex.getMessage());
         verify(productRepository, never()).save(any());
     }
 
@@ -375,7 +377,7 @@ class ProductServiceTest {
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.update(999, request));
 
-        assertEquals("Product not found with id: 999", ex.getMessage());
+        assertEquals("Không tìm thấy sản phẩm với id: 999", ex.getMessage());
     }
 
     @Test
@@ -551,7 +553,7 @@ class ProductServiceTest {
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.delete(999));
 
-        assertEquals("Product not found with id: 999", ex.getMessage());
+        assertEquals("Không tìm thấy sản phẩm với id: 999", ex.getMessage());
     }
 
     // ========== TOGGLE STATUS TESTS ==========
@@ -606,7 +608,7 @@ class ProductServiceTest {
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productService.toggleStatus(999));
 
-        assertEquals("Product not found with id: 999", ex.getMessage());
+        assertEquals("Không tìm thấy sản phẩm với id: 999", ex.getMessage());
     }
 
     // ========== HELPER METHODS ==========

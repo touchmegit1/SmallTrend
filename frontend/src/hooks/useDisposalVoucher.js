@@ -2,27 +2,24 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "../components/ui/Toast";
 import {
   DV_STATUS,
-  REASON_TYPE,
-  generateDVCode,
   validateForConfirm,
   DEFAULT_VOUCHER,
 } from "../utils/disposalVoucher";
-import { getProductBatches, getDashboardProducts, getActiveLocations } from "../services/inventoryService";
-import { 
-  getDisposalVoucherById, 
+import { getActiveLocations } from "../services/inventoryService";
+import {
+  getDisposalVoucherById,
   getNextDisposalCode,
+  getExpiredBatches,
   saveDisposalDraft,
   submitDisposalVoucher,
   approveDisposalVoucher,
-  rejectDisposalVoucher
 } from "../services/disposalService";
 
 export function useDisposalVoucher(voucherId = null) {
   const toast = useToast();
   const [voucher, setVoucher] = useState({ ...DEFAULT_VOUCHER });
   const [items, setItems] = useState([]);
-  const [batches, setBatches] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [expiredBatches, setExpiredBatches] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,28 +30,39 @@ export function useDisposalVoucher(voucherId = null) {
     let cancelled = false;
     const init = async () => {
       try {
-        const [batchesData, productsData, locsData] = await Promise.all([
-          getProductBatches(),
-          getDashboardProducts(),
-          getActiveLocations(),
-        ]);
+        const locsData = await getActiveLocations();
 
         if (cancelled) return;
-
-        setBatches(batchesData);
-        setProducts(productsData);
         setLocations(locsData);
 
         if (voucherId) {
           const voucherData = await getDisposalVoucherById(voucherId);
+          if (cancelled) return;
           setVoucher(voucherData);
           setItems(voucherData.items || []);
         } else {
           const code = await getNextDisposalCode();
+
+          let defaultLocationId = null;
+          for (const loc of locsData) {
+            try {
+              const expiredAtLocation = await getExpiredBatches(loc.id);
+              if ((expiredAtLocation || []).length > 0) {
+                defaultLocationId = loc.id;
+                break;
+              }
+            } catch {
+              // skip invalid location response
+            }
+          }
+
+          if (cancelled) return;
           setVoucher((prev) => ({
             ...prev,
             code,
             created_at: new Date().toISOString(),
+            location_id: defaultLocationId,
+            locationId: defaultLocationId,
           }));
         }
       } catch (err) {
@@ -64,27 +72,71 @@ export function useDisposalVoucher(voucherId = null) {
       }
     };
     init();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [voucherId]);
 
-  // ─── Expired batches detection ─────────────────────────
-  const expiredBatches = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return batches.filter((b) => {
-      if (!b.expiry_date || b.quantity <= 0) return false;
-      return new Date(b.expiry_date) < today;
-    }).map((b) => {
-      const product = products.find((p) => p.id === b.product_id);
-      return {
-        ...b,
-        product_name: product?.name || "Không rõ",
-        product_sku: product?.sku || "",
-        unit: product?.unit || "",
-        unit_cost: product?.purchase_price || 0,
-      };
+  // ─── Load expired batches by selected location ──────────
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadExpiredBatches = async () => {
+      const locationId = voucher.location_id ?? voucher.locationId;
+      if (!locationId) {
+        setExpiredBatches([]);
+        return;
+      }
+
+      try {
+        const data = await getExpiredBatches(locationId);
+        if (cancelled) return;
+
+        setExpiredBatches(
+          data.map((b) => ({
+            ...b,
+            id: b.id ?? b.batchId ?? b.batch_id,
+            batch_id: b.batch_id ?? b.batchId ?? b.id,
+            product_id: b.product_id ?? b.productId,
+            product_name: b.product_name ?? b.productName,
+            batch_code: b.batch_code ?? b.batchCode,
+            quantity: b.quantity ?? b.availableQuantity ?? 0,
+            unit_cost: b.unit_cost ?? b.unitCost ?? 0,
+            expiry_date: b.expiry_date ?? b.expiryDate,
+            unit: b.unit ?? "",
+          }))
+        );
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      }
+    };
+
+    loadExpiredBatches();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [voucher.location_id, voucher.locationId]);
+
+  const expiredBatchById = useMemo(() => {
+    const map = new Map();
+    expiredBatches.forEach((b) => {
+      map.set(b.id, b);
     });
-  }, [batches, products]);
+    return map;
+  }, [expiredBatches]);
+
+  const validationBatches = useMemo(
+    () =>
+      items.map((item) => {
+        const batch = expiredBatchById.get(item.batch_id);
+        return {
+          id: item.batch_id,
+          quantity: batch?.quantity ?? item.quantity,
+        };
+      }),
+    [items, expiredBatchById]
+  );
 
   const isEditable =
     voucher.status === DV_STATUS.DRAFT || voucher.status === DV_STATUS.REJECTED;
@@ -92,6 +144,10 @@ export function useDisposalVoucher(voucherId = null) {
   // ─── Update voucher fields ─────────────────────────────
   const updateVoucher = useCallback((field, value) => {
     setVoucher((prev) => ({ ...prev, [field]: value }));
+
+    if (field === "location_id") {
+      setItems([]);
+    }
   }, []);
 
   // ─── Add expired batch as disposal item ────────────────
@@ -125,7 +181,7 @@ export function useDisposalVoucher(voucherId = null) {
   // ─── Update item quantity ──────────────────────────────
   const updateItemQty = useCallback(
     (batchId, qty) => {
-      const numQty = parseInt(qty, 10) || 0;
+      const numQty = Number.parseInt(qty, 10) || 0;
       setItems((prev) =>
         prev.map((i) =>
           i.batch_id === batchId
@@ -160,97 +216,49 @@ export function useDisposalVoucher(voucherId = null) {
       setVoucher(savedVoucher);
       return savedVoucher;
     } catch (err) {
-      setError(err.message);
       throw err;
     } finally {
       setSaving(false);
     }
   }, [voucher, items]);
 
-  // ─── Submit for approval ───────────────────────────────
-  const submitVoucherAction = useCallback(async () => {
-    // Validate
-    const validationErrors = validateForConfirm(voucher, items, batches);
+  // ─── Confirm and deduct stock immediately ──────────────
+  const confirmAndDeductAction = useCallback(async () => {
+    const validationErrors = validateForConfirm(voucher, items, validationBatches);
     if (validationErrors.length > 0) {
-      toast.warning(validationErrors.join(", "), { title: "Không thể gửi duyệt", duration: 5000 });
+      toast.warning(validationErrors.join(", "), {
+        title: "Không thể xác nhận",
+        duration: 5000,
+      });
       return false;
     }
 
-    if (!window.confirm("Gửi phiếu này cho quản lý để chờ duyệt?")) return false;
-
     setSaving(true);
     try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = user.id || 1;
+
       let currentVoucherId = voucherId || voucher.id;
       if (!currentVoucherId) {
         const saved = await saveDraft();
         currentVoucherId = saved.id;
       }
-      const submittedVoucher = await submitDisposalVoucher(currentVoucherId);
-      setVoucher(submittedVoucher);
-      return true;
+
+      await submitDisposalVoucher(currentVoucherId);
+      const confirmedVoucher = await approveDisposalVoucher(currentVoucherId, userId);
+      setVoucher(confirmedVoucher);
+      return confirmedVoucher;
     } catch (err) {
-      setError(err.message);
-      toast.error("Lỗi khi gửi duyệt: " + err.message);
+      toast.error("Lỗi khi xác nhận xử lý: " + err.message);
       return false;
     } finally {
       setSaving(false);
     }
-  }, [voucher, items, batches, voucherId, saveDraft]);
-
-  // ─── Approve (stock deduction) ─────────────────────────
-  const approveVoucherAction = useCallback(async () => {
-    if (!window.confirm("Xác nhận duyệt phiếu xử lý? Tồn kho sẽ bị trừ ngay lập tức.")) {
-      return false;
-    }
-
-    setSaving(true);
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const userId = user.id || 1;
-
-      const currentVoucherId = voucherId || voucher.id;
-      const approvedVoucher = await approveDisposalVoucher(currentVoucherId, userId);
-
-      setVoucher(approvedVoucher);
-      return true;
-    } catch (err) {
-      setError(err.message);
-      toast.error("Lỗi khi duyệt: " + err.message);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  }, [voucherId, voucher.id]);
-
-  // ─── Reject ────────────────────────────────────────────
-  const rejectVoucherAction = useCallback(async (reason) => {
-    if (!reason || reason.trim() === "") {
-      toast.warning("Vui lòng nhập lý do từ chối");
-      return false;
-    }
-
-    if (!window.confirm("Xác nhận từ chối phiếu xử lý này?")) return false;
-
-    setSaving(true);
-    try {
-      const currentVoucherId = voucherId || voucher.id;
-      const rejectedVoucher = await rejectDisposalVoucher(currentVoucherId, reason);
-
-      setVoucher(rejectedVoucher);
-      return true;
-    } catch (err) {
-      // alert("Lỗi khi từ chối: " + err.message);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  }, [voucherId, voucher.id]);
+  }, [voucher, items, validationBatches, voucherId, saveDraft, toast]);
 
   return {
     voucher,
     items,
-    batches,
-    products,
     locations,
     expiredBatches,
     loading,
@@ -263,8 +271,7 @@ export function useDisposalVoucher(voucherId = null) {
     addItem,
     removeItem,
     updateItemQty,
-    submitVoucher: submitVoucherAction,
-    approveVoucher: approveVoucherAction,
-    rejectVoucher: rejectVoucherAction,
+    saveDraft,
+    confirmAndDeduct: confirmAndDeductAction,
   };
 }

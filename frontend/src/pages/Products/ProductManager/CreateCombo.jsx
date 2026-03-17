@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Save, Plus, X, Search, Image as ImageIcon, Upload } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, Search, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -28,6 +28,7 @@ const CreateCombo = () => {
   const [showVariantPicker, setShowVariantPicker] = useState(false);
   const [availableVariants, setAvailableVariants] = useState([]); // Renamed from allVariants to match original
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Thêm state upload image
   const [imageFile, setImageFile] = useState(null);
@@ -37,7 +38,7 @@ const CreateCombo = () => {
   const fileInputRef = useRef(null);
 
   const navigate = useNavigate();
-  const { createCombo } = useProductCombos();
+  const { combos, createCombo } = useProductCombos();
 
   useEffect(() => {
     // Gọi API lấy danh sách các variant (sản phẩm con) để hiển thị trên ô tìm kiếm
@@ -56,9 +57,9 @@ const CreateCombo = () => {
   // Hàm xử lý việc gõ text nội dung của thông tin Combo
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setErrorMsg("");
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
@@ -163,11 +164,55 @@ const CreateCombo = () => {
     }
   };
 
+  const validateForm = () => {
+    const normalizedName = (formData.comboName || "").trim();
+    const parsedComboPrice = Number(formData.comboPrice);
+
+    if (!normalizedName) {
+      return "Vui lòng nhập tên combo";
+    }
+
+    if (!Number.isFinite(parsedComboPrice) || parsedComboPrice <= 0) {
+      return "Giá combo phải lớn hơn 0";
+    }
+
+    if (selectedVariants.length === 0) {
+      return "Vui lòng chọn ít nhất 1 sản phẩm";
+    }
+
+    const seen = new Set();
+    for (const variant of selectedVariants) {
+      if (!variant?.id) {
+        return "Sản phẩm trong combo không hợp lệ";
+      }
+      if (variant.quantity < 1) {
+        return "Số lượng sản phẩm trong combo phải lớn hơn 0";
+      }
+      if (seen.has(variant.id)) {
+        return "Không được thêm trùng sản phẩm trong combo";
+      }
+      seen.add(variant.id);
+    }
+
+    const duplicateName = combos.some(
+      (combo) => (combo.comboName || "").trim().toLowerCase() === normalizedName.toLowerCase(),
+    );
+
+    if (duplicateName) {
+      return "Tên combo đã tồn tại";
+    }
+
+    return null;
+  };
+
   // Xử lý gửi API để lưu danh sách con thành Combo duy nhất
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedVariants.length === 0) { // Changed condition from < 2 to === 0
-      alert("Vui lòng chọn ít nhất 1 sản phẩm!"); // Used alert instead of setToast
+    setErrorMsg("");
+
+    const validationError = validateForm();
+    if (validationError) {
+      setErrorMsg(validationError);
       return;
     }
 
@@ -180,6 +225,7 @@ const CreateCombo = () => {
 
       const payload = {
         ...formData,
+        comboName: formData.comboName.trim(),
         imageUrl,
         comboPrice: Number(formData.comboPrice),
         originalPrice: totalPrice,
@@ -195,7 +241,7 @@ const CreateCombo = () => {
         state: { message: "Tạo combo thành công!" },
       });
     } catch (err) {
-      alert(err.message || "Có lỗi xảy ra khi tạo combo");
+      setErrorMsg(err.message || "Có lỗi xảy ra khi tạo combo");
       setIsSubmitting(false);
     }
   };
@@ -203,6 +249,11 @@ const CreateCombo = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-medium">
+            {errorMsg}
+          </div>
+        )}
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -277,6 +328,8 @@ const CreateCombo = () => {
                     <Input
                       className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       type="number"
+                      min="0.01"
+                      step="0.01"
                       placeholder="0"
                       name="comboPrice"
                       value={formData.comboPrice}
@@ -331,17 +384,26 @@ const CreateCombo = () => {
                           className="w-full h-full object-contain rounded-2xl bg-white"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 rounded-2xl backdrop-blur-[1px]" />
+
+                        {uploadingImage && (
+                          <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                            <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                          </div>
+                        )}
                         <button
                           type="button"
                           onClick={removeImage}
-                          className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl"
+                          disabled={uploadingImage}
+                          className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <X className="w-5 h-5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="absolute bottom-4 right-4 bg-white hover:bg-slate-50 text-gray-800 rounded-xl px-4 py-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center gap-2"
+                          disabled={uploadingImage}
+                          className="absolute bottom-4 right-4 bg-white hover:bg-slate-50 text-gray-800 rounded-xl px-4 py-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Upload className="w-4 h-4 text-blue-600" />
                           Tìm file khác
@@ -351,9 +413,9 @@ const CreateCombo = () => {
                       <div
                         role="button"
                         tabIndex={0}
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => !uploadingImage && fileInputRef.current?.click()}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
+                          if ((e.key === 'Enter' || e.key === ' ') && !uploadingImage) {
                             e.preventDefault();
                             fileInputRef.current?.click();
                           }
@@ -361,11 +423,17 @@ const CreateCombo = () => {
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer bg-white ${isDragging
+                        className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all bg-white ${uploadingImage ? 'cursor-wait opacity-80' : 'cursor-pointer'} ${isDragging
                           ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50/70 scale-[1.02]'
                           : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'
                           }`}
                       >
+                        {uploadingImage && (
+                          <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                            <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                          </div>
+                        )}
                         <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4 shadow-sm border border-slate-200">
                           <ImageIcon className="w-10 h-10 text-slate-400" />
                         </div>
@@ -503,8 +571,8 @@ const CreateCombo = () => {
               disabled={isSubmitting || uploadingImage}
               className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold disabled:opacity-50"
             >
-              <Save className="w-5 h-5 mr-2" />
-              {isSubmitting || uploadingImage ? "Đang xử lý..." : "Lưu Combo"}
+              {(uploadingImage || isSubmitting) ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+              {uploadingImage ? "Đang tải ảnh..." : isSubmitting ? "Đang lưu..." : "Lưu Combo"}
             </Button>
             <Button
               type="button"

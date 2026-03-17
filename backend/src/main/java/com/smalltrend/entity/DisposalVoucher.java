@@ -97,7 +97,15 @@ public class DisposalVoucher {
         this.totalItems = items.size();
         this.totalQuantity = items.stream().mapToInt(DisposalVoucherItem::getQuantity).sum();
         this.totalValue = items.stream()
-                .map(DisposalVoucherItem::getTotalCost)
+                .map(item -> {
+                    if (item.getTotalCost() != null) {
+                        return item.getTotalCost();
+                    }
+                    if (item.getUnitCost() != null && item.getQuantity() != null) {
+                        return item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity()));
+                    }
+                    return BigDecimal.ZERO;
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

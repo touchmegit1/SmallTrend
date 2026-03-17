@@ -15,18 +15,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000"
-})
 public class CategoryController {
 
     private final CategoriesService service;
 
     /**
-     * API tạo danh mục mới
-     * POST /api/categories
+     * API tạo danh mục mới POST /api/categories
      */
     @PostMapping
     public ResponseEntity<CategoriesResponse> create(@RequestBody CategoriesRequest request) {
@@ -34,8 +28,7 @@ public class CategoryController {
     }
 
     /**
-     * API lấy danh sách tất cả danh mục
-     * GET /api/categories
+     * API lấy danh sách tất cả danh mục GET /api/categories
      */
     @GetMapping
     public ResponseEntity<List<CategoriesResponse>> getAll() {
@@ -43,8 +36,7 @@ public class CategoryController {
     }
 
     /**
-     * API cập nhật thông tin danh mục theo ID
-     * PUT /api/categories/{id}
+     * API cập nhật thông tin danh mục theo ID PUT /api/categories/{id}
      */
     @PutMapping("/{id}")
     public ResponseEntity<CategoriesResponse> update(
@@ -54,8 +46,7 @@ public class CategoryController {
     }
 
     /**
-     * API xoá danh mục theo ID
-     * DELETE /api/categories/{id}
+     * API xoá danh mục theo ID DELETE /api/categories/{id}
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {

@@ -5,6 +5,13 @@ export default function Invoice({ transaction, onClose }) {
 
   if (!transaction) return null;
 
+  const invoiceItems = transaction.items || transaction.cart || [];
+  const parseMoney = (value) => parseInt((value || 0).toString().replace(/[^0-9]/g, ""), 10) || 0;
+  const totalAmount = parseMoney(transaction.total);
+  const pointsDiscount = Number(transaction.pointsDiscount || 0);
+  const refundedAmount = Number(transaction.refundedAmount || 0);
+  const subTotal = totalAmount + pointsDiscount + refundedAmount;
+
   return (
     <div style={{
       position: "fixed",
@@ -86,39 +93,49 @@ export default function Invoice({ transaction, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {transaction.items.map((item, index) => (
-                <tr key={index}>
-                  <td style={{ padding: "5px 0" }}>{item.name}</td>
-                  <td style={{ textAlign: "center" }}>{item.qty}</td>
-                  <td style={{ textAlign: "right" }}>{item.price.toLocaleString()}</td>
-                  <td style={{ textAlign: "right" }}>{(item.price * item.qty).toLocaleString()}</td>
-                </tr>
-              ))}
+              {invoiceItems.map((item, index) => {
+                const quantity = item.qty || item.quantity || 0;
+                const price = Number(item.price || 0);
+                return (
+                  <tr key={index}>
+                    <td style={{ padding: "5px 0" }}>{item.name}</td>
+                    <td style={{ textAlign: "center" }}>{quantity}</td>
+                    <td style={{ textAlign: "right" }}>{price.toLocaleString()}</td>
+                    <td style={{ textAlign: "right" }}>{(price * quantity).toLocaleString()}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
           <div style={{ borderTop: "1px dashed #000", paddingTop: "10px", fontSize: "12px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
               <span>Tạm tính:</span>
-              <span>{(parseInt(transaction.total.replace(/[^0-9]/g, '')) + (transaction.pointsDiscount || 0)).toLocaleString()} đ</span>
+              <span>{subTotal.toLocaleString()} đ</span>
             </div>
-            {transaction.pointsDiscount > 0 && (
+            {pointsDiscount > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", color: "#dc3545" }}>
                 <span>Giảm giá (điểm):</span>
-                <span>-{transaction.pointsDiscount.toLocaleString()} đ</span>
+                <span>-{pointsDiscount.toLocaleString()} đ</span>
+              </div>
+            )}
+            {refundedAmount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", color: "#e67e22" }}>
+                <span>Tiền hoàn trả khách:</span>
+                <span>-{refundedAmount.toLocaleString()} đ</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontWeight: "bold", fontSize: "14px" }}>
               <span>TỔNG CỘNG:</span>
-              <span>{transaction.total}</span>
+              <span>{totalAmount.toLocaleString()} đ</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
               <span>Tiền khách đưa:</span>
-              <span>{transaction.customerMoney.toLocaleString()} đ</span>
+              <span>{Number(transaction.customerMoney || 0).toLocaleString()} đ</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
               <span>Tiền thừa:</span>
-              <span>{transaction.change.toLocaleString()} đ</span>
+              <span>{Number(transaction.change || 0).toLocaleString()} đ</span>
             </div>
           </div>
 

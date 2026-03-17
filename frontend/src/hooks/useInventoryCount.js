@@ -3,7 +3,6 @@ import { useToast } from "../components/ui/Toast";
 import {
   getProducts,
   getActiveLocations,
-  getInventoryCounts,
   getInventoryCountById,
   getInventoryCountNextCode,
   saveInventoryCountDraft,
@@ -19,7 +18,6 @@ import {
 } from "../services/inventoryService";
 import {
   IC_STATUS,
-  generateICCode,
   createDefaultCountSession,
   createCountItem,
   classifyCountItem,
@@ -52,6 +50,7 @@ export function useInventoryCount(voucherId) {
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [reasonModalItem, setReasonModalItem] = useState(null);
+  const [bulkMatchedVariantIds, setBulkMatchedVariantIds] = useState(new Set());
 
   // ─── Init ────────────────────────────────────────
   useEffect(() => {
@@ -69,14 +68,7 @@ export function useInventoryCount(voucherId) {
 
         if (isCreateMode) {
           // ── CREATE MODE: generate new voucher ───────────
-          let code;
-          try {
-            code = await getInventoryCountNextCode();
-          } catch {
-            // Fallback: generate code client-side
-            const existingCounts = await getInventoryCounts();
-            code = generateICCode(existingCounts);
-          }
+          const code = await getInventoryCountNextCode();
           if (cancelled) return;
 
           setSession(createDefaultCountSession(code));
@@ -99,15 +91,18 @@ export function useInventoryCount(voucherId) {
           }
 
           // Build items: start with saved items, then add uncounted products
-          const countedProductIds = new Set(savedItems.map((i) => i.product_id));
+          const countedVariantIds = new Set(
+            savedItems.map((i) => i.variant_id || i.product_id)
+          );
           const mergedItems = [];
 
           // Add saved/counted items with product info
           for (const si of savedItems) {
             const prod = productMap[si.product_id];
             mergedItems.push({
-              _key: `ci_${si.product_id}_${si.id}`,
+              _key: `ci_${si.variant_id || si.product_id}_${si.id}`,
               product_id: si.product_id,
+              variant_id: si.variant_id || si.product_id,
               sku: prod?.sku || "N/A",
               name: prod?.name || "Sản phẩm không tồn tại",
               unit: prod?.unit || "",
@@ -139,12 +134,13 @@ export function useInventoryCount(voucherId) {
             }
 
             for (const p of productsData) {
-              if (!countedProductIds.has(p.id)) {
+              const variantId = p.variant_id || p.variantId || p.id;
+              if (!countedVariantIds.has(variantId)) {
                 if (locStockMap) {
                   // Only add if it exists in the location
-                  if (locStockMap[p.id] !== undefined) {
+                  if (locStockMap[variantId] !== undefined) {
                     const newItem = createCountItem(p);
-                    newItem.system_quantity = locStockMap[p.id];
+                    newItem.system_quantity = locStockMap[variantId];
                     mergedItems.push(newItem);
                   }
                 } else {
@@ -187,19 +183,25 @@ export function useInventoryCount(voucherId) {
           });
         }
 
+        setBulkMatchedVariantIds(new Set());
+
         setItems((prevItems) => {
-          // Keep items that are already counted/modified
-          const countedItems = prevItems.filter(i => i.actual_quantity !== null);
-          const countedProductIds = new Set(countedItems.map(i => i.product_id));
-          
+          // Keep only manually counted/modified items.
+          // Items auto-filled by "Khớp tất cả chưa kiểm" should be rebuilt when location changes.
+          const countedItems = prevItems.filter(
+            (i) => i.actual_quantity !== null && !bulkMatchedVariantIds.has(i.variant_id)
+          );
+          const countedVariantIds = new Set(countedItems.map((i) => i.variant_id));
+
           const newItems = [...countedItems];
-          
+
           for (const p of products) {
-            if (!countedProductIds.has(p.id)) {
+            const variantId = p.variant_id || p.variantId || p.id;
+            if (!countedVariantIds.has(variantId)) {
               if (locStockMap) {
-                if (locStockMap[p.id] !== undefined) {
+                if (locStockMap[variantId] !== undefined) {
                   const newItem = createCountItem(p);
-                  newItem.system_quantity = locStockMap[p.id];
+                  newItem.system_quantity = locStockMap[variantId];
                   newItems.push(newItem);
                 }
               } else {
@@ -227,7 +229,9 @@ export function useInventoryCount(voucherId) {
 
     if (activeTab === "matched") {
       filtered = filtered.filter(
-        (i) => classifyCountItem(i) === COUNT_ITEM_STATUS.MATCHED
+        (i) =>
+          classifyCountItem(i) === COUNT_ITEM_STATUS.MATCHED &&
+          !bulkMatchedVariantIds.has(i.variant_id)
       );
     } else if (activeTab === "shortage") {
       filtered = filtered.filter(
@@ -253,16 +257,16 @@ export function useInventoryCount(voucherId) {
     }
 
     return filtered;
-  }, [items, activeTab, searchTerm]);
+  }, [items, activeTab, searchTerm, bulkMatchedVariantIds]);
 
   // ─── Stats ───────────────────────────────────────
   const stats = useMemo(() => calcCountStats(items), [items]);
 
   // ─── Update Actual Quantity ──────────────────────
-  const updateActualQuantity = useCallback((productId, value) => {
+  const updateActualQuantity = useCallback((variantId, value) => {
     setItems((prev) =>
       prev.map((item) => {
-        if (item.product_id !== productId) return item;
+        if (item.variant_id !== variantId) return item;
         const actual =
           value === "" || value === null
             ? null
@@ -281,29 +285,34 @@ export function useInventoryCount(voucherId) {
   }, []);
 
   // ─── Update Reason ──────────────────────────────
-  const updateReason = useCallback((productId, reason) => {
+  const updateReason = useCallback((variantId, reason) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.product_id === productId ? { ...item, reason } : item
+        item.variant_id === variantId ? { ...item, reason } : item
       )
     );
   }, []);
 
   // ─── Mark All Matched ───────────────────────────
   const markAllAsMatched = useCallback(() => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.actual_quantity === null
-          ? {
-              ...item,
-              actual_quantity: item.system_quantity,
-              difference_quantity: 0,
-              difference_value: 0,
-              reason: "",
-            }
-          : item
-      )
-    );
+    setItems((prev) => {
+      const autoMatchedIds = new Set();
+      const nextItems = prev.map((item) => {
+        if (item.actual_quantity !== null) return item;
+
+        autoMatchedIds.add(item.variant_id);
+        return {
+          ...item,
+          actual_quantity: item.system_quantity,
+          difference_quantity: 0,
+          difference_value: 0,
+          reason: "",
+        };
+      });
+
+      setBulkMatchedVariantIds(autoMatchedIds);
+      return nextItems;
+    });
   }, []);
 
   // ─── Session Update ──────────────────────────────
@@ -313,8 +322,8 @@ export function useInventoryCount(voucherId) {
 
   // ─── Reason Modal ────────────────────────────────
   const openReasonModal = useCallback(
-    (productId) => {
-      const item = items.find((i) => i.product_id === productId);
+    (variantId) => {
+      const item = items.find((i) => i.variant_id === variantId);
       if (item) setReasonModalItem(item);
     },
     [items]
@@ -325,8 +334,8 @@ export function useInventoryCount(voucherId) {
   }, []);
 
   const saveReasonFromModal = useCallback(
-    (productId, reason) => {
-      updateReason(productId, reason);
+    (variantId, reason) => {
+      updateReason(variantId, reason);
       setReasonModalItem(null);
     },
     [updateReason]
@@ -377,15 +386,6 @@ export function useInventoryCount(voucherId) {
         return;
       }
 
-      const confirmMsg =
-        `Xác nhận kiểm kho ${session.code}?\n\n` +
-        `• Khớp: ${stats.matched}\n` +
-        `• Thiếu: ${stats.shortage}\n` +
-        `• Dư: ${stats.overage}\n\n` +
-        `Tồn kho sẽ được cập nhật theo số thực tế.`;
-
-      if (!window.confirm(confirmMsg)) return;
-
       setSaving(true);
       try {
         const request = {
@@ -421,8 +421,6 @@ export function useInventoryCount(voucherId) {
         return;
       }
 
-      if (!window.confirm(`Gửi phiếu kiểm kho ${session.code} cho Manager duyệt?`)) return;
-
       setSaving(true);
       try {
         const request = {
@@ -452,8 +450,6 @@ export function useInventoryCount(voucherId) {
   // ─── Approve (Manager) ────────────────────────
   const approveCount = useCallback(
     async (navigate) => {
-      if (!window.confirm(`Duyệt phiếu kiểm kho ${session.code}? Tồn kho sẽ được cập nhật theo số thực tế.`)) return;
-
       setSaving(true);
       try {
         await approveInventoryCount(voucherId);
@@ -476,8 +472,6 @@ export function useInventoryCount(voucherId) {
         return;
       }
 
-      if (!window.confirm(`Từ chối phiếu kiểm kho ${session.code}?`)) return;
-
       setSaving(true);
       try {
         await rejectInventoryCount(voucherId, rejectionReason);
@@ -495,11 +489,6 @@ export function useInventoryCount(voucherId) {
   // ─── Cancel ──────────────────────────────────────
   const cancelCount = useCallback(
     async (navigate) => {
-      if (
-        !window.confirm("Hủy phiên kiểm kho này? Dữ liệu sẽ không được lưu.")
-      )
-        return;
-
       // If existing voucher, update status
       if (!isCreateMode) {
         try {

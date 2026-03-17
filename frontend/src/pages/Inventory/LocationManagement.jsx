@@ -1,32 +1,24 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Plus,
-  Search,
   MapPin,
   Edit2,
-  ChevronDown,
-  ChevronRight,
-  Store,
   Warehouse,
   Package,
   Loader2,
   X,
   Box,
   Eye,
-  ToggleLeft,
-  ToggleRight,
   ArrowRightLeft,
   ArrowLeft,
+  Snowflake,
+  DoorOpen,
 } from "lucide-react";
 import {
   getLocations,
-  createLocation,
   updateLocation,
-  toggleLocationStatus,
   transferStock,
 } from "../../services/inventoryService";
-import ConfirmModal from "../../components/ui/ConfirmModal";
 import { useToast } from "../../components/ui/Toast";
 import CustomSelect from "../../components/common/CustomSelect";
 
@@ -35,19 +27,11 @@ function LocationManagement() {
   const navigate = useNavigate();
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
-  const [expandedLocationId, setExpandedLocationId] = useState(null);
+  const [selectedLocationId, setSelectedLocationId] = useState(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockModalData, setStockModalData] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [confirmModal, setConfirmModal] = useState({
-    isOpen: false,
-    location: null,
-  });
-  const [toggling, setToggling] = useState(false);
 
   // Transfer modal state
   const [transferModal, setTransferModal] = useState({
@@ -63,23 +47,49 @@ function LocationManagement() {
   const [formData, setFormData] = useState({
     location_name: "",
     location_code: "",
-    location_type: "SHELF",
+    location_type: "DISPLAY",
     address: "",
     capacity: 0,
     description: "",
   });
 
+  const normalizeLocationType = (type) =>
+    (type || "").toUpperCase() === "SHELF" ? "DISPLAY" : type;
+
   const locationTypes = [
-    { value: "DISPLAY", label: "Khu vực trưng bày", icon: Store },
     { value: "STORAGE", label: "Kho lưu trữ", icon: Warehouse },
-    { value: "SHELF", label: "Kệ hàng", icon: Package },
+    { value: "DISPLAY", label: "Kệ hàng", icon: Package },
     { value: "COLD_STORAGE", label: "Kho lạnh", icon: MapPin },
     { value: "CASHIER", label: "Quầy thu ngân", icon: MapPin },
   ];
 
+  const transferDestinationOptions = (sourceLocationId) => [
+    { value: "", label: "-- Chọn vị trí đích --" },
+    ...locations
+      .filter((l) => l.id !== sourceLocationId)
+      .map((l) => ({
+        value: String(l.id),
+        label: `${l.location_name} (${l.location_code})`,
+      })),
+  ];
+
+  const formatTransferLocationLabel = (locationId) =>
+    locations.find((l) => l.id === parseInt(locationId))?.location_name || "";
+
   useEffect(() => {
     fetchLocations();
   }, []);
+
+  useEffect(() => {
+    if (locations.length === 0) {
+      setSelectedLocationId(null);
+      return;
+    }
+
+    if (!locations.some((loc) => loc.id === selectedLocationId)) {
+      setSelectedLocationId(locations[0].id);
+    }
+  }, [locations, selectedLocationId]);
 
   const fetchLocations = async () => {
     try {
@@ -87,88 +97,177 @@ function LocationManagement() {
       setLocations(data);
     } catch (error) {
       console.error("Error fetching locations:", error);
+      toast.error(error?.message || "Không thể tải danh sách vị trí", {
+        title: "Lỗi tải dữ liệu",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenModal = (location = null) => {
-    if (location) {
-      setEditingLocation(location);
-      setFormData({
-        location_name: location.location_name,
-        location_code: location.location_code,
-        location_type: location.location_type,
-        address: location.address,
-        capacity: location.capacity,
-        description: location.description,
-      });
-    } else {
-      setEditingLocation(null);
-      setFormData({
-        location_name: "",
-        location_code: "",
-        location_type: "SHELF",
-        address: "",
-        capacity: 0,
-        description: "",
-      });
+  const classifyErrorTitle = (message = "") => {
+    const text = message.toLowerCase();
+    if (
+      text.includes("không được") ||
+      text.includes("thiếu") ||
+      text.includes("lớn hơn 0")
+    ) {
+      return "Dữ liệu chưa hợp lệ";
     }
+    if (
+      text.includes("đã tồn tại") ||
+      text.includes("không thể") ||
+      text.includes("vượt quá") ||
+      text.includes("tham chiếu")
+    ) {
+      return "Không thể thực hiện";
+    }
+    return "Lỗi hệ thống";
+  };
+
+  const getErrorMessage = (error, fallback) =>
+    (error?.message || "").trim() || fallback;
+
+  const validateLocationForm = () => {
+    if (!formData.location_code?.trim()) {
+      toast.error("Mã vị trí không được để trống", { title: "Dữ liệu chưa hợp lệ" });
+      return false;
+    }
+    if (!formData.location_name?.trim()) {
+      toast.error("Tên vị trí không được để trống", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return false;
+    }
+    if ((Number(formData.capacity) || 0) < 0) {
+      toast.error("Sức chứa không được nhỏ hơn 0", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const validateTransferForm = () => {
+    const { toLocationId, selectedItem, quantity } = transferData;
+    if (!toLocationId || !selectedItem) {
+      toast.error("Vui lòng chọn sản phẩm và vị trí đích", {
+        title: "Thiếu thông tin",
+      });
+      return null;
+    }
+
+    const transferQty = Number(quantity);
+    if (!Number.isInteger(transferQty) || transferQty <= 0) {
+      toast.error("Số lượng chuyển phải lớn hơn 0", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return null;
+    }
+
+    if (transferQty > Number(selectedItem.quantity || 0)) {
+      toast.error("Số lượng chuyển vượt quá tồn kho hiện có", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return null;
+    }
+
+    const destinationId = Number(toLocationId);
+    if (destinationId === transferModal.location?.id) {
+      toast.error("Vị trí nguồn và đích không được trùng nhau", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return null;
+    }
+
+    const destination = locations.find((l) => l.id === destinationId);
+    if (!destination) {
+      toast.error("Vị trí đích không hợp lệ", {
+        title: "Dữ liệu chưa hợp lệ",
+      });
+      return null;
+    }
+
+    return { transferQty, destinationId, selectedItem };
+  };
+
+  const buildLocationPayload = () => ({
+    ...formData,
+    location_code: formData.location_code?.trim(),
+    location_name: formData.location_name?.trim(),
+    address: formData.address?.trim(),
+    description: formData.description?.trim(),
+    capacity: Number(formData.capacity) || 0,
+  });
+
+  const buildTransferPayload = ({ transferQty, destinationId, selectedItem }) => ({
+    fromLocationId: transferModal.location.id,
+    toLocationId: destinationId,
+    variantId: Number(selectedItem.variantId),
+    batchId: Number(selectedItem.batchId),
+    quantity: transferQty,
+  });
+
+  const showApiErrorToast = (error, fallbackMessage) => {
+    const message = getErrorMessage(error, fallbackMessage);
+    toast.error(message, {
+      title: classifyErrorTitle(message),
+      duration: 5000,
+    });
+  };
+
+  const handleLocationSaved = (savedMessage) => {
+    toast.success(savedMessage);
+    fetchLocations();
+    setIsModalOpen(false);
+  };
+
+  const handleTransferSuccess = (transferQty, selectedItem) => {
+    toast.success(
+      `Đã chuyển ${transferQty} ${selectedItem.variantUnit || ""} "${selectedItem.productName}" thành công!`,
+    );
+    setTransferModal({ isOpen: false, location: null });
+    fetchLocations();
+  };
+
+  const normalizeFormData = (location) => ({
+    location_name: location.location_name,
+    location_code: location.location_code,
+    location_type: normalizeLocationType(location.location_type),
+    address: location.address,
+    capacity: location.capacity,
+    description: location.description,
+  });
+
+  const createInitialTransferData = () => ({
+    toLocationId: "",
+    selectedItem: null,
+    quantity: 1,
+  });
+
+  const handleOpenModal = (location) => {
+    setEditingLocation(location);
+    setFormData(normalizeFormData(location));
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateLocationForm() || !editingLocation) return;
+
+    const payload = buildLocationPayload();
     try {
-      if (editingLocation) {
-        await updateLocation(editingLocation.id, formData);
-        toast.success(`Đã cập nhật vị trí thành công!`);
-      } else {
-        await createLocation(formData);
-        toast.success(`Đã tạo vị trí mới thành công!`);
-      }
-      fetchLocations();
-      setIsModalOpen(false);
+      await updateLocation(editingLocation.id, payload);
+      handleLocationSaved("Đã cập nhật vị trí thành công!");
     } catch (error) {
       console.error("Error saving location:", error);
-      toast.error("Có lỗi xảy ra khi lưu vị trí!");
+      showApiErrorToast(error, "Có lỗi xảy ra khi lưu vị trí");
     }
   };
 
-  // Open confirm modal instead of window.confirm
-  const handleToggleStatus = (loc) => {
-    setConfirmModal({ isOpen: true, location: loc });
-  };
 
-  // Actually perform the toggle after user confirms
-  const confirmToggle = async () => {
-    const loc = confirmModal.location;
-    if (!loc) return;
-    const isActive = loc.status === "ACTIVE";
-    setToggling(true);
-    try {
-      await toggleLocationStatus(loc.id);
-      fetchLocations();
-      setConfirmModal({ isOpen: false, location: null });
-      toast.success(
-        isActive
-          ? `Vị trí "${loc.location_name}" đã được chuyển sang Ngừng hoạt động.`
-          : `Vị trí "${loc.location_name}" đã được kích hoạt lại.`,
-      );
-    } catch (error) {
-      console.error("Error toggling location status:", error);
-      setConfirmModal({ isOpen: false, location: null });
-      toast.error(error.message, {
-        title: "Không thể chuyển trạng thái",
-        duration: 5000,
-      });
-    } finally {
-      setToggling(false);
-    }
-  };
-
-  const toggleExpand = (locId) => {
-    setExpandedLocationId(expandedLocationId === locId ? null : locId);
+  const handleSelectLocation = (locId) => {
+    setSelectedLocationId(locId);
   };
 
   const openStockModal = (loc) => {
@@ -178,63 +277,238 @@ function LocationManagement() {
 
   const openTransferModal = (loc) => {
     setTransferModal({ isOpen: true, location: loc });
-    setTransferData({ toLocationId: "", selectedItem: null, quantity: 1 });
+    setTransferData(createInitialTransferData());
   };
 
   const handleTransfer = async (e) => {
     e.preventDefault();
-    const { toLocationId, selectedItem, quantity } = transferData;
-    if (!toLocationId || !selectedItem || quantity <= 0) return;
+    const validated = validateTransferForm();
+    if (!validated) return;
+
+    const { transferQty, selectedItem } = validated;
     setTransferring(true);
     try {
-      await transferStock({
-        fromLocationId: transferModal.location.id,
-        toLocationId: parseInt(toLocationId),
-        variantId: selectedItem.variantId,
-        batchId: selectedItem.batchId,
-        quantity: parseInt(quantity),
-      });
-      toast.success(
-        `Đã chuyển ${quantity} ${selectedItem.variantUnit || ""} "${selectedItem.productName}" thành công!`,
-      );
-      setTransferModal({ isOpen: false, location: null });
-      fetchLocations();
-    } catch (err) {
-      toast.error(err.message || "Chuyển hàng thất bại", {
-        title: "Lỗi chuyển hàng",
-      });
+      await transferStock(buildTransferPayload(validated));
+      handleTransferSuccess(transferQty, selectedItem);
+    } catch (error) {
+      showApiErrorToast(error, "Chuyển hàng thất bại");
     } finally {
       setTransferring(false);
     }
   };
 
-  const filteredLocations = locations.filter((loc) => {
-    const matchesSearch =
-      (loc.location_name || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      (loc.location_code || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter && statusFilter !== "all"
-        ? loc.status === statusFilter
-        : true;
-    const matchesType =
-      typeFilter && typeFilter !== "all"
-        ? loc.location_type === typeFilter
-        : true;
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  const filteredLocations = locations;
+
+  const groupedLocations = locationTypes
+    .map((type) => ({
+      ...type,
+      locations: filteredLocations.filter(
+        (loc) => normalizeLocationType(loc.location_type) === type.value,
+      ),
+    }))
+    .filter((group) => group.locations.length > 0);
+
+  const ungroupedLocations = filteredLocations.filter(
+    (loc) =>
+      !locationTypes.some(
+        (type) => type.value === normalizeLocationType(loc.location_type),
+      ),
+  );
+
+  if (ungroupedLocations.length > 0) {
+    groupedLocations.push({
+      value: "OTHER",
+      label: "Khu vực khác",
+      icon: MapPin,
+      locations: ungroupedLocations,
+    });
+  }
+
+  const groupedLocationMap = groupedLocations.reduce((acc, group) => {
+    acc[group.value] = group;
+    return acc;
+  }, {});
+
+  const hasAnyZone = filteredLocations.length > 0;
+
+  const coldStorageLocations = groupedLocationMap.COLD_STORAGE?.locations || [];
+  const storageLocations = groupedLocationMap.STORAGE?.locations || [];
+  const displayLocations = groupedLocationMap.DISPLAY?.locations || [];
+
+  const featuredColdStorage = coldStorageLocations[0] || null;
+  const featuredStorage = storageLocations[0] || null;
+  const featuredDisplayLocations = Array.from(
+    { length: 3 },
+    (_, index) => displayLocations[index] || null,
+  );
+
+  const featuredLocationIds = new Set(
+    [featuredColdStorage, featuredStorage, ...featuredDisplayLocations]
+      .filter(Boolean)
+      .map((loc) => loc.id),
+  );
+
+  const remainingMapLocations = filteredLocations.filter(
+    (loc) => !featuredLocationIds.has(loc.id),
+  );
+
+  const selectedLocation =
+    filteredLocations.find((loc) => loc.id === selectedLocationId) || null;
+
+  const calcFillPercent = (loc) => {
+    const capacity = Number(loc?.capacity || 0);
+    const qty = Number(loc?.total_products || 0);
+    if (capacity <= 0) return qty > 0 ? 100 : 0;
+    return Math.min(100, Math.round((qty / capacity) * 100));
+  };
+
+  const resolveWarningMeta = (item) => {
+    const rawStatus = item.warning_status;
+    const rawDays = item.days_until_expiry;
+
+    if (rawStatus) {
+      return {
+        status: rawStatus,
+        days: Number(rawDays ?? 99999),
+      };
+    }
+
+    if (!item.expiry_date) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const expiry = new Date(item.expiry_date);
+    if (Number.isNaN(expiry.getTime())) return null;
+    expiry.setHours(0, 0, 0, 0);
+
+    const days = Math.floor((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return { status: "EXPIRED", days };
+    if (days <= 7) return { status: "EXPIRING_CRITICAL", days };
+    if (days <= 30) return { status: "EXPIRING_WARNING", days };
+    return null;
+  };
+
+  const getUrgentStockItems = (loc) => {
+    const items = loc?.stock_items || [];
+
+    const priorityRank = {
+      EXPIRED: 0,
+      EXPIRING_CRITICAL: 1,
+      EXPIRING_WARNING: 2,
+    };
+
+    return items
+      .map((item) => {
+        const warningMeta = resolveWarningMeta(item);
+        return warningMeta ? { ...item, __warningMeta: warningMeta } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        const rankA = priorityRank[a.__warningMeta.status] ?? 99;
+        const rankB = priorityRank[b.__warningMeta.status] ?? 99;
+        if (rankA !== rankB) return rankA - rankB;
+        return a.__warningMeta.days - b.__warningMeta.days;
+      })
+      .slice(0, 6);
+  };
+
+  const formatWarningLabel = (item) => {
+    const warningMeta = item.__warningMeta || resolveWarningMeta(item);
+    if (!warningMeta) return "Cần xử lý";
+
+    if (warningMeta.status === "EXPIRED") return "Đã hết hạn";
+    return `${warningMeta.days} ngày nữa hết hạn`;
+  };
+
+  const getWarningBadgeClass = (status) => {
+    if (status === "EXPIRED") return "bg-red-100 text-red-700";
+    if (status === "EXPIRING_CRITICAL") return "bg-orange-100 text-orange-700";
+    return "bg-amber-100 text-amber-700";
+  };
+
+  const getWarningBadgeText = (status) => {
+    if (status === "EXPIRED") return "Hết hạn";
+    if (status === "EXPIRING_CRITICAL") return "Nguy cơ cao";
+    return "Cảnh báo";
+  };
+
+  const getItemWarningStatus = (item) => item.__warningMeta?.status || item.warning_status;
+
+  const urgentItemsForSelected = selectedLocation ? getUrgentStockItems(selectedLocation) : [];
+
+  const hasAnyStockItems = (selectedLocation?.stock_items || []).length > 0;
+
+  const getFillColor = (percent) => {
+    if (percent >= 80) return "bg-red-400";
+    if (percent >= 50) return "bg-amber-400";
+    return "bg-emerald-400";
+  };
+
+  const renderMapLocationCard = (loc, options = {}) => {
+    if (!loc) return null;
+
+    const {
+      icon: IconOverride,
+      title,
+      className = "",
+      tone = "amber",
+      compact = false,
+    } = options;
+
+    const Icon = IconOverride || getIcon(loc.location_type);
+    const isSelected = selectedLocationId === loc.id;
+    const totalProducts = loc.total_products || 0;
+    const fill = calcFillPercent(loc);
+
+    const tones = {
+      blue: "bg-blue-100 border-blue-400 text-blue-800",
+      green: "bg-emerald-100 border-emerald-400 text-emerald-800",
+      amber: "bg-amber-100 border-amber-400 text-amber-800",
+      rose: "bg-rose-100 border-rose-400 text-rose-800",
+      indigo: "bg-indigo-100 border-indigo-400 text-indigo-800",
+    };
+
+    return (
+      <div
+        key={loc.id}
+        className={`rounded-[22px] border-2 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer ${tones[tone] || tones.amber} ${isSelected ? "ring-2 ring-indigo-500 ring-offset-1" : ""} ${className}`}
+        onClick={() => handleSelectLocation(loc.id)}
+      >
+        <div className={`p-3.5 ${compact ? "min-h-[118px]" : "min-h-[138px]"}`}>
+          <div className="flex-1 min-w-0 text-left">
+            <div className="flex items-center justify-center mb-2">
+              <Icon size={compact ? 17 : 21} />
+            </div>
+            <p className={`${compact ? "text-sm" : "text-lg"} font-bold text-center truncate leading-tight`}>
+              {title || loc.location_name}
+            </p>
+          </div>
+
+          <p className="w-full mt-2 text-center text-[10.5px] font-medium opacity-75">
+            {loc.location_code} • {totalProducts} SKU
+          </p>
+        </div>
+
+        <div className="px-3 pb-3">
+          <div className="h-2.5 bg-white/75 rounded-full overflow-hidden">
+            <div className={`h-full ${getFillColor(fill)}`} style={{ width: `${fill}%` }} />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const getIcon = (type) => {
-    const found = locationTypes.find((t) => t.value === type);
+    const normalizedType = normalizeLocationType(type);
+    const found = locationTypes.find((t) => t.value === normalizedType);
     return found ? found.icon : MapPin;
   };
 
   const getLabel = (type) => {
-    const found = locationTypes.find((t) => t.value === type);
-    return found ? found.label : type;
+    const normalizedType = normalizeLocationType(type);
+    const found = locationTypes.find((t) => t.value === normalizedType);
+    return found ? found.label : normalizedType;
   };
 
   if (loading) {
@@ -260,339 +534,207 @@ function LocationManagement() {
               Quản lý khu vực & vị trí
             </h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              Sắp xếp không gian cửa hàng và vị trí trưng bày sản phẩm
+              Sắp xếp không gian kho và khu khách hàng có thể mua hàng
             </p>
           </div>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all shadow-sm hover:shadow-md"
-        >
-          <Plus size={20} />
-          Thêm vị trí mới
-        </button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Tìm theo tên hoặc mã vị trí..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-            />
-          </div>
-          <div className="flex gap-2">
-            <CustomSelect
-              value={typeFilter}
-              onChange={setTypeFilter}
-              options={[
-                { value: "all", label: "Tất cả loại hình" },
-                ...locationTypes.map((t) => ({
-                  value: t.value,
-                  label: t.label,
-                })),
-              ]}
-              className="min-w-[170px]"
-            />
-            <CustomSelect
-              value={statusFilter}
-              onChange={setStatusFilter}
-              variant="status"
-              options={[
-                { value: "all", label: "Tất cả trạng thái" },
-                { value: "ACTIVE", label: "Đang hoạt động" },
-                { value: "INACTIVE", label: "Ngừng hoạt động" },
-              ]}
-              className="min-w-[170px]"
-            />
-          </div>
-        </div>
+        <div className="p-4 md:p-5">
+          {hasAnyZone ? (
+            <>
+              <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-700">Sơ đồ kho 2D</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Bố cục trực quan gồm kho chính, kệ trưng bày, quầy thu ngân và cửa ra vào.
+                </p>
+              </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold">
-                <th className="px-3 py-4 w-10"></th>
-                <th className="px-4 py-4">Tên & Mã vị trí</th>
-                <th className="px-4 py-4">Loại hình</th>
-                <th className="px-4 py-4">Địa chỉ / Vị trí</th>
-                <th className="px-4 py-4 text-center">Sức chứa</th>
-                <th className="px-4 py-4 text-center">Tồn kho</th>
-                <th className="px-4 py-4">Trạng thái</th>
-                <th className="px-4 py-4 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {filteredLocations.map((loc) => {
-                const Icon = getIcon(loc.location_type);
-                const isExpanded = expandedLocationId === loc.id;
-                const stockItems = loc.stock_items || [];
-                const totalProducts = loc.total_products || 0;
-
-                return (
-                  <React.Fragment key={loc.id}>
-                    <tr
-                      className={`hover:bg-slate-50 transition-colors group cursor-pointer ${
-                        isExpanded ? "bg-indigo-50/30" : ""
-                      }`}
-                      onClick={() => toggleExpand(loc.id)}
-                    >
-                      <td className="px-3 py-4 text-center">
-                        <button
-                          className="p-1 rounded hover:bg-slate-100 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleExpand(loc.id);
-                          }}
-                        >
-                          {isExpanded ? (
-                            <ChevronDown
-                              size={16}
-                              className="text-indigo-600"
-                            />
-                          ) : (
-                            <ChevronRight
-                              size={16}
-                              className="text-slate-400"
-                            />
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                            <Icon size={20} />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">
-                              {loc.location_name}
-                            </p>
-                            <p className="text-xs text-slate-500 font-mono uppercase">
-                              {loc.location_code}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="text-sm text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-                          {getLabel(loc.location_type)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-slate-500 max-w-xs truncate">
-                        {loc.address}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <div className="inline-flex items-center justify-center min-w-[32px] px-2 py-1 bg-slate-50 border border-slate-200 rounded text-sm font-medium text-slate-700">
-                          {loc.capacity}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        {totalProducts > 0 ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openStockModal(loc);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold hover:bg-emerald-100 transition-colors cursor-pointer"
-                            title="Xem chi tiết sản phẩm"
-                          >
-                            <Box size={14} />
-                            {totalProducts}
-                          </button>
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-4 md:gap-5 items-start">
+                <div>
+                  <div className="rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 p-4 md:p-6 shadow-inner">
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+                        {featuredColdStorage ? (
+                          renderMapLocationCard(featuredColdStorage, {
+                            icon: Snowflake,
+                            title: featuredColdStorage.location_name,
+                            tone: "blue",
+                            className: "min-h-[210px]",
+                          })
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg text-sm">
-                            0
-                          </span>
+                          <div className="rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/60 min-h-[210px] flex items-center justify-center text-sm text-blue-500">
+                            Chưa có kho lạnh
+                          </div>
                         )}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            loc.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-red-50 text-red-600 border border-red-200"
-                          }`}
-                        >
-                          {loc.status === "ACTIVE"
-                            ? "Đang hoạt động"
-                            : "Ngừng hoạt động"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+
+                        {featuredStorage ? (
+                          renderMapLocationCard(featuredStorage, {
+                            icon: Package,
+                            title: featuredStorage.location_name,
+                            tone: "amber",
+                            className: "min-h-[210px]",
+                          })
+                        ) : (
+                          <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 min-h-[210px] flex items-center justify-center text-sm text-amber-600">
+                            Chưa có kho để đồ
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 justify-items-center pt-1">
+                        {featuredDisplayLocations.map((loc, index) =>
+                          loc ? (
+                            <div key={loc.id} className="w-full max-w-[260px]">
+                              {renderMapLocationCard(loc, {
+                                tone: "indigo",
+                                className: "min-h-[220px]",
+                              })}
+                            </div>
+                          ) : (
+                            <div
+                              key={`display-placeholder-${index}`}
+                              className="rounded-2xl border-2 border-dashed border-indigo-300 bg-indigo-50/60 min-h-[220px] w-full max-w-[260px] flex items-center justify-center text-sm text-indigo-600"
+                            >
+                              Chưa có khu vực kệ hàng
+                            </div>
+                          ),
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-end pt-1.5">
+                        <div className="md:col-span-2 w-full flex justify-center md:justify-start md:pl-1">
+                          <div className="rounded-2xl border-2 border-rose-300 bg-rose-50/70 h-[112px] w-full max-w-[390px] flex items-center justify-center text-rose-700 shadow-sm">
+                            <div className="text-center px-4">
+                              <p className="text-xl leading-none mb-1.5">▭</p>
+                              <p className="text-sm font-semibold tracking-wide">Quầy thu ngân</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="w-full flex justify-center md:justify-end">
+                          <div className="rounded-2xl border-2 border-dashed border-slate-400 bg-slate-100/80 h-[112px] w-full max-w-[210px] flex items-center justify-center text-slate-600 shadow-sm">
+                            <div className="flex flex-col items-center gap-1.5 text-center px-3">
+                              <DoorOpen size={17} />
+                              <span className="text-sm font-semibold tracking-wide">Cửa chính ra vào</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {remainingMapLocations.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Vị trí khác</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                        {remainingMapLocations.map((loc) =>
+                          renderMapLocationCard(loc, { tone: "amber", compact: true }),
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="xl:sticky xl:top-4 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 md:p-5">
+                  {selectedLocation ? (
+                    <>
+                      <div className="flex flex-col gap-4">
+                        <div>
+                          <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-1">
+                            Chi tiết khu vực đã chọn
+                          </p>
+                          <h3 className="text-xl font-bold text-slate-900">{selectedLocation.location_name}</h3>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {selectedLocation.location_code} • {getLabel(selectedLocation.location_type)}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openStockModal(loc);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                            title="Xem sản phẩm"
+                            onClick={() => openStockModal(selectedLocation)}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
                           >
-                            <Eye size={18} />
+                            <Eye size={15} /> Xem sản phẩm
                           </button>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openTransferModal(loc);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-all"
-                            title="Chuyển hàng sang vị trí khác"
+                            onClick={() => openTransferModal(selectedLocation)}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors"
                           >
-                            <ArrowRightLeft size={18} />
+                            <ArrowRightLeft size={15} /> Chuyển hàng
                           </button>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenModal(loc);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                            title="Sửa"
+                            onClick={() => handleOpenModal(selectedLocation)}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors"
                           >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleStatus(loc);
-                            }}
-                            className={`p-1.5 rounded-lg transition-all ${
-                              loc.status === "ACTIVE"
-                                ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
-                                : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                            }`}
-                            title={
-                              loc.status === "ACTIVE"
-                                ? "Chuyển sang Ngừng hoạt động"
-                                : "Kích hoạt lại"
-                            }
-                          >
-                            {loc.status === "ACTIVE" ? (
-                              <ToggleRight size={18} />
-                            ) : (
-                              <ToggleLeft size={18} />
-                            )}
+                            <Edit2 size={15} /> Chỉnh sửa
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
 
-                    {/* Expanded Row - Inline Stock Preview */}
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan="8" className="p-0">
-                          <div className="bg-gradient-to-b from-indigo-50/50 to-slate-50/50 px-6 py-4 border-t border-indigo-100">
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                <Box size={16} className="text-indigo-500" />
-                                Sản phẩm tại vị trí "{loc.location_name}"
-                                <span className="text-xs font-normal text-slate-400 ml-1">
-                                  (Tổng: {totalProducts} sản phẩm)
-                                </span>
-                              </h4>
-                              {stockItems.length > 0 && (
-                                <button
-                                  onClick={() => openStockModal(loc)}
-                                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 hover:underline"
-                                >
-                                  Xem chi tiết
-                                  <ChevronRight size={14} />
-                                </button>
-                              )}
-                            </div>
+                      <div className="mt-4 grid grid-cols-1 gap-3">
+                        <div className="rounded-xl border border-indigo-100 bg-white px-3 py-2.5">
+                          <p className="text-xs text-slate-500">Tổng số lượng</p>
+                          <p className="text-lg font-bold text-indigo-700">{selectedLocation.total_products || 0}</p>
+                        </div>
+                        <div className="rounded-xl border border-indigo-100 bg-white px-3 py-2.5">
+                          <p className="text-xs text-slate-500">Sức chứa</p>
+                          <p className="text-lg font-bold text-slate-800">{selectedLocation.capacity || 0}</p>
+                        </div>
+                        <div className="rounded-xl border border-indigo-100 bg-white px-3 py-2.5">
+                          <p className="text-xs text-slate-500">Mức đầy</p>
+                          <p className="text-lg font-bold text-slate-800">{calcFillPercent(selectedLocation)}%</p>
+                        </div>
+                      </div>
 
-                            {stockItems.length > 0 ? (
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {stockItems.slice(0, 6).map((item, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
-                                  >
-                                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                      <Package
-                                        size={18}
-                                        className="text-indigo-600"
-                                      />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-semibold text-slate-900 truncate">
-                                        {item.product_name || "N/A"}
-                                      </p>
-                                      <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-xs text-slate-400 font-mono">
-                                          {item.sku || "—"}
-                                        </span>
-                                        {item.batch_code && (
-                                          <>
-                                            <span className="text-slate-300">
-                                              •
-                                            </span>
-                                            <span className="text-xs text-slate-400">
-                                              Lô: {item.batch_code}
-                                            </span>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="text-right flex-shrink-0">
-                                      <p className="text-sm font-bold text-indigo-600">
-                                        {item.quantity}
-                                      </p>
-                                      <p className="text-xs text-slate-400">
-                                        {item.variant_unit || "đơn vị"}
-                                      </p>
-                                    </div>
-                                  </div>
-                                ))}
-                                {stockItems.length > 6 && (
-                                  <button
-                                    onClick={() => openStockModal(loc)}
-                                    className="flex items-center justify-center gap-2 bg-white/60 p-3 rounded-xl border border-dashed border-slate-300 text-slate-500 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-all"
-                                  >
-                                    <span className="text-sm font-medium">
-                                      +{stockItems.length - 6} sản phẩm khác
-                                    </span>
-                                  </button>
-                                )}
+                      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3.5">
+                        <p className="text-sm font-semibold text-slate-800 mb-2">Sản phẩm cảnh báo cần xử lý ngay</p>
+                        {urgentItemsForSelected.length > 0 ? (
+                          <div className="space-y-1.5 text-sm text-slate-600">
+                            {urgentItemsForSelected.map((item, idx) => (
+                              <div key={`${item.variant_id || idx}-${item.batch_id || idx}`} className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate">
+                                    {item.product_name || "N/A"}
+                                    {item.batch_code ? ` • Lô ${item.batch_code}` : ""}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {formatWarningLabel(item)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${getWarningBadgeClass(getItemWarningStatus(item))}`}>
+                                    {getWarningBadgeText(getItemWarningStatus(item))}
+                                  </span>
+                                  <span className="font-semibold text-indigo-700 whitespace-nowrap">
+                                    {item.quantity} {item.variant_unit || "đv"}
+                                  </span>
+                                </div>
                               </div>
-                            ) : (
-                              <div className="text-center py-6 bg-white rounded-xl border border-dashed border-slate-200">
-                                <Package
-                                  size={32}
-                                  className="mx-auto text-slate-300 mb-2"
-                                />
-                                <p className="text-sm text-slate-400">
-                                  Chưa có sản phẩm nào tại vị trí này
-                                </p>
-                                <p className="text-xs text-slate-300 mt-1">
-                                  Tạo đơn nhập kho để thêm sản phẩm vào vị trí
-                                </p>
-                              </div>
-                            )}
+                            ))}
                           </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-
-          {filteredLocations.length === 0 && (
+                        ) : hasAnyStockItems ? (
+                          <p className="text-sm text-slate-500">Khu vực này hiện chưa có sản phẩm cần cảnh báo.</p>
+                        ) : (
+                          <p className="text-sm text-slate-500">Khu vực này chưa có sản phẩm.</p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-indigo-300 bg-white/80 p-4 text-sm text-slate-500">
+                      Chọn một khu vực ở bên trái để xem chi tiết.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
             <div className="p-12 text-center">
               <div className="inline-flex p-4 bg-slate-50 rounded-full mb-4">
                 <MapPin className="text-slate-300" size={40} />
               </div>
-              <p className="text-slate-500 font-medium">
-                Không tìm thấy vị trí nào khớp với từ khóa tìm kiếm
-              </p>
+              <p className="text-slate-500 font-medium">Chưa có dữ liệu vị trí</p>
             </div>
           )}
         </div>
@@ -742,7 +884,7 @@ function LocationManagement() {
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0">
               <h2 className="text-lg font-bold text-slate-900">
-                {editingLocation ? "Chỉnh sửa vị trí" : "Thêm vị trí mới"}
+                Chỉnh sửa vị trí
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -753,47 +895,6 @@ function LocationManagement() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-1">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Mã vị trí *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.location_code}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        location_code: e.target.value,
-                      })
-                    }
-                    placeholder="VD: KE-A01"
-                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono"
-                  />
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Loại hình
-                  </label>
-                  <select
-                    value={formData.location_type}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        location_type: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  >
-                    {locationTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
@@ -869,7 +970,7 @@ function LocationManagement() {
                   type="submit"
                   className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
                 >
-                  {editingLocation ? "Cập nhật" : "Lưu vị trí"}
+                  Cập nhật
                 </button>
               </div>
             </form>
@@ -1035,30 +1136,18 @@ function LocationManagement() {
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
                   3. Chuyển đến vị trí *
                 </label>
-                <select
-                  required
+                <CustomSelect
                   value={transferData.toLocationId}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setTransferData((prev) => ({
                       ...prev,
-                      toLocationId: e.target.value,
+                      toLocationId: value,
                     }))
                   }
-                  className="w-full px-4 py-2 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
-                >
-                  <option value="">-- Chọn vị trí đích --</option>
-                  {locations
-                    .filter(
-                      (l) =>
-                        l.id !== transferModal.location.id &&
-                        l.status === "ACTIVE",
-                    )
-                    .map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.location_name} ({l.location_code})
-                      </option>
-                    ))}
-                </select>
+                  options={transferDestinationOptions(transferModal.location.id)}
+                  dropdownPosition="inline"
+                  className="w-full"
+                />
               </div>
 
               {/* Summary preview */}
@@ -1077,9 +1166,7 @@ function LocationManagement() {
                   </p>
                   <p className="text-violet-600 text-xs mt-1">
                     {transferModal.location.location_name} →{" "}
-                    {locations.find(
-                      (l) => l.id === parseInt(transferData.toLocationId),
-                    )?.location_name || ""}
+                    {formatTransferLocationLabel(transferData.toLocationId)}
                   </p>
                 </div>
               )}
@@ -1120,31 +1207,6 @@ function LocationManagement() {
         </div>
       )}
 
-      {/* Confirm Toggle Status Modal */}
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onConfirm={confirmToggle}
-        onCancel={() => setConfirmModal({ isOpen: false, location: null })}
-        title={
-          confirmModal.location?.status === "ACTIVE"
-            ? "Ngừng hoạt động vị trí"
-            : "Kích hoạt lại vị trí"
-        }
-        message={
-          confirmModal.location?.status === "ACTIVE"
-            ? `Bạn có chắc chắn muốn ngừng hoạt động vị trí "${confirmModal.location?.location_name}"? Vị trí sẽ bị ẩn khỏi các danh sách chọn.`
-            : `Bạn có chắc chắn muốn kích hoạt lại vị trí "${confirmModal.location?.location_name}"?`
-        }
-        confirmText={
-          confirmModal.location?.status === "ACTIVE"
-            ? "Ngừng hoạt động"
-            : "Kích hoạt lại"
-        }
-        variant={
-          confirmModal.location?.status === "ACTIVE" ? "danger" : "success"
-        }
-        loading={toggling}
-      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 package com.smalltrend.service;
 
+import com.smalltrend.dto.inventory.dashboard.PriceExpiryAlertResponse;
 import com.smalltrend.dto.products.VariantPriceRequest;
 import com.smalltrend.dto.products.VariantPriceResponse;
 import com.smalltrend.entity.ProductVariant;
@@ -11,9 +12,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.smalltrend.entity.enums.VariantPriceStatus.ACTIVE;
+
+/**
+ * Service quản lý vòng đời giá của Product Variant.
+ * Quy tắc chính: mỗi variant chỉ nên có 1 bản ghi giá ACTIVE tại một thời điểm.
+ */
 @Service
 @RequiredArgsConstructor
 public class VariantPriceService {
@@ -40,7 +50,7 @@ public class VariantPriceService {
 
         // Deactivate all current ACTIVE prices for this variant
         List<VariantPrice> activePrices = variantPriceRepository.findByVariantIdAndStatus(
-                variantId, VariantPriceStatus.ACTIVE);
+                variantId, ACTIVE);
         for (VariantPrice activePrice : activePrices) {
             activePrice.setStatus(VariantPriceStatus.INACTIVE);
             variantPriceRepository.save(activePrice);
@@ -80,9 +90,31 @@ public class VariantPriceService {
      * Lấy giá đang ACTIVE của variant.
      */
     public VariantPriceResponse getActivePrice(Integer variantId) {
-        return variantPriceRepository.findFirstByVariantIdAndStatus(variantId, VariantPriceStatus.ACTIVE)
+        return variantPriceRepository.findFirstByVariantIdAndStatus(variantId, ACTIVE)
                 .map(this::mapToResponse)
                 .orElse(null);
+    }
+
+    /**
+     * Đồng bộ giá nhập vào bản ghi giá đang ACTIVE (nếu có).
+     * Trả về false khi thiếu dữ liệu hoặc variant chưa có giá ACTIVE.
+     */
+    @Transactional
+    public boolean syncActivePurchasePrice(Integer variantId, BigDecimal purchasePrice) {
+        if (purchasePrice == null) {
+            return false;
+        }
+
+        VariantPrice activePrice = variantPriceRepository
+                .findFirstByVariantIdAndStatus(variantId, ACTIVE)
+                .orElse(null);
+        if (activePrice == null) {
+            return false;
+        }
+
+        activePrice.setPurchasePrice(purchasePrice);
+        variantPriceRepository.save(activePrice);
+        return true;
     }
 
     /**
@@ -149,6 +181,34 @@ public class VariantPriceService {
         productVariantRepository.save(variant);
 
         return mapToResponse(saved);
+    }
+
+    /**
+     * Lấy danh sách giá ACTIVE sắp hết hiệu lực theo số ngày cảnh báo.
+     */
+    public List<PriceExpiryAlertResponse> getPriceExpiryAlerts(int daysBeforeExpiry) {
+        LocalDate today = LocalDate.now();
+        LocalDate targetDate = today.plusDays(daysBeforeExpiry);
+
+        return variantPriceRepository.findByStatusAndExpiryDateWithVariant(VariantPriceStatus.ACTIVE, targetDate)
+                .stream()
+                .map(vp -> {
+                    String variantName = "N/A";
+                    if (vp.getVariant() != null && vp.getVariant().getProduct() != null) {
+                        variantName = vp.getVariant().getProduct().getName();
+                    }
+
+                    return PriceExpiryAlertResponse.builder()
+                            .variantPriceId(vp.getId())
+                            .variantId(vp.getVariant() != null ? vp.getVariant().getId() : null)
+                            .variantName(variantName)
+                            .sku(vp.getVariant() != null ? vp.getVariant().getSku() : null)
+                            .activeSellingPrice(vp.getSellingPrice())
+                            .expiryDate(vp.getExpiryDate())
+                            .daysUntilExpiry((int) ChronoUnit.DAYS.between(today, vp.getExpiryDate()))
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     // ─── Mapper ──────────────────────────────────────────────────────────────

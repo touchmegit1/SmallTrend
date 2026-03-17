@@ -17,4 +17,7 @@ public class LocationStockItemResponse {
     private Integer quantity;
     private String batchCode;
     private Integer batchId;
+    private String expiryDate;
+    private Integer daysUntilExpiry;
+    private String warningStatus;
 }

@@ -1,7 +1,9 @@
 ﻿import React from "react";
+import PropTypes from "prop-types";
 
-function LowStockTable({ products }) {
-  const lowStockProducts = products.filter((p) => (p.stock_quantity || 0) < 100);
+function LowStockTable(props) {
+  const products = props.products ?? [];
+  const lowStockProducts = products.filter((p) => (p.stock_quantity ?? 0) < 100);
 
   if (lowStockProducts.length === 0) return null;
 
@@ -27,7 +29,7 @@ function LowStockTable({ products }) {
                 <td className="px-4 py-3 text-sm text-slate-900">{product.sku}</td>
                 <td className="px-4 py-3 text-sm text-slate-900">{product.name}</td>
                 <td className="px-4 py-3 text-sm text-right">
-                  <span className="text-orange-600 font-semibold">{product.stock_quantity || 0}</span>
+                  <span className="text-orange-600 font-semibold">{product.stock_quantity ?? 0}</span>
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-orange-100 text-orange-800">Cần nhập thêm</span>
@@ -40,6 +42,10 @@ function LowStockTable({ products }) {
     </div>
   );
 }
+
+LowStockTable.propTypes = {
+  products: PropTypes.arrayOf(PropTypes.object),
+};
 
 export default LowStockTable;
 

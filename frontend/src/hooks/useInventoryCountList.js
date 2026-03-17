@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "../components/ui/Toast";
 import { getInventoryCounts, getLocations, cancelInventoryCount, deleteInventoryCount } from "../services/inventoryService";
-import { IC_STATUS, IC_STATUS_CONFIG, formatVNDCount } from "../utils/inventoryCount";
+import { IC_STATUS } from "../utils/inventoryCount";
 
 export function useInventoryCountList() {
   const toast = useToast();
@@ -108,8 +108,6 @@ export function useInventoryCountList() {
 
   // ─── Cancel voucher ──────────────────────────────
   const cancelVoucher = useCallback(async (id) => {
-    if (!window.confirm("Bạn có chắc muốn hủy phiếu kiểm kho này?")) return;
-
     try {
       await cancelInventoryCount(id);
       setVouchers((prev) =>
@@ -124,8 +122,6 @@ export function useInventoryCountList() {
 
   // ─── Delete voucher ──────────────────────────────
   const deleteVoucher = useCallback(async (id) => {
-    if (!window.confirm("Bạn có chắc muốn XÓA VĨNH VIỄN phiếu kiểm kho này?")) return;
-
     try {
       await deleteInventoryCount(id);
       setVouchers((prev) => prev.filter((v) => v.id !== id));

@@ -10,7 +10,7 @@ function PurchaseOrderSidebar({
   saving,
 }) {
   return (
-    <div className="w-[400px] bg-white border-l border-slate-200 flex flex-col">
+    <div className="w-full lg:w-[400px] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col">
       <div className="bg-blue-50 px-6 py-4 border-b border-slate-200">
         <div className="space-y-3 text-sm">
           <div className="flex justify-between items-center">
@@ -46,7 +46,7 @@ function PurchaseOrderSidebar({
           <div className="flex justify-between items-center">
             <span className="text-slate-600">Cần trả nhà cung cấp</span>
             <span className="font-semibold text-blue-600">
-              {totalAmount.toLocaleString()}
+              {Number(totalAmount ?? 0).toLocaleString("vi-VN")}
             </span>
           </div>
         </div>

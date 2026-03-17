@@ -41,7 +41,7 @@ function InventoryCountList() {
   // ─── Loading ─────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
             <div className="w-12 h-12 rounded-full border-4 border-slate-100" />
@@ -58,12 +58,12 @@ function InventoryCountList() {
   // ─── Error ───────────────────────────────────────
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="text-center">
           <p className="text-red-500 font-medium mb-2">Lỗi tải dữ liệu</p>
           <p className="text-sm text-slate-500 mb-3">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => globalThis.location.reload()}
             className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg"
           >
             Thử lại
@@ -95,7 +95,7 @@ function InventoryCountList() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       {/* ─── Header ──────────────────────────────────── */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 shrink-0">
         <div className="flex items-center justify-between">

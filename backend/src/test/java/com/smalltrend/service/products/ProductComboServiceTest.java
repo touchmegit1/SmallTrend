@@ -11,6 +11,7 @@ import com.smalltrend.entity.Unit;
 import com.smalltrend.repository.ProductComboItemRepository;
 import com.smalltrend.repository.ProductComboRepository;
 import com.smalltrend.repository.ProductVariantRepository;
+import com.smalltrend.validation.product.ProductComboValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,9 @@ class ProductComboServiceTest {
 
     @Mock
     private ProductVariantRepository productVariantRepository;
+
+    @Mock
+    private ProductComboValidator productComboValidator;
 
     @InjectMocks
     private ProductComboServiceImpl productComboService;
@@ -97,12 +101,13 @@ class ProductComboServiceTest {
     @Test
     void getComboById_shouldThrowException_whenNotFound() {
         // Arrange
-        when(productComboRepository.findById(99)).thenReturn(Optional.empty());
+        when(productComboValidator.requireExistingCombo(99))
+            .thenThrow(new RuntimeException("Không tìm thấy combo với id: 99"));
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productComboService.getComboById(99));
 
-        assertEquals("Combo not found with id: 99", ex.getMessage());
+        assertEquals("Không tìm thấy combo với id: 99", ex.getMessage());
     }
 
     @Test
@@ -119,7 +124,6 @@ class ProductComboServiceTest {
         // mock to simulate empty repo for code generation
         when(productComboRepository.findAll()).thenReturn(Collections.emptyList());
         when(productComboRepository.save(any(ProductCombo.class))).thenReturn(savedCombo);
-        when(productComboRepository.findById(2)).thenReturn(Optional.of(savedCombo));
         when(productComboItemRepository.findByComboId(2)).thenReturn(Collections.emptyList());
 
         // Act
@@ -137,12 +141,13 @@ class ProductComboServiceTest {
         CreateProductComboRequest req = new CreateProductComboRequest();
         req.setComboCode("DUP-123");
 
-        when(productComboRepository.findByComboCode("DUP-123")).thenReturn(Optional.of(new ProductCombo()));
+        doThrow(new RuntimeException("Mã combo đã tồn tại: DUP-123"))
+            .when(productComboValidator).validateComboCodeUniqueForCreate("DUP-123");
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productComboService.createCombo(req));
 
-        assertEquals("Combo Code already exists: DUP-123", ex.getMessage());
+        assertEquals("Mã combo đã tồn tại: DUP-123", ex.getMessage());
     }
 
     @Test
@@ -161,15 +166,13 @@ class ProductComboServiceTest {
         
         req.setItems(List.of(itemReq));
 
-        when(productComboRepository.findByComboCode("CB-100")).thenReturn(Optional.empty());
-        when(productVariantRepository.findById(5)).thenReturn(Optional.of(testVariant));
+        when(productComboValidator.requireExistingVariant(5)).thenReturn(testVariant);
         
         ProductCombo savedCombo = new ProductCombo();
         savedCombo.setId(3);
         savedCombo.setComboCode("CB-100");
         
         when(productComboRepository.save(any(ProductCombo.class))).thenReturn(savedCombo);
-        when(productComboRepository.findById(3)).thenReturn(Optional.of(savedCombo));
         when(productComboItemRepository.findByComboId(3)).thenReturn(List.of(testComboItem));
 
         ProductComboResponse result = productComboService.createCombo(req);
@@ -187,12 +190,12 @@ class ProductComboServiceTest {
         itemReq.setProductVariantId(99); 
         req.setItems(List.of(itemReq));
 
-        when(productComboRepository.findByComboCode("CB-200")).thenReturn(Optional.empty());
-        when(productVariantRepository.findById(99)).thenReturn(Optional.empty());
+        when(productComboValidator.requireExistingVariant(99))
+            .thenThrow(new RuntimeException("Không tìm thấy biến thể với id: 99"));
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productComboService.createCombo(req));
 
-        assertEquals("Variant not found: 99", ex.getMessage());
+        assertEquals("Không tìm thấy biến thể với id: 99", ex.getMessage());
     }
 
     @Test
@@ -202,9 +205,8 @@ class ProductComboServiceTest {
         // No items to trigger empty items branch
         req.setItems(Collections.emptyList());
 
-        when(productComboRepository.findById(1)).thenReturn(Optional.of(testCombo));
+        when(productComboValidator.requireExistingCombo(1)).thenReturn(testCombo);
         when(productComboRepository.save(any(ProductCombo.class))).thenReturn(testCombo);
-        when(productComboRepository.findById(1)).thenReturn(Optional.of(testCombo));
         when(productComboItemRepository.findByComboId(1)).thenReturn(Collections.emptyList());
 
         ProductComboResponse result = productComboService.updateCombo(1, req);
@@ -218,17 +220,18 @@ class ProductComboServiceTest {
         CreateProductComboRequest req = new CreateProductComboRequest();
         req.setComboCode("NEW-CB");
 
-        when(productComboRepository.findById(1)).thenReturn(Optional.of(testCombo));
-        when(productComboRepository.findByComboCode("NEW-CB")).thenReturn(Optional.of(new ProductCombo()));
+        when(productComboValidator.requireExistingCombo(1)).thenReturn(testCombo);
+        doThrow(new RuntimeException("Mã combo đã tồn tại: NEW-CB"))
+            .when(productComboValidator).validateComboCodeUniqueForUpdate(testCombo, "NEW-CB");
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productComboService.updateCombo(1, req));
 
-        assertEquals("Combo Code already exists: NEW-CB", ex.getMessage());
+        assertEquals("Mã combo đã tồn tại: NEW-CB", ex.getMessage());
     }
 
     @Test
     void deleteCombo_shouldDeleteComboAndItems() {
-        when(productComboRepository.findById(1)).thenReturn(Optional.of(testCombo));
+        when(productComboValidator.requireExistingCombo(1)).thenReturn(testCombo);
 
         productComboService.deleteCombo(1);
 
@@ -238,7 +241,7 @@ class ProductComboServiceTest {
 
     @Test
     void toggleStatus_shouldReverseIsActive() {
-        when(productComboRepository.findById(1)).thenReturn(Optional.of(testCombo));
+        when(productComboValidator.requireExistingCombo(1)).thenReturn(testCombo);
         assertTrue(testCombo.getIsActive());
 
         productComboService.toggleStatus(1);

@@ -14,7 +14,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/brands")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class BrandController {
 
     private final BrandService brandService;
@@ -50,6 +49,6 @@ public class BrandController {
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable Integer id) {
         brandService.delete(id);
-        return ResponseEntity.ok("Brand deactivated");
+        return ResponseEntity.ok("Đã xóa thương hiệu");
     }
 }

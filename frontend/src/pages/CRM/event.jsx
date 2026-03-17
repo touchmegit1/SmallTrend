@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useToast, ToastContainer } from '../../hooks/useToast.jsx';
 import eventService from '../../services/eventService';
+import cloudinaryUploadService from '../../services/cloudinaryUploadService';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useVouchers } from '../../hooks/useVouchers';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
@@ -10,9 +11,6 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 const IconEdit = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
 const IconDelete = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>;
 const IconPin = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>;
-const IconUnpin = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="2" y1="2" x2="22" y2="22" /><line x1="12" y1="17" x2="12" y2="22" /><path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h12" /><path d="M15 9.34V6h1a2 2 0 0 0 0-4H7.89" /></svg>;
-const IconSearch = () => <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>;
-
 
 // ─── STATUS BADGE ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
@@ -41,6 +39,8 @@ const voucherTypeBadge = (type) => ({
   FIXED_AMOUNT: 'bg-blue-100 text-blue-700',
 }[type] || 'bg-gray-100 text-gray-600');
 
+const getHomepageBannerFlag = (campaign) => Boolean(campaign?.isHomepageBanner ?? campaign?.homepageBanner);
+
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const EventManagement = () => {
   const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' | 'vouchers'
@@ -52,10 +52,11 @@ const EventManagement = () => {
   const initialCampaignForm = {
     campaignCode: '', campaignName: '', campaignType: 'PROMOTION', description: '',
     bannerImageUrl: '', startDate: '', endDate: '', status: 'DRAFT',
-    budget: '', minPurchaseAmount: '', isPublic: true,
+    budget: '', minPurchaseAmount: '', isPublic: true, isHomepageBanner: false,
   };
   const [campaignForm, setCampaignForm] = useState(initialCampaignForm);
   const [savingCampaign, setSavingCampaign] = useState(false);
+  const [uploadingCampaignImage, setUploadingCampaignImage] = useState(false);
 
   // ── Vouchers ──
   const { vouchers, loading: loadingVouchers, refetch: refetchVouchers } = useVouchers();
@@ -86,6 +87,7 @@ const EventManagement = () => {
         endDate: campaign.endDate || '',
         budget: campaign.budget ?? '',
         minPurchaseAmount: campaign.minPurchaseAmount ?? '',
+        isHomepageBanner: getHomepageBannerFlag(campaign),
       });
       setEditingCampaign(campaign.id);
     } else {
@@ -103,6 +105,7 @@ const EventManagement = () => {
         ...campaignForm,
         budget: campaignForm.budget ? Number(campaignForm.budget) : null,
         minPurchaseAmount: campaignForm.minPurchaseAmount ? Number(campaignForm.minPurchaseAmount) : null,
+        isHomepageBanner: Boolean(campaignForm.isHomepageBanner),
       };
       if (editingCampaign) {
         await eventService.updateCampaign(editingCampaign, payload);
@@ -122,6 +125,25 @@ const EventManagement = () => {
 
   const handleDeleteCampaign = (id) => {
     setConfirmDialog({ open: true, type: 'campaign', id, label: 'sự kiện' });
+  };
+
+  const handleUploadCampaignBanner = async (file) => {
+    if (!file) return;
+    if (!file.type?.startsWith('image/')) {
+      showToast('Vui lòng chọn file ảnh hợp lệ', 'warning');
+      return;
+    }
+
+    setUploadingCampaignImage(true);
+    try {
+      const res = await cloudinaryUploadService.uploadImage(file, 'crm/campaigns');
+      setCampaignForm((prev) => ({ ...prev, bannerImageUrl: res.url || '' }));
+      showToast('Upload banner thành công');
+    } catch (err) {
+      showToast('Upload ảnh thất bại: ' + (err?.response?.data?.error || err.message), 'error');
+    } finally {
+      setUploadingCampaignImage(false);
+    }
   };
 
   // ── Voucher handlers ───────────────────────────────────────────────────────────
@@ -290,11 +312,17 @@ const EventManagement = () => {
                       <div className="flex items-center gap-3">
                         {c.bannerImageUrl ? (
                           <img src={c.bannerImageUrl} alt={c.campaignName} className="w-10 h-10 object-cover rounded border flex-shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 bg-blue-50 rounded border flex items-center justify-center text-blue-300 text-lg flex-shrink-0">🎯</div>
-                        )}
+                        ) : null}
                         <div>
-                          <div className="font-semibold text-gray-800">{c.campaignName}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold text-gray-800">{c.campaignName}</div>
+                            {getHomepageBannerFlag(c) ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                <IconPin />
+                                Homepage
+                              </span>
+                            ) : null}
+                          </div>
                           <div className="text-xs text-gray-400 font-mono">{c.campaignCode}</div>
                         </div>
                       </div>
@@ -470,7 +498,14 @@ const EventManagement = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Trạng thái</label>
                   <select value={campaignForm.status}
-                    onChange={e => setCampaignForm({ ...campaignForm, status: e.target.value })}
+                    onChange={e => {
+                      const nextStatus = e.target.value;
+                      setCampaignForm({
+                        ...campaignForm,
+                        status: nextStatus,
+                        isHomepageBanner: nextStatus === 'ACTIVE' ? campaignForm.isHomepageBanner : false,
+                      });
+                    }}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     <option value="DRAFT">DRAFT</option>
                     <option value="ACTIVE">ACTIVE</option>
@@ -503,13 +538,36 @@ const EventManagement = () => {
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">URL Banner</label>
-                  <input type="url" value={campaignForm.bannerImageUrl}
-                    onChange={e => setCampaignForm({ ...campaignForm, bannerImageUrl: e.target.value })}
-                    placeholder="https://..."
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Banner sự kiện</label>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700 cursor-pointer whitespace-nowrap transition-colors">
+                        {uploadingCampaignImage ? 'Đang up...' : 'Upload ảnh'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingCampaignImage}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            handleUploadCampaignBanner(file);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                      {campaignForm.bannerImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setCampaignForm({ ...campaignForm, bannerImageUrl: '' })}
+                          className="px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-sm font-medium text-slate-600 transition-colors"
+                        >
+                          Xóa ảnh
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   {campaignForm.bannerImageUrl && (
-                    <img src={campaignForm.bannerImageUrl} alt="Preview" className="mt-2 h-24 rounded-lg object-cover w-full" onError={e => e.target.style.display = 'none'} />
+                    <img src={campaignForm.bannerImageUrl} alt="Preview" className="mt-2 h-24 rounded-lg object-cover w-full border border-slate-200" onError={e => e.target.style.display = 'none'} />
                   )}
                 </div>
                 <div className="col-span-2">
@@ -523,6 +581,19 @@ const EventManagement = () => {
                     onChange={e => setCampaignForm({ ...campaignForm, isPublic: e.target.checked })}
                     className="w-4 h-4 text-indigo-600 rounded border-slate-300" />
                   <label htmlFor="isPublic" className="text-sm font-medium text-slate-700">Hiển thị công khai</label>
+                </div>
+                <div className="col-span-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isHomepageBanner"
+                    checked={Boolean(campaignForm.isHomepageBanner)}
+                    onChange={e => setCampaignForm({ ...campaignForm, isHomepageBanner: e.target.checked })}
+                    disabled={campaignForm.status !== 'ACTIVE'}
+                    className="w-4 h-4 text-indigo-600 rounded border-slate-300"
+                  />
+                  <label htmlFor="isHomepageBanner" className="text-sm font-medium text-slate-700">
+                    Dùng làm banner homepage (chỉ 1 sự kiện)
+                  </label>
                 </div>
               </div>
 

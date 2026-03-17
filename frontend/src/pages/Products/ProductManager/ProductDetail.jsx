@@ -18,9 +18,9 @@ import { useFetchVariants, useFetchUnits } from "../../../hooks/product_variants
 import api from "../../../config/axiosConfig";
 
 /**
- * Màn hình Chi tiết Sản phẩm (ProductDetail)
- * Cho phép xem tổng quan thông tin metadata (Thuế, Tên, Hình ảnh, Brand) 
- * Màn hình chịu trách nhiệm kết xuất và cho phép tao tác In tem dòng "Variants" (Loại sản phẩm sku thực giá)
+ * Màn hình chi tiết sản phẩm (ProductDetail).
+ * Hiển thị thông tin product và quản lý toàn bộ variant liên quan: đổi trạng thái,
+ * chỉnh sửa, in mã vạch, quy đổi đơn vị và xóa variant trong thời gian cho phép.
  */
 function ProductDetail() {
   const { id: productId } = useParams(); // Lấy mã ID sản phẩm trên path URL

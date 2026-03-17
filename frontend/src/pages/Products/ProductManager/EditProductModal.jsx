@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Save, Image as ImageIcon, Upload } from "lucide-react";
+import { X, Save, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
@@ -30,6 +30,8 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
   // Gán thông tin Parent Item đang target vào Hook để đẩy lên Form Control 
@@ -100,6 +102,7 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
   // --- API SERVICE DISPATCH ---
   const uploadImage = async () => {
     if (!imageFile) return null;
+    setUploadingImage(true);
     try {
       const formDataUpload = new FormData();
       formDataUpload.append("file", imageFile);
@@ -110,6 +113,8 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
     } catch (error) {
       console.error("Error uploading image:", error);
       throw error;
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -118,6 +123,8 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
    */
   const handleSubmit = async (e) => {
     e.preventDefault(); // Tránh form auto reload window
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       // Logic xử lý Link Image Path:
       // - Biến imageUrl ban đầu ưu tiên lấy State Preview đã init từ prop.
@@ -147,6 +154,8 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
     } catch (error) {
       console.error("Error updating product:", error);
       alert("Lỗi kết nối khi cập nhật chỉnh sửa DB!");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -273,11 +282,19 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 rounded-2xl backdrop-blur-[1px]" />
 
+                    {uploadingImage && (
+                      <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                        <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                      </div>
+                    )}
+
                     {/* Control Action Clear Ảnh Hiện tại */}
                     <button
                       type="button"
                       onClick={removeImage}
-                      className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl"
+                      disabled={uploadingImage || isSubmitting}
+                      className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -286,7 +303,8 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-4 right-4 bg-white hover:bg-slate-50 text-gray-800 rounded-xl px-4 py-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center gap-2"
+                      disabled={uploadingImage || isSubmitting}
+                      className="absolute bottom-4 right-4 bg-white hover:bg-slate-50 text-gray-800 rounded-xl px-4 py-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Upload className="w-4 h-4 text-blue-600" />
                       Tìm file khác
@@ -297,9 +315,9 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                   <div
                     role="button"
                     tabIndex={0}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => !(uploadingImage || isSubmitting) && fileInputRef.current?.click()}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if ((e.key === 'Enter' || e.key === ' ') && !(uploadingImage || isSubmitting)) {
                         e.preventDefault();
                         fileInputRef.current?.click();
                       }
@@ -307,12 +325,18 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer bg-white ${isDragging
+                    className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all bg-white ${(uploadingImage || isSubmitting) ? 'cursor-wait opacity-80' : 'cursor-pointer'} ${isDragging
                       ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50/70 scale-[1.02]'
                       : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'
                       }`}
                     style={{ minHeight: '280px' }}
                   >
+                    {uploadingImage && (
+                      <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                        <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                      </div>
+                    )}
                     <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4 shadow-sm border border-slate-200">
                       <ImageIcon className="w-10 h-10 text-slate-400" />
                     </div>
@@ -328,10 +352,11 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
             <Button
               type="submit"
               variant="success"
-              className="w-full h-12 bg-gradient-to-r from-green-600 to-green-600 hover:from-green-700 hover:to-green-700 text-white shadow-lg shadow-green-500/20 border-0 rounded-xl font-bold flex items-center justify-center"
+              disabled={uploadingImage || isSubmitting}
+              className="w-full h-12 bg-gradient-to-r from-green-600 to-green-600 hover:from-green-700 hover:to-green-700 text-white shadow-lg shadow-green-500/20 border-0 rounded-xl font-bold flex items-center justify-center disabled:opacity-50"
             >
-              <Save className="w-5 h-5 mr-2" />
-              Lưu thay đổi
+              {(uploadingImage || isSubmitting) ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+              {uploadingImage ? "Đang tải ảnh..." : isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
             <Button
               type="button"

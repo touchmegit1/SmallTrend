@@ -12,8 +12,6 @@ import {
   ChevronRight,
   Shield,
   Menu,
-  User,
-  Settings,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -22,6 +20,11 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const role = user?.role;
+  const normalizedRole = String(role || "").toUpperCase();
+  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "ROLE_ADMIN" || normalizedRole.includes("ADMIN");
+  const isManager = normalizedRole === "MANAGER" || normalizedRole === "ROLE_MANAGER" || normalizedRole.includes("MANAGER");
+  const canManageWorkforce = isAdmin || isManager;
 
   const toggleMenu = (label) => {
     setOpenMenus((prev) => ({
@@ -43,8 +46,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       children: [
         { label: "Giao diện bán hàng", path: "/pos" },
         { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Đơn hàng treo", path: "/pos/suspended" },
-        { label: "Giao ca", path: "/pos/shift-handover" },
+        { label: "Báo cáo doanh số", path: "/pos/suspended" },
+        { label: "Khiếu nại", path: "/pos/complain" },
       ],
     },
     {
@@ -79,6 +82,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         { label: "Danh sách khách hàng", path: "/crm/customer" },
         { label: "Khuyến Mãi", path: "/crm/event" },
         { label: "Kho quà tặng", path: "/crm/loyalty" },
+        { label: "Quản lý Quảng cáo", path: "/crm/ads" },
         { label: "Báo Cáo Thống Kê", path: "/crm/report" },
       ],
     },
@@ -86,31 +90,23 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       icon: Clock,
       label: "Nhân sự & Ca",
       path: "/hr",
-      children: [
-        { label: "Danh sách nhân viên", path: "/hr" },
-        { label: "Phân ca làm việc", path: "/hr/shifts" },
-        { label: "Chấm công", path: "/hr/attendance" },
-        { label: "Tính lương", path: "/hr/payroll" },
-      ],
-    },
-    {
-      icon: BarChart3,
-      label: "Báo cáo & AI",
-      path: "/reports",
-      children: [
-        { label: "Tạo báo cáo", path: "/reports/create" },
-        { label: "Quản lý báo cáo", path: "/reports/manage" },
-        { label: "AI dự báo", path: "/reports/ai-chat" },
-        { label: "Báo cáo doanh thu", path: "/reports/sales" },
-        { label: "Báo cáo kho", path: "/reports/inventory" },
-        { label: "Nhật ký kiểm toán", path: "/reports/audit-logs" },
-        { label: "Nhật ký hoạt động", path: "/reports/logs" },
-      ],
+      children: canManageWorkforce
+        ? [
+          { label: "Danh sách nhân viên", path: "/hr/workforce" },
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Phân ca làm việc", path: "/hr/shifts" },
+          { label: "Chấm công", path: "/hr/attendance" },
+          { label: "Tính lương", path: "/hr/payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ]
+        : [
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Chấm công", path: "/hr/my-attendance" },
+          { label: "Tính lương", path: "/hr/my-payroll" },
+          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+        ],
     },
   ];
-
-  // Admin menu - compatible with new DB role naming
-  const isAdmin = user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
 
   return (
     <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>
@@ -118,9 +114,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         <div
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
           onClick={() => {
-            const isAdminRole =
-              user && (user.role === "ADMIN" || user.role === "ROLE_ADMIN");
-            navigate(isAdminRole ? "/dashboard" : "/pos");
+            navigate("/crm/homepage");
           }}
           title="Về trang chính"
         >
@@ -133,7 +127,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
             </h1>
           )}
         </div>
-        
+
         {/* Collapse Button */}
         <button
           type="button"
@@ -204,28 +198,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   }
                 >
                   Quản lý người dùng
-                </NavLink>
-                <NavLink
-                  to="/admin/ticket-center"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Trung tâm Báo cáo
-                </NavLink>
-                <NavLink
-                  to="/admin/audit-logs"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Nhật ký Audit
                 </NavLink>
               </div>
             )}

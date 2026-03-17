@@ -29,7 +29,7 @@ function TransactionHistory() {
 
       // Lưu tất cả transactions hoàn thành vào database
       for (const transaction of savedTransactions) {
-        if (!transaction.savedToDb && transaction.status === "Hoàn thành") {
+        if (!transaction.savedToDb && !transaction.purchaseHistorySyncFailed && transaction.status === "Hoàn thành") {
           await savePurchaseHistory(transaction);
         }
       }
@@ -42,31 +42,74 @@ function TransactionHistory() {
     const items = transaction.cart || transaction.items || [];
     if (items.length === 0) return;
 
-    try {
-      const request = {
-        customerId: transaction.customer?.id || null,
-        customerName: transaction.customer?.name || null,
-        paymentMethod: transaction.payment,
-        items: items.map(item => ({
-          productId: item.productId || item.id || 0,
-          productName: item.name,
-          quantity: item.qty || item.quantity || 1,
-          price: item.price,
-          subtotal: item.price * (item.qty || item.quantity || 1)
-        }))
-      };
-
-      await api.post('/pos/purchase-history', request);
-
-      // Đánh dấu đã lưu
+    const updateTransactionSyncState = (patch) => {
       const updatedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       const index = updatedTransactions.findIndex(t => t.id === transaction.id);
       if (index !== -1) {
-        updatedTransactions[index].savedToDb = true;
+        updatedTransactions[index] = { ...updatedTransactions[index], ...patch };
         localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
         setTransactions(updatedTransactions);
       }
+    };
+
+    const markTransactionAsSaved = () => {
+      updateTransactionSyncState({ savedToDb: true, purchaseHistorySyncFailed: false });
+    };
+
+    const markTransactionAsSyncFailed = () => {
+      updateTransactionSyncState({ purchaseHistorySyncFailed: true });
+    };
+
+    try {
+      const validItems = items
+        .map(item => {
+          const productId = item.productId || item.id;
+          const numericProductId = Number(productId);
+          if (!Number.isInteger(numericProductId) || numericProductId <= 0) {
+            return null;
+          }
+
+          const quantity = Number(item.qty || item.quantity || 1);
+          const price = Number(item.price);
+          const subtotal = quantity * price;
+
+          if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0 || !Number.isFinite(subtotal) || subtotal < 0) {
+            return null;
+          }
+
+          return {
+            productId: numericProductId,
+            productName: item.name,
+            quantity,
+            price,
+            subtotal
+          };
+        })
+        .filter(Boolean);
+
+      if (validItems.length === 0) {
+        markTransactionAsSyncFailed();
+        return;
+      }
+
+      const customerId = Number(transaction.customer?.id);
+      const request = {
+        customerId: Number.isInteger(customerId) && customerId > 0 ? customerId : 0,
+        customerName: transaction.customer?.name || "Khách lẻ",
+        paymentMethod: transaction.payment,
+        items: validItems
+      };
+
+      await api.post('/pos/purchase-history', request);
+      markTransactionAsSaved();
     } catch (error) {
+      if (error?.response?.status === 409) {
+        markTransactionAsSaved();
+        return;
+      }
+      if (error?.response?.status === 400) {
+        markTransactionAsSyncFailed();
+      }
       console.error('Error saving purchase history:', error);
     }
   };
@@ -189,6 +232,7 @@ function TransactionHistory() {
 
     const oldTotal = parseInt((refundModal.total || '').toString().replace(/[^0-9]/g, '')) || 0;
     const newTotal = Math.max(0, oldTotal - refundAmount);
+    const totalRefundedAmount = Number(refundModal.refundedAmount || 0) + refundAmount;
 
     const updatedTransaction = {
       ...refundModal,
@@ -197,12 +241,14 @@ function TransactionHistory() {
       total: `${newTotal.toLocaleString()} đ`,
       quantity: `${newItems.reduce((s, it) => s + (it.qty || it.quantity || 1), 0)} món`,
       status: newItems.length === 0 ? 'Đã hoàn trả' : 'Hoàn thành',
+      refundedAmount: totalRefundedAmount,
       refundNote: `Hoàn trả ${refundAmount.toLocaleString()}đ lúc ${new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}`,
     };
 
     const updatedTransactions = transactions.map(t => t.id === refundModal.id ? updatedTransaction : t);
     setTransactions(updatedTransactions);
     localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    setSelectedTransaction(prev => (prev?.id === updatedTransaction.id ? updatedTransaction : prev));
     setRefundModal(null);
   };
 
@@ -224,10 +270,16 @@ function TransactionHistory() {
     if (!timeStr) return 0;
     const parts = timeStr.split(/[\s,]+/);
     if (parts.length >= 2) {
-      const dateParts = parts[0].split('/');
+      let dateString = parts[0];
+      let timeString = parts[1];
+      if (parts[1] && parts[1].includes('/')) {
+        dateString = parts[1];
+        timeString = parts[0];
+      }
+      const dateParts = dateString.split('/');
       if (dateParts.length === 3) {
         const [day, month, year] = dateParts;
-        const timeParts = parts[1].split(':');
+        const timeParts = timeString.split(':');
         const hour = timeParts[0] || '0';
         const min = timeParts[1] || '0';
         const sec = timeParts[2] || '0';

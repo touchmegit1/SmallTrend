@@ -13,7 +13,7 @@ export const useProductCombos = () => {
             setCombos(response.data);
             setError(null);
         } catch (err) {
-            setError(err.response?.data?.message || 'Có lỗi khi tải danh sách combo');
+            setError(err.response?.data?.message || 'Lỗi khi tải danh sách combo');
         } finally {
             setLoading(false);
         }
@@ -29,7 +29,7 @@ export const useProductCombos = () => {
             await fetchCombos();
             return response.data;
         } catch (err) {
-            throw new Error(err.response?.data?.message || 'Có lỗi khi tạo combo');
+            throw new Error(err.response?.data?.message || 'Lỗi khi tạo combo');
         }
     };
 
@@ -39,7 +39,7 @@ export const useProductCombos = () => {
             await fetchCombos();
             return response.data;
         } catch (err) {
-            throw new Error(err.response?.data?.message || 'Có lỗi khi cập nhật combo');
+            throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật combo');
         }
     };
 
@@ -48,7 +48,7 @@ export const useProductCombos = () => {
             await axios.delete(`/product-combos/${id}`);
             await fetchCombos();
         } catch (err) {
-            throw new Error(err.response?.data?.message || 'Có lỗi khi xóa combo');
+            throw new Error(err.response?.data?.message || 'Lỗi khi xóa combo');
         }
     };
 
@@ -57,7 +57,7 @@ export const useProductCombos = () => {
             await axios.put(`/product-combos/${id}/toggle-status`);
             await fetchCombos();
         } catch (err) {
-            throw new Error(err.response?.data?.message || 'Có lỗi khi cập nhật trạng thái');
+            throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
         }
     };
 

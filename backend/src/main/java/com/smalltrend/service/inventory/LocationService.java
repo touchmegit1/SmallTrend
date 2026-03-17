@@ -6,18 +6,26 @@ import com.smalltrend.dto.inventory.location.LocationStockItemResponse;
 import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.Location;
 import com.smalltrend.entity.StockMovement;
+import com.smalltrend.repository.DisposalVoucherRepository;
+import com.smalltrend.repository.InventoryCountRepository;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.LocationRepository;
+import com.smalltrend.repository.PurchaseOrderRepository;
 import com.smalltrend.repository.StockMovementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.smalltrend.exception.LocationException.conflict;
+import static com.smalltrend.exception.LocationException.invalidRequest;
+import static com.smalltrend.exception.LocationException.notFound;
 
 @Service
 @RequiredArgsConstructor
@@ -26,129 +34,133 @@ public class LocationService {
     private final LocationRepository locationRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final StockMovementRepository stockMovementRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
+    private final InventoryCountRepository inventoryCountRepository;
+    private final DisposalVoucherRepository disposalVoucherRepository;
+    private final InventoryOutOfStockNotificationService outOfStockNotificationService;
 
-    // ─── GET ALL (with stock info) ──────────────────────────
     public List<FullLocationResponse> getAllLocations() {
         return locationRepository.findAll().stream()
-                .map(loc -> toResponseWithStock(loc))
+                .map(this::toResponseWithStock)
                 .collect(Collectors.toList());
     }
 
-    // ─── GET ACTIVE LOCATIONS ONLY (for dropdowns) ──────────
     public List<FullLocationResponse> getActiveLocations() {
-        return locationRepository.findAll().stream()
-                .filter(loc -> loc.getStatus() == null || "ACTIVE".equals(loc.getStatus()))
-                .map(loc -> toResponseWithStock(loc))
+        return locationRepository.findByStatus("ACTIVE").stream()
+                .map(this::toResponseWithStock)
                 .collect(Collectors.toList());
     }
 
-    // ─── GET BY ID (with stock details) ─────────────────────
     public FullLocationResponse getLocationById(Integer id) {
-        Location loc = locationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Location not found: " + id));
-        return toResponseWithStock(loc);
+        return toResponseWithStock(getLocationOrThrow(id));
     }
 
-    // ─── GET STOCK ITEMS AT LOCATION ────────────────────────
     public List<LocationStockItemResponse> getLocationStockItems(Integer locationId) {
-        if (!locationRepository.existsById(locationId)) {
-            throw new RuntimeException("Location not found: " + locationId);
-        }
-        List<InventoryStock> stocks = inventoryStockRepository.findByLocationIdWithProduct(locationId);
-        return stocks.stream()
+        getLocationOrThrow(locationId);
+        return inventoryStockRepository.findByLocationIdWithProduct(locationId).stream()
                 .map(this::toStockItemResponse)
                 .collect(Collectors.toList());
     }
 
-    // ─── CREATE ──────────────────────────────────────────
     @Transactional
     public FullLocationResponse createLocation(LocationRequest request) {
+        String locationName = normalizeRequired(request.getLocationName(), "Tên vị trí không được để trống");
+        String locationCode = normalizeRequired(request.getLocationCode(), "Mã vị trí không được để trống");
+        String locationType = normalizeLocationType(
+                normalizeRequired(request.getLocationType(), "Loại vị trí không được để trống")
+        );
+
+        if (locationRepository.existsByLocationCodeIgnoreCase(locationCode)) {
+            throw conflict("Mã vị trí đã tồn tại");
+        }
+
         Location loc = Location.builder()
-                .name(request.getLocationName())
-                .locationCode(request.getLocationCode())
-                .warehouseType(request.getLocationType())
-                .address(request.getAddress())
+                .name(locationName)
+                .locationCode(locationCode)
+                .warehouseType(locationType)
+                .address(normalizeNullable(request.getAddress()))
                 .capacity(request.getCapacity() != null ? request.getCapacity() : 0)
-                .description(request.getDescription())
+                .description(normalizeNullable(request.getDescription()))
                 .status("ACTIVE")
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        Location saved = locationRepository.save(loc);
-        return toResponseWithStock(saved);
+        return toResponseWithStock(locationRepository.save(loc));
     }
 
-    // ─── UPDATE ──────────────────────────────────────────
     @Transactional
     public FullLocationResponse updateLocation(Integer id, LocationRequest request) {
-        Location loc = locationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Location not found: " + id));
+        Location loc = getLocationOrThrow(id);
 
-        if (request.getLocationName() != null) loc.setName(request.getLocationName());
-        if (request.getLocationCode() != null) loc.setLocationCode(request.getLocationCode());
-        if (request.getLocationType() != null) loc.setWarehouseType(request.getLocationType());
-        if (request.getAddress() != null) loc.setAddress(request.getAddress());
-        if (request.getCapacity() != null) loc.setCapacity(request.getCapacity());
-        if (request.getDescription() != null) loc.setDescription(request.getDescription());
+        String locationName = normalizeRequired(request.getLocationName(), "Tên vị trí không được để trống");
 
-        Location saved = locationRepository.save(loc);
-        return toResponseWithStock(saved);
+        loc.setName(locationName);
+        loc.setAddress(normalizeNullable(request.getAddress()));
+        loc.setCapacity(request.getCapacity() != null ? request.getCapacity() : 0);
+        loc.setDescription(normalizeNullable(request.getDescription()));
+
+        return toResponseWithStock(locationRepository.save(loc));
     }
 
-    // ─── DELETE ──────────────────────────────────────────
     @Transactional
     public void deleteLocation(Integer id) {
-        if (!locationRepository.existsById(id)) {
-            throw new RuntimeException("Location not found: " + id);
+        getLocationOrThrow(id);
+
+        if (inventoryStockRepository.existsByLocationIdAndQuantityGreaterThan(id, 0)) {
+            throw conflict("Không thể xóa vị trí đang còn tồn kho");
         }
+        if (purchaseOrderRepository.existsByLocationId(id)
+                || inventoryCountRepository.existsByLocationId(id)
+                || disposalVoucherRepository.existsByLocationId(id)) {
+            throw conflict("Không thể xóa vị trí đang được tham chiếu trong nghiệp vụ");
+        }
+
         locationRepository.deleteById(id);
     }
 
-    // ─── TRANSFER STOCK ────────────────────────────────────
     @Transactional
     public void transferStock(Integer fromLocationId, Integer toLocationId,
                               Integer variantId, Integer batchId, int qty) {
+        if (fromLocationId == null || toLocationId == null || variantId == null || batchId == null) {
+            throw invalidRequest("Thiếu thông tin chuyển hàng");
+        }
         if (fromLocationId.equals(toLocationId)) {
-            throw new RuntimeException("Vị trí nguồn và đích không được trùng nhau.");
+            throw invalidRequest("Vị trí nguồn và đích không được trùng nhau.");
         }
         if (qty <= 0) {
-            throw new RuntimeException("Số lượng chuyển phải lớn hơn 0.");
+            throw invalidRequest("Số lượng chuyển phải lớn hơn 0.");
         }
 
-        Location fromLoc = locationRepository.findById(fromLocationId)
-                .orElseThrow(() -> new RuntimeException("Vị trí nguồn không tồn tại."));
-        Location toLoc = locationRepository.findById(toLocationId)
-                .orElseThrow(() -> new RuntimeException("Vị trí đích không tồn tại."));
+        Location fromLoc = getLocationOrThrow(fromLocationId);
+        Location toLoc = getLocationOrThrow(toLocationId);
 
-        // Tìm stock nguồn
-        Optional<InventoryStock> fromStockOpt = inventoryStockRepository
-                .findByVariantIdAndBatchIdAndLocationId(variantId, batchId, fromLocationId);
-        if (fromStockOpt.isEmpty()) {
-            throw new RuntimeException("Không tìm thấy hàng hóa tại vị trí nguồn.");
-        }
-        InventoryStock fromStock = fromStockOpt.get();
+        InventoryStock fromStock = inventoryStockRepository
+                .findByVariantIdAndBatchIdAndLocationId(variantId, batchId, fromLocationId)
+                .orElseThrow(() -> conflict("Không tìm thấy hàng hóa tại vị trí nguồn."));
+
         int available = fromStock.getQuantity() != null ? fromStock.getQuantity() : 0;
         if (qty > available) {
-            throw new RuntimeException(
-                    "Số lượng chuyển (" + qty + ") vượt quá tồn kho hiện có (" + available + ").");
+            throw conflict("Số lượng chuyển (" + qty + ") vượt quá tồn kho hiện có (" + available + ").");
         }
 
-        // Trừ tồn kho nguồn
         int remaining = available - qty;
         if (remaining == 0) {
+            outOfStockNotificationService.handleStockTransition(fromStock, available, 0, "TRANSFER_OUT");
             inventoryStockRepository.delete(fromStock);
         } else {
             fromStock.setQuantity(remaining);
-            inventoryStockRepository.save(fromStock);
+            InventoryStock savedFromStock = inventoryStockRepository.save(fromStock);
+            outOfStockNotificationService.handleStockTransition(savedFromStock, available, savedFromStock.getQuantity(), "TRANSFER_OUT");
         }
 
-        // Cộng tồn kho đích (merge nếu đã có record)
         Optional<InventoryStock> toStockOpt = inventoryStockRepository
                 .findByVariantIdAndBatchIdAndLocationId(variantId, batchId, toLocationId);
         if (toStockOpt.isPresent()) {
             InventoryStock toStock = toStockOpt.get();
-            toStock.setQuantity((toStock.getQuantity() != null ? toStock.getQuantity() : 0) + qty);
-            inventoryStockRepository.save(toStock);
+            int oldToQty = toStock.getQuantity() != null ? toStock.getQuantity() : 0;
+            toStock.setQuantity(oldToQty + qty);
+            InventoryStock savedToStock = inventoryStockRepository.save(toStock);
+            outOfStockNotificationService.handleStockTransition(savedToStock, oldToQty, savedToStock.getQuantity(), "TRANSFER_IN");
         } else {
             InventoryStock newStock = InventoryStock.builder()
                     .variant(fromStock.getVariant())
@@ -156,10 +168,10 @@ public class LocationService {
                     .location(toLoc)
                     .quantity(qty)
                     .build();
-            inventoryStockRepository.save(newStock);
+            InventoryStock savedNewStock = inventoryStockRepository.save(newStock);
+            outOfStockNotificationService.handleStockTransition(savedNewStock, 0, savedNewStock.getQuantity(), "TRANSFER_IN");
         }
 
-        // Ghi StockMovement OUT (từ nguồn)
         stockMovementRepository.save(StockMovement.builder()
                 .variant(fromStock.getVariant())
                 .batch(fromStock.getBatch())
@@ -170,7 +182,6 @@ public class LocationService {
                 .notes("Chuyển " + qty + " sang " + toLoc.getName())
                 .build());
 
-        // Ghi StockMovement IN (tới đích)
         stockMovementRepository.save(StockMovement.builder()
                 .variant(fromStock.getVariant())
                 .batch(fromStock.getBatch())
@@ -182,46 +193,30 @@ public class LocationService {
                 .build());
     }
 
-    // ─── TOGGLE STATUS (ACTIVE ↔ INACTIVE) ──────────────
-    @Transactional
-    public FullLocationResponse toggleLocationStatus(Integer id) {
-        Location loc = locationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Location not found: " + id));
-
-        // null status coi như ACTIVE
-        boolean isActive = loc.getStatus() == null || "ACTIVE".equals(loc.getStatus());
-
-        if (isActive) {
-            // Check if inventory is 0 before deactivating
-            List<InventoryStock> stocks;
-            try {
-                stocks = inventoryStockRepository.findByLocationIdWithProduct(id);
-            } catch (Exception e) {
-                stocks = new ArrayList<>();
-            }
-            int totalQty = stocks.stream()
-                    .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0)
-                    .sum();
-            if (totalQty > 0) {
-                throw new RuntimeException("Vui lòng chuyển hết hàng hóa sang vị trí khác trước khi đóng vị trí này");
-            }
-            loc.setStatus("INACTIVE");
-        } else {
-            loc.setStatus("ACTIVE");
-        }
-
-        Location saved = locationRepository.save(loc);
-        return toResponseWithStock(saved);
+    private Location getLocationOrThrow(Integer id) {
+        return locationRepository.findById(id).orElseThrow(() -> notFound(id));
     }
 
-    // ─── Mapper: Location → Response WITH stock info ────────
-    private FullLocationResponse toResponseWithStock(Location loc) {
-        List<InventoryStock> stocks;
-        try {
-            stocks = inventoryStockRepository.findByLocationIdWithProduct(loc.getId());
-        } catch (Exception e) {
-            stocks = new ArrayList<>();
+    private String normalizeRequired(String value, String message) {
+        String normalized = normalizeNullable(value);
+        if (normalized == null || normalized.isBlank()) {
+            throw invalidRequest(message);
         }
+        return normalized;
+    }
+
+    private String normalizeLocationType(String value) {
+        return "SHELF".equalsIgnoreCase(value) ? "DISPLAY" : value;
+    }
+
+    private String normalizeNullable(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private FullLocationResponse toResponseWithStock(Location loc) {
+        List<InventoryStock> stocks = inventoryStockRepository.findByLocationIdWithProduct(loc.getId());
 
         int totalProducts = stocks.stream()
                 .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0)
@@ -246,8 +241,22 @@ public class LocationService {
                 .build();
     }
 
-    // ─── Mapper: InventoryStock → StockItemResponse ─────────
     private LocationStockItemResponse toStockItemResponse(InventoryStock stock) {
+        LocalDate expiryDate = stock.getBatch() != null ? stock.getBatch().getExpiryDate() : null;
+        Integer daysUntilExpiry = null;
+        String warningStatus = null;
+
+        if (expiryDate != null) {
+            daysUntilExpiry = (int) ChronoUnit.DAYS.between(LocalDate.now(), expiryDate);
+            if (daysUntilExpiry < 0) {
+                warningStatus = "EXPIRED";
+            } else if (daysUntilExpiry <= 7) {
+                warningStatus = "EXPIRING_CRITICAL";
+            } else if (daysUntilExpiry <= 30) {
+                warningStatus = "EXPIRING_WARNING";
+            }
+        }
+
         return LocationStockItemResponse.builder()
                 .variantId(stock.getVariant() != null ? stock.getVariant().getId() : null)
                 .sku(stock.getVariant() != null ? stock.getVariant().getSku() : "")
@@ -258,6 +267,9 @@ public class LocationService {
                 .quantity(stock.getQuantity() != null ? stock.getQuantity() : 0)
                 .batchCode(stock.getBatch() != null ? stock.getBatch().getBatchNumber() : "")
                 .batchId(stock.getBatch() != null ? stock.getBatch().getId() : null)
+                .expiryDate(expiryDate != null ? expiryDate.toString() : null)
+                .daysUntilExpiry(daysUntilExpiry)
+                .warningStatus(warningStatus)
                 .build();
     }
 }

@@ -2,8 +2,8 @@ package com.smalltrend.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,12 +17,16 @@ import java.security.MessageDigest;
 import java.util.Map;
 import java.util.UUID;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class CloudinaryService {
 
+    private static final Logger log = LoggerFactory.getLogger(CloudinaryService.class);
+
     private final Cloudinary cloudinary;
+
+    public CloudinaryService(Cloudinary cloudinary) {
+        this.cloudinary = cloudinary;
+    }
 
     /**
      * Upload a MultipartFile (e.g. images) to Cloudinary.
@@ -30,6 +34,7 @@ public class CloudinaryService {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> uploadFile(MultipartFile file, String folder) {
+        validateCloudinaryConfig();
         try {
             Map<String, Object> uploadResult = cloudinary.uploader().upload(
                 file.getBytes(),
@@ -138,6 +143,20 @@ public class CloudinaryService {
         } catch (Exception e) {
             log.error("Failed to download file bytes from Cloudinary: {}", storedUrl, e);
             throw new RuntimeException("Could not download report file", e);
+        }
+    }
+
+    private void validateCloudinaryConfig() {
+        String cloudName = cloudinary.config.cloudName;
+        String apiKey = cloudinary.config.apiKey;
+        String apiSecret = cloudinary.config.apiSecret;
+
+        boolean invalidCloudName = cloudName == null || cloudName.isBlank() || "your_cloud_name".equals(cloudName);
+        boolean invalidApiKey = apiKey == null || apiKey.isBlank() || "your_api_key".equals(apiKey);
+        boolean invalidApiSecret = apiSecret == null || apiSecret.isBlank() || "your_api_secret".equals(apiSecret);
+
+        if (invalidCloudName || invalidApiKey || invalidApiSecret) {
+            throw new IllegalStateException("Cloudinary is not configured correctly. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in backend .env");
         }
     }
 

@@ -25,13 +25,19 @@ export function usePurchaseOrderList() {
     fetchData();
   }, []);
 
-  const filteredOrders = purchaseOrders.filter((record) => {
-    const query = searchQuery.toLowerCase();
-    if (!query) return true;
-    const poNumber = (record.order_number || "").toLowerCase();
-    const supplierName = (record.supplier_name || "").toLowerCase();
-    return poNumber.includes(query) || supplierName.includes(query);
-  });
+  const filteredOrders = purchaseOrders
+    .filter((record) => {
+      const query = searchQuery.toLowerCase();
+      if (!query) return true;
+      const poNumber = (record.order_number || "").toLowerCase();
+      const supplierName = (record.supplier_name || "").toLowerCase();
+      return poNumber.includes(query) || supplierName.includes(query);
+    })
+    .sort((a, b) => {
+      const aNumber = a.order_number || "";
+      const bNumber = b.order_number || "";
+      return bNumber.localeCompare(aNumber, undefined, { numeric: true });
+    });
 
   return { suppliers, filteredOrders, loading, searchQuery, setSearchQuery };
 }

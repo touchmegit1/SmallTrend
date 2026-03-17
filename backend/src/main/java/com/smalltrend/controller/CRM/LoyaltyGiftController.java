@@ -3,6 +3,7 @@ package com.smalltrend.controller.CRM;
 import com.smalltrend.dto.CRM.CreateLoyaltyGiftRequest;
 import com.smalltrend.dto.CRM.LoyaltyGiftResponse;
 import com.smalltrend.dto.CRM.RedeemGiftRequest;
+import com.smalltrend.dto.CRM.UpdateLoyaltyGiftRequest;
 import com.smalltrend.service.CRM.LoyaltyGiftService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/crm/loyalty-gifts")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class LoyaltyGiftController {
 
     private final LoyaltyGiftService loyaltyGiftService;
@@ -36,6 +36,23 @@ public class LoyaltyGiftController {
             error.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateGift(@PathVariable Integer id, @RequestBody UpdateLoyaltyGiftRequest request) {
+        try {
+            LoyaltyGiftResponse gift = loyaltyGiftService.updateGift(id, request);
+            return ResponseEntity.ok(gift);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+    @PostMapping("/{id}/update")
+    public ResponseEntity<?> updateGiftViaPost(@PathVariable Integer id, @RequestBody UpdateLoyaltyGiftRequest request) {
+        return updateGift(id, request);
     }
 
     @DeleteMapping("/{id}")

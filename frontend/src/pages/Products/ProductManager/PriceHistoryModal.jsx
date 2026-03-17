@@ -13,10 +13,42 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
     }
   }, [isOpen, variant?.id]);
 
+  const toDateOnly = (dateStr) => {
+    if (!dateStr) return null;
+    const normalized = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    const d = new Date(normalized);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const isExpiredActivePrice = (price) => {
+    if (price?.status !== 'ACTIVE' || !price?.expiryDate) return false;
+
+    const expiryDate = toDateOnly(price.expiryDate);
+    if (!expiryDate) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return expiryDate <= today;
+  };
+
+  // Tải lịch sử giá; nếu phát hiện giá ACTIVE đã hết hạn thì tự chuyển trạng thái rồi tải lại.
   const fetchHistory = async () => {
     setLoading(true);
     try {
       const data = await getVariantPriceHistory(variant.id);
+
+      const expiredActivePrices = data.filter(isExpiredActivePrice);
+      if (expiredActivePrices.length > 0) {
+        await Promise.all(expiredActivePrices.map((price) => toggleVariantPriceStatus(price.id)));
+        const refreshedData = await getVariantPriceHistory(variant.id);
+        setPrices(refreshedData);
+        onStatusChanged && onStatusChanged();
+        return;
+      }
+
       setPrices(data);
     } catch (err) {
       console.error('Error fetching price history:', err);
@@ -92,8 +124,9 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
                   <th className="px-4 py-3 text-right font-semibold text-gray-600">Giá bán</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-600">Thuế (%)</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày hiệu lực</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Trạng thái</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày tạo</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Ngày hết hiệu lực</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Trạng thái</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-600">Thao tác</th>
                 </tr>
               </thead>
@@ -112,6 +145,10 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
                     </td>
                     <td className="px-4 py-3 text-right">{price.taxPercent ?? 0}%</td>
                     <td className="px-4 py-3 text-center">{formatDate(price.effectiveDate)}</td>
+                    <td className="px-4 py-3 text-center text-gray-400 text-xs">
+                      {formatDate(price.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 text-center">{formatDate(price.expiryDate)}</td>
                     <td className="px-4 py-3 text-center">
                       {price.status === 'ACTIVE' ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
@@ -122,9 +159,6 @@ const PriceHistoryModal = ({ isOpen, onClose, variant, onStatusChanged }) => {
                           <XCircle size={12} /> Đã tắt kích hoạt
                         </span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-center text-gray-400 text-xs">
-                      {formatDate(price.createdAt)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button

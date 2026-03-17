@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Save, Plus, Search, Image as ImageIcon, Upload } from "lucide-react";
+import { X, Save, Plus, Search, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
@@ -8,7 +8,7 @@ import axios from "../../../config/axiosConfig";
 
 // Modal Popup dùng chung để sửa thông tin của một Combo đã tồn tại
 // Nhận vào state combo được chọn từ component cha và gọi hàm onSave khi hoàn thành
-const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
+const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     comboName: "",
     description: "",
@@ -19,6 +19,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   const [availableVariants, setAvailableVariants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showVariantPicker, setShowVariantPicker] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Thêm state upload image
   const [imageFile, setImageFile] = useState(null);
@@ -70,6 +71,7 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   }, [isOpen]);
 
   const addVariant = (variant) => {
+    setErrorMsg("");
     const existing = selectedVariants.find((v) => v.id === variant.id);
     if (existing) {
       setSelectedVariants(
@@ -85,11 +87,13 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
   };
 
   const removeVariant = (variantId) => {
+    setErrorMsg("");
     setSelectedVariants(selectedVariants.filter((v) => v.id !== variantId));
   };
 
   const updateQuantity = (variantId, quantity) => {
     if (quantity < 1) return;
+    setErrorMsg("");
     setSelectedVariants(
       selectedVariants.map((v) => (v.id === variantId ? { ...v, quantity } : v))
     );
@@ -153,23 +157,73 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
     }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Hàm cập nhật state nội bộ khi người dùng gõ vào form chỉnh sửa
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setErrorMsg("");
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
   };
 
+  const validateForm = () => {
+    const normalizedName = (formData.comboName || "").trim();
+    const parsedComboPrice = Number(formData.comboPrice);
+
+    if (!normalizedName) {
+      return "Vui lòng nhập tên combo";
+    }
+
+    if (!Number.isFinite(parsedComboPrice) || parsedComboPrice <= 0) {
+      return "Giá combo phải lớn hơn 0";
+    }
+
+    if (selectedVariants.length === 0) {
+      return "Vui lòng chọn ít nhất 1 sản phẩm";
+    }
+
+    const seen = new Set();
+    for (const variant of selectedVariants) {
+      if (!variant?.id) {
+        return "Sản phẩm trong combo không hợp lệ";
+      }
+      if (variant.quantity < 1) {
+        return "Số lượng sản phẩm trong combo phải lớn hơn 0";
+      }
+      if (seen.has(variant.id)) {
+        return "Không được thêm trùng sản phẩm trong combo";
+      }
+      seen.add(variant.id);
+    }
+
+    const duplicateName = combos.some(
+      (item) => item.id !== combo?.id
+        && (item.comboName || "").trim().toLowerCase() === normalizedName.toLowerCase(),
+    );
+
+    if (duplicateName) {
+      return "Tên combo đã tồn tại";
+    }
+
+    return null;
+  };
+
   // Hàm chặn submit mặc định và đẩy dữ liệu chỉnh sửa lên component cha
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedVariants.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 sản phẩm!");
+    if (isSubmitting) return;
+    setErrorMsg("");
+
+    const validationError = validateForm();
+    if (validationError) {
+      setErrorMsg(validationError);
       return;
     }
 
+    setIsSubmitting(true);
     try {
       let imageUrl = imagePreview;
       if (imageFile) {
@@ -181,9 +235,10 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
         quantity: v.quantity,
       }));
 
-      onSave({
+      await onSave({
         ...combo,
         ...formData,
+        comboName: formData.comboName.trim(),
         imageUrl: imageUrl || null,
         comboPrice: Number(formData.comboPrice),
         originalPrice: totalPrice,
@@ -191,7 +246,9 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
       });
     } catch (error) {
       console.error("Error saving combo:", error);
-      alert("Có lỗi xảy ra khi xử lý ảnh");
+      setErrorMsg(error.message || "Có lỗi xảy ra khi lưu combo");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -226,6 +283,11 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {errorMsg && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-medium">
+              {errorMsg}
+            </div>
+          )}
           <div>
             <Label className="text-sm font-semibold text-gray-700">
               Tên Combo <span className="text-red-500">*</span>
@@ -268,6 +330,8 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
               <Input
                 className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 type="number"
+                min="0.01"
+                step="0.01"
                 placeholder="0"
                 name="comboPrice"
                 value={formData.comboPrice}
@@ -414,17 +478,26 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
                     className="w-full h-full object-contain rounded-2xl bg-white"
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 rounded-2xl backdrop-blur-[1px]" />
+
+                  {uploadingImage && (
+                    <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                      <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={removeImage}
-                    className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl"
+                    disabled={uploadingImage || isSubmitting}
+                    className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <X className="w-5 h-5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-4 right-4 bg-white hover:bg-slate-50 text-gray-800 rounded-xl px-4 py-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center gap-2"
+                    disabled={uploadingImage || isSubmitting}
+                    className="absolute bottom-4 right-4 bg-white hover:bg-slate-50 text-gray-800 rounded-xl px-4 py-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Upload className="w-4 h-4 text-blue-600" />
                     Tìm file khác
@@ -434,9 +507,9 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => !(uploadingImage || isSubmitting) && fileInputRef.current?.click()}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if ((e.key === 'Enter' || e.key === ' ') && !(uploadingImage || isSubmitting)) {
                       e.preventDefault();
                       fileInputRef.current?.click();
                     }
@@ -444,11 +517,17 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer bg-white ${isDragging
+                  className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all bg-white ${(uploadingImage || isSubmitting) ? 'cursor-wait opacity-80' : 'cursor-pointer'} ${isDragging
                     ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50/70 scale-[1.02]'
                     : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'
                     }`}
                 >
+                  {uploadingImage && (
+                    <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                      <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                    </div>
+                  )}
                   <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4 shadow-sm border border-slate-200">
                     <ImageIcon className="w-10 h-10 text-slate-400" />
                   </div>
@@ -463,11 +542,11 @@ const EditComboModal = ({ combo, isOpen, onClose, onSave }) => {
           <div className="flex gap-3 pt-4">
             <Button
               type="submit"
-              disabled={uploadingImage}
+              disabled={uploadingImage || isSubmitting}
               className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold disabled:opacity-50"
             >
-              <Save className="w-5 h-5 mr-2" />
-              {uploadingImage ? "Đang xử lý..." : "Lưu thay đổi"}
+              {(uploadingImage || isSubmitting) ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+              {uploadingImage ? "Đang tải ảnh..." : isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
             <Button
               type="button"

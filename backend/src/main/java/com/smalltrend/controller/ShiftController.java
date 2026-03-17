@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.List;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -30,7 +29,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/shifts")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"})
 public class ShiftController {
 
     private final WorkShiftService workShiftService;
@@ -54,16 +52,16 @@ public class ShiftController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> listShifts(
-            @RequestParam(required = false) String query,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false, defaultValue = "false") boolean includeExpired) {
+            @RequestParam(value = "query", required = false) String query,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "includeExpired", required = false, defaultValue = "false") boolean includeExpired) {
         List<WorkShiftResponse> shifts = workShiftService.listShifts(query, status, includeExpired);
         return ResponseEntity.ok(shifts);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
-    public ResponseEntity<?> getShift(@PathVariable Integer id) {
+    public ResponseEntity<?> getShift(@PathVariable("id") Integer id) {
         List<String> errors = validator.validateId(id, "Shift id");
         if (validator.hasErrors(errors)) {
             return ResponseEntity.badRequest()
@@ -75,8 +73,8 @@ public class ShiftController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<?> updateShift(@PathVariable Integer id, @Valid @RequestBody WorkShiftRequest request) {
-        List<String> errors = new ArrayList<>(validator.validateId(id, "Shift id"));
+    public ResponseEntity<?> updateShift(@PathVariable("id") Integer id, @Valid @RequestBody WorkShiftRequest request) {
+        List<String> errors = validator.validateId(id, "Shift id");
         errors.addAll(validator.validateShift(request));
         if (validator.hasErrors(errors)) {
             return ResponseEntity.badRequest()
@@ -89,7 +87,7 @@ public class ShiftController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<?> deleteShift(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteShift(@PathVariable("id") Integer id) {
         List<String> errors = validator.validateId(id, "Shift id");
         if (validator.hasErrors(errors)) {
             return ResponseEntity.badRequest()
@@ -116,8 +114,8 @@ public class ShiftController {
     public ResponseEntity<?> listAssignments(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Integer userId,
-            @RequestParam(required = false) Integer shiftId) {
+            @RequestParam(value = "userId", required = false) Integer userId,
+            @RequestParam(value = "shiftId", required = false) Integer shiftId) {
         List<String> errors = validator.validateDateRange(startDate, endDate);
         if (validator.hasErrors(errors)) {
             return ResponseEntity.badRequest()
@@ -130,7 +128,7 @@ public class ShiftController {
 
     @GetMapping("/assignments/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
-    public ResponseEntity<?> getAssignment(@PathVariable Integer id) {
+    public ResponseEntity<?> getAssignment(@PathVariable("id") Integer id) {
         List<String> errors = validator.validateId(id, "Assignment id");
         if (validator.hasErrors(errors)) {
             return ResponseEntity.badRequest()
@@ -143,7 +141,7 @@ public class ShiftController {
     @PutMapping("/assignments/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<?> updateAssignment(
-            @PathVariable Integer id,
+            @PathVariable("id") Integer id,
             @Valid @RequestBody ShiftAssignmentRequest request) {
         List<String> errors = validator.validateId(id, "Assignment id");
         errors.addAll(validator.validateAssignment(request));
@@ -157,7 +155,7 @@ public class ShiftController {
 
     @DeleteMapping("/assignments/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<?> deleteAssignment(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer id) {
         List<String> errors = validator.validateId(id, "Assignment id");
         if (validator.hasErrors(errors)) {
             return ResponseEntity.badRequest()
@@ -177,11 +175,11 @@ public class ShiftController {
     @GetMapping("/attendance")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> listAttendance(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Integer userId,
-            @RequestParam(required = false) String status) {
+            @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(value = "userId", required = false) Integer userId,
+            @RequestParam(value = "status", required = false) String status) {
         List<AttendanceResponse> responses = workforceService.listAttendance(date, startDate, endDate, userId, status);
         return ResponseEntity.ok(responses);
     }
@@ -196,11 +194,11 @@ public class ShiftController {
     @GetMapping("/payroll/summary")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> payrollSummary(
-            @RequestParam(required = false) String month,
-            @RequestParam(required = false) String fromMonth,
-            @RequestParam(required = false) String toMonth,
-            @RequestParam(required = false) Integer userId,
-            @RequestParam(required = false) BigDecimal hourlyRate) {
+            @RequestParam(value = "month", required = false) String month,
+            @RequestParam(value = "fromMonth", required = false) String fromMonth,
+            @RequestParam(value = "toMonth", required = false) String toMonth,
+            @RequestParam(value = "userId", required = false) Integer userId,
+            @RequestParam(value = "hourlyRate", required = false) BigDecimal hourlyRate) {
         PayrollSummaryResponse response = workforceService.buildPayrollSummary(month, fromMonth, toMonth, userId,
                 hourlyRate);
         return ResponseEntity.ok(response);
@@ -209,8 +207,8 @@ public class ShiftController {
     @PostMapping("/payroll/mark-paid")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<?> markPayrollAsPaid(
-            @RequestParam String month,
-            @RequestParam(required = false) Integer userId) {
+            @RequestParam("month") String month,
+            @RequestParam(value = "userId", required = false) Integer userId) {
         String message = workforceService.markPayrollAsPaid(month, userId);
         return ResponseEntity.ok(new MessageResponse(message));
     }
@@ -218,12 +216,12 @@ public class ShiftController {
     @GetMapping("/workforce/dashboard")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> workforceDashboard(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) Integer userId,
-            @RequestParam(required = false) String month,
-            @RequestParam(required = false) String fromMonth,
-            @RequestParam(required = false) String toMonth,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate paymentDueDate) {
+            @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(value = "userId", required = false) Integer userId,
+            @RequestParam(value = "month", required = false) String month,
+            @RequestParam(value = "fromMonth", required = false) String fromMonth,
+            @RequestParam(value = "toMonth", required = false) String toMonth,
+            @RequestParam(value = "paymentDueDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate paymentDueDate) {
         LocalDate targetDate = date != null ? date : LocalDate.now();
         List<AttendanceResponse> attendanceRows = workforceService.listAttendance(targetDate, targetDate, targetDate,
                 userId, "ALL");

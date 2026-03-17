@@ -13,6 +13,8 @@ import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.UnitConversionRepository;
 import com.smalltrend.repository.UnitRepository;
+import com.smalltrend.service.products.ProductVariantService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,7 +87,8 @@ public class UnitConversionService {
         String autoSku = productVariantService.generateSkuForConversion(
                 baseVariant, toUnit, request.getConversionFactor());
 
-        // Tạo variant mới với đơn vị đích (khởi tạo map rỗng để Hibernate quản lý dưới dạng PersistentMap)
+        // Tạo variant mới với đơn vị đích.
+        // Copy attributes từ base variant (mỗi variant có variant_id riêng nên không xung đột key).
         ProductVariant packagingVariant = ProductVariant.builder()
                 .product(product)
                 .sku(autoSku)
@@ -93,21 +96,18 @@ public class UnitConversionService {
                 .sellPrice(request.getSellPrice())
                 .isActive(baseVariant.isActive())
                 .imageUrl(baseVariant.getImageUrl()) // Kế thừa ảnh từ variant gốc
-                .attributes(new java.util.HashMap<>()) // QUAN TRỌNG: tránh duplicate entry
+                .attributes(baseVariant.getAttributes() != null
+                        ? new java.util.HashMap<>(baseVariant.getAttributes())
+                        : new java.util.HashMap<>())
                 .build();
 
-        ProductVariant savedVariant = productVariantRepository.saveAndFlush(packagingVariant);
+        ProductVariant savedVariant = productVariantRepository.saveAndFlush(packagingVariant); // cần id ngay để sinh barcode
 
-        // ─── 3. Sinh barcode nội bộ & gán thuộc tính ──────
+
+        // ─── 3. Sinh barcode nội bộ ──────
         String autoBarcode = productVariantService.generateInternalBarcodeForPackaging(
                 product.getId(), savedVariant.getId());
         savedVariant.setBarcode(autoBarcode);
-        productVariantRepository.save(savedVariant);
-
-        // Gán thuộc tính bằng putAll để cập nhật PersistentMap, tránh lỗi Hibernate cố gắng Insert lại collection
-        if (baseVariant.getAttributes() != null && !baseVariant.getAttributes().isEmpty()) {
-            savedVariant.getAttributes().putAll(baseVariant.getAttributes());
-        }
 
         // ─── 3.1. Chia sẻ tồn kho từ base variant sang variant đóng gói ───────
         List<InventoryStock> baseStocks = inventoryStockRepository.findByVariantId(baseVariant.getId());

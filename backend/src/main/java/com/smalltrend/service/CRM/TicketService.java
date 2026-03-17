@@ -120,6 +120,10 @@ public class TicketService {
 
         if (requesterUser != null) {
             ticket.setCreatedBy(requesterUser);
+        } else if (request.getCreatedById() != null) {
+            User createdBy = userRepository.findById(request.getCreatedById())
+                    .orElseThrow(() -> new RuntimeException("Created user not found"));
+            ticket.setCreatedBy(createdBy);
         }
 
         if (targetSwapUser != null) {

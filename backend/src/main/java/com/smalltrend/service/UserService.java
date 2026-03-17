@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,8 @@ import java.util.Optional;
 
 @Service
 public class UserService implements UserDetailsService {
+
+    private static final long USER_DELETE_WINDOW_MINUTES = 20;
 
     private final UserRepository userRepository;
     private final UserCredentialsRepository userCredentialsRepository;
@@ -63,8 +66,8 @@ public class UserService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username)));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username)));
         String roleName = user.getRole() != null ? user.getRole().getName() : "ROLE_USER";
         roleName = roleName.toUpperCase();
 
@@ -161,8 +164,8 @@ public class UserService implements UserDetailsService {
     public AuthResponse login(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found")));
         String token = jwtUtil.generateToken(username);
 
         return AuthResponse.builder()
@@ -180,8 +183,8 @@ public class UserService implements UserDetailsService {
     public User getCurrentUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found")));
     }
 
     public UserProfileDTO getCurrentUserProfile(String username) {
@@ -351,6 +354,17 @@ public class UserService implements UserDetailsService {
 
     public void deleteUser(Integer id) {
         User user = getUserById(id);
+
+        LocalDateTime createdAt = user.getCreatedAt();
+        if (createdAt == null) {
+            throw new RuntimeException("Không thể xóa người dùng do thiếu thời điểm tạo tài khoản");
+        }
+
+        LocalDateTime deleteDeadline = createdAt.plusMinutes(USER_DELETE_WINDOW_MINUTES);
+        if (LocalDateTime.now().isAfter(deleteDeadline)) {
+            throw new RuntimeException("Chỉ có thể xóa người dùng trong vòng 20 phút kể từ lúc tạo");
+        }
+
         userRepository.delete(user);
     }
 

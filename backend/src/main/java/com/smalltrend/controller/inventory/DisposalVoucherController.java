@@ -2,6 +2,7 @@ package com.smalltrend.controller.inventory;
 
 import com.smalltrend.dto.inventory.disposal.*;
 import com.smalltrend.service.inventory.DisposalVoucherService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +13,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/inventory/disposal-vouchers")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class DisposalVoucherController {
 
     private final DisposalVoucherService disposalVoucherService;
@@ -23,7 +23,7 @@ public class DisposalVoucherController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DisposalVoucherResponse> getDisposalVoucherById(@PathVariable Long id) {
+    public ResponseEntity<DisposalVoucherResponse> getDisposalVoucherById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(disposalVoucherService.getDisposalVoucherById(id));
     }
 
@@ -34,33 +34,33 @@ public class DisposalVoucherController {
 
     @GetMapping("/expired-batches")
     public ResponseEntity<List<ExpiredBatchResponse>> getExpiredBatches(
-            @RequestParam(required = false) Long locationId) {
+            @RequestParam(value = "locationId", required = false) Long locationId) {
         return ResponseEntity.ok(disposalVoucherService.getExpiredBatches(locationId));
     }
 
     @PostMapping("/draft")
     public ResponseEntity<DisposalVoucherResponse> saveDraft(
-            @RequestBody DisposalVoucherRequest request,
-            @RequestParam Long userId) {
+            @Valid @RequestBody DisposalVoucherRequest request,
+            @RequestParam("userId") Long userId) {
         return ResponseEntity.ok(disposalVoucherService.saveDraft(request, userId));
     }
 
     @PutMapping("/{id}/submit")
-    public ResponseEntity<DisposalVoucherResponse> submitForApproval(@PathVariable Long id) {
+    public ResponseEntity<DisposalVoucherResponse> submitForApproval(@PathVariable("id") Long id) {
         return ResponseEntity.ok(disposalVoucherService.submitForApproval(id));
     }
 
     @PutMapping("/{id}/approve")
     public ResponseEntity<DisposalVoucherResponse> approveVoucher(
-            @PathVariable Long id,
-            @RequestParam Long userId) {
+            @PathVariable("id") Long id,
+            @RequestParam("userId") Long userId) {
         return ResponseEntity.ok(disposalVoucherService.approveVoucher(id, userId));
     }
 
     @PutMapping("/{id}/reject")
     public ResponseEntity<DisposalVoucherResponse> rejectVoucher(
-            @PathVariable Long id,
-            @RequestParam String reason) {
+            @PathVariable("id") Long id,
+            @RequestParam("reason") String reason) {
         return ResponseEntity.ok(disposalVoucherService.rejectVoucher(id, reason));
     }
 }

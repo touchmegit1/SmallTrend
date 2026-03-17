@@ -6,7 +6,7 @@ export default function LocationSelect({
   onChange,
   locations = [],
   disabled = false,
-  placeholder = "— Chọn vị trí —",
+  placeholder = "Tất cả",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");

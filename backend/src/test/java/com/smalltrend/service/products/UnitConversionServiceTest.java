@@ -13,7 +13,6 @@ import com.smalltrend.repository.UnitConversionRepository;
 import com.smalltrend.repository.UnitRepository;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductBatchRepository;
-import com.smalltrend.service.ProductVariantService;
 import com.smalltrend.service.UnitConversionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +23,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,6 +70,11 @@ class UnitConversionServiceTest {
         baseVariant.setSku("BEV-COCA");
         baseVariant.setActive(true);
 
+        Map<String, String> baseAttributes = new HashMap<>();
+        baseAttributes.put("Hương vị", "Nguyên bản");
+        baseAttributes.put("Dung tích", "330ml");
+        baseVariant.setAttributes(baseAttributes);
+
         toUnit = new Unit();
         toUnit.setId(2);
         toUnit.setName("Thùng");
@@ -99,7 +105,7 @@ class UnitConversionServiceTest {
     void addConversion_VariantNotFound_ThrowException() {
         when(productVariantRepository.findById(99)).thenReturn(Optional.empty());
         RuntimeException ex = assertThrows(RuntimeException.class, () -> unitConversionService.addConversion(99, request));
-         assertEquals("Không tìm thấy biến thể với ID: 99", ex.getMessage());
+        assertEquals("Không tìm thấy biến thể với ID: 99", ex.getMessage());
     }
 
     @Test
@@ -115,7 +121,7 @@ class UnitConversionServiceTest {
         when(productVariantRepository.findById(1)).thenReturn(Optional.of(baseVariant));
         when(unitRepository.findById(2)).thenReturn(Optional.of(toUnit));
         when(unitConversionRepository.existsByVariantIdAndToUnitId(1, 2)).thenReturn(true);
-        
+
         RuntimeException ex = assertThrows(RuntimeException.class, () -> unitConversionService.addConversion(1, request));
         assertEquals("Quy đổi sang đơn vị 'Thùng' đã tồn tại cho biến thể này!", ex.getMessage());
     }
@@ -140,8 +146,17 @@ class UnitConversionServiceTest {
         savedVariant.setId(500);
         savedVariant.setSku("BEV-COCA-BOX24");
         savedVariant.setBarcode("2010100500123");
-        savedVariant.setAttributes(new java.util.HashMap<String, String>());
-        when(productVariantRepository.saveAndFlush(any(ProductVariant.class))).thenReturn(savedVariant);
+        Map<String, String> copiedAttributes = new HashMap<>(baseVariant.getAttributes());
+        savedVariant.setAttributes(copiedAttributes);
+        when(productVariantRepository.saveAndFlush(any(ProductVariant.class))).thenAnswer(invocation -> {
+            ProductVariant arg = invocation.getArgument(0);
+            // Verify attributes were copied from base variant
+            assertNotNull(arg.getAttributes(), "Packaging variant phải kế thừa attributes từ base variant");
+            assertEquals(2, arg.getAttributes().size(), "Packaging variant phải có đủ attributes");
+            assertEquals("Nguyên bản", arg.getAttributes().get("Hương vị"));
+            assertEquals("330ml", arg.getAttributes().get("Dung tích"));
+            return savedVariant;
+        });
 
         // Mock Inventory share
         ProductBatch baseBatch = new ProductBatch();
@@ -152,9 +167,9 @@ class UnitConversionServiceTest {
         InventoryStock baseStock = new InventoryStock();
         baseStock.setQuantity(48); // Tồn kho gốc 48 lon
         baseStock.setBatch(baseBatch);
-        
+
         when(inventoryStockRepository.findByVariantId(1)).thenReturn(List.of(baseStock));
-        
+
         ProductBatch savedBatch = new ProductBatch();
         when(productBatchRepository.save(any(ProductBatch.class))).thenReturn(savedBatch);
 
@@ -163,7 +178,7 @@ class UnitConversionServiceTest {
         assertNotNull(result);
         assertEquals(500, result.getAutoCreatedVariantId());
         assertEquals("BEV-COCA-BOX24", result.getAutoCreatedSku());
-        
+
         // Verify 1 conversion saved
         verify(unitConversionRepository).save(any(UnitConversion.class));
         // Verify packaging variant saved twice (init + barcode)
@@ -183,7 +198,7 @@ class UnitConversionServiceTest {
         when(unitConversionRepository.findById(100)).thenReturn(Optional.of(testConversion));
         when(unitRepository.findById(2)).thenReturn(Optional.of(toUnit));
         when(unitConversionRepository.existsByVariantIdAndToUnitIdAndIdNot(1, 2, 100)).thenReturn(true);
-        
+
         assertThrows(RuntimeException.class, () -> unitConversionService.updateConversion(100, request));
     }
 
@@ -213,7 +228,7 @@ class UnitConversionServiceTest {
         verify(unitConversionRepository).deleteById(100);
         verify(productVariantService).deleteVariant(500);
     }
-    
+
     @Test
     void deleteConversion_NotFound() {
         when(unitConversionRepository.findById(99)).thenReturn(Optional.empty());

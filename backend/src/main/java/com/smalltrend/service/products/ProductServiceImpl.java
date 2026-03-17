@@ -2,14 +2,9 @@ package com.smalltrend.service.products;
 
 import com.smalltrend.dto.products.CreateProductRequest;
 import com.smalltrend.dto.products.ProductResponse;
-import com.smalltrend.entity.Brand;
-import com.smalltrend.entity.Category;
 import com.smalltrend.entity.Product;
-import com.smalltrend.entity.TaxRate;
-import com.smalltrend.repository.BrandRepository;
-import com.smalltrend.repository.CategoryRepository;
 import com.smalltrend.repository.ProductRepository;
-import com.smalltrend.repository.TaxRateRepository;
+import com.smalltrend.validation.product.ProductValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,9 +20,7 @@ import java.util.stream.Collectors;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
-    private final BrandRepository brandRepository;
-    private final CategoryRepository categoryRepository;
-    private final TaxRateRepository taxRateRepository;
+    private final ProductValidator productValidator;
 
     // Chuyển đổi Entity Product trong DB sang DTO Response để trả về cho Frontend
     private ProductResponse mapToResponse(Product product) {
@@ -55,6 +48,7 @@ public class ProductServiceImpl implements ProductService {
 
     // Lấy toàn bộ danh sách sản phẩm và map sang DTO
     @Override
+    @Transactional(readOnly = true)
     public List<ProductResponse> getAll() {
         return productRepository.findAll().stream()
                 .map(this::mapToResponse)
@@ -63,9 +57,9 @@ public class ProductServiceImpl implements ProductService {
 
     // Tìm kiếm và lấy chi tiết một sản phẩm theo khóa chính (ID)
     @Override
+    @Transactional(readOnly = true)
     public ProductResponse getById(Integer id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        Product product = productValidator.requireExistingProduct(id);
         return mapToResponse(product);
     }
 
@@ -73,6 +67,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse create(CreateProductRequest request) {
+        productValidator.validateNameForCreate(request.getName());
+
         Product product = new Product();
         applyRequestToProduct(request, product);
         Product saved = productRepository.save(product);
@@ -84,8 +80,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse update(Integer id, CreateProductRequest request) {
-        Product existing = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        Product existing = productValidator.requireExistingProduct(id);
+        productValidator.validateNameForUpdate(request.getName(), id);
 
         boolean oldStatus = existing.getIsActive() != null ? existing.getIsActive() : true;
         applyRequestToProduct(request, existing);
@@ -101,34 +97,14 @@ public class ProductServiceImpl implements ProductService {
 
     // Hàm tiện ích map các trường từ Request form sang Entity để lưu
     private void applyRequestToProduct(CreateProductRequest request, Product product) {
-        product.setName(request.getName());
+        product.setName(request.getName() != null ? request.getName().trim() : null);
         product.setDescription(request.getDescription());
         product.setImageUrl(request.getImageUrl());
         product.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
-        if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
-            product.setCategory(category);
-        } else {
-            product.setCategory(null);
-        }
-
-        if (request.getBrandId() != null) {
-            Brand brand = brandRepository.findById(request.getBrandId())
-                    .orElseThrow(() -> new RuntimeException("Brand not found with id: " + request.getBrandId()));
-            product.setBrand(brand);
-        } else {
-            product.setBrand(null);
-        }
-
-        if (request.getTaxRateId() != null) {
-            TaxRate taxRate = taxRateRepository.findById(request.getTaxRateId())
-                    .orElseThrow(() -> new RuntimeException("TaxRate not found with id: " + request.getTaxRateId()));
-            product.setTaxRate(taxRate);
-        } else {
-            product.setTaxRate(null);
-        }
+        product.setCategory(productValidator.resolveCategory(request.getCategoryId()));
+        product.setBrand(productValidator.resolveBrand(request.getBrandId()));
+        product.setTaxRate(productValidator.resolveTaxRate(request.getTaxRateId()));
     }
 
     // Xóa một Sản phẩm. Quy định: Chỉ được phép xóa bản ghi vừa tạo trong vòng 2
@@ -137,17 +113,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void delete(Integer id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
-
-        java.time.LocalDateTime createdAt = product.getCreatedAt();
-        if (createdAt != null) {
-            long minutes = java.time.Duration.between(createdAt, java.time.LocalDateTime.now()).toMinutes();
-            if (minutes >= 2) {
-                throw new RuntimeException("Sản phẩm đã tạo quá 2 phút, bạn không thể xoá sản phẩm này nữa!");
-            }
-        }
-
+        Product product = productValidator.requireExistingProduct(id);
+        productValidator.validateDeletableWithinTwoMinutes(product);
         productRepository.deleteById(id);
     }
 
@@ -156,8 +123,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void toggleStatus(Integer id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        Product product = productValidator.requireExistingProduct(id);
 
         boolean newStatus = !product.getIsActive();
         product.setIsActive(newStatus);

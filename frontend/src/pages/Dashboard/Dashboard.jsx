@@ -1,12 +1,15 @@
 import React from 'react';
-import { TrendingUp, Users, DollarSign, ShoppingBag, History, Bot, Clock3, Warehouse } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, ShoppingBag, History, Bot, Clock3, Warehouse, AlertTriangle } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import api from '../../config/axiosConfig';
 import * as XLSX from 'xlsx';
 
 const Dashboard = () => {
     const [orders, setOrders] = React.useState([]);
+    const [priceExpiryAlerts, setPriceExpiryAlerts] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [isAlertLoading, setIsAlertLoading] = React.useState(true);
+    const [alertError, setAlertError] = React.useState('');
 
     React.useEffect(() => {
         const fetchSaleOrders = async () => {
@@ -57,6 +60,25 @@ const Dashboard = () => {
         };
 
         fetchSaleOrders();
+    }, []);
+
+    React.useEffect(() => {
+        const fetchPriceExpiryAlerts = async () => {
+            setIsAlertLoading(true);
+            setAlertError('');
+            try {
+                const res = await api.get('/products/price-expiry-alerts?days=1');
+                setPriceExpiryAlerts(Array.isArray(res.data) ? res.data : []);
+            } catch (error) {
+                console.error('Không thể tải cảnh báo hết hiệu lực giá:', error);
+                setAlertError('Không thể tải cảnh báo giá sắp hết hiệu lực.');
+                setPriceExpiryAlerts([]);
+            } finally {
+                setIsAlertLoading(false);
+            }
+        };
+
+        fetchPriceExpiryAlerts();
     }, []);
 
     const toNumber = (value) => {
@@ -134,7 +156,7 @@ const Dashboard = () => {
 
     const quickWidgets = [
         { label: 'Lịch sử đơn hàng', path: '/pos/history', icon: History, tone: 'bg-blue-50 text-blue-700 border-blue-100' },
-        { label: 'AI dự báo', path: '/reports/ai', icon: Bot, tone: 'bg-purple-50 text-purple-700 border-purple-100' },
+        { label: 'Danh sách sản phẩm', path: '/products', icon: ShoppingBag, tone: 'bg-purple-50 text-purple-700 border-purple-100' },
         { label: 'Ca làm việc', path: '/hr/shifts', icon: Clock3, tone: 'bg-amber-50 text-amber-700 border-amber-100' },
         { label: 'Kho hàng', path: '/inventory', icon: Warehouse, tone: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
     ];
@@ -201,6 +223,37 @@ const Dashboard = () => {
                     Tải báo cáo
                 </button>
             </div>
+
+            {!isAlertLoading && priceExpiryAlerts.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-amber-100 text-amber-700">
+                            <AlertTriangle size={18} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-sm font-bold text-amber-900">Giá sắp hết hiệu lực trong 1 ngày</h3>
+                            <p className="text-xs text-amber-800 mt-1">Có {priceExpiryAlerts.length} giá cần cập nhật trước ngày hết hiệu lực.</p>
+                            <div className="mt-3 space-y-1.5">
+                                {priceExpiryAlerts.slice(0, 5).map((alert) => (
+                                    <div key={alert.variantPriceId || alert.variantId} className="text-xs text-amber-900 bg-white/70 border border-amber-100 rounded-lg px-3 py-2">
+                                        <span className="font-semibold">{alert.variantName || 'N/A'}</span>
+                                        <span className="mx-2 text-amber-500">•</span>
+                                        <span>SKU: {alert.sku || 'N/A'}</span>
+                                        <span className="mx-2 text-amber-500">•</span>
+                                        <span>Hết hiệu lực: {alert.expiryDate ? new Date(alert.expiryDate).toLocaleDateString('vi-VN') : 'N/A'}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {!isAlertLoading && alertError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+                    {alertError}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, index) => (

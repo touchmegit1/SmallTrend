@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus } from "lucide-react";
+import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
@@ -10,6 +10,7 @@ import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchTaxRates } from "../../../hooks/taxRates";
 import { useFetchSuppliers } from "../../../hooks/useSuppliers";
 import api from "../../../config/axiosConfig";
+import { useToast, ToastContainer } from "../../../hooks/useToast";
 
 /**
  * Screen hiển thị Form Tạo Mới Sản Phẩm.
@@ -24,6 +25,7 @@ const AddNewProduct = () => {
   const { suppliers } = useFetchSuppliers();
 
   const navigate = useNavigate();
+  const { toasts, showToast, removeToast } = useToast();
 
   // --- STATE QUẢN LÝ DỮ LIỆU ĐIỀN FORM ---
   const [formData, setFormData] = useState({
@@ -44,6 +46,19 @@ const AddNewProduct = () => {
   // State Loading Block Form Button (Chống submit spam 2 lần)
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const nextErrors = {};
+
+    if (!formData.name.trim()) nextErrors.name = "Vui lòng nhập tên sản phẩm";
+    if (!formData.categoryId) nextErrors.categoryId = "Vui lòng chọn danh mục";
+    if (!formData.taxRateId) nextErrors.taxRateId = "Vui lòng chọn thuế";
+    if (!formData.brandId) nextErrors.brandId = "Vui lòng chọn thương hiệu";
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   // --- STATE & DATA CHO QUICK-CREATE MODAL CATEGORY & BRAND ---
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -59,6 +74,7 @@ const AddNewProduct = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   /**
@@ -138,7 +154,7 @@ const AddNewProduct = () => {
       setShowCategoryModal(false);
     } catch (error) {
       console.error("Error creating category:", error);
-      alert("Tạo danh mục thất bại!");
+      showToast("Tạo danh mục thất bại!", "error");
     } finally {
       setCreatingCategory(false);
     }
@@ -154,7 +170,7 @@ const AddNewProduct = () => {
       setShowBrandModal(false);
     } catch (error) {
       console.error("Error creating brand:", error);
-      alert("Tạo thương hiệu thất bại!");
+      showToast("Tạo thương hiệu thất bại!", "error");
     } finally {
       setCreatingBrand(false);
     }
@@ -163,6 +179,11 @@ const AddNewProduct = () => {
   // --- HANDLER SUBMIT TỔNG CHÍNH ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -195,7 +216,11 @@ const AddNewProduct = () => {
       });
     } catch (error) {
       console.error("Error creating product:", error);
-      alert("Lưu sản phẩm thất bại!");
+      const errorMessage = error?.response?.data?.message || "Lưu sản phẩm thất bại!";
+      if (errorMessage.toLowerCase().includes("tên sản phẩm đã tồn tại")) {
+        setErrors((prev) => ({ ...prev, name: "Tên sản phẩm đã tồn tại" }));
+      }
+      showToast(errorMessage, "error");
     } finally {
       setSubmitting(false);
     }
@@ -203,6 +228,7 @@ const AddNewProduct = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="max-w-7xl mx-auto space-y-6">
         {/* HEADER ĐIỀU HƯỚNG */}
         <div className="flex items-center gap-4">
@@ -244,13 +270,14 @@ const AddNewProduct = () => {
                       Tên sản phẩm <span className="text-red-500">*</span>
                     </Label>
                     <Input
-                      className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`mt-2 h-11 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.name ? "border-red-500" : "border-gray-200"}`}
                       placeholder="Nhập tên sản phẩm (Vd: Áo Vest đen nhám)"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
                       required
                     />
+                    {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                   </div>
 
                   {/* Ngành Hàng (Category) Selector + Nút Gọi Modal New */}
@@ -261,7 +288,7 @@ const AddNewProduct = () => {
                     <div className="flex gap-2 mt-2">
                       <select
                         name="categoryId"
-                        className="flex-1 h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`flex-1 h-11 px-4 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
                         value={formData.categoryId}
                         onChange={handleChange}
                         required
@@ -281,35 +308,41 @@ const AddNewProduct = () => {
                         Thêm mới
                       </button>
                     </div>
+                    {errors.categoryId && <p className="mt-1 text-sm text-red-600">{errors.categoryId}</p>}
                   </div>
 
                   {/* Thuế - Chạy theo cấu hình Tax Rate DB */}
                   <div>
                     <Label className="text-sm font-semibold text-gray-700">
-                      Thuế nhập/xuất áp dụng mặc định
+                      Thuế nhập/xuất áp dụng mặc định <span className="text-red-500">*</span>
                     </Label>
                     <select
                       name="taxRateId"
-                      className="mt-2 w-full h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`mt-2 w-full h-11 px-4 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.taxRateId ? "border-red-500" : "border-gray-200"}`}
                       value={formData.taxRateId}
                       onChange={handleChange}
+                      required
                     >
                       <option value="">(Non-Tax) Trống</option>
                       {taxRates.map((tax) => (
                         <option key={tax.id} value={tax.id}>{tax.name} ({tax.rate}%)</option>
                       ))}
                     </select>
+                    {errors.taxRateId && <p className="mt-1 text-sm text-red-600">{errors.taxRateId}</p>}
                   </div>
 
                   {/* Nhãn hiệu - Brand Picker Component */}
                   <div>
-                    <Label className="text-sm font-semibold text-gray-700">Thương hiệu</Label>
+                    <Label className="text-sm font-semibold text-gray-700">
+                      Thương hiệu <span className="text-red-500">*</span>
+                    </Label>
                     <div className="flex gap-2 mt-2">
                       <select
                         name="brandId"
-                        className="flex-1 h-11 px-4 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`flex-1 h-11 px-4 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.brandId ? "border-red-500" : "border-gray-200"}`}
                         value={formData.brandId}
                         onChange={handleChange}
+                        required
                       >
                         <option value="">Loại nhãn hàng nội địa/Trống</option>
                         {brands.map((brand) => (
@@ -326,6 +359,7 @@ const AddNewProduct = () => {
                         Thêm mới
                       </button>
                     </div>
+                    {errors.brandId && <p className="mt-1 text-sm text-red-600">{errors.brandId}</p>}
                   </div>
 
                   {/* Status Toggle Switch */}
@@ -361,7 +395,7 @@ const AddNewProduct = () => {
             {/* CỘT RIGHT: IMAGE UPLOADER UI --- */}
             <div className="h-full">
               <Card className="h-full border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl flex flex-col">
-                <CardHeader classNa me="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-200">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-200">
                   <CardTitle className="text-xl font-bold text-gray-800">
                     Hình ảnh sản phẩm gốc
                   </CardTitle>
@@ -389,11 +423,19 @@ const AddNewProduct = () => {
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-2xl" />
 
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                          <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                        </div>
+                      )}
+
                       {/* Sub Nút Huỷ Data Ảnh */}
                       <button
                         type="button"
                         onClick={removeImage}
-                        className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
+                        disabled={uploadingImage}
+                        className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <X className="w-5 h-5" />
                       </button>
@@ -402,7 +444,8 @@ const AddNewProduct = () => {
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-3 right-3 bg-white/90 hover:bg-white text-gray-700 rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg flex items-center gap-2"
+                        disabled={uploadingImage}
+                        className="absolute bottom-3 right-3 bg-white/90 hover:bg-white text-gray-700 rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <Upload className="w-4 h-4" />
                         Đổi ảnh
@@ -413,9 +456,9 @@ const AddNewProduct = () => {
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => !uploadingImage && fileInputRef.current?.click()}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
+                        if ((e.key === 'Enter' || e.key === ' ') && !uploadingImage) {
                           e.preventDefault();
                           fileInputRef.current?.click();
                         }
@@ -423,12 +466,18 @@ const AddNewProduct = () => {
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
+                      className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all ${uploadingImage ? 'cursor-wait opacity-80' : 'cursor-pointer'} ${isDragging
                         ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]'
                         : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
                         }`}
                       style={{ minHeight: '300px' }}
                     >
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                          <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                        </div>
+                      )}
                       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
                         <ImageIcon className="w-10 h-10 text-blue-600" />
                       </div>
@@ -452,8 +501,8 @@ const AddNewProduct = () => {
               disabled={submitting || uploadingImage}
               className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold disabled:opacity-50"
             >
-              <Save className="w-5 h-5 mr-2" />
-              {submitting ? "Đang đẩy request..." : "Lưu vào kho dữ liệu"}
+              {(uploadingImage || submitting) ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+              {uploadingImage ? "Đang tải ảnh..." : submitting ? "Đang lưu..." : "Lưu vào kho dữ liệu"}
             </Button>
             <Button
               type="button"

@@ -1,20 +1,28 @@
-import React from "react";
-import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, Box } from "lucide-react";
 import { formatVND } from "../../../utils/purchaseOrder";
 
 export default function GoodsReceiptTable({
   items,
   receiptItems,
   onUpdateReceiptItem,
+  isReadOnly = false,
+  lockExpiryDate = false,
 }) {
-  const getReceiptItem = (itemId) => {
-    return receiptItems.find((ri) => ri.itemId === itemId) || {};
+  const getItemIdentity = (item) => item.id ?? item._key;
+
+  const getReceiptItem = (item) => {
+    const identity = getItemIdentity(item);
+    return receiptItems.find((ri) => ri.itemId === identity) || {};
   };
 
+  const getOrderedCheckingQuantity = (item) =>
+    Number(item.checking_quantity ?? item.quantity ?? 0);
+
   const getDifference = (item) => {
-    const ri = getReceiptItem(item.id);
-    const received = ri.receivedQuantity ?? item.quantity;
-    return received - item.quantity;
+    const ri = getReceiptItem(item);
+    const ordered = getOrderedCheckingQuantity(item);
+    const received = Number(ri.receivedQuantity ?? ordered);
+    return received - ordered;
   };
 
   const getDiffClass = (diff) => {
@@ -30,129 +38,183 @@ export default function GoodsReceiptTable({
     return <AlertTriangle size={14} className="text-amber-500" />;
   };
 
+  const getUnitCostValue = (ri, item) => {
+    const unitCost = Number(ri.unitCost ?? item.unit_price ?? item.unitCost ?? 0);
+    return Number.isFinite(unitCost) ? unitCost / 1000 : 0;
+  };
+
+  const parseUnitCostInput = (value) => {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return parsed * 1000;
+  };
+
   return (
-    <div className="flex-1 overflow-auto">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-purple-50 border-b border-purple-200 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
-          <h3 className="text-sm font-semibold text-purple-800">
-            Kiểm kê hàng hóa — Nhập số lượng thực nhận
-          </h3>
+    <div className="flex-1 overflow-auto bg-white">
+      <div className="sticky top-0 z-10 bg-purple-50 border-b border-purple-200 px-6 py-2.5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-purple-800">
+          <span className="w-2 h-2 rounded-full bg-purple-500" />
+          {isReadOnly
+            ? "Kết quả kiểm kê hàng hóa"
+            : "Kiểm kê hàng hóa — Nhập số lượng thực nhận"}
         </div>
       </div>
 
       <table className="w-full">
-        <thead className="bg-slate-50 border-b border-slate-200 sticky top-[49px] z-10">
+        <thead className="bg-slate-50 border-b border-slate-200 sticky top-[46px] z-10">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-8">
+            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase w-8">
               #
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+            <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
               Sản phẩm
             </th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-28">
+            <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-40">
               Hạn SD
             </th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-24">
+            <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-36">
+              Giá nhập
+            </th>
+            <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-32">
               SL đặt hàng
             </th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-32">
+            <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-36">
               SL thực nhận
             </th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-24">
+            <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-32">
               Chênh lệch
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-40">
-              Ghi chú
             </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {items.map((item, idx) => {
-            const ri = getReceiptItem(item.id);
+            const ri = getReceiptItem(item);
             const diff = getDifference(item);
             const diffClass = getDiffClass(diff);
+            const orderedCheckingQty = getOrderedCheckingQuantity(item);
+            const unitCostValue = getUnitCostValue(ri, item);
+            const hasUnitCost = unitCostValue !== 0;
+            const displayUnit = item.checking_unit || item.unit || "";
+            const receivedQuantity = Number(
+              ri.receivedQuantity ?? orderedCheckingQty,
+            );
+            const receivedDiff = receivedQuantity - orderedCheckingQty;
+            const receivedQtyClass =
+              receivedDiff === 0
+                ? "border-slate-300"
+                : receivedDiff < 0
+                  ? "border-red-300 bg-red-50 text-red-700"
+                  : "border-amber-300 bg-amber-50 text-amber-700";
+            const conversionFactor = Number(item.conversion_factor ?? 1);
+            const originalQty = Number(item.quantity ?? 0);
+            const showConversionHint = conversionFactor > 1 && originalQty > 0;
+            const originalUnit = item.unit || "";
+            const conversionHint = showConversionHint
+              ? `${originalQty} ${originalUnit} = ${orderedCheckingQty} ${displayUnit}`
+              : "";
 
             return (
               <tr
                 key={item.id || item._key || idx}
                 className="hover:bg-slate-50/50 transition-colors"
               >
-                <td className="px-4 py-3 text-sm text-slate-400">{idx + 1}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    {item.imageUrl || item.image_url ? (
-                      <img
-                        src={item.imageUrl || item.image_url}
-                        alt={item.name}
-                        className="w-8 h-8 rounded-lg object-cover border border-slate-200"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                        <span className="text-xs text-slate-400">📦</span>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">
-                        {item.name}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {item.sku} •{" "}
-                        {formatVND(item.unit_price || item.unitCost)}
+                <td className="px-5 py-3 text-sm text-slate-400">{idx + 1}</td>
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
+                      <Box size={13} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-800 leading-tight truncate whitespace-nowrap">{item.name}</p>
+                      <p className="text-xs text-slate-400 truncate">
+                        {item.sku} • {formatVND(item.unit_price ?? item.unitCost)}
                       </p>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-center">
-                  {item.expiry_date || item.expiryDate ? (
-                    <span className="text-sm text-slate-600">
-                      {new Date(
-                        item.expiry_date || item.expiryDate,
-                      ).toLocaleDateString("vi-VN")}
+                <td className="px-5 py-4 text-center">
+                  <input
+                    type="date"
+                    value={
+                      ri.expiryDate ??
+                      ri.expiry_date ??
+                      item.expiry_date ??
+                      item.expiryDate ??
+                      ""
+                    }
+                    onChange={(e) =>
+                      onUpdateReceiptItem(
+                        getItemIdentity(item),
+                        "expiryDate",
+                        e.target.value,
+                      )
+                    }
+                    disabled={isReadOnly || lockExpiryDate}
+                    className="w-36 px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500"
+                  />
+                </td>
+                <td className="px-5 py-4 text-center">
+                  <div className="relative inline-block">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={hasUnitCost ? unitCostValue : ""}
+                      onChange={(e) =>
+                        onUpdateReceiptItem(
+                          getItemIdentity(item),
+                          "unitCost",
+                          parseUnitCostInput(e.target.value),
+                        )
+                      }
+                      disabled={isReadOnly}
+                      className="w-28 px-3 py-1.5 pr-11 text-right text-sm border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500"
+                    />
+                    {hasUnitCost && (
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-indigo-300">
+                        .000
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-5 py-3.5 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-base font-semibold text-slate-700">
+                      {orderedCheckingQty}
                     </span>
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">—</span>
-                  )}
+                    {displayUnit && (
+                      <span className="mt-0.5 text-[10px] font-medium text-slate-500 uppercase tracking-wide">
+                        {displayUnit}
+                      </span>
+                    )}
+                    {showConversionHint && (
+                      <span className="mt-0.5 text-[10px] text-indigo-500">{conversionHint}</span>
+                    )}
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-center">
-                  <span className="text-sm font-semibold text-slate-700">
-                    {item.quantity}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-5 py-4 text-center">
                   <input
                     type="number"
                     min="0"
-                    value={ri.receivedQuantity ?? item.quantity}
+                    value={receivedQuantity}
                     onChange={(e) =>
                       onUpdateReceiptItem(
-                        item.id,
+                        getItemIdentity(item),
                         "receivedQuantity",
-                        parseInt(e.target.value) || 0,
+                        Number.parseInt(e.target.value, 10) || 0,
                       )
                     }
-                    className="w-20 text-center px-2 py-1.5 text-sm font-semibold border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled={isReadOnly}
+                    className={`w-24 text-center px-2.5 py-1.5 text-sm font-semibold border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 ${receivedQtyClass}`}
                   />
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-5 py-4 text-center">
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${diffClass}`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${diffClass}`}
                   >
                     {getDiffIcon(diff)}
                     {diff > 0 ? `+${diff}` : diff}
                   </span>
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    type="text"
-                    placeholder="Ghi chú..."
-                    value={ri.notes || ""}
-                    onChange={(e) =>
-                      onUpdateReceiptItem(item.id, "notes", e.target.value)
-                    }
-                    className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
                 </td>
               </tr>
             );
@@ -160,30 +222,24 @@ export default function GoodsReceiptTable({
         </tbody>
       </table>
 
-      {/* Summary */}
-      <div className="sticky bottom-0 bg-white border-t border-slate-200 px-4 py-3">
+      <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-3">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">
-            Tổng:{" "}
-            <span className="font-semibold text-slate-800">{items.length}</span>{" "}
-            sản phẩm
+          <span className="text-slate-600">
+            Tổng: <span className="font-semibold text-slate-800">{items.length} sản phẩm</span>
           </span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6 text-base">
             <span className="text-slate-500">
-              Đúng:{" "}
-              <span className="font-semibold text-emerald-600">
+              Đúng: <span className="font-semibold text-emerald-600">
                 {items.filter((item) => getDifference(item) === 0).length}
               </span>
             </span>
             <span className="text-slate-500">
-              Thiếu:{" "}
-              <span className="font-semibold text-red-600">
+              Thiếu: <span className="font-semibold text-red-600">
                 {items.filter((item) => getDifference(item) < 0).length}
               </span>
             </span>
             <span className="text-slate-500">
-              Thừa:{" "}
-              <span className="font-semibold text-amber-600">
+              Thừa: <span className="font-semibold text-amber-600">
                 {items.filter((item) => getDifference(item) > 0).length}
               </span>
             </span>

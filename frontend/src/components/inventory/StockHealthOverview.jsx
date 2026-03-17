@@ -68,7 +68,7 @@ export default function StockHealthOverview({ products }) {
         <div className="border-t border-slate-100">
           <div className="px-5 py-3 bg-red-50/50">
             <p className="text-xs font-semibold text-red-700 uppercase mb-2">
-              ⚠ Cần nhập hàng ngay
+              Cần nhập hàng ngay
             </p>
             <div className="space-y-1.5">
               {products
@@ -102,8 +102,8 @@ export default function StockHealthOverview({ products }) {
                           {p.sku}
                         </span>
                         <span className="font-bold text-red-600">
-                          {formatNumber(p.stock_quantity || 0)} /{" "}
-                          {formatNumber(p.min_stock || 50)}
+                          {formatNumber(p.stock_quantity ?? 0)} /{" "}
+                          {formatNumber(p.min_stock ?? 50)}
                         </span>
                       </div>
                     </div>

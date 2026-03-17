@@ -112,7 +112,7 @@ class BrandControllerTest {
 
         // Assert: Kiểm tra mã phản hồi
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Brand deactivated", response.getBody());
+        assertEquals("Đã xóa thương hiệu", response.getBody());
         verify(brandService).delete(10);
     }
 }

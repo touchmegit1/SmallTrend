@@ -33,6 +33,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     List<User> findByRoleId(Integer roleId);
 
+    List<User> findByRole_NameInAndActiveTrueAndStatusIgnoreCase(List<String> roleNames, String status);
+
     /**
      * Search users by name or email with pagination
      */

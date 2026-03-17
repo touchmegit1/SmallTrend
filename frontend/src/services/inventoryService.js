@@ -1,5 +1,7 @@
-const JSON_API = "http://localhost:3001";
-const SPRING_API = "http://localhost:8081/api/inventory";
+const SPRING_API =
+  import.meta.env.VITE_INVENTORY_API_BASE_URL || "http://localhost:8081/api/inventory";
+
+const JSON_API = import.meta.env.VITE_JSON_API_BASE_URL || "http://localhost:3001";
 
 // ─── Helper: get auth token ──────────────────────────────
 function getAuthHeaders() {
@@ -38,14 +40,17 @@ export const getPurchaseOrders = async () => {
     contract_number: order.contractNumber || order.contract_number,
     contract_title: order.contractTitle || order.contract_title,
     location_id: order.locationId || order.location_id,
-    total_amount: order.totalAmount || order.total_amount,
+    total_amount: order.totalAmount ?? order.total_amount,
     created_at: order.createdAt || order.created_at,
     confirmed_at: order.confirmedAt || order.confirmed_at,
-    tax_percent: order.taxPercent || order.tax_percent,
-    shipping_fee: order.shippingFee || order.shipping_fee,
-    paid_amount: order.paidAmount || order.paid_amount,
-    remaining_amount: order.remainingAmount || order.remaining_amount,
-    tax_amount: order.taxAmount || order.tax_amount,
+    tax_percent: order.taxPercent ?? order.tax_percent,
+    shipping_fee: order.shippingFee ?? order.shipping_fee,
+    paid_amount: order.paidAmount ?? order.paid_amount,
+    remaining_amount: order.remainingAmount ?? order.remaining_amount,
+    tax_amount: order.taxAmount ?? order.tax_amount,
+    shortage_reason: order.shortageReason || order.shortage_reason,
+    manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
+    rejection_reason: order.rejectionReason || order.rejection_reason,
   }));
 };
 
@@ -53,7 +58,10 @@ export const getPurchaseOrderById = async (id) => {
   const response = await fetch(`${SPRING_API}/purchase-orders/${id}`, {
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to fetch purchase order");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Failed to fetch purchase order");
+  }
   const order = await response.json();
   return {
     ...order,
@@ -64,14 +72,17 @@ export const getPurchaseOrderById = async (id) => {
     contract_number: order.contractNumber || order.contract_number,
     contract_title: order.contractTitle || order.contract_title,
     location_id: order.locationId || order.location_id,
-    total_amount: order.totalAmount || order.total_amount,
+    total_amount: order.totalAmount ?? order.total_amount,
     created_at: order.createdAt || order.created_at,
     confirmed_at: order.confirmedAt || order.confirmed_at,
-    tax_percent: order.taxPercent || order.tax_percent,
-    shipping_fee: order.shippingFee || order.shipping_fee,
-    paid_amount: order.paidAmount || order.paid_amount,
-    remaining_amount: order.remainingAmount || order.remaining_amount,
-    tax_amount: order.taxAmount || order.tax_amount,
+    tax_percent: order.taxPercent ?? order.tax_percent,
+    shipping_fee: order.shippingFee ?? order.shipping_fee,
+    paid_amount: order.paidAmount ?? order.paid_amount,
+    remaining_amount: order.remainingAmount ?? order.remaining_amount,
+    tax_amount: order.taxAmount ?? order.tax_amount,
+    shortage_reason: order.shortageReason || order.shortage_reason,
+    manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
+    rejection_reason: order.rejectionReason || order.rejection_reason,
   };
 };
 
@@ -93,7 +104,10 @@ export const createPurchaseOrder = async (orderData) => {
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Failed to save draft");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Failed to save draft");
+  }
   return response.json();
 };
 
@@ -104,7 +118,10 @@ export const confirmPurchaseOrder = async (orderData) => {
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Failed to confirm order");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Failed to confirm order");
+  }
   return response.json();
 };
 
@@ -142,12 +159,23 @@ export const updatePurchaseOrder = async (id, orderData) => {
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Failed to update purchase order");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Failed to update purchase order");
+  }
   return response.json();
 };
 
 // ─── Helper: map frontend → backend request ──────────────
 function mapOrderToBackend(orderData) {
+  const discountAmount = Number(orderData.discountAmount ?? orderData.discount ?? 0);
+  const taxPercent = Number(orderData.taxPercent ?? orderData.tax_percent ?? 0);
+  const shippingFee = Number(orderData.shippingFee ?? orderData.shipping_fee ?? 0);
+  const paidAmount = Number(orderData.paidAmount ?? orderData.paid_amount ?? 0);
+  const subtotal = Number(orderData.subtotal ?? 0);
+  const taxAmount = Number(orderData.taxAmount ?? orderData.tax_amount ?? 0);
+  const totalAmount = Number(orderData.totalAmount ?? orderData.total_amount ?? 0);
+
   return {
     orderNumber:
       orderData.order_number ||
@@ -158,31 +186,39 @@ function mapOrderToBackend(orderData) {
     contractId: orderData.contract_id || orderData.contractId || null,
     locationId: orderData.location_id || orderData.locationId || null,
     status: orderData.status,
-    discountAmount: orderData.discount || orderData.discountAmount || 0,
-    taxAmount: orderData.tax_amount || orderData.taxAmount || 0,
-    taxPercent: orderData.tax_percent || orderData.taxPercent || 0,
-    subtotal: orderData.subtotal || 0,
-    totalAmount: orderData.total_amount || orderData.totalAmount || 0,
-    shippingFee: orderData.shipping_fee || orderData.shippingFee || 0,
-    paidAmount: orderData.paid_amount || orderData.paidAmount || 0,
+    discountAmount: Number.isFinite(discountAmount) ? discountAmount : 0,
+    taxAmount: Number.isFinite(taxAmount) ? taxAmount : 0,
+    taxPercent: Number.isFinite(taxPercent) ? taxPercent : 0,
+    subtotal: Number.isFinite(subtotal) ? subtotal : 0,
+    totalAmount: Number.isFinite(totalAmount) ? totalAmount : 0,
+    shippingFee: Number.isFinite(shippingFee) ? shippingFee : 0,
+    paidAmount: Number.isFinite(paidAmount) ? paidAmount : 0,
     expectedDeliveryDate:
       orderData.expected_delivery_date ||
       orderData.expectedDeliveryDate ||
       null,
     notes: orderData.notes || "",
     createdBy: orderData.created_by || orderData.createdBy || 1,
-    items: (orderData.items || []).map((item) => ({
-      productId: item.product_id || item.productId,
-      variantId: item.variant_id || item.variantId,
-      sku: item.sku || "",
-      name: item.name || "",
-      quantity: item.quantity || 0,
-      unitCost: item.unit_price || item.unitPrice || item.unitCost || 0,
-      totalCost: item.total || item.totalCost || 0,
-      receivedQuantity: item.received_quantity || item.receivedQuantity || 0,
-      expiryDate: item.expiry_date || item.expiryDate || null,
-      notes: item.notes || "",
-    })),
+    items: (orderData.items || []).map((item) => {
+      const quantity = Number(item.quantity ?? 0);
+      const unitCost = Number(item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0);
+      const receivedQuantity = Number(
+        item.receivedQuantity ?? item.received_quantity ?? quantity,
+      );
+      const totalCostRaw = Number(item.totalCost ?? item.total_cost ?? quantity * unitCost);
+      return {
+        productId: item.product_id || item.productId,
+        variantId: item.variant_id || item.variantId,
+        sku: item.sku || "",
+        name: item.name || "",
+        quantity: Number.isFinite(quantity) ? quantity : 0,
+        unitCost: Number.isFinite(unitCost) ? unitCost : 0,
+        totalCost: Number.isFinite(totalCostRaw) ? totalCostRaw : 0,
+        receivedQuantity: Number.isFinite(receivedQuantity) ? receivedQuantity : 0,
+        expiryDate: item.expiryDate || item.expiry_date || null,
+        notes: item.notes || "",
+      };
+    }),
   };
 }
 
@@ -246,6 +282,35 @@ export const rejectPurchaseOrder = async (id, rejectionReason) => {
   return response.json();
 };
 
+export const closeShortageOrder = async (id, managerDecisionNote) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/shortage/close`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ managerDecisionNote: managerDecisionNote || "" }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi chốt thiếu hàng");
+  }
+  return response.json();
+};
+
+export const requestSupplierSupplementOrder = async (id, managerDecisionNote) => {
+  const response = await fetch(
+    `${SPRING_API}/purchase-orders/${id}/shortage/request-supplement`,
+    {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ managerDecisionNote: managerDecisionNote || "" }),
+    },
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi yêu cầu nhà cung cấp giao bù");
+  }
+  return response.json();
+};
+
 // ═══════════════════════════════════════════════════════════
 //  Reference Data (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
@@ -270,46 +335,6 @@ export const getProducts = async () => {
     stock_quantity: p.stockQuantity ?? p.stock_quantity ?? 0,
     image_url: p.imageUrl || p.image_url,
     unit: p.unit || "",
-  }));
-};
-
-export const getLocations = async () => {
-  const response = await fetch(`${SPRING_API}/locations`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to fetch locations");
-  const data = await response.json();
-  return data.map((loc) => ({
-    ...loc,
-    location_name: loc.locationName || loc.location_name,
-    location_code: loc.locationCode || loc.location_code,
-    location_type: loc.locationType || loc.location_type,
-    created_at: loc.createdAt || loc.created_at,
-    total_products: loc.totalProducts || loc.total_products || 0,
-    stock_items: (loc.stockItems || loc.stock_items || []).map((item) => ({
-      ...item,
-      variant_id: item.variantId || item.variant_id,
-      product_name: item.productName || item.product_name,
-      variant_unit: item.variantUnit || item.variant_unit,
-      batch_code: item.batchCode || item.batch_code,
-      batch_id: item.batchId || item.batch_id,
-    })),
-  }));
-};
-
-export const getLocationStocks = async (locationId) => {
-  const response = await fetch(`${SPRING_API}/locations/${locationId}/stocks`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to fetch location stocks");
-  const data = await response.json();
-  return data.map((item) => ({
-    ...item,
-    variant_id: item.variantId || item.variant_id,
-    product_name: item.productName || item.product_name,
-    variant_unit: item.variantUnit || item.variant_unit,
-    batch_code: item.batchCode || item.batch_code,
-    batch_id: item.batchId || item.batch_id,
   }));
 };
 
@@ -442,28 +467,9 @@ export const getProductBatches = async () => {
 //  Location CRUD (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
 
-export const createLocation = async (locationData) => {
-  const response = await fetch(`${SPRING_API}/locations`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      locationName: locationData.location_name,
-      locationCode: locationData.location_code,
-      locationType: locationData.location_type,
-      address: locationData.address,
-      capacity: locationData.capacity,
-      description: locationData.description,
-    }),
-  });
-  if (!response.ok) throw new Error("Failed to create location");
-  const data = await response.json();
-  return {
-    ...data,
-    location_name: data.locationName,
-    location_code: data.locationCode,
-    location_type: data.locationType,
-    created_at: data.createdAt,
-  };
+const getApiErrorMessage = async (response, fallbackMessage) => {
+  const err = await response.json().catch(() => null);
+  return err?.message || fallbackMessage;
 };
 
 export const updateLocation = async (id, locationData) => {
@@ -475,11 +481,15 @@ export const updateLocation = async (id, locationData) => {
       locationCode: locationData.location_code,
       locationType: locationData.location_type,
       address: locationData.address,
-      capacity: locationData.capacity,
+      capacity: Number(locationData.capacity ?? 0),
       description: locationData.description,
     }),
   });
-  if (!response.ok) throw new Error("Failed to update location");
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể cập nhật vị trí"),
+    );
+  }
   const data = await response.json();
   return {
     ...data,
@@ -495,53 +505,58 @@ export const deleteLocation = async (id) => {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to delete location");
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể xóa vị trí"),
+    );
+  }
   return true;
 };
 
-export const toggleLocationStatus = async (id) => {
-  const response = await fetch(`${SPRING_API}/locations/${id}/toggle-status`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => null);
-    throw new Error(err?.message || "Lỗi khi chuyển trạng thái vị trí");
-  }
-  const data = await response.json();
-  return {
-    ...data,
-    location_name: data.locationName || data.location_name,
-    location_code: data.locationCode || data.location_code,
-    location_type: data.locationType || data.location_type,
-    created_at: data.createdAt || data.created_at,
-    total_products: data.totalProducts || data.total_products || 0,
-    stock_items: (data.stockItems || data.stock_items || []).map((item) => ({
-      ...item,
-      variant_id: item.variantId || item.variant_id,
-      product_name: item.productName || item.product_name,
-      variant_unit: item.variantUnit || item.variant_unit,
-      batch_code: item.batchCode || item.batch_code,
-      batch_id: item.batchId || item.batch_id,
-    })),
-  };
-};
-
-export const transferStock = async ({
+export const toLocationTransferPayload = ({
   fromLocationId,
   toLocationId,
   variantId,
   batchId,
   quantity,
-}) => {
+}) => ({
+  fromLocationId: Number(fromLocationId),
+  toLocationId: Number(toLocationId),
+  variantId: Number(variantId),
+  batchId: Number(batchId),
+  quantity: Number(quantity),
+});
+
+const validateLocationTransferPayload = (payload) => {
+  if (
+    !payload.fromLocationId ||
+    !payload.toLocationId ||
+    !payload.variantId ||
+    !payload.batchId
+  ) {
+    throw new Error("Thiếu thông tin chuyển hàng");
+  }
+  if (payload.fromLocationId === payload.toLocationId) {
+    throw new Error("Vị trí nguồn và đích không được trùng nhau");
+  }
+  if (!Number.isInteger(payload.quantity) || payload.quantity <= 0) {
+    throw new Error("Số lượng chuyển phải lớn hơn 0");
+  }
+};
+
+export const transferStock = async (request) => {
+  const payload = toLocationTransferPayload(request);
+  validateLocationTransferPayload(payload);
+
   const response = await fetch(`${SPRING_API}/locations/transfer`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ fromLocationId, toLocationId, variantId, batchId, quantity }),
+    body: JSON.stringify(payload),
   });
   if (!response.ok) {
-    const err = await response.json().catch(() => null);
-    throw new Error(err?.message || "Lỗi khi chuyển hàng giữa vị trí");
+    throw new Error(
+      await getApiErrorMessage(response, "Lỗi khi chuyển hàng giữa vị trí"),
+    );
   }
   return response.json();
 };
@@ -550,7 +565,61 @@ export const getActiveLocations = async () => {
   const response = await fetch(`${SPRING_API}/locations/active`, {
     headers: getAuthHeaders(),
   });
-  if (!response.ok) throw new Error("Failed to fetch active locations");
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể tải vị trí đang hoạt động"),
+    );
+  }
+  const data = await response.json();
+  return data.map((loc) => ({
+    ...loc,
+    id: loc.id ?? loc.locationId ?? loc.location_id,
+    location_name: loc.locationName || loc.location_name,
+    location_code: loc.locationCode || loc.location_code,
+    location_type: loc.locationType || loc.location_type,
+    created_at: loc.createdAt || loc.created_at,
+    total_products: loc.totalProducts || loc.total_products || 0,
+    stock_items: (loc.stockItems || loc.stock_items || []).map((item) => ({
+      ...item,
+      variant_id: item.variantId || item.variant_id,
+      product_name: item.productName || item.product_name,
+      variant_unit: item.variantUnit || item.variant_unit,
+      batch_code: item.batchCode || item.batch_code,
+      batch_id: item.batchId || item.batch_id,
+      expiry_date: item.expiryDate || item.expiry_date,
+      days_until_expiry: item.daysUntilExpiry ?? item.days_until_expiry,
+      warning_status: item.warningStatus || item.warning_status || null,
+    })),
+  }));
+};
+
+export const getLocationStocks = async (locationId) => {
+  const response = await fetch(`${SPRING_API}/locations/${locationId}/stocks`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(response, "Không thể tải tồn kho vị trí"),
+    );
+  }
+  const data = await response.json();
+  return data.map((item) => ({
+    ...item,
+    variant_id: item.variantId || item.variant_id,
+    product_name: item.productName || item.product_name,
+    variant_unit: item.variantUnit || item.variant_unit,
+    batch_code: item.batchCode || item.batch_code,
+    batch_id: item.batchId || item.batch_id,
+  }));
+};
+
+export const getLocations = async () => {
+  const response = await fetch(`${SPRING_API}/locations`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, "Không thể tải vị trí"));
+  }
   const data = await response.json();
   return data.map((loc) => ({
     ...loc,
@@ -566,8 +635,24 @@ export const getActiveLocations = async () => {
       variant_unit: item.variantUnit || item.variant_unit,
       batch_code: item.batchCode || item.batch_code,
       batch_id: item.batchId || item.batch_id,
+      expiry_date: item.expiryDate || item.expiry_date,
+      days_until_expiry: item.daysUntilExpiry ?? item.days_until_expiry,
+      warning_status: item.warningStatus || item.warning_status || null,
     })),
   }));
+};
+
+
+export const deleteLocationById = deleteLocation;
+
+export const locationApi = {
+  getLocations,
+  getActiveLocations,
+  getLocationStocks,
+  updateLocation,
+  deleteLocation,
+  transferStock,
+  toLocationTransferPayload,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -618,6 +703,7 @@ export const getInventoryCountById = async (id) => {
     items: (ic.items || []).map((item) => ({
       ...item,
       product_id: item.productId || item.product_id,
+      variant_id: item.variantId || item.variant_id,
       system_quantity: item.systemQuantity ?? item.system_quantity,
       actual_quantity: item.actualQuantity ?? item.actual_quantity,
       difference_quantity: item.differenceQuantity ?? item.difference_quantity,
@@ -627,32 +713,13 @@ export const getInventoryCountById = async (id) => {
 };
 
 export const getInventoryCountNextCode = async () => {
-  try {
-    const response = await fetch(`${SPRING_API}/inventory-counts/next-code`, {
-      headers: getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error("Failed to get next code");
-    const data = await response.json();
-    return data.code;
-  } catch {
-    // Fallback: generate code client-side
-    const counts = await getInventoryCounts();
-    return generateICCode(counts);
-  }
+  const response = await fetch(`${SPRING_API}/inventory-counts/next-code`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to get next code");
+  const data = await response.json();
+  return data.code;
 };
-
-function generateICCode(existingCounts = []) {
-  const prefix = "IC-";
-  let maxNum = 0;
-  for (const count of existingCounts) {
-    const code = count.code || "";
-    if (code.startsWith(prefix)) {
-      const num = parseInt(code.slice(prefix.length), 10);
-      if (!isNaN(num) && num > maxNum) maxNum = num;
-    }
-  }
-  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
-}
 
 export const saveInventoryCountDraft = async (request) => {
   const body = mapCountRequestToBackend(request);
@@ -775,10 +842,13 @@ function mapCountRequestToBackend(request) {
     items: (request.items || [])
       .filter(
         (item) =>
-          item.actual_quantity !== null && item.actual_quantity !== undefined,
+          item.actual_quantity !== null &&
+          item.actual_quantity !== undefined &&
+          (item.variant_id || item.variantId),
       )
       .map((item) => ({
         productId: item.product_id || item.productId,
+        variantId: item.variant_id || item.variantId,
         systemQuantity: item.system_quantity ?? item.systemQuantity,
         actualQuantity: item.actual_quantity ?? item.actualQuantity,
         differenceQuantity: item.difference_quantity ?? item.differenceQuantity,

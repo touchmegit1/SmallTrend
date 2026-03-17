@@ -2,6 +2,7 @@ package com.smalltrend.service.products;
 
 import com.smalltrend.entity.Brand;
 import com.smalltrend.repository.BrandRepository;
+import com.smalltrend.validation.product.BrandValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,12 +15,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BrandServiceImpl implements BrandService {
 
+    // Service này xử lý CRUD thương hiệu và kiểm tra ràng buộc trước khi xóa.
+
     private final BrandRepository brandRepository;
-    private final com.smalltrend.repository.ProductRepository productRepository;
+    private final BrandValidator brandValidator;
 
     // Lưu mới Thương hiệu vào Database
     @Override
     public Brand create(Brand brand) {
+        brandValidator.validateNameUniqueForCreate(brand.getName());
         return brandRepository.save(brand);
     }
 
@@ -32,13 +36,14 @@ public class BrandServiceImpl implements BrandService {
     // Tìm Brand theo ID, nếu không tìm thấy sẽ bắn ngoại lệ
     @Override
     public Brand getById(Integer id) {
-        return brandRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Brand not found"));
+        return brandValidator.requireExistingBrand(id);
     }
 
+    // Cập nhật các thông tin chính của thương hiệu theo ID.
     @Override
     public Brand update(Integer id, Brand brand) {
         Brand existing = getById(id);
+        brandValidator.validateNameUniqueForUpdate(brand.getName(), id);
         existing.setName(brand.getName());
         existing.setCountry(brand.getCountry());
         existing.setDescription(brand.getDescription());
@@ -51,9 +56,7 @@ public class BrandServiceImpl implements BrandService {
     // liên kết với Brand này)
     @Override
     public void delete(Integer id) {
-        if (productRepository.existsByBrandId(id)) {
-            throw new RuntimeException("Không thể xoá thương hiệu vì đang có sản phẩm thuộc thương hiệu này");
-        }
+        brandValidator.validateDeletable(id);
         brandRepository.deleteById(id);
     }
 }

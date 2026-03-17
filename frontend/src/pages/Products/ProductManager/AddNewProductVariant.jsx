@@ -1,21 +1,27 @@
-import { useState, useRef } from "react";
-import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Trash, Zap, Barcode } from "lucide-react";
+import { useState, useRef, useMemo } from "react";
+import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Trash, Zap, Barcode, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
+import { Badge } from "../ProductComponents/badge";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useFetchUnits } from "../../../hooks/product_variants";
+import { useFetchUnits, useFetchVariants } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
 // Màn hình Thêm mới một Variant (Sản phẩm biến thể)
 // Cho phép khai báo SKU, Barcode, PLU Code, đơn vị, giá bán và hình ảnh
+/**
+ * Form tạo mới variant cho sản phẩm gốc.
+ * Hỗ trợ sinh SKU/Barcode tự động, khai báo thuộc tính và cấu hình quy đổi đơn vị.
+ */
 const AddNewProductVariant = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const product = location.state?.product;
 
   const { units, loading: unitsLoading } = useFetchUnits();
+  const { variants } = useFetchVariants(product?.id);
 
   const [formData, setFormData] = useState({
     sku: "",
@@ -32,6 +38,8 @@ const AddNewProductVariant = () => {
   const [errorMsg, setErrorMsg] = useState("");
   const [generatingSku, setGeneratingSku] = useState(false);
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
+  const [showAllAttributeSuggestions, setShowAllAttributeSuggestions] = useState(false);
+  const [showAllPairSuggestions, setShowAllPairSuggestions] = useState(false);
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -131,6 +139,77 @@ const AddNewProductVariant = () => {
     const newAttrs = [...attributes];
     newAttrs[index][field] = value;
     setAttributes(newAttrs);
+  };
+
+  const normalizeAttrText = (value) =>
+    (value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[đĐ]/g, "d")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+  const hasAttributeName = (name) => {
+    const normalizedName = normalizeAttrText(name);
+    return attributes.some((attr) => normalizeAttrText(attr.name) === normalizedName);
+  };
+
+  const hasAttributePair = (name, value) => {
+    const normalizedName = normalizeAttrText(name);
+    const normalizedValue = normalizeAttrText(value);
+    return attributes.some(
+      (attr) =>
+        normalizeAttrText(attr.name) === normalizedName &&
+        normalizeAttrText(attr.value) === normalizedValue
+    );
+  };
+
+  const attributeSuggestions = useMemo(() => {
+    const map = new Map();
+    variants.forEach((variant) => {
+      const attrs = variant?.attributes || {};
+      Object.entries(attrs).forEach(([name, value]) => {
+        if (!name || !String(name).trim()) return;
+        const normalizedName = normalizeAttrText(name);
+        if (!normalizedName || map.has(normalizedName)) return;
+        map.set(normalizedName, String(name).trim());
+      });
+    });
+    return Array.from(map.values());
+  }, [variants]);
+
+  const attributePairSuggestions = useMemo(() => {
+    const map = new Map();
+    variants.forEach((variant) => {
+      const attrs = variant?.attributes || {};
+      Object.entries(attrs).forEach(([name, value]) => {
+        if (!name || !String(name).trim()) return;
+        if (value === null || value === undefined || !String(value).trim()) return;
+        const normalizedKey = `${normalizeAttrText(name)}::${normalizeAttrText(value)}`;
+        if (!normalizedKey || map.has(normalizedKey)) return;
+        map.set(normalizedKey, { name: String(name).trim(), value: String(value).trim() });
+      });
+    });
+    return Array.from(map.values());
+  }, [variants]);
+
+  const visibleAttributeSuggestions = showAllAttributeSuggestions
+    ? attributeSuggestions
+    : attributeSuggestions.slice(0, 8);
+
+  const visiblePairSuggestions = showAllPairSuggestions
+    ? attributePairSuggestions
+    : attributePairSuggestions.slice(0, 8);
+
+  const handleApplyAttributeNameSuggestion = (name) => {
+    if (!name || hasAttributeName(name)) return;
+    setAttributes([...attributes, { name, value: "" }]);
+  };
+
+  const handleApplyAttributePairSuggestion = ({ name, value }) => {
+    if (!name || !value || hasAttributePair(name, value)) return;
+    setAttributes([...attributes, { name, value }]);
   };
 
   const handleAddConversion = () => {
@@ -522,6 +601,92 @@ const AddNewProductVariant = () => {
                         ))}
                       </div>
                     )}
+
+                    {(attributeSuggestions.length > 0 || attributePairSuggestions.length > 0) && (
+                      <div className="mt-4 space-y-3 rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                        {attributeSuggestions.length > 0 && (
+                          <div>
+                            <p className="mb-2 text-xs font-semibold text-indigo-700">Gợi ý tên thuộc tính</p>
+                            <div className="flex flex-wrap gap-2">
+                              {visibleAttributeSuggestions.map((name) => {
+                                const disabled = hasAttributeName(name);
+                                return (
+                                  <button
+                                    key={name}
+                                    type="button"
+                                    onClick={() => handleApplyAttributeNameSuggestion(name)}
+                                    disabled={disabled}
+                                    className="disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    <Badge
+                                      variant="outline"
+                                      className={`cursor-pointer border-indigo-200 text-indigo-700 ${disabled ? "bg-gray-100 text-gray-400" : "bg-white hover:bg-indigo-100"}`}
+                                    >
+                                      {name}
+                                    </Badge>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {attributeSuggestions.length > 8 && (
+                              <button
+                                type="button"
+                                onClick={() => setShowAllAttributeSuggestions((prev) => !prev)}
+                                className="mt-2 text-xs font-medium text-indigo-700 hover:underline"
+                              >
+                                {showAllAttributeSuggestions ? "Thu gọn" : `Xem thêm ${attributeSuggestions.length - 8} gợi ý`}
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {attributePairSuggestions.length > 0 && (
+                          <div>
+                            <p className="mb-2 text-xs font-semibold text-indigo-700">Gợi ý nhanh thuộc tính + giá trị</p>
+                            <div className="flex flex-wrap gap-2">
+                              {visiblePairSuggestions.map((pair) => {
+                                const key = `${pair.name}:${pair.value}`;
+                                const disabled = hasAttributePair(pair.name, pair.value);
+                                return (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => handleApplyAttributePairSuggestion(pair)}
+                                    disabled={disabled}
+                                    className="disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    <Badge
+                                      variant="secondary"
+                                      className={`cursor-pointer ${disabled ? "bg-gray-100 text-gray-400" : "bg-indigo-100 text-indigo-800 hover:bg-indigo-200"}`}
+                                    >
+                                      {pair.name}: {pair.value}
+                                    </Badge>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {attributePairSuggestions.length > 8 && (
+                              <button
+                                type="button"
+                                onClick={() => setShowAllPairSuggestions((prev) => !prev)}
+                                className="mt-2 text-xs font-medium text-indigo-700 hover:underline"
+                              >
+                                {showAllPairSuggestions ? "Thu gọn" : `Xem thêm ${attributePairSuggestions.length - 8} gợi ý`}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {variants.length > 0 && attributeSuggestions.length === 0 && attributePairSuggestions.length === 0 && (
+                      <p className="mt-3 text-xs text-gray-500 italic">Chưa có dữ liệu thuộc tính để gợi ý từ các biến thể hiện có.</p>
+                    )}
+
+                    {variants.length === 0 && (
+                      <p className="mt-3 text-xs text-gray-500 italic">Khi sản phẩm có biến thể trước đó, hệ thống sẽ hiện gợi ý thuộc tính tại đây.</p>
+                    )}
+
                   </div>
 
                   {/* DYNAMIC CONVERSIONS */}
@@ -629,17 +794,26 @@ const AddNewProductVariant = () => {
                         style={{ minHeight: "300px" }}
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-2xl" />
+
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                          <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={removeImage}
-                        className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
+                        disabled={uploadingImage}
+                        className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <X className="w-5 h-5" />
                       </button>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-3 right-3 bg-white/90 hover:bg-white text-gray-700 rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg flex items-center gap-2"
+                        disabled={uploadingImage}
+                        className="absolute bottom-3 right-3 bg-white/90 hover:bg-white text-gray-700 rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <Upload className="w-4 h-4" />
                         Đổi ảnh
@@ -649,9 +823,9 @@ const AddNewProductVariant = () => {
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => !uploadingImage && fileInputRef.current?.click()}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
+                        if ((e.key === "Enter" || e.key === " ") && !uploadingImage) {
                           e.preventDefault();
                           fileInputRef.current?.click();
                         }
@@ -659,12 +833,18 @@ const AddNewProductVariant = () => {
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging
+                      className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center transition-all ${uploadingImage ? "cursor-wait opacity-80" : "cursor-pointer"} ${isDragging
                         ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 scale-[1.02]"
                         : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
                         }`}
                       style={{ minHeight: "300px" }}
                     >
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 rounded-2xl z-10">
+                          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                          <p className="text-sm font-semibold text-blue-700">Đang tải ảnh lên...</p>
+                        </div>
+                      )}
                       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mb-4">
                         <ImageIcon className="w-10 h-10 text-blue-600" />
                       </div>
@@ -715,8 +895,8 @@ const AddNewProductVariant = () => {
               className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-xl font-semibold disabled:opacity-50"
               disabled={saving || uploadingImage}
             >
-              <Save className="w-5 h-5 mr-2" />
-              {saving || uploadingImage ? "Đang lưu..." : "Lưu biến thể"}
+              {(uploadingImage || saving) ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+              {uploadingImage ? "Đang tải ảnh..." : saving ? "Đang lưu..." : "Lưu biến thể"}
             </Button>
 
             <Button

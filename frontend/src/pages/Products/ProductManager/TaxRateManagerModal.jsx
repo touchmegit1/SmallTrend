@@ -5,6 +5,10 @@ import { Input } from '../ProductComponents/input';
 import { Label } from '../ProductComponents/label';
 import api from '../../../config/axiosConfig';
 
+/**
+ * Modal quản lý danh sách thuế suất (thêm/sửa/xóa).
+ * Sau mỗi thao tác thành công sẽ gọi onDataChange để đồng bộ màn hình cha.
+ */
 export default function TaxRateManagerModal({ onClose, onDataChange }) {
     const [taxRates, setTaxRates] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -79,16 +83,39 @@ export default function TaxRateManagerModal({ onClose, onDataChange }) {
         e.preventDefault();
         setErrorMsg("");
 
-        if (!formData.name) {
+        const normalizedName = formData.name?.trim() || "";
+        const parsedRate = Number(formData.rate);
+
+        if (!normalizedName) {
             setErrorMsg("Vui lòng điền tên loại thuế");
+            return;
+        }
+
+        if (!Number.isFinite(parsedRate)) {
+            setErrorMsg("Vui lòng nhập mức tỷ lệ thuế hợp lệ");
+            return;
+        }
+
+        if (parsedRate < 0 || parsedRate > 100) {
+            setErrorMsg("Mức tỷ lệ thuế phải nằm trong khoảng từ 0 đến 100");
+            return;
+        }
+
+        const duplicate = taxRates.some(tax =>
+            tax.id !== editingId &&
+            (tax.name || "").trim().toLowerCase() === normalizedName.toLowerCase()
+        );
+
+        if (duplicate) {
+            setErrorMsg("Tên thuế suất đã tồn tại");
             return;
         }
 
         setActionLoading(true);
         try {
             const payload = {
-                name: formData.name,
-                rate: parseFloat(formData.rate) || 0,
+                name: normalizedName,
+                rate: parsedRate,
                 active: formData.active
             };
 
@@ -183,6 +210,8 @@ export default function TaxRateManagerModal({ onClose, onDataChange }) {
                                     <Input
                                         type="number"
                                         step="0.01"
+                                        min="0"
+                                        max="100"
                                         value={formData.rate}
                                         onChange={e => setFormData({ ...formData, rate: e.target.value })}
                                         placeholder="VD: 10, 8, 5..."

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import {
-    Users, Gift, Megaphone, Tag, TrendingUp, ShoppingBag,
+    Users, Gift, Megaphone, Tag, TrendingUp,
     ChevronRight, X, Calendar, Search, BarChart2, Award
 } from 'lucide-react';
 import { useFetchCustomers } from '../../hooks/Customers';
+import { useCustomerTiers } from '../../hooks/useCustomerTiers';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useCoupons } from '../../hooks/useCoupons';
 import { useGifts } from '../../hooks/useGifts';
-import { useDiscountedVariants } from '../../hooks/useEventData';
+import adService from '../../services/adService';
 
 // ─── STAT CARD (clickable) ────────────────────────────────────────────────────
 const ReportCard = ({ icon: Icon, label, value, sub, color, onClick }) => (
@@ -75,6 +76,120 @@ const Badge = ({ text, color }) => (
     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>{text}</span>
 );
 
+const AnalyticsPanel = ({ title, subtitle, children, className = '' }) => (
+    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 p-5 ${className}`}>
+        <div className="mb-4">
+            <h3 className="text-base font-bold text-slate-800">{title}</h3>
+            {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+        </div>
+        {children}
+    </div>
+);
+
+const MiniMetric = ({ label, value, sub, tone = 'indigo' }) => {
+    const toneClass = {
+        indigo: 'bg-indigo-50 text-indigo-700',
+        emerald: 'bg-emerald-50 text-emerald-700',
+        amber: 'bg-amber-50 text-amber-700',
+        rose: 'bg-rose-50 text-rose-700',
+        sky: 'bg-sky-50 text-sky-700',
+        slate: 'bg-slate-100 text-slate-700',
+        purple: 'bg-purple-50 text-purple-700',
+    }[tone] || 'bg-slate-100 text-slate-700';
+
+    return (
+        <div className={`rounded-xl px-4 py-3 ${toneClass}`}>
+            <p className="text-xs font-medium opacity-80">{label}</p>
+            <p className="text-xl font-black mt-1">{value}</p>
+            {sub && <p className="text-xs mt-1 opacity-75">{sub}</p>}
+        </div>
+    );
+};
+
+const HorizontalBar = ({ label, labelTag, value, percent, helper, color = 'indigo' }) => {
+    const colorClass = {
+        indigo: 'bg-indigo-500',
+        emerald: 'bg-emerald-500',
+        amber: 'bg-amber-500',
+        rose: 'bg-rose-500',
+        sky: 'bg-sky-500',
+        purple: 'bg-purple-500',
+    }[color] || 'bg-indigo-500';
+
+    return (
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">{label}</p>
+                        {labelTag ? (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 flex-shrink-0">
+                                {labelTag}
+                            </span>
+                        ) : null}
+                    </div>
+                    {helper && <p className="text-xs text-slate-400 truncate">{helper}</p>}
+                </div>
+                <span className="text-sm font-bold text-slate-700 whitespace-nowrap">{value}</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                    className={`h-full rounded-full ${colorClass}`}
+                    style={{ width: `${Math.max(0, Math.min(100, percent || 0))}%` }}
+                />
+            </div>
+        </div>
+    );
+};
+
+const VerticalBars = ({ rows, valueKey, labelKey, subLabelKey, color = 'indigo', formatter = (v) => v }) => {
+    const max = Math.max(...rows.map(row => Number(row[valueKey]) || 0), 1);
+    const colorClass = {
+        indigo: 'bg-indigo-500',
+        emerald: 'bg-emerald-500',
+        amber: 'bg-amber-500',
+        rose: 'bg-rose-500',
+        sky: 'bg-sky-500',
+        purple: 'bg-purple-500',
+    }[color] || 'bg-indigo-500';
+
+    if (!rows.length) {
+        return <Empty text="Chưa có dữ liệu để vẽ biểu đồ." />;
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="h-56 flex items-end gap-3">
+                {rows.map((row) => {
+                    const raw = Number(row[valueKey]) || 0;
+                    const pct = (raw / max) * 100;
+                    return (
+                        <div key={row[labelKey]} className="flex-1 min-w-0 flex flex-col items-center gap-2">
+                            <div className="text-[11px] font-semibold text-slate-600">{formatter(raw)}</div>
+                            <div className="w-full h-44 flex items-end">
+                                <div
+                                    className={`w-full rounded-t-lg ${colorClass} transition-all duration-300`}
+                                    style={{ height: `${Math.max(4, pct)}%` }}
+                                />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs font-semibold text-slate-700 truncate max-w-[100px]" title={row[labelKey]}>
+                                    {row[labelKey]}
+                                </p>
+                                {subLabelKey && row[subLabelKey] != null ? (
+                                    <p className="text-[11px] text-slate-400 truncate max-w-[100px]" title={row[subLabelKey]}>
+                                        {row[subLabelKey]}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const statusColor = s => ({
     ACTIVE: 'bg-emerald-100 text-emerald-700',
     DRAFT: 'bg-slate-100 text-slate-600',
@@ -86,13 +201,33 @@ const statusColor = s => ({
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function CRMReport() {
     const { customers, loading: loadingCustomers } = useFetchCustomers();
+    const { tiers } = useCustomerTiers();
     const { campaigns, loading: loadingCampaigns } = useCampaigns();
     const { coupons, loading: loadingCoupons } = useCoupons();
     const { gifts, loading: loadingGifts } = useGifts();
-    const { variants, loading: loadingVariants } = useDiscountedVariants();
+    const [ads, setAds] = useState([]);
+    const [loadingAds, setLoadingAds] = useState(true);
 
-    const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'discounted'
+    const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'ads'
     const [search, setSearch] = useState('');
+    const [campaignChartMode, setCampaignChartMode] = useState('monthly');
+    const [giftPage, setGiftPage] = useState(0);
+    const [customerPage, setCustomerPage] = useState(0);
+
+    React.useEffect(() => {
+        const loadAds = async () => {
+            setLoadingAds(true);
+            try {
+                const list = await adService.getAll();
+                setAds(Array.isArray(list) ? list : []);
+            } catch (_e) {
+                setAds([]);
+            } finally {
+                setLoadingAds(false);
+            }
+        };
+        loadAds();
+    }, []);
 
     const openModal = (key) => { setActiveModal(key); setSearch(''); };
     const closeModal = () => { setActiveModal(null); setSearch(''); };
@@ -109,17 +244,111 @@ export default function CRMReport() {
         c.couponName?.toLowerCase().includes(kw) || c.couponCode?.toLowerCase().includes(kw)
     );
     const filteredGifts = gifts.filter(g => g.name?.toLowerCase().includes(kw));
-    const filteredVariants = variants.filter(v =>
-        v.name?.toLowerCase().includes(kw) || v.sku?.toLowerCase().includes(kw)
+    const filteredAds = ads.filter(a =>
+        a.sponsorName?.toLowerCase().includes(kw)
+        || a.title?.toLowerCase().includes(kw)
+        || a.slot?.toLowerCase().includes(kw)
     );
 
     // Summary stats
     const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
     const activeCoupons = coupons.filter(c => c.status === 'ACTIVE').length;
     const totalLoyaltyPts = customers.reduce((s, c) => s + (c.loyaltyPoints || 0), 0);
-    const discountedCount = variants.length;
+    const activeAds = ads.filter(a => a.isActive).length;
+    const totalSpent = customers.reduce((sum, customer) => sum + (Number(customer.spentAmount) || 0), 0);
+    const avgSpentPerCustomer = customers.length > 0 ? totalSpent / customers.length : 0;
+    const totalGiftStock = gifts.reduce((sum, gift) => sum + (gift.stock || 0), 0);
+    const outOfStockGifts = gifts.filter(gift => (gift.stock || 0) <= 0).length;
+    const totalCouponUsage = coupons.reduce((sum, coupon) => sum + (coupon.currentUsageCount || 0), 0);
+    const couponsWithFiniteLimit = coupons.filter(coupon => coupon.totalUsageLimit != null);
+    const totalCouponCapacity = couponsWithFiniteLimit.reduce((sum, coupon) => sum + (coupon.totalUsageLimit || 0), 0);
+    const couponUsageRate = totalCouponCapacity > 0 ? (totalCouponUsage / totalCouponCapacity) * 100 : 0;
+    const percentageCoupons = coupons.filter(coupon => coupon.couponType === 'PERCENTAGE').length;
+    const fixedCoupons = coupons.filter(coupon => coupon.couponType === 'FIXED_AMOUNT').length;
+    const activeAdSlots = new Set(ads.filter(ad => ad.isActive).map(ad => ad.slot)).size;
+    const draftCampaigns = campaigns.filter(campaign => campaign.status === 'DRAFT').length;
+    const expiredCoupons = coupons.filter(coupon => coupon.status === 'EXPIRED').length;
+    const topLoyaltyCustomer = customers.length > 0
+        ? [...customers].sort((a, b) => (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0))[0]
+        : null;
+    const topSpentCustomer = customers.length > 0
+        ? [...customers].sort((a, b) => (Number(b.spentAmount) || 0) - (Number(a.spentAmount) || 0))[0]
+        : null;
+
+    const topCoupons = [...coupons]
+        .sort((a, b) => (b.currentUsageCount || 0) - (a.currentUsageCount || 0))
+        .slice(0, 5);
+    const topCustomersBySpend = [...customers]
+        .sort((a, b) => (Number(b.spentAmount) || 0) - (Number(a.spentAmount) || 0));
+    const maxCustomerSpend = Math.max(...topCustomersBySpend.map(customer => Number(customer.spentAmount) || 0), 1);
+
+    const eventBudgetComparison = [...campaigns]
+        .filter(campaign => Number(campaign.budget) > 0)
+        .sort((a, b) => (Number(b.budget) || 0) - (Number(a.budget) || 0))
+        .slice(0, 6)
+        .map(campaign => ({
+            name: campaign.campaignName || campaign.campaignCode || `Event ${campaign.id}`,
+            code: campaign.campaignCode,
+            budget: Number(campaign.budget) || 0,
+        }));
+
+    const campaignsByMonthMap = campaigns.reduce((acc, campaign) => {
+        const dateStr = campaign.startDate || campaign.createdAt || campaign.created_at;
+        if (!dateStr) return acc;
+        const dt = new Date(dateStr);
+        if (Number.isNaN(dt.getTime())) return acc;
+
+        const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+        const monthLabel = dt.toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' });
+        const current = acc.get(key) || { monthKey: key, month: monthLabel, total: 0, active: 0 };
+        current.total += 1;
+        if (campaign.status === 'ACTIVE') current.active += 1;
+        acc.set(key, current);
+        return acc;
+    }, new Map());
+
+    const campaignsByMonth = Array.from(campaignsByMonthMap.values())
+        .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+        .slice(-6);
+
+    const campaignStatusRows = [
+        { label: 'ACTIVE', value: activeCampaigns },
+        { label: 'DRAFT', value: draftCampaigns },
+        { label: 'Khác', value: Math.max(0, campaigns.length - activeCampaigns - draftCampaigns) },
+    ];
+
+    const voucherUsageRows = topCoupons.map((coupon) => ({
+        label: coupon.couponName || coupon.couponCode,
+        code: coupon.couponCode,
+        value: coupon.currentUsageCount || 0,
+    }));
+
+    const adSlotRows = ['LEFT', 'RIGHT'].map((slot) => {
+        const slotAds = ads.filter(ad => ad.slot === slot);
+        const activeCount = slotAds.filter(ad => ad.isActive).length;
+        return {
+            slot,
+            total: slotAds.length,
+            active: activeCount,
+            percent: slotAds.length > 0 ? (activeCount / slotAds.length) * 100 : 0,
+        };
+    });
 
     const fmt = v => v != null ? Number(v).toLocaleString('vi-VN') + 'đ' : '-';
+
+    const getCustomerTierLabel = (customer) => {
+        const directTier = customer?.tierName || customer?.tier || customer?.customerTierName || customer?.tierInfo?.tierName;
+        if (directTier) return String(directTier);
+
+        const spent = Number(customer?.spentAmount) || 0;
+        if (!Array.isArray(tiers) || tiers.length === 0) return 'Thường';
+
+        const matchedTier = [...tiers]
+            .sort((a, b) => (Number(b.minSpending) || 0) - (Number(a.minSpending) || 0))
+            .find((tier) => spent >= (Number(tier.minSpending) || 0));
+
+        return matchedTier?.tierName || 'Thường';
+    };
 
     return (
         <div className="space-y-6">
@@ -129,29 +358,13 @@ export default function CRMReport() {
                 <p className="text-slate-500 mt-1">Tổng quan toàn bộ hệ thống CRM. Nhấn vào thẻ để xem chi tiết.</p>
             </div>
 
-            {/* SUMMARY ROW */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                    { label: 'KH đăng ký', value: customers.length, color: 'bg-indigo-500' },
-                    { label: 'Campaign ACTIVE', value: activeCampaigns, color: 'bg-emerald-500' },
-                    { label: 'Coupon ACTIVE', value: activeCoupons, color: 'bg-purple-500' },
-                    { label: 'SP đang KM', value: discountedCount, color: 'bg-rose-500' },
-                ].map(s => (
-                    <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center">
-                        <div className={`w-2 h-2 rounded-full ${s.color} mx-auto mb-2`} />
-                        <p className="text-2xl font-black text-slate-800">{s.value}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
-                    </div>
-                ))}
-            </div>
-
             {/* REPORT CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <ReportCard
                     icon={Users}
                     label="Khách hàng"
                     value={loadingCustomers ? '...' : customers.length}
-                    sub={`Tổng điểm tích lũy: ${totalLoyaltyPts.toLocaleString()} pts`}
+                    sub={customers.length > 0 ? `Chi tiêu trung bình: ${fmt(avgSpentPerCustomer)}` : 'Chưa có dữ liệu khách hàng'}
                     color="bg-indigo-500"
                     onClick={() => openModal('customers')}
                 />
@@ -159,7 +372,7 @@ export default function CRMReport() {
                     icon={Megaphone}
                     label="Sự kiện / Campaign"
                     value={loadingCampaigns ? '...' : campaigns.length}
-                    sub={`${activeCampaigns} đang ACTIVE`}
+                    sub={`${activeCampaigns} ACTIVE · ${draftCampaigns} draft`}
                     color="bg-blue-500"
                     onClick={() => openModal('campaigns')}
                 />
@@ -167,7 +380,7 @@ export default function CRMReport() {
                     icon={Tag}
                     label="Coupon"
                     value={loadingCoupons ? '...' : coupons.length}
-                    sub={`${activeCoupons} đang ACTIVE`}
+                    sub={`${totalCouponUsage.toLocaleString()} lượt sử dụng · ${activeCoupons} ACTIVE`}
                     color="bg-purple-500"
                     onClick={() => openModal('coupons')}
                 />
@@ -175,30 +388,259 @@ export default function CRMReport() {
                     icon={Gift}
                     label="Kho quà tặng Loyalty"
                     value={loadingGifts ? '...' : gifts.length}
-                    sub={`Tổng tồn: ${gifts.reduce((s, g) => s + (g.stock || 0), 0)} sản phẩm`}
+                    sub={`Tổng tồn: ${totalGiftStock} · Hết hàng: ${outOfStockGifts}`}
                     color="bg-amber-500"
                     onClick={() => openModal('gifts')}
                 />
                 <ReportCard
-                    icon={ShoppingBag}
-                    label="Sản phẩm đang khuyến mãi"
-                    value={loadingVariants ? '...' : discountedCount}
-                    sub="Đang được áp dụng coupon"
-                    color="bg-rose-500"
-                    onClick={() => openModal('discounted')}
+                    icon={TrendingUp}
+                    label="Quảng cáo"
+                    value={loadingAds ? '...' : ads.length}
+                    sub={`${activeAds} đang hiển thị trên ${activeAdSlots} vị trí`}
+                    color="bg-sky-500"
+                    onClick={() => openModal('ads')}
                 />
                 <ReportCard
                     icon={Award}
                     label="Top Loyalty khách hàng"
-                    value={customers.length > 0 ? `${Math.max(...customers.map(c => c.loyaltyPoints || 0)).toLocaleString()} pts` : '0'}
-                    sub={(() => {
-                        if (customers.length === 0) return 'Chưa có dữ liệu';
-                        const top = [...customers].sort((a, b) => (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0))[0];
-                        return top ? top.name : '';
-                    })()}
+                    value={topLoyaltyCustomer ? `${(topLoyaltyCustomer.loyaltyPoints || 0).toLocaleString()} pts` : '0'}
+                    sub={topSpentCustomer ? `Chi tiêu cao nhất: ${fmt(topSpentCustomer.spentAmount)}` : 'Chưa có dữ liệu'}
                     color="bg-emerald-500"
                     onClick={() => openModal('customers')}
                 />
+            </div>
+
+            {/* ANALYTICS OVERVIEW */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                <AnalyticsPanel
+                    title="Hiệu suất voucher"
+                >
+                    <div className="grid grid-cols-2 gap-3">
+                        <MiniMetric label="Tổng coupon" value={coupons.length} sub={`${activeCoupons} ACTIVE`} tone="purple" />
+                        <MiniMetric label="Lượt sử dụng" value={totalCouponUsage.toLocaleString()} sub={`${couponUsageRate.toFixed(1)}% trên quota`} tone="emerald" />
+                        <MiniMetric label="Coupon %" value={percentageCoupons} sub="Theo phần trăm" tone="amber" />
+                        <MiniMetric label="Coupon cố định" value={fixedCoupons} sub={`${expiredCoupons} đã hết hạn`} tone="rose" />
+                    </div>
+                </AnalyticsPanel>
+
+                <AnalyticsPanel
+                    title="Giá trị khách hàng"
+                >
+                    <div className="grid grid-cols-2 gap-3">
+                        <MiniMetric label="Total spent" value={fmt(totalSpent)} sub="Toàn bộ khách CRM" tone="indigo" />
+                        <MiniMetric label="Chi tiêu TB" value={fmt(avgSpentPerCustomer)} sub="Mỗi khách đăng ký" tone="sky" />
+                        <MiniMetric label="Tổng loyalty" value={`${totalLoyaltyPts.toLocaleString()} pts`} sub="Điểm đang tích lũy" tone="emerald" />
+                        <MiniMetric label="Top spender" value={topCustomersBySpend[0]?.name || '-'} sub={topCustomersBySpend[0] ? fmt(topCustomersBySpend[0].spentAmount) : 'Chưa có dữ liệu'} tone="amber" />
+                    </div>
+                </AnalyticsPanel>
+
+                <AnalyticsPanel
+                    title="Vận hành CRM"
+                >
+                    <div className="grid grid-cols-2 gap-3">
+                        <MiniMetric label="Campaign active" value={activeCampaigns} sub={`${draftCampaigns} draft`} tone="sky" />
+                        <MiniMetric label="Ads active" value={activeAds} sub={`${activeAdSlots} vị trí có hiển thị`} tone="indigo" />
+                        <MiniMetric label="Tồn quà loyalty" value={totalGiftStock.toLocaleString()} sub={`${outOfStockGifts} quà đã hết`} tone="amber" />
+                        <MiniMetric label="Ngân sách campaign" value={fmt(campaigns.reduce((sum, campaign) => sum + (Number(campaign.budget) || 0), 0))} sub="Tổng ngân sách khai báo" tone="emerald" />
+                    </div>
+                </AnalyticsPanel>
+            </div>
+
+            {/* DETAILED INSIGHTS */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <AnalyticsPanel
+                    title="Top khách hàng theo chi tiêu"
+                >
+                    {topCustomersBySpend.length === 0 ? <Empty text="Chưa có dữ liệu chi tiêu khách hàng." /> : (() => {
+                        const CUST_PAGE_SIZE = 5;
+                        const totalCustomerPages = Math.max(1, Math.ceil(topCustomersBySpend.length / CUST_PAGE_SIZE));
+                        const safeCustPage = Math.min(customerPage, totalCustomerPages - 1);
+                        const pageCustomers = topCustomersBySpend.slice(safeCustPage * CUST_PAGE_SIZE, safeCustPage * CUST_PAGE_SIZE + CUST_PAGE_SIZE);
+                        return (
+                            <>
+                                <div className="space-y-4 min-h-[120px]">
+                                    {pageCustomers.map((customer) => (
+                                        <HorizontalBar
+                                            key={customer.id}
+                                            label={customer.name}
+                                            labelTag={getCustomerTierLabel(customer)}
+                                            helper={`${customer.phone || 'Không có SĐT'} · ${(customer.loyaltyPoints || 0).toLocaleString()} pts`}
+                                            value={fmt(customer.spentAmount)}
+                                            percent={((Number(customer.spentAmount) || 0) / maxCustomerSpend) * 100}
+                                            color="emerald"
+                                        />
+                                    ))}
+                                </div>
+                                {totalCustomerPages > 1 && (
+                                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+                                        <button
+                                            onClick={() => setCustomerPage(p => Math.max(0, p - 1))}
+                                            disabled={safeCustPage === 0}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            ← Trước
+                                        </button>
+                                        <span className="text-xs text-slate-400">
+                                            {safeCustPage + 1} / {totalCustomerPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setCustomerPage(p => Math.min(totalCustomerPages - 1, p + 1))}
+                                            disabled={safeCustPage >= totalCustomerPages - 1}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Sau →
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+                </AnalyticsPanel>
+                <AnalyticsPanel
+                    title="Kho quà loyalty"
+                >
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                        <MiniMetric label="Quà sắp hết" value={gifts.filter(gift => (gift.stock || 0) > 0 && (gift.stock || 0) <= 5).length} tone="amber" />
+                        <MiniMetric label="Tổng số quà" value={gifts.length} tone="indigo" />
+                    </div>
+                    {(() => {
+                        const GIFT_PAGE_SIZE = 3;
+                        const sortedGifts = gifts.slice().sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0));
+                        const maxStock = Math.max(...sortedGifts.map(g => Number(g.stock) || 0), 1);
+                        const totalGiftPages = Math.max(1, Math.ceil(sortedGifts.length / GIFT_PAGE_SIZE));
+                        const safePage = Math.min(giftPage, totalGiftPages - 1);
+                        const pageGifts = sortedGifts.slice(safePage * GIFT_PAGE_SIZE, safePage * GIFT_PAGE_SIZE + GIFT_PAGE_SIZE);
+                        return (
+                            <>
+                                <div className="space-y-4 min-h-[120px]">
+                                    {gifts.length === 0 ? (
+                                        <p className="text-sm text-slate-400 text-center py-4">Chưa có quà trong kho.</p>
+                                    ) : pageGifts.map((gift) => {
+                                        const stock = Number(gift.stock) || 0;
+                                        const color = stock === 0 ? 'rose' : stock <= 5 ? 'amber' : 'emerald';
+                                        return (
+                                            <HorizontalBar
+                                                key={gift.id || gift.name}
+                                                label={gift.name || 'Quà'}
+                                                helper={stock === 0 ? 'Hết hàng' : `Cần ${gift.requiredPoints || 0} pts`}
+                                                value={`${stock}`}
+                                                percent={(stock / maxStock) * 100}
+                                                color={color}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                                {totalGiftPages > 1 && (
+                                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+                                        <button
+                                            onClick={() => setGiftPage(p => Math.max(0, p - 1))}
+                                            disabled={safePage === 0}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            ← Trước
+                                        </button>
+                                        <span className="text-xs text-slate-400">
+                                            {safePage + 1} / {totalGiftPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setGiftPage(p => Math.min(totalGiftPages - 1, p + 1))}
+                                            disabled={safePage >= totalGiftPages - 1}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Sau →
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+                </AnalyticsPanel>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+                <AnalyticsPanel
+                    title="Biểu đồ tổng hợp CRM"
+                    subtitle={campaignChartMode === 'monthly'
+                        ? 'Số lượng campaign được tạo theo tháng (6 tháng gần nhất).'
+                        : campaignChartMode === 'budget'
+                            ? 'Top chiến dịch theo ngân sách khai báo.'
+                            : campaignChartMode === 'voucher'
+                                ? 'Top coupon theo số lượt sử dụng.'
+                                : 'Tương quan số lượng campaign theo trạng thái.'}
+                >
+                    <div className="inline-flex rounded-lg bg-slate-100 p-1 mb-4">
+                        <button
+                            type="button"
+                            onClick={() => setCampaignChartMode('monthly')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${campaignChartMode === 'monthly' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                        >
+                            Theo tháng
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCampaignChartMode('budget')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${campaignChartMode === 'budget' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                        >
+                            Theo ngân sách
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCampaignChartMode('voucher')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${campaignChartMode === 'voucher' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                        >
+                            Voucher
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCampaignChartMode('status')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${campaignChartMode === 'status' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                        >
+                            Trạng thái
+                        </button>
+                    </div>
+
+                    {campaignChartMode === 'monthly' ? (
+                        <>
+                            <VerticalBars
+                                rows={campaignsByMonth}
+                                valueKey="total"
+                                labelKey="month"
+                                subLabelKey="active"
+                                color="indigo"
+                                formatter={(v) => `${v} event`}
+                            />
+                            {campaignsByMonth.length > 0 ? (
+                                <p className="text-xs text-slate-400 mt-2">Dòng phụ dưới cột là số campaign ACTIVE trong tháng đó.</p>
+                            ) : null}
+                        </>
+                    ) : campaignChartMode === 'budget' ? (
+                        <VerticalBars
+                            rows={eventBudgetComparison}
+                            valueKey="budget"
+                            labelKey="name"
+                            subLabelKey="code"
+                            color="sky"
+                            formatter={(v) => fmt(v)}
+                        />
+                    ) : campaignChartMode === 'voucher' ? (
+                        <VerticalBars
+                            rows={voucherUsageRows}
+                            valueKey="value"
+                            labelKey="label"
+                            subLabelKey="code"
+                            color="purple"
+                            formatter={(v) => `${v} lượt`}
+                        />
+                    ) : (
+                        <VerticalBars
+                            rows={campaignStatusRows}
+                            valueKey="value"
+                            labelKey="label"
+                            color="emerald"
+                            formatter={(v) => `${v} campaign`}
+                        />
+                    )}
+                </AnalyticsPanel>
             </div>
 
             {/* ── MODAL: CUSTOMERS ── */}
@@ -368,47 +810,50 @@ export default function CRMReport() {
                 </Modal>
             )}
 
-            {/* ── MODAL: DISCOUNTED PRODUCTS ── */}
-            {activeModal === 'discounted' && (
+            {/* ── MODAL: ADS ── */}
+            {activeModal === 'ads' && (
                 <Modal
-                    title="Sản phẩm đang được khuyến mãi"
-                    subtitle={`${variants.length} sản phẩm đang áp dụng coupon`}
+                    title="Danh sách quảng cáo"
+                    subtitle={`${ads.length} quảng cáo · ${activeAds} đang hiển thị`}
                     onClose={closeModal}
                 >
-                    <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên hoặc SKU..." />
-                    {filteredVariants.length === 0 ? <Empty text="Chưa có sản phẩm nào đang khuyến mãi." /> : (
+                    <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo nhà tài trợ, tiêu đề hoặc vị trí..." />
+                    {filteredAds.length === 0 ? <Empty text="Chưa có quảng cáo phù hợp." /> : (
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 border-b border-slate-100">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Sản phẩm</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Giá gốc</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Giá KM</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Coupon</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Nhà tài trợ / Tiêu đề</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Vị trí</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredVariants.map(v => (
-                                    <tr key={v.sku} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                {filteredAds.map(a => (
+                                    <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 <img
-                                                    src={v.imageUrl || 'https://placehold.co/40x40?text=?'}
-                                                    alt={v.name}
+                                                    src={a.imageUrl || 'https://placehold.co/40x40?text=Ad'}
+                                                    alt={a.title}
                                                     className="w-9 h-9 rounded-lg object-cover border border-slate-100 flex-shrink-0"
-                                                    onError={e => { e.target.src = 'https://placehold.co/40x40?text=?'; }}
+                                                    onError={e => { e.target.src = 'https://placehold.co/40x40?text=Ad'; }}
                                                 />
                                                 <div>
-                                                    <p className="font-medium text-slate-800 text-sm">{v.name}</p>
-                                                    <p className="text-xs text-slate-400 font-mono">{v.sku}</p>
+                                                    <p className="font-medium text-slate-800 text-sm">{a.sponsorName}</p>
+                                                    <p className="text-xs text-slate-500">{a.title}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-400 line-through text-sm">{fmt(v.sellPrice)}</td>
-                                        <td className="px-4 py-3 font-bold text-rose-500 text-sm">{fmt(v.discountedPrice ?? v.sellPrice)}</td>
                                         <td className="px-4 py-3">
-                                            <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded font-mono text-xs font-bold">
-                                                {v.couponCode}
+                                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded font-mono text-xs font-bold">
+                                                {a.slot}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <Badge
+                                                text={a.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                                color={a.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}
+                                            />
                                         </td>
                                     </tr>
                                 ))}

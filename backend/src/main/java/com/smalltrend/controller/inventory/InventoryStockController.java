@@ -3,6 +3,7 @@ package com.smalltrend.controller.inventory;
 import com.smalltrend.dto.inventory.StockAdjustRequest;
 import com.smalltrend.dto.inventory.StockImportRequest;
 import com.smalltrend.service.inventory.InventoryStockService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,14 +24,14 @@ public class InventoryStockController {
 
     @PostMapping("/import")
     @PreAuthorize("hasAuthority('INVENTORY_MANAGE')")
-    public ResponseEntity<Void> importStock(@RequestBody StockImportRequest request) {
+    public ResponseEntity<Void> importStock(@Valid @RequestBody StockImportRequest request) {
         inventoryStockService.importStock(request);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/adjust")
     @PreAuthorize("hasAuthority('INVENTORY_MANAGE')")
-    public ResponseEntity<Void> adjustStock(@RequestBody StockAdjustRequest request) {
+    public ResponseEntity<Void> adjustStock(@Valid @RequestBody StockAdjustRequest request) {
         inventoryStockService.adjustStock(request);
         return ResponseEntity.ok().build();
     }

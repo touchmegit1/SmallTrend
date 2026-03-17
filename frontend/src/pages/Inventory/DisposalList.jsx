@@ -38,10 +38,6 @@ const STATUS_CONFIG = {
 
 const REASON_CONFIG = {
   EXPIRED: { label: "Hết hạn" },
-  DAMAGED: { label: "Hư hỏng" },
-  LOST: { label: "Thất thoát" },
-  OBSOLETE: { label: "Lỗi thời" },
-  OTHER: { label: "Khác" },
 };
 
 const SortIcon = ({ field, sortField, sortDir }) => (
@@ -80,7 +76,7 @@ export default function DisposalList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600" />
       </div>
     );
@@ -88,12 +84,12 @@ export default function DisposalList() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen p-6">
+      <div className="flex items-center justify-center min-h-screen p-6">
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 max-w-md w-full text-center">
           <p className="font-semibold text-lg mb-1">Lỗi tải dữ liệu</p>
           <p className="text-sm">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => globalThis.location.reload()}
             className="mt-4 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition"
           >
             Thử lại
@@ -115,7 +111,7 @@ export default function DisposalList() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       {/* ── HEADER ─────────────────────────────────────────────── */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 shrink-0">
         <div className="flex items-center justify-between gap-4">
@@ -251,8 +247,18 @@ export default function DisposalList() {
                 <tbody className="divide-y divide-slate-100">
                   {vouchers.map((v) => {
                     const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
-                    const reason =
-                      REASON_CONFIG[v.reasonType] || REASON_CONFIG.OTHER;
+                    const reason = REASON_CONFIG[v.reasonType] || REASON_CONFIG.EXPIRED;
+                    const derivedValue = (v.items || []).reduce(
+                      (sum, item) =>
+                        sum +
+                        Number(
+                          item.total_cost ?? item.totalCost ?? (item.unit_cost ?? item.unitCost ?? 0) * (item.quantity ?? 0)
+                        ),
+                      0
+                    );
+                    const displayedValue =
+                      Number(v.totalValue ?? 0) > 0 ? Number(v.totalValue) : derivedValue;
+
                     return (
                       <tr
                         key={v.id}
@@ -277,7 +283,7 @@ export default function DisposalList() {
                           {v.totalQuantity || 0}
                         </td>
                         <td className="px-4 py-3 text-sm text-right font-medium text-slate-900">
-                          {formatCurrency(v.totalValue || 0)}
+                          {formatCurrency(displayedValue)}
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-500">
                           {formatDate(v.createdAt)}

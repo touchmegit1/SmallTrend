@@ -11,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/upload")
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class FileUploadController {
 
     private static final Logger logger = LoggerFactory.getLogger(FileUploadController.class);
@@ -23,7 +22,9 @@ public class FileUploadController {
     }
 
     @PostMapping("/image")
-    public ResponseEntity<Map<String, ?>> uploadImage(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, ?>> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "folder", required = false) String folder) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
         }
@@ -31,8 +32,8 @@ public class FileUploadController {
         try {
             logger.info("Starting image upload to Cloudinary: {}", file.getOriginalFilename());
 
-            // Upload file to Cloudinary
-            Map<String, Object> uploadResult = cloudinaryService.uploadFile(file, "user-avatars");
+            String targetFolder = (folder == null || folder.isBlank()) ? "user-avatars" : folder.trim();
+            Map<String, Object> uploadResult = cloudinaryService.uploadFile(file, targetFolder);
 
             String imageUrl = (String) uploadResult.get("secure_url");
             logger.info("Image uploaded successfully to Cloudinary: {}", imageUrl);

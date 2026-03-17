@@ -10,6 +10,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Entity lưu lịch sử mua hàng theo khách và sản phẩm.
+ * Dữ liệu dùng cho tra cứu lịch sử giao dịch và báo cáo liên quan.
+ */
 @Entity
 @Table(name = "purchase_history")
 @Data

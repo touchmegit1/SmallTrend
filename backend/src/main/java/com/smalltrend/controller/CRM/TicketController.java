@@ -19,7 +19,6 @@ import com.smalltrend.service.CRM.TicketService;
 @RestController
 @RequestMapping("/api/crm")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class TicketController {
 
     private final TicketService ticketService;
@@ -32,7 +31,7 @@ public class TicketController {
     }
 
     @GetMapping("/tickets/{id}")
-    public ResponseEntity<TicketResponse> getTicketById(@PathVariable Long id) {
+    public ResponseEntity<TicketResponse> getTicketById(@PathVariable("id") Long id) {
         TicketResponse ticket = ticketService.getTicketById(id);
         return ResponseEntity.ok(ticket);
     }
@@ -51,14 +50,14 @@ public class TicketController {
 
     @PutMapping("/tickets/{id}")
     public ResponseEntity<TicketResponse> updateTicket(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody UpdateTicketRequest request) {
         TicketResponse ticket = ticketService.updateTicket(id, request);
         return ResponseEntity.ok(ticket);
     }
 
     @DeleteMapping("/tickets/{id}")
-    public ResponseEntity<Void> deleteTicket(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteTicket(@PathVariable("id") Long id) {
         ticketService.deleteTicket(id);
         return ResponseEntity.noContent().build();
     }
@@ -67,7 +66,7 @@ public class TicketController {
      * Lookup users by role ID — for assigning tickets
      */
     @GetMapping("/tickets/lookup/users-by-role/{roleId}")
-    public ResponseEntity<List<Map<String, Object>>> getUsersByRole(@PathVariable Integer roleId) {
+    public ResponseEntity<List<Map<String, Object>>> getUsersByRole(@PathVariable("roleId") Integer roleId) {
         List<User> users = userRepository.findByRoleId(roleId);
         List<Map<String, Object>> result = users.stream().map(u -> {
             Map<String, Object> map = new HashMap<>();
@@ -86,7 +85,7 @@ public class TicketController {
      * Delegates to service to keep transaction open for lazy-loaded collections.
      */
     @GetMapping("/tickets/lookup/variant-by-sku")
-    public ResponseEntity<List<Map<String, Object>>> getVariantBySku(@RequestParam String sku) {
+    public ResponseEntity<List<Map<String, Object>>> getVariantBySku(@RequestParam("sku") String sku) {
         List<Map<String, Object>> result = ticketService.lookupVariantBySku(sku);
         return ResponseEntity.ok(result);
     }
