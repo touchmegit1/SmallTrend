@@ -54,8 +54,8 @@ public class ReportController {
     @GetMapping("/history")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReportPageResponse> getReportHistory(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
             Authentication authentication) {
         String userEmail = authentication.getName();
         ReportPageResponse response = reportService.getReportHistory(userEmail, page, size);
@@ -68,8 +68,8 @@ public class ReportController {
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReportPageResponse> getAllReports(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
         ReportPageResponse response = reportService.getAllReports(page, size);
         return ResponseEntity.ok(response);
     }
