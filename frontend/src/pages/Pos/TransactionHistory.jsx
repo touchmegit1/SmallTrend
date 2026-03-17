@@ -29,7 +29,7 @@ function TransactionHistory() {
 
       // Lưu tất cả transactions hoàn thành vào database
       for (const transaction of savedTransactions) {
-        if (!transaction.savedToDb && transaction.status === "Hoàn thành") {
+        if (!transaction.savedToDb && !transaction.purchaseHistorySyncFailed && transaction.status === "Hoàn thành") {
           await savePurchaseHistory(transaction);
         }
       }
@@ -42,31 +42,62 @@ function TransactionHistory() {
     const items = transaction.cart || transaction.items || [];
     if (items.length === 0) return;
 
-    const markTransactionAsSaved = () => {
+    const updateTransactionSyncState = (patch) => {
       const updatedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       const index = updatedTransactions.findIndex(t => t.id === transaction.id);
       if (index !== -1) {
-        updatedTransactions[index].savedToDb = true;
+        updatedTransactions[index] = { ...updatedTransactions[index], ...patch };
         localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
         setTransactions(updatedTransactions);
       }
     };
 
+    const markTransactionAsSaved = () => {
+      updateTransactionSyncState({ savedToDb: true, purchaseHistorySyncFailed: false });
+    };
+
+    const markTransactionAsSyncFailed = () => {
+      updateTransactionSyncState({ purchaseHistorySyncFailed: true });
+    };
+
     try {
-      const request = {
-        customerId: transaction.customer?.id || 0,
-        customerName: transaction.customer?.name || "Khách lẻ",
-        paymentMethod: transaction.payment,
-        items: items.map(item => {
+      const validItems = items
+        .map(item => {
           const productId = item.productId || item.id;
+          const numericProductId = Number(productId);
+          if (!Number.isInteger(numericProductId) || numericProductId <= 0) {
+            return null;
+          }
+
+          const quantity = Number(item.qty || item.quantity || 1);
+          const price = Number(item.price);
+          const subtotal = quantity * price;
+
+          if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0 || !Number.isFinite(subtotal) || subtotal < 0) {
+            return null;
+          }
+
           return {
-            productId: (typeof productId === 'string' && String(productId).startsWith('combo_')) ? 0 : (productId || 0),
+            productId: numericProductId,
             productName: item.name,
-            quantity: item.qty || item.quantity || 1,
-            price: item.price,
-            subtotal: item.price * (item.qty || item.quantity || 1)
+            quantity,
+            price,
+            subtotal
           };
         })
+        .filter(Boolean);
+
+      if (validItems.length === 0) {
+        markTransactionAsSyncFailed();
+        return;
+      }
+
+      const customerId = Number(transaction.customer?.id);
+      const request = {
+        customerId: Number.isInteger(customerId) && customerId > 0 ? customerId : null,
+        customerName: transaction.customer?.name || "Khách lẻ",
+        paymentMethod: transaction.payment,
+        items: validItems
       };
 
       await api.post('/pos/purchase-history', request);
@@ -75,6 +106,9 @@ function TransactionHistory() {
       if (error?.response?.status === 409) {
         markTransactionAsSaved();
         return;
+      }
+      if (error?.response?.status === 400) {
+        markTransactionAsSyncFailed();
       }
       console.error('Error saving purchase history:', error);
     }
