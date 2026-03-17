@@ -16,9 +16,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -76,23 +79,25 @@ public class PurchaseOrderService {
     }
 
     private void notifyManagersOnShortage(PurchaseOrder order) {
-        try {
-            String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
-            String shortageReason = order != null && order.getShortageReason() != null
-                    ? order.getShortageReason()
-                    : "Không có";
+        CompletableFuture.runAsync(() -> {
+            try {
+                String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
+                String shortageReason = order != null && order.getShortageReason() != null
+                        ? order.getShortageReason()
+                        : "Không có";
 
-            NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
-                    .subject("[PO thiếu hàng] " + orderNumber)
-                    .message("Phiếu nhập " + orderNumber + " đang thiếu hàng.\nLý do thiếu: " + shortageReason)
-                    .build();
+                NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
+                        .subject("[PO thiếu hàng] " + orderNumber)
+                        .message("Phiếu nhập " + orderNumber + " đang thiếu hàng.\nLý do thiếu: " + shortageReason)
+                        .build();
 
-            int recipientCount = inventoryManagerNotificationService.notifyManagers(order, request);
-            log.info("Đã tự động gửi thông báo thiếu hàng cho {} quản lý của PO {}.", recipientCount, orderNumber);
-        } catch (Exception ex) {
-            String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
-            log.warn("Không thể tự động gửi email thiếu hàng cho PO {}: {}", orderNumber, ex.getMessage());
-        }
+                int recipientCount = inventoryManagerNotificationService.notifyManagers(order, request);
+                log.info("Đã tự động gửi thông báo thiếu hàng cho {} quản lý của PO {}.", recipientCount, orderNumber);
+            } catch (Exception ex) {
+                String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
+                log.warn("Không thể tự động gửi email thiếu hàng cho PO {}: {}", orderNumber, ex.getMessage());
+            }
+        });
     }
 
 
@@ -224,12 +229,18 @@ public class PurchaseOrderService {
             throw new RuntimeException("Chỉ có thể nhập kho phiếu đang kiểm kê.");
         }
 
-        Integer effectiveSupplierId = receiptRequest.getSupplierId() != null
-                ? receiptRequest.getSupplierId()
-                : (order.getSupplier() != null ? order.getSupplier().getId() : null);
-        Integer effectiveLocationId = receiptRequest.getLocationId() != null
-                ? receiptRequest.getLocationId()
-                : order.getLocationId();
+        Integer lockedSupplierId = order.getSupplier() != null ? order.getSupplier().getId() : null;
+        Integer lockedLocationId = order.getLocationId();
+
+        if (receiptRequest.getSupplierId() != null && !receiptRequest.getSupplierId().equals(lockedSupplierId)) {
+            throw new RuntimeException("Không thể thay đổi nhà cung cấp sau khi bắt đầu kiểm kê.");
+        }
+        if (receiptRequest.getLocationId() != null && !receiptRequest.getLocationId().equals(lockedLocationId)) {
+            throw new RuntimeException("Không thể thay đổi vị trí nhập kho sau khi bắt đầu kiểm kê.");
+        }
+
+        Integer effectiveSupplierId = lockedSupplierId;
+        Integer effectiveLocationId = lockedLocationId;
         BigDecimal effectiveTaxPercent = receiptRequest.getTaxPercent() != null
                 ? receiptRequest.getTaxPercent()
                 : (order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO);
@@ -252,6 +263,14 @@ public class PurchaseOrderService {
 
         boolean hasShortage = false;
         List<PurchaseOrderItemRequest> stockItemRequests = new ArrayList<>();
+        Map<Integer, PurchaseOrderItem> orderItemById = new HashMap<>();
+        if (order.getItems() != null) {
+            for (PurchaseOrderItem item : order.getItems()) {
+                if (item != null && item.getId() != null) {
+                    orderItemById.put(item.getId(), item);
+                }
+            }
+        }
 
         if (receiptRequest.getItems() != null) {
             for (GoodsReceiptRequest.GoodsReceiptItemRequest receiptItem : receiptRequest.getItems()) {
@@ -259,10 +278,14 @@ public class PurchaseOrderService {
                     throw new RuntimeException("Số lượng thực nhận không hợp lệ.");
                 }
 
-                PurchaseOrderItem orderItem = order.getItems().stream()
-                        .filter(i -> i.getId().equals(receiptItem.getItemId()))
-                        .findFirst()
-                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm trong phiếu nhập."));
+                if (receiptItem.getItemId() == null) {
+                    throw new RuntimeException("Thiếu mã sản phẩm trong phiếu nhập.");
+                }
+
+                PurchaseOrderItem orderItem = orderItemById.get(receiptItem.getItemId());
+                if (orderItem == null) {
+                    throw new RuntimeException("Không tìm thấy sản phẩm trong phiếu nhập.");
+                }
 
                 int orderedQty = orderItem.getQuantity() != null ? orderItem.getQuantity() : 0;
                 Integer conversionFactorValue = resolveConversionFactor(orderItem.getVariant());
@@ -282,12 +305,14 @@ public class PurchaseOrderService {
                     hasShortage = true;
                 }
 
+                LocalDate lockedExpiryDate = orderItem.getExpiryDate();
+                if (receiptItem.getExpiryDate() != null && !receiptItem.getExpiryDate().equals(lockedExpiryDate)) {
+                    throw new RuntimeException("Không thể thay đổi hạn sử dụng sau khi bắt đầu kiểm kê.");
+                }
+
                 orderItem.setReceivedQuantity(newReceivedQty);
                 orderItem.setUnitCost(receiptItem.getUnitCost());
                 orderItem.setTotalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(newReceivedQty)));
-                if (receiptItem.getExpiryDate() != null) {
-                    orderItem.setExpiryDate(receiptItem.getExpiryDate());
-                }
                 if (receiptItem.getNotes() != null) {
                     orderItem.setNotes(receiptItem.getNotes());
                 }
@@ -358,7 +383,7 @@ public class PurchaseOrderService {
             order.setManagerDecision("REQUEST_SUPPLEMENT");
             order.setManagerDecisionNote(null);
             order.setManagerDecidedAt(null);
-            order.setStatus(PurchaseOrderStatus.SUPPLIER_SUPPLEMENT_PENDING);
+            order.setStatus(PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL);
             notifyManagersOnShortage(order);
         } else {
             order.setStatus(PurchaseOrderStatus.RECEIVED);
@@ -394,20 +419,6 @@ public class PurchaseOrderService {
         order.setManagerDecidedAt(LocalDateTime.now());
         order.setStatus(PurchaseOrderStatus.RECEIVED);
         purchaseOrderRepository.save(order);
-
-        List<PurchaseOrderItemRequest> itemRequests = order.getItems().stream()
-                .map(item -> PurchaseOrderItemRequest.builder()
-                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
-                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                        ? item.getVariant().getProduct().getId().intValue() : null)
-                .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : item.getQuantity())
-                .unitCost(item.getUnitCost())
-                .totalCost(item.getTotalCost())
-                .expiryDate(item.getExpiryDate())
-                .build())
-                .collect(Collectors.toList());
-
-        updateStock(order, itemRequests, false);
 
         int syncedPurchasePriceCount = syncPurchasePrices(order);
 
@@ -968,6 +979,7 @@ public class PurchaseOrderService {
                     .conversionFactor(resolveConversionFactor(item.getVariant()))
                     .checkingQuantity(resolveCheckingQuantity(item))
                     .notes(item.getNotes())
+                    .expiryDate(item.getExpiryDate())
                     .build())
                     .collect(Collectors.toList());
             response.setItems(itemResponses);

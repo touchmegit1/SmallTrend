@@ -209,6 +209,7 @@ function CreatePurchaseOrder() {
             receiptItems={receiptItems}
             onUpdateReceiptItem={updateReceiptItem}
             isReadOnly={!isChecking}
+            lockExpiryDate={isChecking}
           />
         ) : (
           <div className="flex-1 overflow-auto px-6 py-5">
@@ -311,6 +312,7 @@ function CreatePurchaseOrder() {
             updateOrder={updateOrder}
             isEditable={isEditable}
             allowMetaEdit={isChecking}
+            lockMetaFields={isChecking}
             checkingFinancials={checkingFinancials}
           />
 
