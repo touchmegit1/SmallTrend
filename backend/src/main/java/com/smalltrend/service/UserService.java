@@ -66,8 +66,8 @@ public class UserService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username)));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username)));
         String roleName = user.getRole() != null ? user.getRole().getName() : "ROLE_USER";
         roleName = roleName.toUpperCase();
 
@@ -164,8 +164,8 @@ public class UserService implements UserDetailsService {
     public AuthResponse login(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found")));
         String token = jwtUtil.generateToken(username);
 
         return AuthResponse.builder()
@@ -183,8 +183,8 @@ public class UserService implements UserDetailsService {
     public User getCurrentUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseGet(() -> userCredentialsRepository.findByUsername(username)
-                        .map(UserCredential::getUser)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+                .map(UserCredential::getUser)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found")));
     }
 
     public UserProfileDTO getCurrentUserProfile(String username) {

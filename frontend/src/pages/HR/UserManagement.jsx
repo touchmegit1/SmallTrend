@@ -60,7 +60,7 @@ const UserManagement = () => {
       setUsers([]);
       setError(
         "Không thể tải danh sách người dùng: " +
-          (err.response?.data?.message || err.message),
+        (err.response?.data?.message || err.message),
       );
     } finally {
       setLoading(false);
@@ -308,7 +308,7 @@ const UserManagement = () => {
       } catch (err) {
         setError(
           "Không thể xóa người dùng: " +
-            (err.response?.data?.message || err.message),
+          (err.response?.data?.message || err.message),
         );
       }
     }
@@ -321,7 +321,7 @@ const UserManagement = () => {
     } catch (err) {
       setError(
         "Không thể cập nhật trạng thái: " +
-          (err.response?.data?.message || err.message),
+        (err.response?.data?.message || err.message),
       );
     }
   };
@@ -333,7 +333,7 @@ const UserManagement = () => {
     } catch (err) {
       setError(
         "Không thể cập nhật vai trò: " +
-          (err.response?.data?.message || err.message),
+        (err.response?.data?.message || err.message),
       );
     }
   };
@@ -612,12 +612,11 @@ const UserManagement = () => {
                               onDragLeave={handleDragLeave}
                               onDrop={handleDrop}
                               onClick={() => !uploadingImage && fileInputRef.current?.click()}
-                              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition ${
-                                uploadingImage ? "border-slate-300 bg-slate-100 opacity-50" :
-                                isDragging
-                                  ? "border-indigo-500 bg-indigo-50"
-                                  : "border-slate-300 bg-white hover:bg-slate-50"
-                              }`}
+                              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition ${uploadingImage ? "border-slate-300 bg-slate-100 opacity-50" :
+                                  isDragging
+                                    ? "border-indigo-500 bg-indigo-50"
+                                    : "border-slate-300 bg-white hover:bg-slate-50"
+                                }`}
                               style={{ pointerEvents: uploadingImage ? "none" : "auto" }}
                             >
                               <ImageIcon size={24} className="mx-auto text-slate-400 mb-1" />
