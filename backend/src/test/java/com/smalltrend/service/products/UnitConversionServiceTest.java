@@ -23,6 +23,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,6 +69,11 @@ class UnitConversionServiceTest {
         baseVariant.setProduct(product);
         baseVariant.setSku("BEV-COCA");
         baseVariant.setActive(true);
+
+        Map<String, String> baseAttributes = new HashMap<>();
+        baseAttributes.put("Hương vị", "Nguyên bản");
+        baseAttributes.put("Dung tích", "330ml");
+        baseVariant.setAttributes(baseAttributes);
 
         toUnit = new Unit();
         toUnit.setId(2);
@@ -139,8 +146,17 @@ class UnitConversionServiceTest {
         savedVariant.setId(500);
         savedVariant.setSku("BEV-COCA-BOX24");
         savedVariant.setBarcode("2010100500123");
-        savedVariant.setAttributes(new java.util.HashMap<String, String>());
-        when(productVariantRepository.saveAndFlush(any(ProductVariant.class))).thenReturn(savedVariant);
+        Map<String, String> copiedAttributes = new HashMap<>(baseVariant.getAttributes());
+        savedVariant.setAttributes(copiedAttributes);
+        when(productVariantRepository.saveAndFlush(any(ProductVariant.class))).thenAnswer(invocation -> {
+            ProductVariant arg = invocation.getArgument(0);
+            // Verify attributes were copied from base variant
+            assertNotNull(arg.getAttributes(), "Packaging variant phải kế thừa attributes từ base variant");
+            assertEquals(2, arg.getAttributes().size(), "Packaging variant phải có đủ attributes");
+            assertEquals("Nguyên bản", arg.getAttributes().get("Hương vị"));
+            assertEquals("330ml", arg.getAttributes().get("Dung tích"));
+            return savedVariant;
+        });
 
         // Mock Inventory share
         ProductBatch baseBatch = new ProductBatch();
