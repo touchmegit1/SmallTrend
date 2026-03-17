@@ -44,6 +44,7 @@ const getHomepageBannerFlag = (campaign) => Boolean(campaign?.isHomepageBanner ?
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const EventManagement = () => {
   const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' | 'vouchers'
+  const today = new Date().toISOString().split('T')[0];
 
   // ── Campaigns ──
   const { campaigns, loading: loadingCampaigns, refetch: refetchCampaigns } = useCampaigns();
@@ -101,6 +102,17 @@ const EventManagement = () => {
     e.preventDefault();
     setSavingCampaign(true);
     try {
+      if (!editingCampaign) {
+        if (campaignForm.startDate && campaignForm.startDate < today) {
+          showToast('Ngày bắt đầu sự kiện không được ở quá khứ khi tạo mới', 'warning');
+          return;
+        }
+        if (campaignForm.endDate && campaignForm.endDate < today) {
+          showToast('Ngày kết thúc sự kiện không được ở quá khứ khi tạo mới', 'warning');
+          return;
+        }
+      }
+
       const payload = {
         ...campaignForm,
         budget: campaignForm.budget ? Number(campaignForm.budget) : null,
@@ -178,6 +190,17 @@ const EventManagement = () => {
     e.preventDefault();
     setSavingVoucher(true);
     try {
+      if (!editingVoucher) {
+        if (voucherForm.startDate && voucherForm.startDate < today) {
+          showToast('Ngày bắt đầu voucher không được ở quá khứ khi tạo mới', 'warning');
+          return;
+        }
+        if (voucherForm.endDate && voucherForm.endDate < today) {
+          showToast('Ngày kết thúc voucher không được ở quá khứ khi tạo mới', 'warning');
+          return;
+        }
+      }
+
       const payload = {
         ...voucherForm,
         discountPercent: voucherForm.discountPercent ? Number(voucherForm.discountPercent) : null,
@@ -516,12 +539,14 @@ const EventManagement = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Ngày bắt đầu *</label>
                   <input type="date" required value={campaignForm.startDate}
+                    min={!editingCampaign ? today : undefined}
                     onChange={e => setCampaignForm({ ...campaignForm, startDate: e.target.value })}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Ngày kết thúc *</label>
                   <input type="date" required value={campaignForm.endDate}
+                    min={!editingCampaign ? today : undefined}
                     onChange={e => setCampaignForm({ ...campaignForm, endDate: e.target.value })}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                 </div>
@@ -712,12 +737,14 @@ const EventManagement = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Ngày bắt đầu</label>
                   <input type="date" value={voucherForm.startDate}
+                    min={!editingVoucher ? today : undefined}
                     onChange={e => setVoucherForm({ ...voucherForm, startDate: e.target.value })}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Ngày hết hạn *</label>
                   <input type="date" required value={voucherForm.endDate}
+                    min={!editingVoucher ? today : undefined}
                     onChange={e => setVoucherForm({ ...voucherForm, endDate: e.target.value })}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                 </div>
