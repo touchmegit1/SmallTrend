@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 
 const STATUS_COLORS = {
@@ -34,6 +34,7 @@ const CustomSelect = ({
   dropdownPosition = "fixed",
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, minWidth: 200 });
     const dropdownRef = useRef(null);
     const isInlineDropdown = dropdownPosition === "inline";
 
@@ -54,6 +55,62 @@ const CustomSelect = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const updateMenuPosition = useCallback(() => {
+    if (!dropdownRef.current || isInlineDropdown) {
+      return;
+    }
+
+    const rect = dropdownRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const estimatedOptionHeight = 44;
+    const maxMenuHeight = 240;
+    const estimatedMenuHeight = Math.min(
+      options.length * estimatedOptionHeight + 8,
+      maxMenuHeight,
+    );
+    const gap = 8;
+
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const shouldOpenUp =
+      spaceBelow < estimatedMenuHeight + gap && spaceAbove > spaceBelow;
+
+    const unclampedTop = shouldOpenUp
+      ? rect.top - estimatedMenuHeight - gap
+      : rect.bottom + gap;
+    const top = Math.max(
+      gap,
+      Math.min(unclampedTop, viewportHeight - estimatedMenuHeight - gap),
+    );
+
+    const minWidth = rect.width;
+    const maxWidth = 400;
+    const unclampedLeft = rect.left;
+    const left = Math.max(
+      gap,
+      Math.min(unclampedLeft, viewportWidth - Math.min(maxWidth, minWidth) - gap),
+    );
+
+    setMenuPosition({ top, left, minWidth });
+  }, [isInlineDropdown, options.length]);
+
+  useEffect(() => {
+    if (!isOpen || isInlineDropdown) {
+      return;
+    }
+
+    updateMenuPosition();
+
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [isOpen, isInlineDropdown, updateMenuPosition]);
 
   const getVariantStyles = () => {
     if (variant === "role") {
@@ -103,17 +160,10 @@ const CustomSelect = ({
               ? undefined
               : {
                   zIndex: 9999,
-                  minWidth: dropdownRef.current?.offsetWidth || 200,
+                  minWidth: menuPosition.minWidth,
                   maxWidth: 400,
-                  top: dropdownRef.current
-                    ? dropdownRef.current.getBoundingClientRect().bottom +
-                      window.scrollY +
-                      8
-                    : 0,
-                  left: dropdownRef.current
-                    ? dropdownRef.current.getBoundingClientRect().left +
-                      window.scrollX
-                    : 0,
+                  top: menuPosition.top,
+                  left: menuPosition.left,
                 }
           }
         >
