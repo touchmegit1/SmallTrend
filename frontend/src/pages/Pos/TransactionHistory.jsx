@@ -232,6 +232,7 @@ function TransactionHistory() {
 
     const oldTotal = parseInt((refundModal.total || '').toString().replace(/[^0-9]/g, '')) || 0;
     const newTotal = Math.max(0, oldTotal - refundAmount);
+    const totalRefundedAmount = Number(refundModal.refundedAmount || 0) + refundAmount;
 
     const updatedTransaction = {
       ...refundModal,
@@ -240,12 +241,14 @@ function TransactionHistory() {
       total: `${newTotal.toLocaleString()} đ`,
       quantity: `${newItems.reduce((s, it) => s + (it.qty || it.quantity || 1), 0)} món`,
       status: newItems.length === 0 ? 'Đã hoàn trả' : 'Hoàn thành',
+      refundedAmount: totalRefundedAmount,
       refundNote: `Hoàn trả ${refundAmount.toLocaleString()}đ lúc ${new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}`,
     };
 
     const updatedTransactions = transactions.map(t => t.id === refundModal.id ? updatedTransaction : t);
     setTransactions(updatedTransactions);
     localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    setSelectedTransaction(prev => (prev?.id === updatedTransaction.id ? updatedTransaction : prev));
     setRefundModal(null);
   };
 
