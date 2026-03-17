@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Edit, Trash2, X, Save, CheckCircle, Barcode, Tag } from 'lucide-react';
 import Button from '../ProductComponents/button';
 import { Input } from '../ProductComponents/input';
 import { Label } from '../ProductComponents/label';
 import { Badge } from '../ProductComponents/badge';
+import ConfirmDialog from '../../../components/common/ConfirmDialog';
 import api from '../../../config/axiosConfig';
 
 export default function UnitConversionSection({ variant, units, onSuccess }) {
@@ -21,6 +22,10 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
 
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteStatusMsg, setDeleteStatusMsg] = useState("");
+    const deleteTimeoutRef = useRef(null);
 
     // Thông tin variant tự động tạo sau khi thêm quy đổi
     const [autoCreatedInfo, setAutoCreatedInfo] = useState(null);
@@ -53,7 +58,14 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Bạn có chắc chắn muốn xoá quy đổi này?")) return;
+        if (!id || isDeleting) return;
+
+        setIsDeleting(true);
+        setDeleteStatusMsg("");
+
+        deleteTimeoutRef.current = setTimeout(() => {
+            setDeleteStatusMsg("Đang xử lý lâu hơn dự kiến (quá 2 phút), vui lòng chờ thêm...");
+        }, 120000);
 
         try {
             await api.delete(`/products/conversions/${id}`);
@@ -61,6 +73,14 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
             if (onSuccess) onSuccess();
         } catch (err) {
             console.error("Lỗi xóa quy đổi:", err);
+        } finally {
+            if (deleteTimeoutRef.current) {
+                clearTimeout(deleteTimeoutRef.current);
+                deleteTimeoutRef.current = null;
+            }
+            setIsDeleting(false);
+            setDeleteStatusMsg("");
+            setConfirmDeleteId(null);
         }
     };
 
@@ -114,6 +134,14 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        return () => {
+            if (deleteTimeoutRef.current) {
+                clearTimeout(deleteTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // Lấy tên đơn vị đích từ ID
     const getUnitName = (unitId) => {
@@ -192,7 +220,7 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
                                 <Button size="sm" variant="ghost" onClick={() => handleEdit(conv)} className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 rounded-lg">
                                     <Edit className="w-4 h-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDelete(conv.id)} className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 rounded-lg">
+                                <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(conv.id)} className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 rounded-lg">
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                             </div>
@@ -305,6 +333,19 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
                     </div>
                 </form>
             )}
+            <ConfirmDialog
+                open={confirmDeleteId !== null}
+                title="Xóa quy đổi đơn vị"
+                message={deleteStatusMsg || "Bạn có chắc chắn muốn xoá quy đổi này?"}
+                confirmText={isDeleting ? "Đang xóa..." : "Xóa"}
+                cancelText={isDeleting ? "Đang xử lý" : "Hủy"}
+                variant="danger"
+                onConfirm={() => handleDelete(confirmDeleteId)}
+                onCancel={() => {
+                    if (isDeleting) return;
+                    setConfirmDeleteId(null);
+                }}
+            />
         </div>
     );
 }
