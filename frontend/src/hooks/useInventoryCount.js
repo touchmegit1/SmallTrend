@@ -105,6 +105,8 @@ export function useInventoryCount(voucherId) {
               variant_id: si.variant_id || si.product_id,
               sku: prod?.sku || "N/A",
               name: prod?.name || "Sản phẩm không tồn tại",
+              image_url: prod?.image_url || prod?.imageUrl || null,
+              attributes: prod?.attributes || null,
               unit: prod?.unit || "",
               purchase_price: prod?.purchase_price || 0,
               system_quantity: si.system_quantity,

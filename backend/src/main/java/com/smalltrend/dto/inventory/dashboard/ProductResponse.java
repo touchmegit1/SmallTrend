@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,4 +21,5 @@ public class ProductResponse {
     private String unit;            // Đơn vị tính
     private Integer productId;      // Id sản phẩm gốc
     private Integer variantId;      // Id phiên bản
+    private Map<String, String> attributes;
 }

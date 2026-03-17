@@ -58,6 +58,8 @@ const mapExistingOrderItem = (item, products) => {
     unit: item.unit || matchedProduct?.unit || "",
     checking_unit: item.checkingUnit || item.checking_unit || item.unit || matchedProduct?.unit || "",
     name: item.name || matchedProduct?.name || "Sản phẩm",
+    image_url: item.imageUrl || item.image_url || matchedProduct?.image_url || matchedProduct?.imageUrl || null,
+    attributes: item.attributes || matchedProduct?.attributes || null,
   };
 };
 

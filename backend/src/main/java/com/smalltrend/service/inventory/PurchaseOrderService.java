@@ -629,7 +629,8 @@ public class PurchaseOrderService {
                             .productId(p != null && p.getId() != null ? p.getId().intValue() : null)
                             .variantId(v.getId() != null ? v.getId().intValue() : null)
                             .name(p != null ? p.getName() : "Sản phẩm")
-                            .imageUrl(p != null ? p.getImageUrl() : null)
+                            .imageUrl(v.getImageUrl() != null ? v.getImageUrl() : (p != null ? p.getImageUrl() : null))
+                            .attributes(v.getAttributes())
                             .sku(v.getSku())
                             .purchasePrice(v.getSellPrice());
 
@@ -1075,7 +1076,12 @@ public class PurchaseOrderService {
                     .sku(item.getVariant() != null ? item.getVariant().getSku() : "")
                     .name(item.getVariant() != null && item.getVariant().getProduct() != null
                             ? item.getVariant().getProduct().getName() : "")
-                    .imageUrl(item.getVariant() != null ? item.getVariant().getImageUrl() : null)
+                    .imageUrl(item.getVariant() != null
+                            ? (item.getVariant().getImageUrl() != null
+                                    ? item.getVariant().getImageUrl()
+                                    : (item.getVariant().getProduct() != null ? item.getVariant().getProduct().getImageUrl() : null))
+                            : null)
+                    .attributes(item.getVariant() != null ? item.getVariant().getAttributes() : null)
                     .quantity(item.getQuantity())
                     .unit(item.getVariant() != null && item.getVariant().getUnit() != null
                             ? item.getVariant().getUnit().getName() : null)

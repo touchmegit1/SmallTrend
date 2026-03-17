@@ -234,6 +234,8 @@ export function createOrderItem(product) {
     variant_id: product.variantId || product.variant_id || product.id,
     sku: product.sku,
     name: product.name,
+    image_url: product.image_url || product.imageUrl || null,
+    attributes: product.attributes || null,
     unit: product.unit,
     quantity: 1,
     unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
