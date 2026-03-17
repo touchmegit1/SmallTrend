@@ -20,8 +20,20 @@ function PurchaseOrderRecordsTable(props) {
     const shouldHidePendingInfo = ["PENDING", "CONFIRMED", "CHECKING"].includes(
       record.status,
     );
-    const shouldHideTotal = shouldHidePendingInfo;
+    const shouldHideTotal = shouldHidePendingInfo || record.status === "REJECTED";
     const shouldHideSupplier = shouldHidePendingInfo;
+    const createdAtRaw = record.created_at ?? record.createdAt;
+    const createdAtDate = createdAtRaw ? new Date(createdAtRaw) : null;
+    const createdAtText =
+      createdAtDate && !Number.isNaN(createdAtDate.getTime())
+        ? createdAtDate.toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "--";
 
     return (
       <tr
@@ -35,15 +47,7 @@ function PurchaseOrderRecordsTable(props) {
             record.order_number ||
             record.orderNumber}
         </td>
-        <td className="px-4 py-3 text-sm text-slate-900">
-          {new Date(record.created_at).toLocaleString("vi-VN", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </td>
+        <td className="px-4 py-3 text-sm text-slate-900">{createdAtText}</td>
         <td className="px-4 py-3 text-sm text-slate-900">
           {shouldHideSupplier
             ? ""

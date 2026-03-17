@@ -20,8 +20,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,12 +53,10 @@ public class PurchaseOrderService {
     public List<PurchaseOrderResponse> getAllOrders() {
         return purchaseOrderRepository.findAll()
                 .stream()
-                .sorted((a, b) -> {
-                    if (a.getCreatedAt() == null || b.getCreatedAt() == null) {
-                        return 0;
-                    }
-                    return b.getCreatedAt().compareTo(a.getCreatedAt());
-                })
+                .sorted(Comparator.comparing(
+                        PurchaseOrder::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
                 .map(this::toListResponse)
                 .collect(Collectors.toList());
     }
@@ -232,15 +232,12 @@ public class PurchaseOrderService {
         Integer lockedSupplierId = order.getSupplier() != null ? order.getSupplier().getId() : null;
         Integer lockedLocationId = order.getLocationId();
 
-        if (receiptRequest.getSupplierId() != null && !receiptRequest.getSupplierId().equals(lockedSupplierId)) {
-            throw new RuntimeException("Không thể thay đổi nhà cung cấp sau khi bắt đầu kiểm kê.");
-        }
-        if (receiptRequest.getLocationId() != null && !receiptRequest.getLocationId().equals(lockedLocationId)) {
-            throw new RuntimeException("Không thể thay đổi vị trí nhập kho sau khi bắt đầu kiểm kê.");
-        }
-
-        Integer effectiveSupplierId = lockedSupplierId;
-        Integer effectiveLocationId = lockedLocationId;
+        Integer effectiveSupplierId = receiptRequest.getSupplierId() != null
+                ? receiptRequest.getSupplierId()
+                : lockedSupplierId;
+        Integer effectiveLocationId = receiptRequest.getLocationId() != null
+                ? receiptRequest.getLocationId()
+                : lockedLocationId;
         BigDecimal effectiveTaxPercent = receiptRequest.getTaxPercent() != null
                 ? receiptRequest.getTaxPercent()
                 : (order.getTaxPercent() != null ? order.getTaxPercent() : BigDecimal.ZERO);
@@ -305,9 +302,8 @@ public class PurchaseOrderService {
                     hasShortage = true;
                 }
 
-                LocalDate lockedExpiryDate = orderItem.getExpiryDate();
-                if (receiptItem.getExpiryDate() != null && !receiptItem.getExpiryDate().equals(lockedExpiryDate)) {
-                    throw new RuntimeException("Không thể thay đổi hạn sử dụng sau khi bắt đầu kiểm kê.");
+                if (receiptItem.getExpiryDate() != null) {
+                    orderItem.setExpiryDate(receiptItem.getExpiryDate());
                 }
 
                 orderItem.setReceivedQuantity(newReceivedQty);
@@ -353,9 +349,9 @@ public class PurchaseOrderService {
         if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) {
             afterDiscount = BigDecimal.ZERO;
         }
-        BigDecimal taxPercent = receiptRequest.getTaxPercent();
+        BigDecimal taxPercent = effectiveTaxPercent;
         BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100));
-        BigDecimal shippingFee = receiptRequest.getShippingFee();
+        BigDecimal shippingFee = effectiveShippingFee;
         BigDecimal totalAmount = afterDiscount.add(taxAmount).add(shippingFee);
 
         order.setSubtotal(subtotal);
@@ -396,7 +392,7 @@ public class PurchaseOrderService {
 
         purchaseOrderRepository.save(order);
 
-        log.info("📦 Purchase Order {} receive processed. Status={}, stock delta updated.",
+        log.info("Purchase Order {} receive processed. Status={}, stock delta updated.",
                 order.getOrderNumber(),
                 order.getStatus());
 
@@ -422,7 +418,7 @@ public class PurchaseOrderService {
 
         int syncedPurchasePriceCount = syncPurchasePrices(order);
 
-        log.info("✅ Purchase Order {} shortage closed by manager. Stock updated.", order.getOrderNumber());
+        log.info("Purchase Order {} shortage closed by manager. Stock updated.", order.getOrderNumber());
         PurchaseOrderResponse response = toDetailResponse(order);
         response.setSyncedPurchasePriceCount(syncedPurchasePriceCount);
         return response;
@@ -443,7 +439,7 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.SUPPLIER_SUPPLEMENT_PENDING);
         purchaseOrderRepository.save(order);
 
-        log.info("📦 Purchase Order {} moved to SUPPLIER_SUPPLEMENT_PENDING.", order.getOrderNumber());
+        log.info("Purchase Order {} moved to SUPPLIER_SUPPLEMENT_PENDING.", order.getOrderNumber());
         return toDetailResponse(order);
     }
 
@@ -483,6 +479,13 @@ public class PurchaseOrderService {
         }
 
         validateDraft(request);
+
+        boolean submitForApproval = request.getStatus() != null && "PENDING".equalsIgnoreCase(request.getStatus());
+        if (order.getStatus() == PurchaseOrderStatus.REJECTED
+                && submitForApproval
+                && !hasResubmissionChanges(order, request)) {
+            throw new RuntimeException("Phiếu bị từ chối phải được chỉnh sửa trước khi gửi duyệt lại.");
+        }
 
         if (request.getSupplierId() != null) {
             Supplier supplier = supplierRepository.findById(request.getSupplierId())
@@ -825,7 +828,7 @@ public class PurchaseOrderService {
                     .build();
             stockMovementRepository.save(movement);
 
-            log.info("📦 Stock IN: variant={}, batch={}, qty={}, note={}",
+            log.info("Stock IN: variant={}, batch={}, qty={}, note={}",
                     baseVariant.getSku(),
                     batchNumber,
                     finalQty,
@@ -864,7 +867,7 @@ public class PurchaseOrderService {
                     syncedCount++;
                 }
             } catch (Exception ex) {
-                log.warn("⚠️ Không thể đồng bộ giá nhập cho variant {} từ PO {}: {}",
+                log.warn("Không thể đồng bộ giá nhập cho variant {} từ PO {}: {}",
                         variantId,
                         order.getOrderNumber(),
                         ex.getMessage());
@@ -896,6 +899,104 @@ public class PurchaseOrderService {
         int year = LocalDate.now().getYear();
         long count = productBatchRepository.count() + 1;
         return prefix + year + String.format("%03d", count);
+    }
+
+    private boolean hasResubmissionChanges(PurchaseOrder existingOrder, PurchaseOrderRequest request) {
+        if (existingOrder == null || request == null) {
+            return false;
+        }
+
+        Integer existingSupplierId = existingOrder.getSupplier() != null ? existingOrder.getSupplier().getId() : null;
+        Long existingContractId = existingOrder.getContract() != null ? existingOrder.getContract().getId() : null;
+
+        if (!Objects.equals(existingSupplierId, request.getSupplierId())) {
+            return true;
+        }
+        if (!Objects.equals(existingContractId, request.getContractId())) {
+            return true;
+        }
+        if (!Objects.equals(existingOrder.getLocationId(), request.getLocationId())) {
+            return true;
+        }
+        if (!Objects.equals(existingOrder.getExpectedDeliveryDate(), request.getExpectedDeliveryDate())) {
+            return true;
+        }
+        if (!Objects.equals(trimToNull(existingOrder.getNotes()), trimToNull(request.getNotes()))) {
+            return true;
+        }
+
+        if (!sameMoney(existingOrder.getDiscountAmount(), request.getDiscountAmount())) {
+            return true;
+        }
+        if (!sameMoney(existingOrder.getTaxAmount(), request.getTaxAmount())) {
+            return true;
+        }
+        if (!sameMoney(existingOrder.getTaxPercent(), request.getTaxPercent())) {
+            return true;
+        }
+        if (!sameMoney(existingOrder.getShippingFee(), request.getShippingFee())) {
+            return true;
+        }
+        if (!sameMoney(existingOrder.getPaidAmount(), request.getPaidAmount())) {
+            return true;
+        }
+
+        return !sameItemSnapshot(existingOrder.getItems(), request.getItems());
+    }
+
+    private boolean sameItemSnapshot(List<PurchaseOrderItem> existingItems, List<PurchaseOrderItemRequest> requestItems) {
+        List<String> existingSnapshot = (existingItems == null ? new ArrayList<>() : existingItems).stream()
+                .map(this::toExistingItemSnapshot)
+                .sorted()
+                .collect(Collectors.toList());
+
+        List<String> requestSnapshot = (requestItems == null ? new ArrayList<>() : requestItems).stream()
+                .map(this::toRequestItemSnapshot)
+                .sorted()
+                .collect(Collectors.toList());
+
+        return existingSnapshot.equals(requestSnapshot);
+    }
+
+    private String toExistingItemSnapshot(PurchaseOrderItem item) {
+        Integer variantId = item.getVariant() != null ? item.getVariant().getId() : null;
+        Integer productId = item.getVariant() != null && item.getVariant().getProduct() != null
+                ? item.getVariant().getProduct().getId()
+                : null;
+
+        return String.join("|",
+                String.valueOf(variantId),
+                String.valueOf(productId),
+                String.valueOf(item.getQuantity() != null ? item.getQuantity() : 0),
+                normalizeMoney(item.getUnitCost()).toPlainString(),
+                String.valueOf(item.getExpiryDate()),
+                String.valueOf(trimToNull(item.getNotes())));
+    }
+
+    private String toRequestItemSnapshot(PurchaseOrderItemRequest item) {
+        return String.join("|",
+                String.valueOf(item.getVariantId()),
+                String.valueOf(item.getProductId()),
+                String.valueOf(item.getQuantity() != null ? item.getQuantity() : 0),
+                normalizeMoney(item.getUnitCost()).toPlainString(),
+                String.valueOf(item.getExpiryDate()),
+                String.valueOf(trimToNull(item.getNotes())));
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean sameMoney(BigDecimal left, BigDecimal right) {
+        return normalizeMoney(left).compareTo(normalizeMoney(right)) == 0;
+    }
+
+    private BigDecimal normalizeMoney(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value.stripTrailingZeros();
     }
 
     // ─── Validation ──────────────────────────────────────────

@@ -68,7 +68,7 @@ export default function StockHealthOverview({ products }) {
         <div className="border-t border-slate-100">
           <div className="px-5 py-3 bg-red-50/50">
             <p className="text-xs font-semibold text-red-700 uppercase mb-2">
-              ⚠ Cần nhập hàng ngay
+              Cần nhập hàng ngay
             </p>
             <div className="space-y-1.5">
               {products

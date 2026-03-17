@@ -261,9 +261,6 @@ function ProductSearchBar({
               </div>
               <div className="flex items-center gap-3 shrink-0 ml-3">
                 <span className="text-xs text-slate-400">{product.unit}</span>
-                <span className="text-xs font-semibold text-slate-700">
-                  {(product.purchase_price || 0).toLocaleString("vi-VN")} ₫
-                </span>
               </div>
             </button>
           ))}
