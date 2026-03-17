@@ -4,6 +4,7 @@ import CustomerSearch from "./CustomerSearch";
 import api from "../../config/axiosConfig";
 import customerTierService from "../../services/customerTierService";
 import customerService from "../../services/customerService";
+import eventService from "../../services/eventService";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
@@ -228,11 +229,12 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
   const [usePoints, setUsePoints] = useState(false);
-  const [voucher, setVoucher] = useState("");
-  const [voucherError, setVoucherError] = useState("");
-  const [appliedVoucher, setAppliedVoucher] = useState(null); // { type: 'PERCENT' | 'FIXED', value: number, max: number, code: string }
-  const [discount, setDiscount] = useState(""); // Giảm giá thủ công (dạng chuỗi để trống ban đầu)
   const [notes, setNotes] = useState("");
+  const [campaigns, setCampaigns] = useState([]);
+  const [vouchers, setVouchers] = useState([]);
+  const [selectedVoucherId, setSelectedVoucherId] = useState(null);
+  const [voucherSelectionError, setVoucherSelectionError] = useState("");
+  const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [focusedField, setFocusedField] = useState("customerSearch");
@@ -240,8 +242,6 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   const [tiers, setTiers] = useState([]); // Danh sách hạng thành viên
 
   const customerSearchRef = useRef(null);
-  const voucherInputRef = useRef(null);
-  const voucherButtonRef = useRef(null);
   const notesRef = useRef(null);
   const cashInputRef = useRef(null);
   const paymentButtonRef = useRef(null);
@@ -254,20 +254,123 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
       ? Math.min(currentLoyaltyPoints * 100, subtotal)
       : 0;
 
-  let voucherDiscountAmt = 0;
-  if (appliedVoucher) {
-    if (appliedVoucher.type === 'PERCENTAGE') {
-      voucherDiscountAmt = subtotal * (appliedVoucher.value / 100);
-      if (appliedVoucher.max > 0 && voucherDiscountAmt > appliedVoucher.max) {
-        voucherDiscountAmt = appliedVoucher.max;
-      }
-    } else {
-      voucherDiscountAmt = appliedVoucher.value;
-    }
-  }
+  const today = new Date().toISOString().slice(0, 10);
+  const activeCampaigns = campaigns.filter(c => c?.status === 'ACTIVE');
 
-  const discountNum = parseFloat(discount) || 0;
-  const totalDiscount = pointsDiscount + discountNum + voucherDiscountAmt;
+  const campaignBudgetById = activeCampaigns.reduce((acc, campaign) => {
+    const totalBudget = Number(campaign.budget);
+    const usedBudget = Number(campaign.usedBudget ?? campaign.spentBudget ?? campaign.consumedBudget ?? 0);
+    acc[campaign.id] = Number.isFinite(totalBudget) && totalBudget > 0
+      ? Math.max(0, totalBudget - (Number.isFinite(usedBudget) ? usedBudget : 0))
+      : Infinity;
+    return acc;
+  }, {});
+
+  const getVoucherDiscountAmount = (voucherItem) => {
+    if (!voucherItem) return 0;
+    if (voucherItem.couponType === 'PERCENTAGE') {
+      let value = subtotal * (Number(voucherItem.discountPercent || 0) / 100);
+      const max = Number(voucherItem.maxDiscountAmount || 0);
+      if (max > 0 && value > max) value = max;
+      return Math.max(0, value);
+    }
+    return Math.max(0, Number(voucherItem.discountAmount || 0));
+  };
+
+  const getVoucherCampaignId = (voucherItem) => {
+    const rawId = voucherItem?.campaignId ?? voucherItem?.campaign?.id;
+    const parsed = Number(rawId);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const availableVouchers = vouchers.filter(v => {
+    if (v?.status !== 'ACTIVE') return false;
+    if (v?.startDate && v.startDate > today) return false;
+    if (v?.endDate && v.endDate < today) return false;
+    if (v?.totalUsageLimit && Number(v.currentUsageCount || 0) >= Number(v.totalUsageLimit)) return false;
+
+    const voucherCampaignId = getVoucherCampaignId(v);
+    const campaignBudgetLeft = voucherCampaignId != null ? campaignBudgetById[voucherCampaignId] : Infinity;
+    return getVoucherDiscountAmount(v) <= (campaignBudgetLeft ?? Infinity);
+  });
+
+  const selectedVoucher = availableVouchers.find(v => v.id === selectedVoucherId) || null;
+  const vouchersDiscountTotal = selectedVoucher ? getVoucherDiscountAmount(selectedVoucher) : 0;
+
+  useEffect(() => {
+    if (selectedVoucherId != null && !availableVouchers.some(v => v.id === selectedVoucherId)) {
+      setSelectedVoucherId(null);
+    }
+  }, [availableVouchers, selectedVoucherId]);
+
+  const selectVoucher = (voucherItem) => {
+    if (!voucherItem) return;
+
+    if (usePoints) {
+      setVoucherSelectionError("Không thể dùng voucher khi đang chọn sử dụng điểm.");
+      return;
+    }
+
+    const minPurchaseAmount = Number(voucherItem.minPurchaseAmount || 0);
+    if (minPurchaseAmount > 0 && subtotal < minPurchaseAmount) {
+      setVoucherSelectionError(`Đơn hàng chưa đủ điều kiện áp dụng voucher này (tối thiểu ${minPurchaseAmount.toLocaleString()}đ).`);
+      return;
+    }
+
+    setVoucherSelectionError("");
+    setSelectedVoucherId(prev => (prev === voucherItem.id ? null : voucherItem.id));
+  };
+
+  const handleVoucherKeyDown = (e, voucherItem) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      selectVoucher(voucherItem);
+    }
+  };
+
+  const handleToggleUsePoints = (checked) => {
+    if (checked && selectedVoucherId != null) {
+      setVoucherSelectionError("Chỉ được chọn một hình thức giảm giá: điểm hoặc voucher.");
+      return;
+    }
+
+    if (checked) {
+      setVoucherSelectionError("");
+    }
+
+    setUsePoints(checked);
+  };
+
+  const isVoucherApplicable = (voucherItem) => {
+    const minPurchaseAmount = Number(voucherItem?.minPurchaseAmount || 0);
+    return minPurchaseAmount <= 0 || subtotal >= minPurchaseAmount;
+  };
+
+  const getVoucherValidationMessage = (voucherItem) => {
+    if (!isVoucherApplicable(voucherItem)) {
+      return `Chưa đủ điều kiện: Đơn tối thiểu ${Number(voucherItem.minPurchaseAmount || 0).toLocaleString()}đ`;
+    }
+    return "";
+  };
+
+  const isVoucherSelected = (voucherId) => selectedVoucherId === voucherId;
+
+
+  const groupedVouchers = activeCampaigns.map(campaign => ({
+    campaign,
+    vouchers: availableVouchers.filter(v => getVoucherCampaignId(v) === campaign.id),
+  })).filter(group => group.vouchers.length > 0);
+
+  const standaloneVouchers = availableVouchers.filter(v => getVoucherCampaignId(v) == null);
+
+  const formatVoucherDiscount = (voucherItem) => {
+    if (voucherItem.couponType === 'PERCENTAGE') {
+      return `${Number(voucherItem.discountPercent || 0)}%`;
+    }
+    return `${Number(voucherItem.discountAmount || 0).toLocaleString()}đ`;
+  };
+
+  const totalDiscount = pointsDiscount + vouchersDiscountTotal;
   const finalTotal = Math.max(0, subtotal - totalDiscount);
   const change = cashAmount ? Math.max(0, parseFloat(cashAmount) - finalTotal) : 0;
 
@@ -285,6 +388,28 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   }, []);
 
   useEffect(() => {
+    const fetchPromotions = async () => {
+      setLoadingPromotions(true);
+      try {
+        const [campaignData, voucherData] = await Promise.all([
+          eventService.getAllCampaigns(),
+          eventService.getAllVouchers(),
+        ]);
+        setCampaigns(Array.isArray(campaignData) ? campaignData : []);
+        setVouchers(Array.isArray(voucherData) ? voucherData : []);
+      } catch (error) {
+        console.error("Error fetching promotions:", error);
+        setCampaigns([]);
+        setVouchers([]);
+      } finally {
+        setLoadingPromotions(false);
+      }
+    };
+
+    fetchPromotions();
+  }, []);
+
+  useEffect(() => {
     if (focusedField === "customerSearch" && customerSearchRef.current) {
       customerSearchRef.current.focus();
     }
@@ -292,13 +417,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // ArrowDown navigation
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         if (focusedField === "customerSearch") {
-          setFocusedField("voucher");
-          voucherInputRef.current?.focus();
-        } else if (focusedField === "voucher") {
           setFocusedField("notes");
           notesRef.current?.focus();
         } else if (focusedField === "notes") {
@@ -308,7 +429,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
           if (paymentMethod === "cash") {
             setFocusedField("cashAmount");
             cashInputRef.current?.focus();
-          } else if (paymentMethod === "transfer") {
+          } else {
             setFocusedField("paymentButton");
             paymentButtonRef.current?.focus();
           }
@@ -325,16 +446,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
           paymentButtonRef.current?.focus();
           setSuggestedIndex(-1);
         }
-      }
-      // ArrowUp navigation
-      else if (e.key === 'ArrowUp') {
+      } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        if (focusedField === "voucher") {
+        if (focusedField === "notes") {
           setFocusedField("customerSearch");
           customerSearchRef.current?.focus();
-        } else if (focusedField === "notes") {
-          setFocusedField("voucher");
-          voucherInputRef.current?.focus();
         } else if (focusedField === "paymentMethod") {
           setFocusedField("notes");
           notesRef.current?.focus();
@@ -357,9 +473,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
             setFocusedField("paymentMethod");
           }
         }
-      }
-      // ArrowLeft/Right for payment method and suggested amounts
-      else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
         if (focusedField === "paymentMethod") {
           setPaymentMethod("cash");
@@ -381,13 +495,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
         } else if (focusedField === "cashAmount") {
           setFocusedField("paymentMethod");
         }
-      }
-      // Enter key actions
-      else if (e.key === 'Enter') {
-        if (focusedField === "voucher") {
-          e.preventDefault();
-          voucherButtonRef.current?.click();
-        } else if (focusedField === "paymentMethod") {
+      } else if (e.key === 'Enter') {
+        if (focusedField === "paymentMethod") {
           e.preventDefault();
           if (paymentMethod === "cash") {
             setFocusedField("cashAmount");
@@ -407,12 +516,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
           e.preventDefault();
           paymentButtonRef.current?.click();
         }
-      }
-      // F10 shortcuts actions
-      else if (shortcuts && e.key === shortcuts.payment1) {
+      } else if (shortcuts && e.key === shortcuts.payment1) {
         e.preventDefault();
         if (finalTotal === 0) {
-          // Đơn 0đ: Hoàn tất ngay không cần nhập tiền
           completePaymentProcess("cash", 0, 0);
         } else {
           paymentButtonRef.current?.click();
@@ -481,55 +587,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
       customerMoney: receivedAmt,
       change: changeAmt,
       pointsDiscount,
-      discount: discountNum + voucherDiscountAmt,
+      discount: vouchersDiscountTotal,
+      selectedVoucherId,
       notes,
       paymentMethod: method === "cash" ? "Tiền mặt" : "Chuyển khoản"
     });
-  };
-
-  const handleApplyVoucher = async () => {
-    if (!voucher || !voucher.trim()) return;
-    setVoucherError("");
-    setAppliedVoucher(null);
-    try {
-      const response = await api.get('/crm/coupons');
-      const coupons = response.data;
-      const validCoupon = coupons.find(c => c.couponCode.toUpperCase() === voucher.trim().toUpperCase() && c.status === 'ACTIVE');
-
-      if (!validCoupon) {
-        setVoucherError("Mã voucher không hợp lệ hoặc đã hết hạn/chưa kích hoạt!");
-        setDiscount(0);
-        return;
-      }
-
-      if (validCoupon.minPurchaseAmount && subtotal < validCoupon.minPurchaseAmount) {
-        setVoucherError(`Đơn hàng tối thiểu ${validCoupon.minPurchaseAmount.toLocaleString()}đ để áp mã này!`);
-        setDiscount(0);
-        return;
-      }
-
-      if (validCoupon.couponType === 'PERCENTAGE') {
-        setAppliedVoucher({
-          type: 'PERCENTAGE',
-          value: validCoupon.discountPercent || 0,
-          max: validCoupon.maxDiscountAmount || 0,
-          code: validCoupon.couponCode
-        });
-      } else {
-        setAppliedVoucher({
-          type: 'FIXED_AMOUNT',
-          value: validCoupon.discountAmount || 0,
-          max: 0,
-          code: validCoupon.couponCode
-        });
-      }
-
-      setFocusedField("notes");
-      notesRef.current?.focus();
-    } catch (error) {
-      console.error('Error applying voucher:', error);
-      setVoucherError("Lỗi kết nối máy chủ để kiểm tra mã voucher.");
-    }
   };
 
   const initiatePayment = async () => {
@@ -572,7 +634,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
             customerMoney: finalTotal,
             change: 0,
             pointsDiscount,
-            discount: discountNum + voucherDiscountAmt,
+            discount: vouchersDiscountTotal,
+            selectedVoucherId,
             notes,
             paymentMethod: "Chuyển khoản"
          };
@@ -716,7 +779,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
                   <span>-{pointsDiscount.toLocaleString()}đ</span>
                 </div>
               )}
-              {appliedVoucher && (
+              {vouchersDiscountTotal > 0 && (
                 <div
                   style={{
                     display: "flex",
@@ -725,23 +788,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
                     color: "#17a2b8",
                   }}
                 >
-                  <span>
-                    Voucher ({appliedVoucher.code}):
-                  </span>
-                  <span>-{voucherDiscountAmt.toLocaleString()}đ</span>
-                </div>
-              )}
-              {discountNum > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "8px",
-                    color: "#17a2b8",
-                  }}
-                >
-                  <span>Giảm giá:</span>
-                  <span>-{discountNum.toLocaleString()}đ</span>
+                  <span>Giảm voucher:</span>
+                  <span>-{vouchersDiscountTotal.toLocaleString()}đ</span>
                 </div>
               )}
             </div>
@@ -752,8 +800,8 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
               onSelectCustomer={setSelectedCustomer}
               cart={cart}
               onNavigateDown={() => {
-                setFocusedField("voucher");
-                voucherInputRef.current?.focus();
+                setFocusedField("notes");
+                notesRef.current?.focus();
               }}
             />
 
@@ -815,7 +863,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
                       <input
                         type="checkbox"
                         checked={usePoints}
-                        onChange={(e) => setUsePoints(e.target.checked)}
+                        onChange={(e) => handleToggleUsePoints(e.target.checked)}
                       />
                       <span>
                         Sử dụng điểm (-
@@ -831,87 +879,201 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
               );
             })()}
 
-            {/* Voucher */}
+            {/* Event đang diễn ra + voucher */}
             <div style={{ marginBottom: "15px" }}>
-              <label
+              <div
                 style={{
-                  display: "block",
-                  marginBottom: "5px",
-                  fontSize: "13px",
-                  fontWeight: "500",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "8px",
                 }}
               >
-                Mã voucher:
-              </label>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <input
-                  ref={voucherInputRef}
-                  type="text"
-                  placeholder="Nhập mã voucher"
-                  value={voucher}
-                  onChange={(e) => {
-                    setVoucher(e.target.value);
-                    setVoucherError("");
-                    setAppliedVoucher(null); // Xóa voucher cũ khi người dùng gõ thay đổi
-                  }}
-                  onFocus={() => setFocusedField("voucher")}
+                <label
                   style={{
-                    flex: 1,
-                    padding: "8px",
-                    border: focusedField === "voucher" ? "2px solid #007bff" : "1px solid #ddd",
-                    borderRadius: "4px",
+                    display: "block",
                     fontSize: "13px",
-                  }}
-                />
-                <button
-                  ref={voucherButtonRef}
-                  onClick={handleApplyVoucher}
-                  style={{
-                    padding: "8px 16px",
-                    background: "#007bff",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontSize: "13px",
+                    fontWeight: "500",
                   }}
                 >
-                  Áp dụng
-                </button>
+                  Event & Voucher áp dụng:
+                </label>
+                {loadingPromotions && (
+                  <span style={{ fontSize: "12px", color: "#6c757d" }}>Đang tải...</span>
+                )}
               </div>
-              {voucherError && (
-                <div style={{ color: "#dc3545", fontSize: "12px", marginTop: "5px" }}>
-                  {voucherError}
-                </div>
-              )}
-            </div>
 
-            {/* Giảm giá thủ công */}
-            <div style={{ marginBottom: "15px" }}>
-              <label
+              <div
                 style={{
-                  display: "block",
-                  marginBottom: "5px",
-                  fontSize: "13px",
-                  fontWeight: "500",
+                  border: "1px solid #ddd",
+                  borderRadius: "6px",
+                  padding: "10px",
+                  maxHeight: "220px",
+                  overflowY: "auto",
+                  background: "#fafafa",
                 }}
               >
-                Giảm giá thủ công (VNĐ):
-              </label>
-              <input
-                type="number"
-                placeholder="Nhập số tiền giảm"
-                value={discount}
-                onChange={(e) => setDiscount(e.target.value)}
-                onFocus={(e) => e.target.select()}
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "13px",
-                }}
-              />
+                {activeCampaigns.length > 0 && (
+                  <div style={{ marginBottom: "10px" }}>
+                    <div style={{ fontSize: "12px", fontWeight: "600", color: "#0d6efd", marginBottom: "6px" }}>
+                      Sự kiện đang diễn ra
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {activeCampaigns.map((campaign) => (
+                        <span
+                          key={campaign.id}
+                          style={{
+                            fontSize: "11px",
+                            background: "#e7f1ff",
+                            color: "#0d6efd",
+                            border: "1px solid #b6d4fe",
+                            borderRadius: "999px",
+                            padding: "3px 8px",
+                          }}
+                        >
+                          {campaign.campaignName}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {groupedVouchers.length === 0 && standaloneVouchers.length === 0 ? (
+                  <div style={{ fontSize: "12px", color: "#6c757d" }}>
+                    Không có voucher khả dụng cho đơn hàng hiện tại.
+                  </div>
+                ) : (
+                  <>
+                    {voucherSelectionError && (
+                      <div style={{ fontSize: "12px", color: "#dc3545", marginBottom: "8px" }}>
+                        {voucherSelectionError}
+                      </div>
+                    )}
+                    {groupedVouchers.map(({ campaign, vouchers: campaignVouchers }) => (
+                      <div key={campaign.id} style={{ marginBottom: "10px" }}>
+                        <div style={{ fontSize: "12px", fontWeight: "600", color: "#0d6efd", marginBottom: "6px" }}>
+                          {campaign.campaignName}
+                        </div>
+                        {campaignVouchers.map((voucherItem) => {
+                          const checked = isVoucherSelected(voucherItem.id);
+                          const isApplicable = isVoucherApplicable(voucherItem);
+                          const validationMessage = getVoucherValidationMessage(voucherItem);
+                          return (
+                            <label
+                              key={voucherItem.id}
+                              tabIndex={0}
+                              onKeyDown={(e) => handleVoucherKeyDown(e, voucherItem)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "8px",
+                                padding: "6px 8px",
+                                borderRadius: "4px",
+                                background: checked ? "#e7f1ff" : "white",
+                                border: checked ? "1px solid #0d6efd" : "1px solid #eee",
+                                marginBottom: "6px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => selectVoucher(voucherItem)}
+                                />
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: "12px", fontWeight: "500" }}>
+                                    {voucherItem.couponCode || voucherItem.name || `Voucher #${voucherItem.id}`}
+                                  </div>
+                                  <div style={{ fontSize: "11px", color: !isApplicable ? "#dc3545" : "#6c757d" }}>
+                                    Giảm {formatVoucherDiscount(voucherItem)}
+                                    {voucherItem.minPurchaseAmount
+                                      ? ` • ĐH tối thiểu ${Number(voucherItem.minPurchaseAmount).toLocaleString()}đ`
+                                      : ""}
+                                    {voucherItem.totalUsageLimit
+                                      ? ` • Còn ${Math.max(0, Number(voucherItem.totalUsageLimit) - Number(voucherItem.currentUsageCount || 0))}/${Number(voucherItem.totalUsageLimit)} lượt`
+                                      : ""}
+                                    {voucherItem.endDate ? ` • HSD ${voucherItem.endDate}` : ""}
+                                  </div>
+                                  {!isApplicable && (
+                                    <div style={{ fontSize: "11px", color: "#dc3545", marginTop: "2px" }}>
+                                      {validationMessage}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <span style={{ fontSize: "12px", fontWeight: 600, color: "#198754" }}>
+                                -{getVoucherDiscountAmount(voucherItem).toLocaleString()}đ
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ))}
+
+                    {standaloneVouchers.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: "12px", fontWeight: "600", color: "#6c757d", marginBottom: "6px" }}>
+                          Voucher khác
+                        </div>
+                        {standaloneVouchers.map((voucherItem) => {
+                          const checked = isVoucherSelected(voucherItem.id);
+                          const isApplicable = isVoucherApplicable(voucherItem);
+                          const validationMessage = getVoucherValidationMessage(voucherItem);
+                          return (
+                            <label
+                              key={voucherItem.id}
+                              tabIndex={0}
+                              onKeyDown={(e) => handleVoucherKeyDown(e, voucherItem)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "8px",
+                                padding: "6px 8px",
+                                borderRadius: "4px",
+                                background: checked ? "#e7f1ff" : "white",
+                                border: checked ? "1px solid #0d6efd" : "1px solid #eee",
+                                marginBottom: "6px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => selectVoucher(voucherItem)}
+                                />
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: "12px", fontWeight: "500" }}>
+                                    {voucherItem.couponCode || voucherItem.name || `Voucher #${voucherItem.id}`}
+                                  </div>
+                                  <div style={{ fontSize: "11px", color: !isApplicable ? "#dc3545" : "#6c757d" }}>
+                                    Giảm {formatVoucherDiscount(voucherItem)}
+                                    {voucherItem.minPurchaseAmount
+                                      ? ` • ĐH tối thiểu ${Number(voucherItem.minPurchaseAmount).toLocaleString()}đ`
+                                      : ""}
+                                  </div>
+                                  {!isApplicable && (
+                                    <div style={{ fontSize: "11px", color: "#dc3545", marginTop: "2px" }}>
+                                      {validationMessage}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <span style={{ fontSize: "12px", fontWeight: 600, color: "#198754" }}>
+                                -{getVoucherDiscountAmount(voucherItem).toLocaleString()}đ
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
             </div>
 
             {/* Ghi chú */}
@@ -1003,7 +1165,6 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
                     outline: focusedField === "paymentMethod" && paymentMethod === "cash" ? "3px solid #80bdff" : "none"
                   }}
                 >
-                  Tiền mặt
                   Tiền mặt
                 </button>
                 <button

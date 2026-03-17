@@ -15,7 +15,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/crm/campaigns")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class CampaignController {
 
     private final CampaignService campaignService;
@@ -43,7 +42,7 @@ public class CampaignController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCampaign(@PathVariable Integer id, @RequestBody CreateCampaignRequest request) {
+    public ResponseEntity<?> updateCampaign(@PathVariable("id") Integer id, @RequestBody CreateCampaignRequest request) {
         try {
             CampaignResponse campaign = campaignService.updateCampaign(id, request);
             return ResponseEntity.ok(campaign);
@@ -55,7 +54,7 @@ public class CampaignController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCampaign(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteCampaign(@PathVariable("id") Integer id) {
         campaignService.deleteCampaign(id);
         return ResponseEntity.noContent().build();
     }

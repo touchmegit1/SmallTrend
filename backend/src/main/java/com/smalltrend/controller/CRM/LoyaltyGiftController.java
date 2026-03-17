@@ -17,7 +17,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/crm/loyalty-gifts")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class LoyaltyGiftController {
 
     private final LoyaltyGiftService loyaltyGiftService;

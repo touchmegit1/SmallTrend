@@ -12,7 +12,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/pos/purchase-history")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class PurchaseHistoryController {
 
     private final PurchaseHistoryService purchaseHistoryService;

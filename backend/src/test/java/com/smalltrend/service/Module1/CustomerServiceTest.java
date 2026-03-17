@@ -6,6 +6,7 @@ import com.smalltrend.repository.CustomerRepository;
 import com.smalltrend.service.CRM.CustomerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -17,46 +18,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit Test for CustomerService
- * Coverage target: 100% Statement Coverage + 100% Decision Coverage
- *
- * Methods tested and their decision branches:
- *
- *  1. getAllCustomers()
- *     - Returns empty list
- *     - Returns list with items (mapToResponse: loyaltyPoints != null, spentAmount != null)
- *
- *  2. getCustomerById()
- *     - Branch TRUE : customer found → return response
- *     - Branch FALSE: customer not found → throw RuntimeException
- *
- *  3. createCustomer()
- *     - Always saves and maps (mapToResponse: loyaltyPoints == null, spentAmount == null)
- *
- *  4. updateCustomer()
- *     - Branch A : customer not found → throw RuntimeException
- *     - Branch B : loyaltyPoints != null AND spentAmount != null → set both
- *     - Branch C : loyaltyPoints == null AND spentAmount == null → skip both (already covered in existing test)
- *     - Branch D : loyaltyPoints != null AND spentAmount == null
- *     - Branch E : loyaltyPoints == null AND spentAmount != null
- *
- *  5. deleteCustomer()
- *     - Branch TRUE : exists → delete
- *     - Branch FALSE: not exists → throw RuntimeException
- *
- *  6. getCustomerByPhone()
- *     - Branch when phone == null (cleanPhone = "")
- *     - Branch when phone != null
- *     - Branch: customer not found → throw RuntimeException
- *     - Branch: customer found → return response
- *
- *  mapToResponse() — private, covered via above:
- *     - loyaltyPoints != null branch (test B / listWith items)
- *     - loyaltyPoints == null branch (test createCustomer / test C)
- *     - spentAmount  != null branch (test B)
- *     - spentAmount  == null branch (test createCustomer / test C)
- */
 @ExtendWith(MockitoExtension.class)
 class CustomerServiceTest {
 
@@ -65,10 +26,6 @@ class CustomerServiceTest {
 
     @InjectMocks
     private CustomerService customerService;
-
-    // -----------------------------------------------------------------------
-    // 1. getAllCustomers
-    // -----------------------------------------------------------------------
 
     @Test
     void getAllCustomers_shouldReturnEmptyList_whenNoCustomers() {
@@ -81,17 +38,17 @@ class CustomerServiceTest {
         verify(customerRepository).findAll();
     }
 
-    /**
-     * Also covers mapToResponse with non-null loyaltyPoints and spentAmount
-     */
     @Test
-    void getAllCustomers_shouldReturnMappedList_whenCustomersExist() {
-        Customer c = Customer.builder()
-                .id(1).name("Alice").phone("0900")
-                .loyaltyPoints(10).spentAmount(50000L)
+    void getAllCustomers_shouldMapValues_whenCustomersExist() {
+        Customer customer = Customer.builder()
+                .id(1)
+                .name("Alice")
+                .phone("0900")
+                .loyaltyPoints(10)
+                .spentAmount(50000L)
                 .build();
 
-        when(customerRepository.findAll()).thenReturn(List.of(c));
+        when(customerRepository.findAll()).thenReturn(List.of(customer));
 
         List<CustomerResponse> result = customerService.getAllCustomers();
 
@@ -101,22 +58,13 @@ class CustomerServiceTest {
         assertEquals(50000L, result.get(0).getSpentAmount());
     }
 
-    // -----------------------------------------------------------------------
-    // 2. getCustomerById — Decision: found / not found
-    // -----------------------------------------------------------------------
-
     @Test
     void getCustomerById_shouldReturnResponse_whenFound() {
-        Customer c = Customer.builder()
-                .id(5).name("Bob").phone("0911")
-                .loyaltyPoints(0).spentAmount(0L)
-                .build();
-
-        when(customerRepository.findById(5)).thenReturn(Optional.of(c));
+        Customer customer = Customer.builder().id(5).name("Bob").phone("0911").build();
+        when(customerRepository.findById(5)).thenReturn(Optional.of(customer));
 
         CustomerResponse result = customerService.getCustomerById(5);
 
-        assertNotNull(result);
         assertEquals(5, result.getId());
         assertEquals("Bob", result.getName());
     }
@@ -124,171 +72,176 @@ class CustomerServiceTest {
     @Test
     void getCustomerById_shouldThrowException_whenNotFound() {
         when(customerRepository.findById(99)).thenReturn(Optional.empty());
+        
 
-        RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> customerService.getCustomerById(99));
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.getCustomerById(99));
 
         assertEquals("Customer not found", ex.getMessage());
-    }
 
-    // -----------------------------------------------------------------------
-    // 3. createCustomer — also covers mapToResponse(null, null)
-    // -----------------------------------------------------------------------
+    }
 
     @Test
-    void createCustomer_shouldSaveAndReturnResponse() {
-        Customer saved = Customer.builder()
-                .id(10).name("Charlie").phone("0922")
-                .loyaltyPoints(null).spentAmount(null)
-                .build();
+    void createCustomer_shouldSaveWithCleanPhone_whenPhoneHasSpaces() {
+        when(customerRepository.findByPhoneIgnoreSpaces("0987654321")).thenReturn(Optional.empty());
 
+        Customer saved = Customer.builder()
+                .id(10)
+                .name("Charlie")
+                .phone("0987654321")
+                .loyaltyPoints(null)
+                .spentAmount(null)
+                .build();
         when(customerRepository.save(any(Customer.class))).thenReturn(saved);
 
-        CustomerResponse result = customerService.createCustomer("Charlie", "0922");
+        CustomerResponse result = customerService.createCustomer("Charlie", "0987 654 321");
 
-        assertNotNull(result);
         assertEquals(10, result.getId());
         assertEquals("Charlie", result.getName());
-        // null branches in mapToResponse → default 0
+        assertEquals("0987654321", result.getPhone());
         assertEquals(0, result.getLoyaltyPoints());
         assertEquals(0L, result.getSpentAmount());
-        verify(customerRepository).save(any(Customer.class));
+
+        ArgumentCaptor<Customer> captor = ArgumentCaptor.forClass(Customer.class);
+        verify(customerRepository).save(captor.capture());
+        assertEquals("0987654321", captor.getValue().getPhone());
     }
 
-    // -----------------------------------------------------------------------
-    // 4. updateCustomer — multiple decision branches
-    // -----------------------------------------------------------------------
 
-    /**
-     * Branch A: customer not found → RuntimeException
-     */
+    @Test
+    void createCustomer_shouldSaveWithEmptyPhone_whenPhoneIsNull() {
+        when(customerRepository.findByPhoneIgnoreSpaces("")).thenReturn(Optional.empty());
+
+        Customer saved = Customer.builder().id(11).name("NullPhone").phone("").build();
+        when(customerRepository.save(any(Customer.class))).thenReturn(saved);
+
+        CustomerResponse result = customerService.createCustomer("NullPhone", null);
+
+        assertEquals(11, result.getId());
+        assertEquals("", result.getPhone());
+        verify(customerRepository).findByPhoneIgnoreSpaces("");
+    }
+
+
+
     @Test
     void updateCustomer_shouldThrowException_whenIdNotFound() {
         when(customerRepository.findById(99)).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> customerService.updateCustomer(99, "Name", "Phone", 100, 5000L));
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> customerService.updateCustomer(99, "Name", "Phone", 1, 100L));
 
-        assertEquals("Customer not found", exception.getMessage());
+        assertEquals("Customer not found", ex.getMessage());
         verify(customerRepository, never()).save(any());
     }
 
-    /**
-     * Branch B: loyaltyPoints != null AND spentAmount != null → both updated
-     */
     @Test
-    void updateCustomer_shouldUpdateAllFields_whenPointsAndAmountAreNotNull() {
-        Customer existingCustomer = Customer.builder()
-                .id(1).name("Old Name").phone("0000")
-                .loyaltyPoints(50).spentAmount(0L)
+    void updateCustomer_shouldUpdateAndCleanPhone_whenChangedAndUnique() {
+        Customer current = Customer.builder()
+                .id(1)
+                .name("Old")
+                .phone("0900")
+                .loyaltyPoints(5)
+                .spentAmount(100L)
                 .build();
+        when(customerRepository.findById(1)).thenReturn(Optional.of(current));
+        when(customerRepository.findByPhoneIgnoreSpaces("0911222333")).thenReturn(Optional.empty());
 
-        when(customerRepository.findById(1)).thenReturn(Optional.of(existingCustomer));
-
-        Customer updatedCustomer = Customer.builder()
-                .id(1).name("New Name").phone("1111")
-                .loyaltyPoints(200).spentAmount(500000L)
+        Customer updated = Customer.builder()
+                .id(1)
+                .name("New")
+                .phone("0911222333")
+                .loyaltyPoints(50)
+                .spentAmount(999L)
                 .build();
+        when(customerRepository.save(any(Customer.class))).thenReturn(updated);
 
-        when(customerRepository.save(any(Customer.class))).thenReturn(updatedCustomer);
+        CustomerResponse result = customerService.updateCustomer(1, "New", "0911 222 333", 50, 999L);
 
-        CustomerResponse response = customerService.updateCustomer(1, "New Name", "1111", 200, 500000L);
-
-        assertNotNull(response);
-        assertEquals("New Name", response.getName());
-        assertEquals("1111", response.getPhone());
-        assertEquals(200, response.getLoyaltyPoints());
-        assertEquals(500000L, response.getSpentAmount());
-        verify(customerRepository).save(existingCustomer);
+        assertEquals("New", result.getName());
+        assertEquals("0911222333", result.getPhone());
+        assertEquals(50, result.getLoyaltyPoints());
+        assertEquals(999L, result.getSpentAmount());
+        verify(customerRepository).findByPhoneIgnoreSpaces("0911222333");
     }
 
-    /**
-     * Branch C: loyaltyPoints == null AND spentAmount == null → neither updated
-     * Also covers mapToResponse with null fields → returns 0 defaults
-     */
     @Test
-    void updateCustomer_shouldNotUpdatePointsAndAmount_whenBothAreNull() {
-        Customer existingCustomer = Customer.builder()
-                .id(1).name("Old Name").phone("0000")
-                .loyaltyPoints(null).spentAmount(null)
-                .build();
+    void updateCustomer_shouldThrowException_whenChangedPhoneBelongsToDifferentCustomer() {
+        Customer current = Customer.builder().id(1).name("A").phone("0900").build();
+        Customer other = Customer.builder().id(2).phone("0911").build();
 
-        when(customerRepository.findById(1)).thenReturn(Optional.of(existingCustomer));
+        when(customerRepository.findById(1)).thenReturn(Optional.of(current));
+        when(customerRepository.findByPhoneIgnoreSpaces("0911")).thenReturn(Optional.of(other));
 
-        Customer updatedCustomer = Customer.builder()
-                .id(1).name("New Name").phone("1111")
-                .loyaltyPoints(null).spentAmount(null)
-                .build();
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> customerService.updateCustomer(1, "A", "0911", 1, 1L));
 
-        when(customerRepository.save(any(Customer.class))).thenReturn(updatedCustomer);
-
-        CustomerResponse response = customerService.updateCustomer(1, "New Name", "1111", null, null);
-
-        assertNotNull(response);
-        assertEquals("New Name", response.getName());
-        assertEquals("1111", response.getPhone());
-        assertEquals(0, response.getLoyaltyPoints());
-        assertEquals(0L, response.getSpentAmount());
-        verify(customerRepository).save(existingCustomer);
+        assertEquals("Số điện thoại này đã được sử dụng cho một khách hàng khác.", ex.getMessage());
+        verify(customerRepository, never()).save(any());
     }
 
-    /**
-     * Branch D: loyaltyPoints != null AND spentAmount == null → only loyaltyPoints updated
-     */
     @Test
-    void updateCustomer_shouldUpdateOnlyLoyaltyPoints_whenSpentAmountIsNull() {
-        Customer existingCustomer = Customer.builder()
-                .id(2).name("Dave").phone("0933")
-                .loyaltyPoints(10).spentAmount(1000L)
-                .build();
+    void updateCustomer_shouldAllowChangedPhone_whenMatchedCustomerIsSameId() {
+        Customer current = Customer.builder().id(1).name("A").phone("0900").loyaltyPoints(1).spentAmount(1L).build();
+        Customer same = Customer.builder().id(1).phone("0911").build();
 
-        when(customerRepository.findById(2)).thenReturn(Optional.of(existingCustomer));
+        when(customerRepository.findById(1)).thenReturn(Optional.of(current));
+        when(customerRepository.findByPhoneIgnoreSpaces("0911")).thenReturn(Optional.of(same));
 
-        Customer updatedCustomer = Customer.builder()
-                .id(2).name("Dave Updated").phone("0933")
-                .loyaltyPoints(99).spentAmount(1000L)
-                .build();
+        Customer updated = Customer.builder().id(1).name("B").phone("0911").loyaltyPoints(9).spentAmount(8L).build();
+        when(customerRepository.save(any(Customer.class))).thenReturn(updated);
 
-        when(customerRepository.save(any(Customer.class))).thenReturn(updatedCustomer);
+        CustomerResponse result = customerService.updateCustomer(1, "B", "0911", 9, 8L);
 
-        CustomerResponse response = customerService.updateCustomer(2, "Dave Updated", "0933", 99, null);
-
-        assertNotNull(response);
-        assertEquals(99, response.getLoyaltyPoints());
-        assertEquals(1000L, response.getSpentAmount());
-        verify(customerRepository).save(existingCustomer);
+        assertEquals("0911", result.getPhone());
+        assertEquals(9, result.getLoyaltyPoints());
+        assertEquals(8L, result.getSpentAmount());
+        verify(customerRepository).save(current);
     }
 
-    /**
-     * Branch E: loyaltyPoints == null AND spentAmount != null → only spentAmount updated
-     */
     @Test
-    void updateCustomer_shouldUpdateOnlySpentAmount_whenLoyaltyPointsIsNull() {
-        Customer existingCustomer = Customer.builder()
-                .id(3).name("Eve").phone("0944")
-                .loyaltyPoints(5).spentAmount(200L)
-                .build();
+    void updateCustomer_shouldSkipPhoneDuplicateCheck_whenPhoneUnchanged() {
+        Customer current = Customer.builder().id(3).name("Old").phone("0944").loyaltyPoints(5).spentAmount(200L).build();
+        Customer updated = Customer.builder().id(3).name("New").phone("0944").loyaltyPoints(5).spentAmount(9999L).build();
 
-        when(customerRepository.findById(3)).thenReturn(Optional.of(existingCustomer));
+        when(customerRepository.findById(3)).thenReturn(Optional.of(current));
+        when(customerRepository.save(any(Customer.class))).thenReturn(updated);
 
-        Customer updatedCustomer = Customer.builder()
-                .id(3).name("Eve Updated").phone("0944")
-                .loyaltyPoints(5).spentAmount(9999L)
-                .build();
+        CustomerResponse result = customerService.updateCustomer(3, "New", "0944", null, 9999L);
 
-        when(customerRepository.save(any(Customer.class))).thenReturn(updatedCustomer);
-
-        CustomerResponse response = customerService.updateCustomer(3, "Eve Updated", "0944", null, 9999L);
-
-        assertNotNull(response);
-        assertEquals(5, response.getLoyaltyPoints());
-        assertEquals(9999L, response.getSpentAmount());
-        verify(customerRepository).save(existingCustomer);
+        assertEquals(5, result.getLoyaltyPoints());
+        assertEquals(9999L, result.getSpentAmount());
+        verify(customerRepository, never()).findByPhoneIgnoreSpaces(any());
     }
 
-    // -----------------------------------------------------------------------
-    // 5. deleteCustomer — Decision: exists / not exists
-    // -----------------------------------------------------------------------
+    @Test
+    void updateCustomer_shouldSkipPhoneDuplicateCheck_whenPhoneIsNull() {
+        Customer current = Customer.builder().id(4).name("Old").phone("0999").loyaltyPoints(1).spentAmount(2L).build();
+        Customer updated = Customer.builder().id(4).name("New").phone("0999").loyaltyPoints(100).spentAmount(2L).build();
+
+        when(customerRepository.findById(4)).thenReturn(Optional.of(current));
+        when(customerRepository.save(any(Customer.class))).thenReturn(updated);
+
+        CustomerResponse result = customerService.updateCustomer(4, "New", null, 100, null);
+
+        assertEquals("0999", result.getPhone());
+        assertEquals(100, result.getLoyaltyPoints());
+        assertEquals(2L, result.getSpentAmount());
+        verify(customerRepository, never()).findByPhoneIgnoreSpaces(any());
+    }
+
+    @Test
+    void updateCustomer_overloadWithoutSpentAmount_shouldDelegateWithNullSpentAmount() {
+        Customer current = Customer.builder().id(6).name("Old").phone("0977").loyaltyPoints(1).spentAmount(10L).build();
+        Customer updated = Customer.builder().id(6).name("New").phone("0977").loyaltyPoints(30).spentAmount(10L).build();
+
+        when(customerRepository.findById(6)).thenReturn(Optional.of(current));
+        when(customerRepository.save(any(Customer.class))).thenReturn(updated);
+
+        CustomerResponse result = customerService.updateCustomer(6, "New", "0977", 30);
+
+        assertEquals(30, result.getLoyaltyPoints());
+        assertEquals(10L, result.getSpentAmount());
+    }
 
     @Test
     void deleteCustomer_shouldDelete_whenIdExists() {
@@ -303,67 +256,41 @@ class CustomerServiceTest {
     void deleteCustomer_shouldThrowException_whenIdDoesNotExist() {
         when(customerRepository.existsById(99)).thenReturn(false);
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> customerService.deleteCustomer(99));
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.deleteCustomer(99));
 
-        assertEquals("Customer not found", exception.getMessage());
+        assertEquals("Customer not found", ex.getMessage());
         verify(customerRepository, never()).deleteById(any());
     }
 
-    // -----------------------------------------------------------------------
-    // 6. getCustomerByPhone — Decision: phone null vs non-null, found / not found
-    // -----------------------------------------------------------------------
-
-    /**
-     * Branch: phone != null → replaceAll executed on actual value
-     * Sub-branch: customer found → return response
-     */
     @Test
-    void getCustomerByPhone_shouldReturnCustomer_whenPhoneIsNotNullAndFound() {
-        Customer c = Customer.builder()
-                .id(7).name("Frank").phone("0901234567")
-                .loyaltyPoints(0).spentAmount(0L)
-                .build();
+    void getCustomerByPhone_shouldReturnCustomer_whenPhoneProvidedAndFound() {
+        Customer customer = Customer.builder().id(7).name("Frank").phone("0901234567").build();
+        when(customerRepository.findByPhoneIgnoreSpaces("0901234567")).thenReturn(Optional.of(customer));
 
-        // Service calls replaceAll on phone string, then passes cleaned value
-        when(customerRepository.findByPhoneIgnoreSpaces("0901234567"))
-                .thenReturn(Optional.of(c));
+        CustomerResponse result = customerService.getCustomerByPhone("0901 234 567");
 
-        CustomerResponse result = customerService.getCustomerByPhone("0901234567");
-
-        assertNotNull(result);
         assertEquals(7, result.getId());
         verify(customerRepository).findByPhoneIgnoreSpaces("0901234567");
     }
 
-    /**
-     * Branch: phone == null → cleanPhone = "" → still calls findByPhoneIgnoreSpaces("")
-     * Sub-branch: customer not found → throw RuntimeException
-     */
     @Test
     void getCustomerByPhone_shouldThrowException_whenPhoneIsNullAndNotFound() {
-        when(customerRepository.findByPhoneIgnoreSpaces(""))
-                .thenReturn(Optional.empty());
+        when(customerRepository.findByPhoneIgnoreSpaces("")).thenReturn(Optional.empty());
 
-        RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> customerService.getCustomerByPhone(null));
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.getCustomerByPhone(null));
 
-        assertTrue(ex.getMessage().contains("Customer not found with phone:"));
+        assertEquals("Customer not found with phone: null", ex.getMessage());
         verify(customerRepository).findByPhoneIgnoreSpaces("");
     }
 
-    /**
-     * Branch: phone != null → but customer not found → throw RuntimeException
-     */
     @Test
-    void getCustomerByPhone_shouldThrowException_whenPhoneIsNotNullButNotFound() {
-        when(customerRepository.findByPhoneIgnoreSpaces("9999999999"))
-                .thenReturn(Optional.empty());
+    void getCustomerByPhone_shouldThrowException_whenPhoneNotFound() {
+        when(customerRepository.findByPhoneIgnoreSpaces("9999999999")).thenReturn(Optional.empty());
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> customerService.getCustomerByPhone("9999999999"));
 
-        assertTrue(ex.getMessage().contains("Customer not found with phone: 9999999999"));
+        assertEquals("Customer not found with phone: 9999999999", ex.getMessage());
         verify(customerRepository).findByPhoneIgnoreSpaces("9999999999");
     }
 }

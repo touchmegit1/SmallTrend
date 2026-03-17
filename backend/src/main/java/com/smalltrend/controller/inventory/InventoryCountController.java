@@ -13,7 +13,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/inventory/inventory-counts")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class InventoryCountController {
 
     private final InventoryCountService countService;
