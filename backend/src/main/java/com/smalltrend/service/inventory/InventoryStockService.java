@@ -15,6 +15,7 @@ import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.StockMovementRepository;
 import com.smalltrend.repository.UnitConversionRepository;
+import com.smalltrend.validation.inventory.stock.InventoryStockRequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class InventoryStockService {
     private final ProductBatchRepository productBatchRepository;
     private final LocationRepository locationRepository;
     private final InventoryOutOfStockNotificationService outOfStockNotificationService;
+    private final InventoryStockRequestValidator inventoryStockRequestValidator;
 
     /**
      * Lấy tổng tồn kho của 1 variant (tính gộp các batch và location)
@@ -44,6 +46,8 @@ public class InventoryStockService {
      */
     @Transactional
     public void importStock(StockImportRequest request) {
+        inventoryStockRequestValidator.validateImportRequest(request);
+
         ProductVariant variant = productVariantRepository.findById(request.getVariantId())
                 .orElseThrow(() -> new RuntimeException("Variant not found: " + request.getVariantId()));
 
@@ -154,6 +158,8 @@ public class InventoryStockService {
      */
     @Transactional
     public void adjustStock(StockAdjustRequest request) {
+        inventoryStockRequestValidator.validateAdjustRequest(request);
+
         ProductVariant variant = productVariantRepository.findById(request.getVariantId())
                 .orElseThrow(() -> new RuntimeException("Variant not found: " + request.getVariantId()));
 

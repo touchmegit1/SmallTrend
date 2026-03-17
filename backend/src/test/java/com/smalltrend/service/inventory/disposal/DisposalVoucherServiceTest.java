@@ -7,6 +7,7 @@ import com.smalltrend.service.inventory.InventoryOutOfStockNotificationService;
 import com.smalltrend.entity.enums.DisposalReason;
 import com.smalltrend.entity.enums.DisposalStatus;
 import com.smalltrend.repository.*;
+import com.smalltrend.validation.inventory.disposal.DisposalVoucherRequestValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,6 +45,8 @@ class DisposalVoucherServiceTest {
     private UserRepository userRepository;
     @Mock
     private InventoryOutOfStockNotificationService outOfStockNotificationService;
+    @Mock
+    private DisposalVoucherRequestValidator disposalVoucherRequestValidator;
 
     @InjectMocks
     private DisposalVoucherService disposalVoucherService;

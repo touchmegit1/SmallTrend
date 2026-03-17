@@ -8,7 +8,7 @@ export const DV_STATUS = {
 
 export const DV_STATUS_CONFIG = {
   [DV_STATUS.DRAFT]: {
-    label: "Nháp",
+    label: "Phiếu tạm",
     bg: "bg-amber-50",
     text: "text-amber-700",
     border: "border-amber-200",

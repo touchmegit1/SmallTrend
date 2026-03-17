@@ -19,7 +19,6 @@ TRUNCATE TABLE cash_transactions;
 TRUNCATE TABLE shift_handovers;
 TRUNCATE TABLE shift_swap_requests;
 TRUNCATE TABLE stock_movements;
-TRUNCATE TABLE stock_movements;
 TRUNCATE TABLE payroll_calculations;
 TRUNCATE TABLE salary_configs;
 TRUNCATE TABLE attendance;
@@ -40,19 +39,12 @@ TRUNCATE TABLE inventory_count_items;
 TRUNCATE TABLE inventory_counts;
 TRUNCATE TABLE disposal_voucher_items;
 TRUNCATE TABLE disposal_vouchers;
-TRUNCATE TABLE inventory_count_items;
-TRUNCATE TABLE inventory_counts;
-TRUNCATE TABLE disposal_voucher_items;
-TRUNCATE TABLE disposal_vouchers;
 TRUNCATE TABLE inventory_stock;
 TRUNCATE TABLE product_batches;
 TRUNCATE TABLE locations;
 TRUNCATE TABLE variant_prices;
 TRUNCATE TABLE variant_attributes;
 TRUNCATE TABLE product_variants;
-TRUNCATE TABLE gift_redemption_history;
-TRUNCATE TABLE loyalty_gifts;
-TRUNCATE TABLE purchase_history;
 TRUNCATE TABLE gift_redemption_history;
 TRUNCATE TABLE loyalty_gifts;
 TRUNCATE TABLE purchase_history;
@@ -393,10 +385,10 @@ INSERT IGNORE INTO variant_prices (variant_id, purchase_price, selling_price, ta
 -- 10. LOCATIONS
 INSERT IGNORE INTO locations (id, name, type, zone, grid_row, grid_col, grid_level, location_code, address, capacity, status, created_at) VALUES
 (1, 'Kho lưu trữ A1', 'STORAGE', 'A', 1, 1, 1, 'WH-A1', 'Kho chính, Dãy A, Hàng 1', 5000, 'ACTIVE', NOW()),
-(2, 'Kệ hàng C3', 'DISPLAY', 'C', 1, 3, 1, 'DF-C3', 'Kệ hàng, Dãy C, Vị trí 3', 1200, 'ACTIVE', NOW()),
+(2, 'Kệ hàng C3', 'DISPLAY', 'C', 1, 3, 1, 'DF-C3', 'Kệ hàng, Dãy C, Vị trí 3', 2000, 'ACTIVE', NOW()),
 (3, 'Kho lạnh B1', 'COLD_STORAGE', 'B', 1, 1, 1, 'CS-B1', 'Kho lạnh, Dãy B, Tầng 1', 2000, 'ACTIVE', NOW()),
-(4, 'Kệ hàng C1', 'DISPLAY', 'C', 1, 1, 1, 'DF-C1', 'Kệ hàng, Dãy C, Vị trí 1', 1000, 'ACTIVE', NOW()),
-(5, 'Kệ hàng C2', 'DISPLAY', 'C', 1, 2, 1, 'DF-C2', 'Kệ hàng, Dãy C, Vị trí 2', 1500, 'ACTIVE', NOW());
+(4, 'Kệ hàng C1', 'DISPLAY', 'C', 1, 1, 1, 'DF-C1', 'Kệ hàng, Dãy C, Vị trí 1', 2000, 'ACTIVE', NOW()),
+(5, 'Kệ hàng C2', 'DISPLAY', 'C', 1, 2, 1, 'DF-C2', 'Kệ hàng, Dãy C, Vị trí 2', 2000, 'ACTIVE', NOW());
 
 
 -- 11. PRODUCT BATCHES
@@ -959,27 +951,21 @@ INSERT IGNORE INTO purchase_orders (
 ) VALUES
 ('PO-2024-001', 1, 2, '2024-01-10', 'RECEIVED', 5000000.00, 0.00, 0.00, 5000000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-2024-002', 2, 2, '2024-01-15', 'RECEIVED', 3500000.00, 0.00, 0.00, 3500000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-2024-003', 3, 2, '2024-02-01', 'DRAFT', 2400000.00, 0.00, 0.00, 2400000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
 ('PO-2026-001', 1, 2, '2026-02-10', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
-('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW()),
-('PO-2026-003', 3, 1, '2026-02-15', 'DRAFT', 12000000.00, 1200000.00, 200000.00, 13000000.00, 'Đơn nhập snack Nestle', NOW(), NOW()),
-('PO-2026-004', 4, 2, '2026-02-18', 'DRAFT', 24000000.00, 2400000.00, 1000000.00, 25400000.00, 'Đơn nhập nước ngọt Coca-Cola', NOW(), NOW());
+('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW());
 
 -- 26. PURCHASE ORDER ITEMS (Matching JPA PurchaseOrderItem schema)
 INSERT IGNORE INTO purchase_order_items (purchase_order_id, variant_id, quantity, unit_price, received_quantity, notes) VALUES
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-001'), 1, 250, 20000.00, 250, 'Migrated from legacy purchase_order_items'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-002'), 2, 160, 22000.00, 160, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-003'), 3, 800, 3500.00, 0, 'Migrated from legacy purchase_order_items'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-004'), 4, 200, 9500.00, 200, 'Migrated from legacy purchase_order_items'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-005'), 5, 180, 12000.00, 0, 'Migrated from legacy purchase_order_items'),
 
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 1, 2000, 20000.00, 2000, 'Đã nhận đủ 2000 hộp'),
 ((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 3, 200, 35000.00, 200, 'Đã nhận đủ 200 gói'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-002'), 2, 1500, 12000.00, 0, 'Chưa nhận hàng'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-003'), 5, 2000, 6000.00, 0, 'Đang chờ giao'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-004'), 4, 3000, 8000.00, 0, 'Đơn nháp chưa gửi');
+((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-002'), 2, 1500, 12000.00, 0, 'Chưa nhận hàng');
 
 -- 27. SHIFT HANDOVERS
 INSERT INTO shift_handovers (
@@ -1096,8 +1082,6 @@ INSERT IGNORE INTO inventory_counts (
 ('IC-2026-0003', 'PENDING', 2, 'Kiểm kho khu vực kho B — chờ quản lý duyệt', 45000.00, 0.00, -45000.00, 5, NULL, '2026-02-22 09:00:00', NULL),
 -- Đang kiểm: chưa hoàn thành đếm
 ('IC-2026-0004', 'COUNTING', 4, 'Kiểm kho khu vực kệ trưng bày C1 — đang đếm', NULL, NULL, NULL, 5, NULL, '2026-02-25 10:00:00', NULL),
--- Phiếu tạm (DRAFT): mới tạo, chưa bắt đầu
-('IC-2026-0005', 'DRAFT', NULL, 'Phiếu kiểm kho tháng 3 — chưa bắt đầu', NULL, NULL, NULL, 5, NULL, '2026-03-01 08:00:00', NULL),
 -- Đã từ chối: quản lý phát hiện lỗi dữ liệu
 ('IC-2026-0006', 'REJECTED', 5, 'Kiểm kho khu vực POS — bị từ chối do lỗi nhập liệu', 0.00, 0.00, 0.00, 5, NULL, '2026-02-23 11:00:00', NULL);
 
@@ -1139,8 +1123,7 @@ INSERT IGNORE INTO disposal_vouchers (
     created_by, created_at, confirmed_by, confirmed_at
 ) VALUES
 ('DV-202602-001', 1, 'CONFIRMED', 'DAMAGED', 'Sản phẩm lỗi - vỏ hộp, không lỗi chất lượng nội dung', 1, 12, 180000.00, 5, '2026-02-18 13:30:00', 2, '2026-02-18 14:00:00'),
-('DV-202602-002', 3, 'CONFIRMED', 'EXPIRED', 'Sản phẩm hết hạn sử dụng - tìm thấy khi kiểm kho', 1, 8, 96000.00, 5, '2026-02-22 10:00:00', 2, '2026-02-22 10:30:00'),
-('DV-202602-003', 2, 'DRAFT', 'DAMAGED', 'Sản phẩm bị vỡ vỏ - hỏng trong quá trình lưu trữ', 1, 5, 75000.00, 5, '2026-02-25 11:00:00', NULL, NULL);
+('DV-202602-002', 3, 'CONFIRMED', 'EXPIRED', 'Sản phẩm hết hạn sử dụng - tìm thấy khi kiểm kho', 1, 8, 96000.00, 5, '2026-02-22 10:00:00', 2, '2026-02-22 10:30:00');
 
 -- 34. DISPOSAL VOUCHER ITEMS
 INSERT IGNORE INTO disposal_voucher_items (
@@ -1148,8 +1131,7 @@ INSERT IGNORE INTO disposal_voucher_items (
     quantity, unit_cost, total_cost, expiry_date
 ) VALUES
 ((SELECT id FROM disposal_vouchers WHERE code = 'DV-202602-001'), 2, 2, 'DV2026001', 12, 15000.00, 180000.00, '2027-02-01'),
-((SELECT id FROM disposal_vouchers WHERE code = 'DV-202602-002'), 3, 3, 'NC2026001', 8, 12000.00, 96000.00, '2026-02-01'),
-((SELECT id FROM disposal_vouchers WHERE code = 'DV-202602-003'), 4, 4, 'CC2026001', 5, 15000.00, 75000.00, '2026-08-10');
+((SELECT id FROM disposal_vouchers WHERE code = 'DV-202602-002'), 3, 3, 'NC2026001', 8, 12000.00, 96000.00, '2026-02-01');
 
 -- 35. LOYALTY GIFTS (Quà tặng gift/rewards từ loyalty program)
 INSERT IGNORE INTO loyalty_gifts (

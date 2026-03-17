@@ -198,8 +198,10 @@ class ProductVariantServiceTest {
     @Test
     void createVariant_BarcodeValidation() {
         request.setBarcode("invalid");
-        when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
-        when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
+        when(productVariantValidator.requireExistingProduct(10)).thenReturn(testProduct);
+        when(productVariantValidator.requireExistingUnit(20)).thenReturn(testUnit);
+        doThrow(new RuntimeException("Barcode phải gồm 12-13 chữ số."))
+                .when(productVariantValidator).validateBarcodeFormat("invalid");
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productVariantService.createVariant(10, request));
         assertEquals("Barcode phải gồm 12-13 chữ số.", ex.getMessage());
@@ -207,10 +209,10 @@ class ProductVariantServiceTest {
 
     @Test
     void createVariant_BarcodeExists() {
-        when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
-        when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
-        when(productVariantRepository.existsBySku("SKU-123")).thenReturn(false);
-        when(productVariantRepository.existsByBarcode("8930000100010")).thenReturn(true);
+        when(productVariantValidator.requireExistingProduct(10)).thenReturn(testProduct);
+        when(productVariantValidator.requireExistingUnit(20)).thenReturn(testUnit);
+        doThrow(new RuntimeException("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác."))
+                .when(productVariantValidator).validateBarcodeUniqueForCreate("8930000100010");
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productVariantService.createVariant(10, request));
         assertEquals("Mã Barcode đã tồn tại trong hệ thống. Vui lòng nhập mã khác.", ex.getMessage());
@@ -219,8 +221,10 @@ class ProductVariantServiceTest {
     @Test
     void createVariant_PluValidation() {
         request.setPluCode("12");
-        when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
-        when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
+        when(productVariantValidator.requireExistingProduct(10)).thenReturn(testProduct);
+        when(productVariantValidator.requireExistingUnit(20)).thenReturn(testUnit);
+        doThrow(new RuntimeException("Mã PLU phải gồm 4-5 chữ số."))
+                .when(productVariantValidator).validatePluCodeFormat("12");
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productVariantService.createVariant(10, request));
         assertEquals("Mã PLU phải gồm 4-5 chữ số.", ex.getMessage());
@@ -228,10 +232,8 @@ class ProductVariantServiceTest {
 
     @Test
     void updateVariant_Success_UpdatesLatestBatch() {
-        when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
-        when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
-        when(productVariantRepository.existsBySkuAndIdNot("SKU-123", 1)).thenReturn(false);
-        when(productVariantRepository.existsByBarcodeAndIdNot("8930000100010", 1)).thenReturn(false);
+        when(productVariantValidator.requireExistingVariant(1)).thenReturn(testVariant);
+        when(productVariantValidator.requireExistingUnit(20)).thenReturn(testUnit);
 
         ProductBatch oldBatch = new ProductBatch();
         oldBatch.setCostPrice(BigDecimal.valueOf(50));
@@ -249,10 +251,8 @@ class ProductVariantServiceTest {
 
     @Test
     void updateVariant_CreateNewBatchWhenNoneExist() {
-        when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
-        when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
-        when(productVariantRepository.existsBySkuAndIdNot("SKU-123", 1)).thenReturn(false);
-        when(productVariantRepository.existsByBarcodeAndIdNot("8930000100010", 1)).thenReturn(false);
+        when(productVariantValidator.requireExistingVariant(1)).thenReturn(testVariant);
+        when(productVariantValidator.requireExistingUnit(20)).thenReturn(testUnit);
 
         when(productBatchRepository.findFirstByVariantIdOrderByIdDesc(1)).thenReturn(Optional.empty());
         when(productVariantRepository.save(testVariant)).thenReturn(testVariant);
@@ -265,7 +265,7 @@ class ProductVariantServiceTest {
 
     @Test
     void generateSku_BaseLogicAndCollision() {
-        when(productRepository.findById(10)).thenReturn(Optional.of(testProduct));
+        when(productVariantValidator.requireExistingProduct(10)).thenReturn(testProduct);
         when(unitRepository.findById(20)).thenReturn(Optional.of(testUnit));
 
         when(productVariantRepository.existsBySku("CAT-BRAN-TESTPR-BOX")).thenReturn(true);
@@ -302,7 +302,7 @@ class ProductVariantServiceTest {
 
     @Test
     void toggleVariantStatus_Allowed() {
-        when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
+        when(productVariantValidator.requireExistingVariant(1)).thenReturn(testVariant);
         productVariantService.toggleVariantStatus(1);
         assertFalse(testVariant.isActive());
     }
@@ -318,7 +318,7 @@ class ProductVariantServiceTest {
 
     @Test
     void deleteVariant_Success_Within2Minutes() {
-        when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
+        when(productVariantValidator.requireExistingVariant(1)).thenReturn(testVariant);
 
         InventoryStock st = new InventoryStock();
         when(inventoryStockRepository.findByVariantId(1)).thenReturn(List.of(st));
@@ -341,7 +341,9 @@ class ProductVariantServiceTest {
     @Test
     void deleteVariant_Past2Minutes_ThrowsException() {
         testVariant.setCreatedAt(LocalDateTime.now().minusMinutes(5));
-        when(productVariantRepository.findById(1)).thenReturn(Optional.of(testVariant));
+        when(productVariantValidator.requireExistingVariant(1)).thenReturn(testVariant);
+        doThrow(new RuntimeException("Biến thể đã tạo quá 2 phút, bạn không thể xoá biến thể này nữa!"))
+                .when(productVariantValidator).validateDeletableWithinTwoMinutes(testVariant);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productVariantService.deleteVariant(1));
         assertEquals("Biến thể đã tạo quá 2 phút, bạn không thể xoá biến thể này nữa!", ex.getMessage());

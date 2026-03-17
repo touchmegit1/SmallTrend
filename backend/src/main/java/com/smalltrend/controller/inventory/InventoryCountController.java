@@ -3,6 +3,7 @@ package com.smalltrend.controller.inventory;
 import com.smalltrend.dto.inventory.inventorycount.InventoryCountRequest;
 import com.smalltrend.dto.inventory.inventorycount.InventoryCountResponse;
 import com.smalltrend.service.inventory.InventoryCountService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,7 +39,7 @@ public class InventoryCountController {
 
     // ─── Save as Draft ───────────────────────────────────────
     @PostMapping("/draft")
-    public ResponseEntity<InventoryCountResponse> saveDraft(@RequestBody InventoryCountRequest request) {
+    public ResponseEntity<InventoryCountResponse> saveDraft(@Valid @RequestBody InventoryCountRequest request) {
         InventoryCountResponse response = countService.saveDraft(request);
         return ResponseEntity.ok(response);
     }
@@ -47,14 +48,14 @@ public class InventoryCountController {
     @PutMapping("/{id:\\d+}")
     public ResponseEntity<InventoryCountResponse> updateCount(
             @PathVariable Integer id,
-            @RequestBody InventoryCountRequest request) {
+            @Valid @RequestBody InventoryCountRequest request) {
         InventoryCountResponse response = countService.updateCount(id, request);
         return ResponseEntity.ok(response);
     }
 
     // ─── Confirm (new: create + confirm) ─────────────────────
     @PostMapping("/confirm")
-    public ResponseEntity<InventoryCountResponse> createAndConfirm(@RequestBody InventoryCountRequest request) {
+    public ResponseEntity<InventoryCountResponse> createAndConfirm(@Valid @RequestBody InventoryCountRequest request) {
         InventoryCountResponse response = countService.createAndConfirm(request);
         return ResponseEntity.ok(response);
     }
@@ -63,7 +64,7 @@ public class InventoryCountController {
     @PutMapping("/{id:\\d+}/confirm")
     public ResponseEntity<InventoryCountResponse> confirmExisting(
             @PathVariable Integer id,
-            @RequestBody InventoryCountRequest request) {
+            @Valid @RequestBody InventoryCountRequest request) {
         InventoryCountResponse response = countService.confirmCount(id, request);
         return ResponseEntity.ok(response);
     }
@@ -79,14 +80,14 @@ public class InventoryCountController {
     @PutMapping("/{id:\\d+}/submit")
     public ResponseEntity<InventoryCountResponse> submitForApproval(
             @PathVariable Integer id,
-            @RequestBody InventoryCountRequest request) {
+            @Valid @RequestBody InventoryCountRequest request) {
         InventoryCountResponse response = countService.submitForApproval(id, request);
         return ResponseEntity.ok(response);
     }
 
     // ─── Submit for approval (create new + submit) ──────────
     @PostMapping("/submit")
-    public ResponseEntity<InventoryCountResponse> createAndSubmitForApproval(@RequestBody InventoryCountRequest request) {
+    public ResponseEntity<InventoryCountResponse> createAndSubmitForApproval(@Valid @RequestBody InventoryCountRequest request) {
         InventoryCountResponse response = countService.createAndSubmitForApproval(request);
         return ResponseEntity.ok(response);
     }
@@ -102,7 +103,7 @@ public class InventoryCountController {
     @PutMapping("/{id:\\d+}/reject")
     public ResponseEntity<InventoryCountResponse> rejectCount(
             @PathVariable Integer id,
-            @RequestBody InventoryCountRequest request) {
+            @Valid @RequestBody InventoryCountRequest request) {
         InventoryCountResponse response = countService.rejectCount(id, request.getRejectionReason());
         return ResponseEntity.ok(response);
     }

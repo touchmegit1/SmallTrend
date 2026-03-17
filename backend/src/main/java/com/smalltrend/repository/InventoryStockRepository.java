@@ -39,7 +39,7 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
             @Param("location") Location location);
 
     // Tìm tất cả stock records tại một location
-    @Query("SELECT i FROM InventoryStock i JOIN FETCH i.variant v JOIN FETCH v.product WHERE i.location.id = :locationId AND i.quantity > 0")
+    @Query("SELECT i FROM InventoryStock i JOIN FETCH i.variant v JOIN FETCH v.product LEFT JOIN FETCH v.unit LEFT JOIN FETCH i.batch WHERE i.location.id = :locationId AND i.quantity > 0")
     List<InventoryStock> findByLocationIdWithProduct(@Param("locationId") Integer locationId);
 
     // Tổng tồn kho của một variant (tất cả batch + location)

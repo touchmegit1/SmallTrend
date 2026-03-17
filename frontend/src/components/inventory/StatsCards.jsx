@@ -92,11 +92,13 @@ function Badge({ label, badgeBg, text }) {
 function ProductsModal({ products, onClose }) {
   const [search, setSearch] = useState("");
   const normalizedSearch = search.toLowerCase();
-  const filtered = products.filter(
-    (p) =>
-      p.name?.toLowerCase().includes(normalizedSearch) ||
-      p.sku?.toLowerCase().includes(normalizedSearch),
-  );
+  const filtered = products
+    .filter(
+      (p) =>
+        p.name?.toLowerCase().includes(normalizedSearch) ||
+        p.sku?.toLowerCase().includes(normalizedSearch),
+    )
+    .sort((a, b) => (a.stock_quantity ?? 0) - (b.stock_quantity ?? 0));
 
   return (
     <Modal
@@ -219,6 +221,14 @@ const URGENT_TABS = [
 function UrgentModal({ products, batches, onClose }) {
   const [tab, setTab] = useState("low_stock");
 
+  const getBatchLocationLabel = (batch) =>
+    batch.locationName ||
+    batch.location_name ||
+    batch.locationCode ||
+    batch.location_code ||
+    batch.location?.name ||
+    "Chưa rõ kho";
+
   const lowStockItems = products
     .filter(
       (p) =>
@@ -290,7 +300,7 @@ function UrgentModal({ products, batches, onClose }) {
         <div className="space-y-2">
           {lowStockItems.length === 0 && (
             <p className="text-center text-sm text-slate-400 py-8">
-              ✅ Không có sản phẩm thiếu hàng
+              Không có sản phẩm thiếu hàng
             </p>
           )}
           {lowStockItems.map((p) => {
@@ -330,7 +340,7 @@ function UrgentModal({ products, batches, onClose }) {
         <div className="space-y-2">
           {expiredBatches.length === 0 && (
             <p className="text-center text-sm text-slate-400 py-8">
-              ✅ Không có lô hàng hết hạn
+              Không có lô hàng hết hạn
             </p>
           )}
           {expiredBatches.map((b) => {
@@ -345,14 +355,14 @@ function UrgentModal({ products, batches, onClose }) {
                     {b.productName}
                   </p>
                   <p className="text-xs text-slate-500">
-                    Lô: {b.batch_code} · HSD: {formatDate(b.expiry_date)}
+                    Lô: {b.batch_code} · HSD: {formatDate(b.expiry_date)} · Kho: {getBatchLocationLabel(b)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={`text-sm font-bold ${cfg.text}`}>
-                    {formatNumber(b.quantity)}
+                  <p className={`text-sm font-bold ${cfg.text}`}>Đã hết hạn</p>
+                  <p className="text-xs text-slate-400">
+                    còn lại · {formatNumber(b.quantity ?? 0)} đơn vị
                   </p>
-                  <p className="text-xs text-slate-400">đơn vị</p>
                 </div>
                 <Badge label="Hết hạn" badgeBg={cfg.badgeBg} text={cfg.text} />
               </div>
@@ -366,7 +376,7 @@ function UrgentModal({ products, batches, onClose }) {
         <div className="space-y-2">
           {expiringBatches.length === 0 && (
             <p className="text-center text-sm text-slate-400 py-8">
-              ✅ Không có lô hàng sắp hết hạn
+              Không có lô hàng sắp hết hạn
             </p>
           )}
           {expiringBatches.map((b) => {
@@ -383,14 +393,16 @@ function UrgentModal({ products, batches, onClose }) {
                     {b.productName}
                   </p>
                   <p className="text-xs text-slate-500">
-                    Lô: {b.batch_code} · HSD: {formatDate(b.expiry_date)}
+                    Lô: {b.batch_code} · HSD: {formatDate(b.expiry_date)} · Kho: {getBatchLocationLabel(b)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className={`text-sm font-bold ${cfg.text}`}>
                     {b.daysRemaining != null ? `${b.daysRemaining} ngày` : "—"}
                   </p>
-                  <p className="text-xs text-slate-400">còn lại</p>
+                  <p className="text-xs text-slate-400">
+                    còn lại · {formatNumber(b.quantity ?? 0)} đơn vị
+                  </p>
                 </div>
                 <Badge
                   label={cfg.label}

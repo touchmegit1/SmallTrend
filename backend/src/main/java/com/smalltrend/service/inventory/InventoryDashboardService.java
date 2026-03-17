@@ -199,13 +199,31 @@ public class InventoryDashboardService {
                 return qty > 0 && batch.getExpiryDate() != null;
             })
             .map(batch -> {
-                int qty = allStocks.stream()
+                List<InventoryStock> stocksForBatch = allStocks.stream()
                     .filter(s -> s.getBatch() != null && s.getBatch().getId().equals(batch.getId()))
+                    .collect(Collectors.toList());
+
+                int qty = stocksForBatch.stream()
                     .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0)
                     .sum();
+
+                String locationName = stocksForBatch.stream()
+                    .map(InventoryStock::getLocation)
+                    .filter(location -> location != null && location.getName() != null && !location.getName().isBlank())
+                    .map(Location::getName)
+                    .distinct()
+                    .collect(Collectors.joining(", "));
+
+                String locationCode = stocksForBatch.stream()
+                    .map(InventoryStock::getLocation)
+                    .filter(location -> location != null && location.getLocationCode() != null && !location.getLocationCode().isBlank())
+                    .map(Location::getLocationCode)
+                    .distinct()
+                    .collect(Collectors.joining(", "));
+
                 LocalDate expiryDate = batch.getExpiryDate();
                 long daysUntil = ChronoUnit.DAYS.between(today, expiryDate);
-                
+
                 String status;
                 if (expiryDate.isBefore(today)) {
                     status = "EXPIRED";
@@ -214,13 +232,13 @@ public class InventoryDashboardService {
                 } else {
                     status = "SAFE";
                 }
-                
+
                 BigDecimal cost = batch.getCostPrice() != null ? batch.getCostPrice() : BigDecimal.ZERO;
                 BigDecimal value = cost.multiply(BigDecimal.valueOf(qty));
-                
-                String productName = batch.getVariant() != null && batch.getVariant().getProduct() != null ? 
+
+                String productName = batch.getVariant() != null && batch.getVariant().getProduct() != null ?
                     batch.getVariant().getProduct().getName() : "Unknown";
-                
+
                 return BatchStatusResponse.builder()
                     .batchId(batch.getId())
                     .batchCode(batch.getBatchNumber())
@@ -231,6 +249,8 @@ public class InventoryDashboardService {
                     .daysUntilExpiry((int) daysUntil)
                     .value(value)
                     .receivedDate(batch.getMfgDate())
+                    .locationName(locationName)
+                    .locationCode(locationCode)
                     .build();
             })
             .collect(Collectors.toList());

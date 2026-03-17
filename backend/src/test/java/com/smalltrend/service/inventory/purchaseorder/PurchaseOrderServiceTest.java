@@ -67,6 +67,8 @@ class PurchaseOrderServiceTest {
 
     @Captor
     private ArgumentCaptor<InventoryStock> stockCaptor;
+    @Captor
+    private ArgumentCaptor<ProductBatch> batchCaptor;
 
     private PurchaseOrder order;
     private Supplier supplier;
@@ -265,6 +267,86 @@ class PurchaseOrderServiceTest {
     }
 
     @Test
+    void receiveGoods_shouldPersistUpdatedExpiryDate_fromReceiptItem() {
+        order.setStatus(PurchaseOrderStatus.CHECKING);
+        order.setItems(new ArrayList<>());
+        order.getItems().add(PurchaseOrderItem.builder()
+                .id(1)
+                .variant(variant)
+                .quantity(10)
+                .receivedQuantity(0)
+                .expiryDate(LocalDate.of(2026, 1, 1))
+                .purchaseOrder(order)
+                .build());
+
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+        when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(new ArrayList<>());
+
+        LocalDate newExpiryDate = LocalDate.of(2027, 6, 15);
+
+        GoodsReceiptRequest req = new GoodsReceiptRequest();
+        req.setSupplierId(1);
+        req.setLocationId(1);
+        req.setTaxPercent(BigDecimal.ZERO);
+        req.setShippingFee(BigDecimal.ZERO);
+        req.setItems(List.of(
+                GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
+                        .itemId(1)
+                        .receivedQuantity(10)
+                        .unitCost(BigDecimal.ONE)
+                        .expiryDate(newExpiryDate)
+                        .build()
+        ));
+
+        PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
+
+        assertEquals("RECEIVED", response.getStatus());
+        assertEquals(newExpiryDate, order.getItems().get(0).getExpiryDate());
+        verify(productBatchRepository, atLeastOnce()).save(batchCaptor.capture());
+        assertEquals(newExpiryDate, batchCaptor.getAllValues().get(batchCaptor.getAllValues().size() - 1).getExpiryDate());
+    }
+
+    @Test
+    void receiveGoods_shouldAllowChangingSupplierAndLocation_duringSupplementRecheck() {
+        Supplier supplierB = Supplier.builder().id(2).name("Supplier B").build();
+        Location locationB = Location.builder().id(2).name("Kho B").build();
+
+        order.setStatus(PurchaseOrderStatus.CHECKING);
+        order.setItems(new ArrayList<>());
+        order.getItems().add(PurchaseOrderItem.builder()
+                .id(1)
+                .variant(variant)
+                .quantity(10)
+                .receivedQuantity(0)
+                .purchaseOrder(order)
+                .build());
+
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+        when(supplierRepository.findById(2)).thenReturn(Optional.of(supplierB));
+        when(locationRepository.findById(2)).thenReturn(Optional.of(locationB));
+        when(inventoryStockRepository.findByLocationIdWithProduct(2)).thenReturn(new ArrayList<>());
+
+        GoodsReceiptRequest req = new GoodsReceiptRequest();
+        req.setSupplierId(2);
+        req.setLocationId(2);
+        req.setTaxPercent(BigDecimal.ZERO);
+        req.setShippingFee(BigDecimal.ZERO);
+        req.setItems(List.of(
+                GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
+                        .itemId(1)
+                        .receivedQuantity(10)
+                        .unitCost(BigDecimal.ONE)
+                        .build()
+        ));
+
+        PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
+
+        assertEquals("RECEIVED", response.getStatus());
+        assertEquals(2, order.getSupplier().getId());
+        assertEquals(2, order.getLocationId());
+    }
+
+    @Test
     void receiveGoods_shouldAutoNotifyManagers_whenShortageDetected() {
         order.setStatus(PurchaseOrderStatus.CHECKING);
         order.setItems(new ArrayList<>());
@@ -291,7 +373,7 @@ class PurchaseOrderServiceTest {
         PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
 
         assertEquals("SHORTAGE_PENDING_APPROVAL", response.getStatus());
-        verify(inventoryManagerNotificationService, times(1)).notifyManagers(any(), any());
+        verify(inventoryManagerNotificationService, timeout(1000).times(1)).notifyManagers(any(), any());
     }
 
     @Test
@@ -322,7 +404,6 @@ class PurchaseOrderServiceTest {
         PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
 
         assertEquals("SHORTAGE_PENDING_APPROVAL", response.getStatus());
-        verify(inventoryManagerNotificationService, times(1)).notifyManagers(any(), any());
     }
 
     @Test

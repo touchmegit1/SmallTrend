@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "../components/ui/Toast";
 import {
   getProducts,
@@ -22,6 +22,7 @@ import {
   calcOrderFinancials,
   validateDraft,
 } from "../utils/purchaseOrder";
+import { classifyStock, STOCK_STATUS } from "../utils/inventory";
 
 const mapExistingOrderItem = (item, products) => {
   const unitPrice = Number(item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0);
@@ -120,6 +121,8 @@ const mapOrderResponseToFrontend = (existingOrder) => ({
     existingOrder.managerDecisionNote || existingOrder.manager_decision_note || "",
   manager_decided_at:
     existingOrder.managerDecidedAt || existingOrder.manager_decided_at || null,
+  rejection_reason:
+    existingOrder.rejectionReason || existingOrder.rejection_reason || "",
   discount: Number(existingOrder.discountAmount || existingOrder.discount || 0),
   tax_percent: Number(existingOrder.taxPercent || existingOrder.tax_percent || 0),
   shipping_fee: Number(existingOrder.shippingFee || existingOrder.shipping_fee || 0),
@@ -220,6 +223,47 @@ const upsertReceiptItem = (prevReceiptItems, itemId, field, value) => {
   );
 };
 
+const normalizeText = (value) => {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeNumber = (value) => {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const buildResubmissionSnapshot = (order, items) => {
+  const normalizedItems = (items || [])
+    .map((item) => ({
+      variant_id: item.variant_id ?? item.variantId ?? null,
+      product_id: item.product_id ?? item.productId ?? null,
+      quantity: normalizeNumber(item.quantity),
+      unit_price: normalizeNumber(item.unit_price ?? item.unitCost),
+      expiry_date: item.expiry_date ?? item.expiryDate ?? null,
+      notes: normalizeText(item.notes),
+    }))
+    .sort((a, b) => {
+      const aKey = `${a.variant_id ?? ""}-${a.product_id ?? ""}`;
+      const bKey = `${b.variant_id ?? ""}-${b.product_id ?? ""}`;
+      return aKey.localeCompare(bKey);
+    });
+
+  return {
+    supplier_id: order?.supplier_id ?? null,
+    location_id: order?.location_id ?? null,
+    contract_id: order?.contract_id ?? null,
+    expected_delivery_date: order?.expected_delivery_date ?? order?.expectedDeliveryDate ?? null,
+    discount: normalizeNumber(order?.discount),
+    tax_percent: normalizeNumber(order?.tax_percent),
+    shipping_fee: normalizeNumber(order?.shipping_fee),
+    paid_amount: normalizeNumber(order?.paid_amount),
+    notes: normalizeText(order?.notes),
+    items: normalizedItems,
+  };
+};
+
 export function usePurchaseOrder(initialId = null) {
   const toast = useToast();
   const [products, setProducts] = useState([]);
@@ -237,6 +281,7 @@ export function usePurchaseOrder(initialId = null) {
 
   // State cho kiểm kê (NV kho)
   const [receiptItems, setReceiptItems] = useState([]);
+  const rejectedResubmissionSnapshotRef = useRef(null);
 
   const toNumber = (value) => {
     const num = Number(value);
@@ -276,12 +321,23 @@ export function usePurchaseOrder(initialId = null) {
           setItems(mappedItems);
           setReceiptItems(mappedReceiptItems);
 
+          if (mappedOrder.status === PO_STATUS.REJECTED) {
+            rejectedResubmissionSnapshotRef.current = buildResubmissionSnapshot(
+              mappedOrder,
+              mappedItems,
+            );
+          } else {
+            rejectedResubmissionSnapshotRef.current = null;
+          }
+
           const initialSupplierName =
             mappedOrder.supplier_name || existingOrder.supplierName || "";
+
           if (initialSupplierName) {
             setSupplierQuery(initialSupplierName);
           }
         } else {
+          rejectedResubmissionSnapshotRef.current = null;
           nextCode = results[3];
           setOrder((prev) => ({ ...prev, po_number: nextCode }));
         }
@@ -345,6 +401,34 @@ export function usePurchaseOrder(initialId = null) {
         s.contactInfo?.toLowerCase().includes(q),
     );
   }, [suppliers, supplierQuery]);
+
+  const lowStockSuggestions = useMemo(() => {
+    const statusPriority = {
+      [STOCK_STATUS.OUT_OF_STOCK]: 0,
+      [STOCK_STATUS.CRITICAL]: 1,
+      [STOCK_STATUS.LOW]: 2,
+    };
+
+    const selectedVariantIds = new Set(items.map((item) => item.variant_id));
+
+    return products
+      .map((product) => {
+        const stockQty = Number(product.stock_quantity ?? 0);
+        const stockStatus = classifyStock(stockQty, 50);
+        return { ...product, stockStatus, stockQty };
+      })
+      .filter(
+        (product) =>
+          statusPriority[product.stockStatus] != null &&
+          !selectedVariantIds.has(product.id),
+      )
+      .sort((a, b) => {
+        const statusDiff =
+          statusPriority[a.stockStatus] - statusPriority[b.stockStatus];
+        if (statusDiff !== 0) return statusDiff;
+        return a.stockQty - b.stockQty;
+      });
+  }, [products, items]);
 
   const updateOrder = useCallback((field, value) => {
     setOrder((prev) => ({ ...prev, [field]: value }));
@@ -482,6 +566,10 @@ export function usePurchaseOrder(initialId = null) {
 
         if (initialId) {
           await updatePurchaseOrder(initialId, orderData);
+          if (order.status === PO_STATUS.REJECTED) {
+            setOrder((prev) => ({ ...prev, status: PO_STATUS.DRAFT }));
+            rejectedResubmissionSnapshotRef.current = null;
+          }
         } else {
           await createPurchaseOrder(orderData);
         }
@@ -508,6 +596,15 @@ export function usePurchaseOrder(initialId = null) {
         return false;
       }
 
+      if (initialId && order.status === PO_STATUS.REJECTED) {
+        const baseSnapshot = rejectedResubmissionSnapshotRef.current;
+        const currentSnapshot = buildResubmissionSnapshot(order, items);
+        if (baseSnapshot && JSON.stringify(baseSnapshot) === JSON.stringify(currentSnapshot)) {
+          toast.warning("Phiếu bị từ chối phải được chỉnh sửa trước khi gửi duyệt lại.");
+          return false;
+        }
+      }
+
       setSaving(true);
       try {
         const orderData = {
@@ -526,6 +623,10 @@ export function usePurchaseOrder(initialId = null) {
 
         if (initialId) {
           await updatePurchaseOrder(initialId, orderData);
+          if (order.status === PO_STATUS.REJECTED) {
+            setOrder((prev) => ({ ...prev, status: PO_STATUS.PENDING }));
+            rejectedResubmissionSnapshotRef.current = null;
+          }
         } else {
           await createPurchaseOrder(orderData);
         }
@@ -856,6 +957,7 @@ export function usePurchaseOrder(initialId = null) {
     suppliers,
     locations,
     filteredSuppliers,
+    lowStockSuggestions,
     loading,
     saving,
     error,

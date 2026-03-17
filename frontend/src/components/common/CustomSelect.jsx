@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 
 const STATUS_COLORS = {
@@ -33,16 +33,17 @@ const CustomSelect = ({
   disabled = false,
   dropdownPosition = "fixed",
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-    const isInlineDropdown = dropdownPosition === "inline";
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, minWidth: 200 });
+  const dropdownRef = useRef(null);
+  const isInlineDropdown = dropdownPosition === "inline";
 
-    const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find(opt => opt.value === value);
 
-    // Force update when options change
-    useEffect(() => {
-        // This ensures the component re-renders when options change
-    }, [options]);
+  // Force update when options change
+  useEffect(() => {
+    // This ensures the component re-renders when options change
+  }, [options]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -54,6 +55,62 @@ const CustomSelect = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const updateMenuPosition = useCallback(() => {
+    if (!dropdownRef.current || isInlineDropdown) {
+      return;
+    }
+
+    const rect = dropdownRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const estimatedOptionHeight = 44;
+    const maxMenuHeight = 240;
+    const estimatedMenuHeight = Math.min(
+      options.length * estimatedOptionHeight + 8,
+      maxMenuHeight,
+    );
+    const gap = 8;
+
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const shouldOpenUp =
+      spaceBelow < estimatedMenuHeight + gap && spaceAbove > spaceBelow;
+
+    const unclampedTop = shouldOpenUp
+      ? rect.top - estimatedMenuHeight - gap
+      : rect.bottom + gap;
+    const top = Math.max(
+      gap,
+      Math.min(unclampedTop, viewportHeight - estimatedMenuHeight - gap),
+    );
+
+    const minWidth = rect.width;
+    const maxWidth = 400;
+    const unclampedLeft = rect.left;
+    const left = Math.max(
+      gap,
+      Math.min(unclampedLeft, viewportWidth - Math.min(maxWidth, minWidth) - gap),
+    );
+
+    setMenuPosition({ top, left, minWidth });
+  }, [isInlineDropdown, options.length]);
+
+  useEffect(() => {
+    if (!isOpen || isInlineDropdown) {
+      return;
+    }
+
+    updateMenuPosition();
+
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [isOpen, isInlineDropdown, updateMenuPosition]);
 
   const getVariantStyles = () => {
     if (variant === "role") {
@@ -73,27 +130,27 @@ const CustomSelect = ({
 
   const variantStyle = getVariantStyles();
 
-    return (
-        <div className={`relative ${className}`} ref={dropdownRef}>
-            <button
-                type="button"
-                onClick={() => !disabled && setIsOpen(!isOpen)}
-                disabled={disabled}
-                className={`w-full px-4 py-2.5 text-sm font-medium rounded-xl border-none outline-none transition-all shadow-md flex items-center justify-between ${disabled
-                        ? 'cursor-not-allowed opacity-50'
-                        : 'cursor-pointer hover:opacity-90 hover:scale-[1.02] focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 hover:shadow-lg'
-                    }`}
-                style={{
-                    backgroundColor: variantStyle.bg,
-                    color: variantStyle.color
-                }}
-            >
-                <span>{selectedOption?.label || 'Chọn...'}</span>
-                <ChevronDown
-                    size={16}
-                    className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                />
-            </button>
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`w-full px-4 py-2.5 text-sm font-medium rounded-xl border-none outline-none transition-all shadow-md flex items-center justify-between ${disabled
+          ? 'cursor-not-allowed opacity-50'
+          : 'cursor-pointer hover:opacity-90 hover:scale-[1.02] focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 hover:shadow-lg'
+          }`}
+        style={{
+          backgroundColor: variantStyle.bg,
+          color: variantStyle.color
+        }}
+      >
+        <span>{selectedOption?.label || 'Chọn...'}</span>
+        <ChevronDown
+          size={16}
+          className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
 
       {isOpen && (
         <div
@@ -102,19 +159,12 @@ const CustomSelect = ({
             isInlineDropdown
               ? undefined
               : {
-                  zIndex: 9999,
-                  minWidth: dropdownRef.current?.offsetWidth || 200,
-                  maxWidth: 400,
-                  top: dropdownRef.current
-                    ? dropdownRef.current.getBoundingClientRect().bottom +
-                      window.scrollY +
-                      8
-                    : 0,
-                  left: dropdownRef.current
-                    ? dropdownRef.current.getBoundingClientRect().left +
-                      window.scrollX
-                    : 0,
-                }
+                zIndex: 9999,
+                minWidth: menuPosition.minWidth,
+                maxWidth: 400,
+                top: menuPosition.top,
+                left: menuPosition.left,
+              }
           }
         >
           <div className="py-1 max-h-60 overflow-y-auto custom-scrollbar">
@@ -122,17 +172,17 @@ const CustomSelect = ({
               const optionStyle =
                 variant === "role"
                   ? {
-                      1: { bg: "#f3e8ff", color: "#6b21a8" },
-                      2: { bg: "#dbeafe", color: "#1e40af" },
-                      3: { bg: "#d1fae5", color: "#065f46" },
-                      4: { bg: "#d1fae5", color: "#065f46" },
-                      5: { bg: "#d1fae5", color: "#065f46" },
-                    }[option.value] || { bg: "#f8fafc", color: "#1e293b" }
+                    1: { bg: "#f3e8ff", color: "#6b21a8" },
+                    2: { bg: "#dbeafe", color: "#1e40af" },
+                    3: { bg: "#d1fae5", color: "#065f46" },
+                    4: { bg: "#d1fae5", color: "#065f46" },
+                    5: { bg: "#d1fae5", color: "#065f46" },
+                  }[option.value] || { bg: "#f8fafc", color: "#1e293b" }
                   : variant === "status"
                     ? STATUS_COLORS[option.value] || {
-                        bg: "#f8fafc",
-                        color: "#334155",
-                      }
+                      bg: "#f8fafc",
+                      color: "#334155",
+                    }
                     : { bg: "#f8fafc", color: "#1e293b" };
 
               return (
@@ -143,11 +193,10 @@ const CustomSelect = ({
                     onChange(option.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full text-left px-4 py-3 text-sm font-medium transition-all duration-150 block ${
-                    value === option.value
+                  className={`w-full text-left px-4 py-3 text-sm font-medium transition-all duration-150 block ${value === option.value
                       ? "ring-2 ring-inset ring-indigo-500"
                       : ""
-                  }`}
+                    }`}
                   style={{
                     backgroundColor:
                       value === option.value ? optionStyle.bg : "#ffffff",

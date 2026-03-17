@@ -4,6 +4,7 @@ import com.smalltrend.dto.inventory.disposal.*;
 import com.smalltrend.entity.*;
 import com.smalltrend.entity.enums.*;
 import com.smalltrend.repository.*;
+import com.smalltrend.validation.inventory.disposal.DisposalVoucherRequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class DisposalVoucherService {
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final InventoryOutOfStockNotificationService outOfStockNotificationService;
+    private final DisposalVoucherRequestValidator disposalVoucherRequestValidator;
 
     // Get all disposal vouchers
     public List<DisposalVoucherResponse> getAllDisposalVouchers() {
@@ -83,7 +85,7 @@ public class DisposalVoucherService {
     // Save draft
     @Transactional
     public DisposalVoucherResponse saveDraft(DisposalVoucherRequest request, Long userId) {
-        validateDraftRequest(request);
+        disposalVoucherRequestValidator.validateDraftRequest(request);
 
         User user = userRepository.findById(userId.intValue())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -231,22 +233,6 @@ public class DisposalVoucherService {
         stock.setQuantity(oldQty - quantity);
         InventoryStock savedStock = inventoryStockRepository.save(stock);
         outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "DISPOSAL_VOUCHER");
-    }
-
-    private void validateDraftRequest(DisposalVoucherRequest request) {
-        if (request == null) {
-            throw new RuntimeException("Request is required");
-        }
-        if (request.getLocationId() == null) {
-            throw new RuntimeException("Location is required");
-        }
-        if (request.getReasonType() != null && !request.getReasonType().trim().isEmpty()
-                && !"EXPIRED".equalsIgnoreCase(request.getReasonType().trim())) {
-            throw new RuntimeException("Only EXPIRED reason type is allowed");
-        }
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new RuntimeException("At least one disposal item is required");
-        }
     }
 
     // Convert to response

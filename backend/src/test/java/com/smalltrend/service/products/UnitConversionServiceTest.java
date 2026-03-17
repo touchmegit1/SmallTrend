@@ -105,7 +105,7 @@ class UnitConversionServiceTest {
     void addConversion_VariantNotFound_ThrowException() {
         when(productVariantRepository.findById(99)).thenReturn(Optional.empty());
         RuntimeException ex = assertThrows(RuntimeException.class, () -> unitConversionService.addConversion(99, request));
-         assertEquals("Không tìm thấy biến thể với ID: 99", ex.getMessage());
+        assertEquals("Không tìm thấy biến thể với ID: 99", ex.getMessage());
     }
 
     @Test
@@ -121,7 +121,7 @@ class UnitConversionServiceTest {
         when(productVariantRepository.findById(1)).thenReturn(Optional.of(baseVariant));
         when(unitRepository.findById(2)).thenReturn(Optional.of(toUnit));
         when(unitConversionRepository.existsByVariantIdAndToUnitId(1, 2)).thenReturn(true);
-        
+
         RuntimeException ex = assertThrows(RuntimeException.class, () -> unitConversionService.addConversion(1, request));
         assertEquals("Quy đổi sang đơn vị 'Thùng' đã tồn tại cho biến thể này!", ex.getMessage());
     }
@@ -167,9 +167,9 @@ class UnitConversionServiceTest {
         InventoryStock baseStock = new InventoryStock();
         baseStock.setQuantity(48); // Tồn kho gốc 48 lon
         baseStock.setBatch(baseBatch);
-        
+
         when(inventoryStockRepository.findByVariantId(1)).thenReturn(List.of(baseStock));
-        
+
         ProductBatch savedBatch = new ProductBatch();
         when(productBatchRepository.save(any(ProductBatch.class))).thenReturn(savedBatch);
 
@@ -178,7 +178,7 @@ class UnitConversionServiceTest {
         assertNotNull(result);
         assertEquals(500, result.getAutoCreatedVariantId());
         assertEquals("BEV-COCA-BOX24", result.getAutoCreatedSku());
-        
+
         // Verify 1 conversion saved
         verify(unitConversionRepository).save(any(UnitConversion.class));
         // Verify packaging variant saved twice (init + barcode)
@@ -198,7 +198,7 @@ class UnitConversionServiceTest {
         when(unitConversionRepository.findById(100)).thenReturn(Optional.of(testConversion));
         when(unitRepository.findById(2)).thenReturn(Optional.of(toUnit));
         when(unitConversionRepository.existsByVariantIdAndToUnitIdAndIdNot(1, 2, 100)).thenReturn(true);
-        
+
         assertThrows(RuntimeException.class, () -> unitConversionService.updateConversion(100, request));
     }
 
@@ -228,7 +228,7 @@ class UnitConversionServiceTest {
         verify(unitConversionRepository).deleteById(100);
         verify(productVariantService).deleteVariant(500);
     }
-    
+
     @Test
     void deleteConversion_NotFound() {
         when(unitConversionRepository.findById(99)).thenReturn(Optional.empty());

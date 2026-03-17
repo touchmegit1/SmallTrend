@@ -362,6 +362,83 @@ function LocationManagement() {
     return Math.min(100, Math.round((qty / capacity) * 100));
   };
 
+  const resolveWarningMeta = (item) => {
+    const rawStatus = item.warning_status;
+    const rawDays = item.days_until_expiry;
+
+    if (rawStatus) {
+      return {
+        status: rawStatus,
+        days: Number(rawDays ?? 99999),
+      };
+    }
+
+    if (!item.expiry_date) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const expiry = new Date(item.expiry_date);
+    if (Number.isNaN(expiry.getTime())) return null;
+    expiry.setHours(0, 0, 0, 0);
+
+    const days = Math.floor((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return { status: "EXPIRED", days };
+    if (days <= 7) return { status: "EXPIRING_CRITICAL", days };
+    if (days <= 30) return { status: "EXPIRING_WARNING", days };
+    return null;
+  };
+
+  const getUrgentStockItems = (loc) => {
+    const items = loc?.stock_items || [];
+
+    const priorityRank = {
+      EXPIRED: 0,
+      EXPIRING_CRITICAL: 1,
+      EXPIRING_WARNING: 2,
+    };
+
+    return items
+      .map((item) => {
+        const warningMeta = resolveWarningMeta(item);
+        return warningMeta ? { ...item, __warningMeta: warningMeta } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        const rankA = priorityRank[a.__warningMeta.status] ?? 99;
+        const rankB = priorityRank[b.__warningMeta.status] ?? 99;
+        if (rankA !== rankB) return rankA - rankB;
+        return a.__warningMeta.days - b.__warningMeta.days;
+      })
+      .slice(0, 6);
+  };
+
+  const formatWarningLabel = (item) => {
+    const warningMeta = item.__warningMeta || resolveWarningMeta(item);
+    if (!warningMeta) return "Cần xử lý";
+
+    if (warningMeta.status === "EXPIRED") return "Đã hết hạn";
+    return `${warningMeta.days} ngày nữa hết hạn`;
+  };
+
+  const getWarningBadgeClass = (status) => {
+    if (status === "EXPIRED") return "bg-red-100 text-red-700";
+    if (status === "EXPIRING_CRITICAL") return "bg-orange-100 text-orange-700";
+    return "bg-amber-100 text-amber-700";
+  };
+
+  const getWarningBadgeText = (status) => {
+    if (status === "EXPIRED") return "Hết hạn";
+    if (status === "EXPIRING_CRITICAL") return "Nguy cơ cao";
+    return "Cảnh báo";
+  };
+
+  const getItemWarningStatus = (item) => item.__warningMeta?.status || item.warning_status;
+
+  const urgentItemsForSelected = selectedLocation ? getUrgentStockItems(selectedLocation) : [];
+
+  const hasAnyStockItems = (selectedLocation?.stock_items || []).length > 0;
+
   const getFillColor = (percent) => {
     if (percent >= 80) return "bg-red-400";
     if (percent >= 50) return "bg-amber-400";
@@ -612,21 +689,33 @@ function LocationManagement() {
                       </div>
 
                       <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3.5">
-                        <p className="text-sm font-semibold text-slate-800 mb-2">Sản phẩm nổi bật</p>
-                        {(selectedLocation.stock_items || []).length > 0 ? (
+                        <p className="text-sm font-semibold text-slate-800 mb-2">Sản phẩm cảnh báo cần xử lý ngay</p>
+                        {urgentItemsForSelected.length > 0 ? (
                           <div className="space-y-1.5 text-sm text-slate-600">
-                            {(selectedLocation.stock_items || []).slice(0, 4).map((item, idx) => (
-                              <div key={idx} className="flex items-center justify-between gap-3">
-                                <span className="truncate">
-                                  {item.product_name || "N/A"}
-                                  {item.batch_code ? ` • Lô ${item.batch_code}` : ""}
-                                </span>
-                                <span className="font-semibold text-indigo-700 whitespace-nowrap">
-                                  {item.quantity} {item.variant_unit || "đv"}
-                                </span>
+                            {urgentItemsForSelected.map((item, idx) => (
+                              <div key={`${item.variant_id || idx}-${item.batch_id || idx}`} className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate">
+                                    {item.product_name || "N/A"}
+                                    {item.batch_code ? ` • Lô ${item.batch_code}` : ""}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {formatWarningLabel(item)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${getWarningBadgeClass(getItemWarningStatus(item))}`}>
+                                    {getWarningBadgeText(getItemWarningStatus(item))}
+                                  </span>
+                                  <span className="font-semibold text-indigo-700 whitespace-nowrap">
+                                    {item.quantity} {item.variant_unit || "đv"}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                           </div>
+                        ) : hasAnyStockItems ? (
+                          <p className="text-sm text-slate-500">Khu vực này hiện chưa có sản phẩm cần cảnh báo.</p>
                         ) : (
                           <p className="text-sm text-slate-500">Khu vực này chưa có sản phẩm.</p>
                         )}
