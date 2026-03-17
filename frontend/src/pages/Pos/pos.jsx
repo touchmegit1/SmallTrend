@@ -31,6 +31,8 @@ export default function POS() {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showDiscontinuedModal, setShowDiscontinuedModal] = useState(false);
+  const [discontinuedMessage, setDiscontinuedMessage] = useState("");
   const [suspendedOrderCount, setSuspendedOrderCount] = useState(0);
   const [unresolvedTicketCount, setUnresolvedTicketCount] = useState(0);
   const [pendingQROrders, setPendingQROrders] = useState(() => {
@@ -214,7 +216,10 @@ export default function POS() {
         sku: item.sku,
         stock: item.stockQuantity || 0,
         category: item.categoryName,
-        brand: item.brandName
+        brand: item.brandName,
+        isActive: item.isActive,
+        active: item.active,
+        status: item.status
       }));
       setProducts(transformedProducts);
     } catch (error) {
@@ -325,7 +330,57 @@ export default function POS() {
     return 0;
   });
 
+  const closeDiscontinuedModal = () => {
+    setShowDiscontinuedModal(false);
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 0);
+  };
+
+  const showDiscontinuedWarning = (itemName) => {
+    setDiscontinuedMessage(`${itemName || 'Sản phẩm này'} đã ngừng bán. Vui lòng chọn sản phẩm khác.`);
+    setShowDiscontinuedModal(true);
+  };
+
+  useEffect(() => {
+    if (!showDiscontinuedModal) return;
+
+    const handleDiscontinuedModalEnter = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        closeDiscontinuedModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleDiscontinuedModalEnter);
+    return () => window.removeEventListener('keydown', handleDiscontinuedModalEnter);
+  }, [showDiscontinuedModal]);
+
+  useEffect(() => {
+    if (showDiscontinuedModal) return;
+    if (searchInputRef.current && !showPaymentModal && !showInvoice && !showShortcuts) {
+      searchInputRef.current.focus();
+    }
+  }, [showDiscontinuedModal, showPaymentModal, showInvoice, showShortcuts, activeOrderId]);
+
+  const isInactiveStatus = (status) => {
+    if (!status || typeof status !== 'string') return false;
+    const normalized = status.toUpperCase();
+    return ['INACTIVE', 'DISCONTINUED', 'STOP_SELLING', 'STOPPED', 'NGUNG_BAN'].includes(normalized);
+  };
+
+  const isInactiveItem = (item) => {
+    return item?.isActive === false || item?.active === false || isInactiveStatus(item?.status);
+  };
+
   const addToCart = (product) => {
+    if (isInactiveItem(product)) {
+      showDiscontinuedWarning(product.name);
+      return;
+    }
+
     const existingItem = activeOrder.cart.find(item => item.id === product.id);
     let updatedOrders;
     if (existingItem) {
@@ -399,6 +454,21 @@ export default function POS() {
   };
 
   const addComboToCart = (combo) => {
+    if (isInactiveItem(combo)) {
+      showDiscontinuedWarning(combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này');
+      return;
+    }
+
+    const hasInactiveItem = (combo.items || []).some(comboItem => {
+      const productInfo = products.find(p => p.id === comboItem.productVariantId);
+      return isInactiveItem(comboItem) || isInactiveItem(productInfo);
+    });
+
+    if (hasInactiveItem) {
+      showDiscontinuedWarning(combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này');
+      return;
+    }
+
     let currentCart = [...activeOrder.cart];
 
     // Tạo hashmap để kiểm tra và trừ qty
@@ -978,6 +1048,53 @@ export default function POS() {
           `}</style>
           <span style={{ fontSize: "20px" }}>✓</span>
           <span>Thanh toán thành công!</span>
+        </div>
+      )}
+
+      {showDiscontinuedModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 3000
+        }}>
+          <div style={{
+            background: "#fff",
+            borderRadius: "10px",
+            width: "380px",
+            maxWidth: "90%",
+            padding: "20px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+          }}>
+            <h3 style={{ margin: "0 0 10px 0", color: "#dc3545", fontSize: "18px" }}>
+              Thông báo
+            </h3>
+            <p style={{ margin: 0, color: "#333", fontSize: "14px", lineHeight: "1.5" }}>
+              {discontinuedMessage}
+            </p>
+            <button
+              onClick={closeDiscontinuedModal}
+              style={{
+                marginTop: "18px",
+                width: "100%",
+                padding: "10px",
+                border: "none",
+                borderRadius: "6px",
+                background: "#007bff",
+                color: "#fff",
+                fontWeight: "600",
+                cursor: "pointer"
+              }}
+            >
+              Đã hiểu
+            </button>
+          </div>
         </div>
       )}
 
