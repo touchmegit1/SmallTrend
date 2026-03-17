@@ -1,11 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { CalendarDays, ChevronLeft, ChevronRight, CheckCircle2, Plus, X } from 'lucide-react';
 import { shiftService } from '../../services/shiftService';
+import { shiftTicketService } from '../../services/shiftTicketService';
+import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
+import CustomSelect from '../../components/common/CustomSelect';
+
+const defaultTicketForm = {
+    ticketMode: 'SWAP',
+    assignmentId: '',
+    targetUserId: '',
+    assignedToUserId: '',
+    reason: '',
+};
 
 const ShiftCalendarPage = () => {
-    const navigate = useNavigate();
     const { user } = useAuth();
 
     const role = String(user?.role || '').toUpperCase();
@@ -19,6 +28,13 @@ const ShiftCalendarPage = () => {
     const [assignments, setAssignments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [ticketForm, setTicketForm] = useState(defaultTicketForm);
+    const [ticketSubmitting, setTicketSubmitting] = useState(false);
+    const [ticketError, setTicketError] = useState('');
+    const [ticketModalLoading, setTicketModalLoading] = useState(false);
+    const [myAssignments, setMyAssignments] = useState([]);
+    const [managerUsers, setManagerUsers] = useState([]);
 
     useEffect(() => {
         loadAssignments();
@@ -87,6 +103,143 @@ const ShiftCalendarPage = () => {
         }
     };
 
+    const openCreateTicketModal = async () => {
+        if (!currentUserId) {
+            setError('Khong xac dinh duoc nguoi dung hien tai de tao ticket.');
+            return;
+        }
+
+        setShowCreateModal(true);
+        setTicketError('');
+        setTicketModalLoading(true);
+
+        try {
+            const { startDate, endDate } = getRange(calendarView, anchorDate);
+            const [assignmentData, userRes] = await Promise.all([
+                shiftService.getAssignments({
+                    userId: currentUserId,
+                    startDate: toDateInput(startDate),
+                    endDate: toDateInput(endDate),
+                }),
+                userService.getAll({ page: 0, size: 100 }),
+            ]);
+
+            const usersPayload = Array.isArray(userRes?.content) ? userRes.content : (Array.isArray(userRes) ? userRes : []);
+            const managers = usersPayload.filter((entry) => {
+                const roleName = String(entry?.role?.name || entry?.role || '').toUpperCase();
+                return roleName === 'ADMIN' || roleName === 'ROLE_ADMIN' || roleName === 'MANAGER' || roleName === 'ROLE_MANAGER';
+            });
+
+            const rows = Array.isArray(assignmentData) ? assignmentData : [];
+            setMyAssignments(rows);
+            setManagerUsers(managers);
+
+            setTicketForm({
+                ...defaultTicketForm,
+                assignedToUserId: managers[0]?.id ? String(managers[0].id) : '',
+            });
+        } catch (err) {
+            setTicketError(err.response?.data?.message || 'Khong the tai du lieu tao ticket.');
+            setMyAssignments([]);
+            setManagerUsers([]);
+        } finally {
+            setTicketModalLoading(false);
+        }
+    };
+
+    const assignmentOptions = useMemo(() => {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        return myAssignments
+            .filter((item) => String(item?.shiftDate || '') >= todayIso)
+            .map((item) => ({
+                value: String(item.id),
+                label: `${item.shiftDate} - ${item.shift?.shiftName || item.shift?.shiftCode || 'Ca lam'}`,
+            }));
+    }, [myAssignments]);
+
+    const targetUserOptions = useMemo(() => {
+        return assignments
+            .filter((item) => Number(item?.user?.id || 0) !== Number(currentUserId || 0))
+            .reduce((acc, item) => {
+                const id = String(item?.user?.id || '');
+                if (!id || acc.some((entry) => entry.value === id)) {
+                    return acc;
+                }
+                acc.push({
+                    value: id,
+                    label: item?.user?.fullName || item?.user?.email || `User #${id}`,
+                });
+                return acc;
+            }, []);
+    }, [assignments, currentUserId]);
+
+    const managerOptions = useMemo(() => {
+        return managerUsers.map((item) => ({
+            value: String(item.id),
+            label: item.fullName || item.email,
+        }));
+    }, [managerUsers]);
+
+    const handleSubmitTicket = async (event) => {
+        event.preventDefault();
+        setTicketError('');
+
+        if (!ticketForm.assignmentId) {
+            setTicketError('Vui long chon ca can tao ticket.');
+            return;
+        }
+
+        if (!ticketForm.assignedToUserId) {
+            setTicketError('Vui long chon nguoi xu ly ticket.');
+            return;
+        }
+
+        if (!ticketForm.reason.trim()) {
+            setTicketError('Vui long nhap ly do ticket.');
+            return;
+        }
+
+        if (ticketForm.ticketMode === 'SWAP' && !ticketForm.targetUserId) {
+            setTicketError('Vui long chon nguoi doi ca.');
+            return;
+        }
+
+        const selectedAssignment = myAssignments.find((item) => String(item.id) === String(ticketForm.assignmentId));
+        if (!selectedAssignment) {
+            setTicketError('Ca duoc chon khong hop le.');
+            return;
+        }
+
+        try {
+            setTicketSubmitting(true);
+            if (ticketForm.ticketMode === 'SWAP') {
+                await shiftTicketService.createShiftSwapTicket({
+                    fromDate: selectedAssignment.shiftDate,
+                    reason: ticketForm.reason.trim(),
+                    requesterUserId: Number(currentUserId),
+                    requesterAssignmentId: Number(ticketForm.assignmentId),
+                    targetUserId: Number(ticketForm.targetUserId),
+                    swapMode: 'TAKE_OVER',
+                    assignedToUserId: Number(ticketForm.assignedToUserId),
+                });
+            } else {
+                await shiftTicketService.createShiftCancelTicket({
+                    shiftDate: selectedAssignment.shiftDate,
+                    reason: ticketForm.reason.trim(),
+                    assignmentId: Number(ticketForm.assignmentId),
+                    assignedToUserId: Number(ticketForm.assignedToUserId),
+                });
+            }
+
+            setShowCreateModal(false);
+            setTicketForm(defaultTicketForm);
+        } catch (err) {
+            setTicketError(err.response?.data?.message || 'Khong the tao ticket.');
+        } finally {
+            setTicketSubmitting(false);
+        }
+    };
+
     return (
         <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -99,10 +252,11 @@ const ShiftCalendarPage = () => {
                 </div>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => navigate('/hr/shift-tickets')}
+                        onClick={openCreateTicketModal}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
                     >
-                        Ticket đổi ca
+                        <Plus size={14} />
+                        Tạo ticket
                     </button>
                 </div>
             </div>
@@ -172,6 +326,117 @@ const ShiftCalendarPage = () => {
                             onQuickAttendance={handleQuickAttendance}
                         />
                     ))}
+                </div>
+            )}
+
+            {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                    <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-900">Tao ticket tu lich lam viec</h2>
+                                <p className="text-xs text-slate-500">Tao yeu cau doi ca/nghi ca ngay tai man hinh lich.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowCreateModal(false)}
+                                className="text-slate-400 hover:text-slate-600"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmitTicket} className="p-6 space-y-4">
+                            {ticketError && (
+                                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                                    {ticketError}
+                                </div>
+                            )}
+
+                            {ticketModalLoading ? (
+                                <div className="text-sm text-slate-500">Dang tai du lieu tao ticket...</div>
+                            ) : (
+                                <>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-slate-600">Loai ticket</label>
+                                        <CustomSelect
+                                            value={ticketForm.ticketMode}
+                                            onChange={(value) => setTicketForm((prev) => ({ ...prev, ticketMode: value, targetUserId: '' }))}
+                                            options={[
+                                                { value: 'SWAP', label: 'Yeu cau doi ca' },
+                                                { value: 'CANCEL', label: 'Yeu cau nghi ca' },
+                                            ]}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-slate-600">Ca can xu ly</label>
+                                        <CustomSelect
+                                            value={ticketForm.assignmentId}
+                                            onChange={(value) => setTicketForm((prev) => ({ ...prev, assignmentId: value }))}
+                                            options={[
+                                                { value: '', label: 'Chon ca' },
+                                                ...assignmentOptions,
+                                            ]}
+                                        />
+                                    </div>
+
+                                    {ticketForm.ticketMode === 'SWAP' && (
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Nguoi doi ca</label>
+                                            <CustomSelect
+                                                value={ticketForm.targetUserId}
+                                                onChange={(value) => setTicketForm((prev) => ({ ...prev, targetUserId: value }))}
+                                                options={[
+                                                    { value: '', label: 'Chon nhan vien' },
+                                                    ...targetUserOptions,
+                                                ]}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-slate-600">Nguoi tiep nhan</label>
+                                        <CustomSelect
+                                            value={ticketForm.assignedToUserId}
+                                            onChange={(value) => setTicketForm((prev) => ({ ...prev, assignedToUserId: value }))}
+                                            options={[
+                                                { value: '', label: 'Chon Manager/Admin' },
+                                                ...managerOptions,
+                                            ]}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-slate-600">Ly do</label>
+                                        <textarea
+                                            value={ticketForm.reason}
+                                            onChange={(event) => setTicketForm((prev) => ({ ...prev, reason: event.target.value }))}
+                                            className="min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            placeholder="Nhap ly do yeu cau"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700"
+                                >
+                                    Huy
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={ticketSubmitting || ticketModalLoading}
+                                    className="rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                                >
+                                    {ticketSubmitting ? 'Dang tao...' : 'Tao ticket'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>

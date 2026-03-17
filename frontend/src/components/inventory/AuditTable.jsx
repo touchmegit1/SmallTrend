@@ -1,4 +1,5 @@
 ﻿import React from "react";
+import { resolveInventoryImageUrl } from "../../utils/inventory";
 
 const getDiffClass = (value) => {
   if (value > 0) return "text-green-600";
@@ -11,7 +12,31 @@ function AuditTable({ items, onActualStockChange }) {
     <tr key={item.id} className="hover:bg-slate-50">
       <td className="px-4 py-3 text-sm text-slate-900 text-center">{item.stt}</td>
       <td className="px-4 py-3 text-sm font-mono text-slate-900">{item.code}</td>
-      <td className="px-4 py-3 text-sm text-slate-900">{item.name}</td>
+      <td className="px-4 py-3 text-sm text-slate-900">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 overflow-hidden shrink-0">
+            {item.image_url ? (
+              <img
+                src={resolveInventoryImageUrl(item.image_url)}
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
+            ) : null}
+          </div>
+          <div>
+            <span>{item.name}</span>
+            {item.attributes && Object.keys(item.attributes).length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {Object.entries(item.attributes).map(([key, value]) => (
+                  <span key={key} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                    {key}: {value}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </td>
       <td className="px-4 py-3 text-sm text-slate-600 text-center">{item.unit}</td>
       <td className="px-4 py-3 text-sm text-slate-900 text-right">{item.systemStock}</td>
       <td className="px-4 py-3 text-sm text-slate-900 text-right">

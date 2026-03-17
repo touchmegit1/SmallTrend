@@ -202,6 +202,20 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       setErrorMsg("Mã PLU phải gồm 4-5 chữ số.");
       return false;
     }
+
+    const costPrice = formData.cost_price !== "" ? Number(formData.cost_price) : null;
+    const sellPrice = formData.sell_price !== "" ? Number(formData.sell_price) : null;
+
+    if (sellPrice === null || Number.isNaN(sellPrice) || sellPrice < 0) {
+      setErrorMsg("Giá bán phải là số hợp lệ và không âm.");
+      return false;
+    }
+
+    if (costPrice !== null && !Number.isNaN(costPrice) && sellPrice < costPrice) {
+      setErrorMsg("Giá bán không được bé hơn giá nhập.");
+      return false;
+    }
+
     return true;
   };
 
@@ -237,7 +251,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         barcode: formData.barcode || null,
         pluCode: formData.plu_code || null,
         unitId: parseInt(formData.unit_id),
-        costPrice: formData.cost_price ? parseFloat(formData.cost_price) : null,
         sellPrice: formData.sell_price ? parseFloat(formData.sell_price) : 0,
         imageUrl: imageUrl,
         isActive: formData.is_active,
@@ -416,6 +429,39 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                       Sản phẩm gốc đang ngừng hoạt động, không thể kích hoạt loại sản phẩm.
                     </p>
                   )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Giá nhập</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="cost_price"
+                    value={formData.cost_price}
+                    disabled
+                    className="bg-gray-100 text-gray-500 border border-gray-200 rounded-lg"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Giá nhập chỉ chỉnh ở trang Thiết lập giá.</p>
+                </div>
+
+                <div>
+                  <Label>
+                    Giá bán <span className="text-red-600">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="sell_price"
+                    value={formData.sell_price}
+                    onChange={handleChange}
+                    required
+                    className="border border-gray-300 rounded-lg"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Giá bán không được bé hơn giá nhập.</p>
                 </div>
               </div>
 

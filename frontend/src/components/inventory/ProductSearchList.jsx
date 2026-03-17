@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import PropTypes from "prop-types";
 import { Plus } from "lucide-react";
+import { resolveInventoryImageUrl } from "../../utils/inventory";
 
 function ProductSearchList({ products = [], searchQuery = "", onAddProduct }) {
   if (!searchQuery) return null;
@@ -31,8 +32,28 @@ function ProductSearchList({ products = [], searchQuery = "", onAddProduct }) {
           >
             <div className="flex-1">
               <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 overflow-hidden shrink-0">
+                  {product.image_url ? (
+                    <img
+                      src={resolveInventoryImageUrl(product.image_url)}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : null}
+                </div>
                 <span className="text-sm font-mono text-blue-600">{product.sku}</span>
-                <span className="text-sm text-slate-900">{product.name}</span>
+                <div>
+                  <span className="text-sm text-slate-900">{product.name}</span>
+                  {product.attributes && Object.keys(product.attributes).length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {Object.entries(product.attributes).map(([key, value]) => (
+                        <span key={key} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                          {key}: {value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-4">

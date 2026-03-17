@@ -414,6 +414,45 @@ const ShiftTicketCenter = () => {
             return;
         }
 
+        const activeStatuses = new Set(['OPEN', 'IN_PROGRESS']);
+        const incomingMode = String(createForm.ticketMode || '').toUpperCase();
+        const incomingAssignmentId = Number(createForm.assignmentId);
+        const incomingTargetUserId = Number(createForm.targetUserId || 0);
+
+        const duplicateActiveTicket = tickets.find((ticket) => {
+            if (!activeStatuses.has(String(ticket?.status || '').toUpperCase())) {
+                return false;
+            }
+
+            if (Number(ticket?.createdByUserId || 0) !== Number(currentUserId || 0)) {
+                return false;
+            }
+
+            const title = String(ticket?.title || '').toLowerCase();
+            const relatedEntityType = String(ticket?.relatedEntityType || '').toUpperCase();
+            const relatedEntityId = Number(ticket?.relatedEntityId || 0);
+
+            if (incomingMode === 'SWAP') {
+                const existingRequesterAssignmentId = extractSwapId(ticket?.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
+                const existingTargetUserId = extractSwapId(ticket?.description, 'SWAP_TARGET_USER_ID')
+                    || Number(ticket?.assignedToUserId || 0);
+                return relatedEntityType === 'SHIFT_SWAP'
+                    && Number(existingRequesterAssignmentId || relatedEntityId) === incomingAssignmentId
+                    && Number(existingTargetUserId || 0) === incomingTargetUserId;
+            }
+
+            if (incomingMode === 'CANCEL') {
+                return title.includes('nghỉ ca') && relatedEntityId === incomingAssignmentId;
+            }
+
+            return title.includes('cập nhật ca') && relatedEntityId === incomingAssignmentId;
+        });
+
+        if (duplicateActiveTicket) {
+            setError('Đã có ticket cùng loại đang chờ xử lý cho ca này. Vui lòng chờ duyệt hoặc cập nhật ticket cũ.');
+            return;
+        }
+
         try {
             setSubmitting(true);
             if (createForm.ticketMode === 'SWAP') {
@@ -566,12 +605,14 @@ const ShiftTicketCenter = () => {
                         <p className="text-slate-600 text-sm">Tạo yêu cầu đổi/nhường/nghỉ ca và xử lý phê duyệt nhanh cho quản lý.</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                >
-                    <Plus size={16} /> Tạo ticket ca làm
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                    >
+                        <Plus size={16} /> Tạo ticket ca làm
+                    </button>
+                </div>
             </div>
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -676,10 +717,8 @@ const ShiftTicketCenter = () => {
                         <TicketCard
                             key={ticket.id}
                             ticket={ticket}
-                            canApprove={(isAdmin || isManager)}
-                            canAcceptSwap={!(isAdmin || isManager)
-                                && ticket.relatedEntityType === 'SHIFT_SWAP'
-                                && Number(ticket.assignedToUserId) === Number(currentUserId)}
+                            canApprove={false}
+                            canAcceptSwap={false}
                             onApprove={handleApprove}
                             onReject={handleReject}
                             onAcceptSwap={handleAcceptSwap}

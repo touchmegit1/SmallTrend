@@ -25,23 +25,23 @@ public class SaleOrderController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'SALES_STAFF')")
     public ResponseEntity<?> list(
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer cashierId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "cashierId", required = false) Integer cashierId,
+            @RequestParam(value = "fromDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(value = "toDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         List<OrderResponse> responses = saleOrderService.listOrders(status, cashierId, fromDate, toDate);
         return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'SALES_STAFF')")
-    public ResponseEntity<?> getById(@PathVariable Integer id) {
+    public ResponseEntity<?> getById(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(saleOrderService.getById(id));
     }
 
     @GetMapping("/code/{orderCode}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'SALES_STAFF')")
-    public ResponseEntity<?> getByCode(@PathVariable String orderCode) {
+    public ResponseEntity<?> getByCode(@PathVariable("orderCode") String orderCode) {
         return ResponseEntity.ok(saleOrderService.getByOrderCode(orderCode));
     }
 
@@ -53,26 +53,26 @@ public class SaleOrderController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER')")
-    public ResponseEntity<?> update(@PathVariable Integer id, @RequestBody OrderRequest request) {
+    public ResponseEntity<?> update(@PathVariable("id") Integer id, @RequestBody OrderRequest request) {
         return ResponseEntity.ok(saleOrderService.update(id, request));
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER')")
-    public ResponseEntity<?> updateStatus(@PathVariable Integer id, @RequestBody OrderStatusUpdateRequest request) {
+    public ResponseEntity<?> updateStatus(@PathVariable("id") Integer id, @RequestBody OrderStatusUpdateRequest request) {
         return ResponseEntity.ok(saleOrderService.updateStatus(id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<?> delete(@PathVariable Integer id) {
+    public ResponseEntity<?> delete(@PathVariable("id") Integer id) {
         saleOrderService.delete(id);
         return ResponseEntity.ok(new MessageResponse("Sale order deleted"));
     }
 
     @GetMapping("/{id}/history")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'SALES_STAFF')")
-    public ResponseEntity<?> listHistory(@PathVariable Integer id) {
+    public ResponseEntity<?> listHistory(@PathVariable("id") Integer id) {
         List<OrderStatusHistoryResponse> responses = saleOrderService.listHistory(id);
         return ResponseEntity.ok(responses);
     }

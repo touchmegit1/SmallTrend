@@ -11,12 +11,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PurchaseOrderItemRequest {
+
     @NotNull(message = "Biến thể sản phẩm là bắt buộc")
     private Integer variantId;
 
@@ -42,4 +44,9 @@ public class PurchaseOrderItemRequest {
     private String notes;
 
     private java.time.LocalDate expiryDate;
+
+    @jakarta.validation.constraints.AssertTrue(message = "Hạn sử dụng phải còn ít nhất 6 tháng")
+    public boolean isExpiryDateAtLeastSixMonths() {
+        return expiryDate == null || !expiryDate.isBefore(LocalDate.now().plusMonths(6));
+    }
 }

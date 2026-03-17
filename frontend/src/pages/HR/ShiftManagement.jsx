@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, Pencil, Trash2, Users, UserPlus, CalendarRange } from 'lucide-react';
 import api from '../../config/axiosConfig';
 import { shiftService } from '../../services/shiftService';
+import { shiftTicketService } from '../../services/shiftTicketService';
 import CustomSelect from '../../components/common/CustomSelect';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const defaultShiftForm = {
     shiftCode: '',
@@ -104,6 +105,7 @@ const shiftTypePresets = {
 
 const ShiftManagement = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState('shifts');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -128,6 +130,7 @@ const ShiftManagement = () => {
     const [assignmentFormErrors, setAssignmentFormErrors] = useState({});
 
     const [assignmentFilters, setAssignmentFilters] = useState({ userId: '', shiftId: '' });
+    const [processingTicket, setProcessingTicket] = useState(null);
 
     const assignmentShiftOptions = useMemo(() => {
         const options = shifts.map((shift) => ({
@@ -180,6 +183,38 @@ const ShiftManagement = () => {
             loadAssignments();
         }
     }, [activeTab, assignmentFilters]);
+
+    useEffect(() => {
+        const context = location.state?.ticketContext;
+        if (!context?.ticketId) {
+            return;
+        }
+
+        setProcessingTicket(context);
+        setActiveTab('assignments');
+
+        if (context.requesterUserId) {
+            setAssignmentFilters((prev) => ({
+                ...prev,
+                userId: String(context.requesterUserId),
+            }));
+        }
+
+        if (context.assignmentId) {
+            (async () => {
+                try {
+                    const assignment = await shiftService.getAssignment(context.assignmentId);
+                    if (assignment?.id) {
+                        openAssignmentModal(assignment);
+                    }
+                } catch (err) {
+                    setError('Không thể mở sẵn ca yêu cầu. Vui lòng chọn và xử lý thủ công.');
+                }
+            })();
+        }
+
+        navigate(location.pathname, { replace: true, state: null });
+    }, [location.state, location.pathname, navigate]);
 
     const loadShifts = async () => {
         try {
@@ -263,7 +298,7 @@ const ShiftManagement = () => {
                 workShiftId: assignment.shift?.id ? String(assignment.shift.id) : '',
                 userId: assignment.user?.id ? String(assignment.user.id) : '',
                 shiftDate: assignment.shiftDate || '',
-                status: assignment.status || 'ASSIGNED',
+                status: 'ASSIGNED',
                 notes: assignment.notes || '',
             });
         } else {
@@ -281,6 +316,22 @@ const ShiftManagement = () => {
             return;
         }
         try {
+            const shiftCode = String(shiftForm.shiftCode || '').trim();
+            if (shiftCode) {
+                const matchedShifts = await shiftService.getShifts({ query: shiftCode, includeExpired: true });
+                const duplicateShift = (Array.isArray(matchedShifts) ? matchedShifts : []).find(
+                    (item) =>
+                        String(item.shiftCode || '').trim().toLowerCase() === shiftCode.toLowerCase()
+                        && String(item.id) !== String(editingShift?.id || ''),
+                );
+
+                if (duplicateShift) {
+                    setShiftFormErrors({ shiftCode: 'Mã ca đã tồn tại.' });
+                    setError('Mã ca đã tồn tại. Vui lòng chọn mã khác.');
+                    return;
+                }
+            }
+
             const payload = buildShiftPayload(shiftForm);
             if (editingShift) {
                 await shiftService.updateShift(editingShift.id, payload);
@@ -314,6 +365,31 @@ const ShiftManagement = () => {
             return;
         }
         try {
+            const userId = Number(assignmentForm.userId);
+            const workShiftId = Number(assignmentForm.workShiftId);
+            const shiftDate = assignmentForm.shiftDate;
+
+            const rowsOnDate = await shiftService.getAssignments({
+                userId,
+                startDate: shiftDate,
+                endDate: shiftDate,
+            });
+
+            const duplicateAssignment = (Array.isArray(rowsOnDate) ? rowsOnDate : []).find(
+                (item) =>
+                    Number(item?.user?.id) === userId
+                    && Number(item?.shift?.id) === workShiftId
+                    && String(item?.shiftDate || '') === String(shiftDate)
+                    && String(item?.id) !== String(editingAssignment?.id || ''),
+            );
+
+            if (duplicateAssignment) {
+                const duplicateErrors = { workShiftId: 'Phân công này đã tồn tại cho nhân viên trong ngày đã chọn.' };
+                setAssignmentFormErrors(duplicateErrors);
+                setError(duplicateErrors.workShiftId);
+                return;
+            }
+
             const payload = buildAssignmentPayload(assignmentForm);
             if (editingAssignment) {
                 await shiftService.updateAssignment(editingAssignment.id, payload);
@@ -347,6 +423,40 @@ const ShiftManagement = () => {
         }
     };
 
+    const handleCompleteLeaveTicket = async () => {
+        if (!processingTicket?.ticketId) {
+            return;
+        }
+
+        try {
+            await shiftTicketService.approveTicket(
+                processingTicket.ticketId,
+                'Manager đã xử lý tại trang chỉnh ca và hoàn tất yêu cầu nghỉ ca.'
+            );
+            setProcessingTicket(null);
+            await loadAssignments();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Không thể hoàn tất ticket nghỉ ca.');
+        }
+    };
+
+    const handleRejectLeaveTicket = async () => {
+        if (!processingTicket?.ticketId) {
+            return;
+        }
+
+        try {
+            await shiftTicketService.rejectTicket(
+                processingTicket.ticketId,
+                'Manager từ chối yêu cầu nghỉ ca.'
+            );
+            setProcessingTicket(null);
+            await loadAssignments();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Không thể từ chối ticket nghỉ ca.');
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[60vh] text-slate-500">
@@ -369,10 +479,10 @@ const ShiftManagement = () => {
                 </div>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => navigate('/hr/shift-tickets')}
+                        onClick={() => navigate('/hr/ticket-processing?tab=swap')}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:border-slate-300"
                     >
-                        Ticket đổi ca
+                        Xử lý ticket
                     </button>
                     <button
                         onClick={() => openShiftModal()}
@@ -394,6 +504,36 @@ const ShiftManagement = () => {
             {error && (
                 <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                     {error}
+                </div>
+            )}
+
+            {processingTicket?.ticketId && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    <p className="font-semibold">Đang xử lý ticket nghỉ ca {processingTicket.ticketCode || ''}</p>
+                    <p className="mt-1">Bạn có thể chỉnh ca/phân công cho nhân viên, sau đó bấm Hoàn tất để đánh dấu Done.</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleCompleteLeaveTicket}
+                            className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                        >
+                            Hoàn tất ticket
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleRejectLeaveTicket}
+                            className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700"
+                        >
+                            Từ chối ticket
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setProcessingTicket(null)}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                            Bỏ liên kết ticket
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -920,7 +1060,7 @@ const ShiftManagement = () => {
                                 />
                                 {assignmentFormErrors.userId && <p className="text-xs text-rose-600">{assignmentFormErrors.userId}</p>}
                             </div>
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className="grid gap-4 md:grid-cols-1">
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-slate-600">Ngày làm việc</label>
                                     <input
@@ -931,19 +1071,6 @@ const ShiftManagement = () => {
                                         required
                                     />
                                     {assignmentFormErrors.shiftDate && <p className="text-xs text-rose-600">{assignmentFormErrors.shiftDate}</p>}
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Trạng thái phân công</label>
-                                    <CustomSelect
-                                        value={assignmentForm.status}
-                                        onChange={(value) => setAssignmentForm({ ...assignmentForm, status: value })}
-                                        options={[
-                                            { value: 'ASSIGNED', label: 'Đã phân công' },
-                                            { value: 'CONFIRMED', label: 'Đã xác nhận' },
-                                            { value: 'COMPLETED', label: 'Hoàn thành' },
-                                            { value: 'CANCELLED', label: 'Đã hủy' },
-                                        ]}
-                                    />
                                 </div>
                             </div>
                             <div className="space-y-1">
@@ -1088,7 +1215,7 @@ const buildAssignmentPayload = (form) => ({
     workShiftId: form.workShiftId ? Number(form.workShiftId) : null,
     userId: form.userId ? Number(form.userId) : null,
     shiftDate: form.shiftDate || null,
-    status: form.status,
+    status: 'ASSIGNED',
     notes: form.notes || null,
 });
 

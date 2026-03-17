@@ -8,23 +8,23 @@ import {
   Warehouse,
   Users,
   Clock,
-  BarChart3,
   ChevronRight,
   Shield,
   Menu,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { isAdminRole, isManagerRole, isStaffRole } from "../../utils/roleUtils";
 
 const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const [openMenus, setOpenMenus] = React.useState({ admin: true });
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const role = user?.role;
-  const normalizedRole = String(role || "").toUpperCase();
-  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "ROLE_ADMIN" || normalizedRole.includes("ADMIN");
-  const isManager = normalizedRole === "MANAGER" || normalizedRole === "ROLE_MANAGER" || normalizedRole.includes("MANAGER");
+  const isAdmin = isAdminRole(user);
+  const isManager = isManagerRole(user);
+  const isStaff = isStaffRole(user);
   const canManageWorkforce = isAdmin || isManager;
+  const canAccessCrm = isManager;
 
   const toggleMenu = (label) => {
     setOpenMenus((prev) => ({
@@ -38,7 +38,23 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
     navigate("/login");
   };
 
-  const navItems = [
+  const inventoryChildren = [
+    { label: "Tổng quan kho", path: "/inventory" },
+    { label: "Nhập hàng", path: "/inventory/purchase-orders" },
+    { label: "Kiểm kê kho", path: "/inventory-counts" },
+    { label: "Quản lý vị trí", path: "/inventory/locations" },
+    { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
+  ];
+
+  const productChildren = [
+    { label: "Danh mục & Thương hiệu", path: "/products/categories" },
+    { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
+    { label: "Danh sách sản phẩm", path: "/products" },
+    { label: "Thiết lập giá", path: "/products/price" },
+    { label: "Combo sản phẩm", path: "/products/combo" },
+  ];
+
+  const managerNavItems = [
     {
       icon: ShoppingCart,
       label: "Bán hàng (POS)",
@@ -54,14 +70,51 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       icon: Warehouse,
       label: "Kho (Inventory)",
       path: "/inventory",
-      children: [
-        { label: "Tổng quan kho", path: "/inventory" },
-        { label: "Nhập hàng", path: "/inventory/purchase-orders" },
-        { label: "Kiểm kê kho", path: "/inventory-counts" },
-        { label: "Quản lý vị trí", path: "/inventory/locations" },
-        { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
-      ],
+      children: inventoryChildren,
     },
+    {
+      icon: Package,
+      label: "Sản phẩm",
+      path: "/products",
+      children: productChildren,
+    },
+    ...(canAccessCrm
+      ? [{
+        icon: Users,
+        label: "Khách hàng & KM",
+        path: "/crm",
+        children: [
+          { label: "Danh sách khách hàng", path: "/crm/customer" },
+          { label: "Khuyến Mãi", path: "/crm/event" },
+          { label: "Kho quà tặng", path: "/crm/loyalty" },
+          { label: "Quản lý Quảng cáo", path: "/crm/ads" },
+          { label: "Báo Cáo Thống Kê", path: "/crm/report" },
+        ],
+      }]
+      : []),
+    {
+      icon: Clock,
+      label: "Nhân sự & Ca",
+      path: "/hr",
+      children: canManageWorkforce
+        ? [
+          { label: "Danh sách nhân viên", path: "/hr/workforce" },
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Phân ca làm việc", path: "/hr/shifts" },
+          { label: "Chấm công", path: "/hr/attendance" },
+          { label: "Tạo ticket ca", path: "/hr/shift-tickets" },
+          { label: "Xử lý ticket", path: "/hr/ticket-processing" },
+        ]
+        : [
+          { label: "Lịch làm việc", path: "/hr/schedule" },
+          { label: "Chấm công", path: "/hr/my-attendance" },
+          { label: "Tạo ticket ca", path: "/hr/shift-tickets" },
+          { label: "Xử lý ticket", path: "/hr/ticket-processing" },
+        ],
+    },
+  ];
+
+  const staffNavItems = [
     {
       icon: Package,
       label: "Sản phẩm",
@@ -75,38 +128,19 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       ],
     },
     {
-      icon: Users,
-      label: "Khách hàng & KM",
-      path: "/crm",
-      children: [
-        { label: "Danh sách khách hàng", path: "/crm/customer" },
-        { label: "Khuyến Mãi", path: "/crm/event" },
-        { label: "Kho quà tặng", path: "/crm/loyalty" },
-        { label: "Quản lý Quảng cáo", path: "/crm/ads" },
-        { label: "Báo Cáo Thống Kê", path: "/crm/report" },
-      ],
-    },
-    {
       icon: Clock,
       label: "Nhân sự & Ca",
       path: "/hr",
-      children: canManageWorkforce
-        ? [
-          { label: "Danh sách nhân viên", path: "/hr/workforce" },
-          { label: "Lịch làm việc", path: "/hr/schedule" },
-          { label: "Phân ca làm việc", path: "/hr/shifts" },
-          { label: "Chấm công", path: "/hr/attendance" },
-          { label: "Tính lương", path: "/hr/payroll" },
-          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
-        ]
-        : [
-          { label: "Lịch làm việc", path: "/hr/schedule" },
-          { label: "Chấm công", path: "/hr/my-attendance" },
-          { label: "Tính lương", path: "/hr/my-payroll" },
-          { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
-        ],
+      children: [
+        { label: "Lịch làm việc", path: "/hr/schedule" },
+        { label: "Chấm công", path: "/hr/my-attendance" },
+        { label: "Tạo ticket ca", path: "/hr/shift-tickets" },
+        { label: "Xử lý ticket", path: "/hr/ticket-processing" },
+      ],
     },
   ];
+
+  const navItems = isAdmin ? [] : isManager ? managerNavItems : isStaff ? staffNavItems : [];
 
   return (
     <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>

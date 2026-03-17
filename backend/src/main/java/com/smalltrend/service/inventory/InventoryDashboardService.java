@@ -73,12 +73,16 @@ public class InventoryDashboardService {
                 }
             }
 
+            String imageUrl = firstVariant != null && firstVariant.getImageUrl() != null
+                    ? firstVariant.getImageUrl()
+                    : product.getImageUrl();
+
             return DashboardProductResponse.builder()
                     .id(product.getId())
                     .sku(sku)
                     .name(product.getName())
                     .description(product.getDescription())
-                    .imageUrl(product.getImageUrl())
+                    .imageUrl(imageUrl)
                     .unit("")
                     .isActive(true)
                     .purchasePrice(purchasePrice)
@@ -89,6 +93,7 @@ public class InventoryDashboardService {
                     .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
                     .brandId(product.getBrand() != null ? product.getBrand().getId() : null)
                     .brandName(product.getBrand() != null ? product.getBrand().getName() : null)
+                    .attributes(firstVariant != null ? firstVariant.getAttributes() : null)
                     .build();
         }).collect(Collectors.toList());
     }

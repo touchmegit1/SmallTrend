@@ -23,6 +23,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useFetchSuppliers } from "../../../hooks/useSuppliers";
+import { useAuth } from "../../../context/AuthContext";
+import { canManageProducts } from "../../../utils/roleUtils";
 
 const initialFormData = {
   name: "",
@@ -43,6 +45,8 @@ const mapSupplierToFormData = (supplier) => ({
 });
 
 export function SuppliersScreen() {
+  const { user } = useAuth();
+  const canEditProducts = canManageProducts(user);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -84,19 +88,23 @@ export function SuppliersScreen() {
   }, [suppliers, searchQuery, filterStatus]);
 
   const handleAdd = () => {
+    if (!canEditProducts) return;
     setEditingSupplier(null);
     setFormData(initialFormData);
     setIsModalOpen(true);
   };
 
   const handleEdit = (supplier) => {
+    if (!canEditProducts) return;
     setEditingSupplier(supplier);
     setFormData(mapSupplierToFormData(supplier));
     setIsModalOpen(true);
   };
 
   const handleSave = async (e) => {
+    if (!canEditProducts) return;
     e.preventDefault();
+    if (isReadOnlyRole) return;
 
     const payload = {
       ...formData,
@@ -119,6 +127,7 @@ export function SuppliersScreen() {
   };
 
   const handleDelete = async () => {
+    if (!canEditProducts) return;
     if (!deleteTarget?.id) return;
 
     const result = await deleteSupplier(deleteTarget.id);
@@ -182,13 +191,15 @@ export function SuppliersScreen() {
               <RotateCcw className="w-4 h-4 mr-2" />
               Làm mới
             </Button>
-            <Button
-              onClick={handleAdd}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Thêm nhà cung cấp
-            </Button>
+            {canEditProducts && (
+              <Button
+                onClick={handleAdd}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Thêm nhà cung cấp
+              </Button>
+            )}
           </div>
         </div>
 
@@ -303,26 +314,28 @@ export function SuppliersScreen() {
                       </TableCell>
 
                       <TableCell className="text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEdit(supplier)}
-                            title="Chỉnh sửa"
-                            className="hover:bg-blue-100 text-blue-600"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Xóa"
-                            onClick={() => setDeleteTarget(supplier)}
-                            className="hover:bg-red-100 text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {canEditProducts && (
+                          <div className="flex justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEdit(supplier)}
+                              title="Chỉnh sửa"
+                              className="hover:bg-blue-100 text-blue-600"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Xóa"
+                              onClick={() => setDeleteTarget(supplier)}
+                              className="hover:bg-red-100 text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -332,7 +345,7 @@ export function SuppliersScreen() {
           </CardContent>
         </Card>
 
-        {deleteTarget && (
+        {canEditProducts && deleteTarget && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
               <div className="p-6 bg-gradient-to-r from-red-50 to-orange-50 rounded-t-2xl">
@@ -365,7 +378,7 @@ export function SuppliersScreen() {
           </div>
         )}
 
-        {isModalOpen && (
+        {canEditProducts && isModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-6 flex justify-between items-center">

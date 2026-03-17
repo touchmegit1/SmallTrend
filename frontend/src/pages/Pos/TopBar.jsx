@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { Bell, Gift } from "lucide-react";
 
-export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice, onKeyDown, selectedProductIndex, setShowShortcuts, notifications }) {
+export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice, onOpenLoyalty, onKeyDown, selectedProductIndex, setShowShortcuts, notifications }) {
   const scrollContainerRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
@@ -272,6 +272,25 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
           In hóa đơn
         </button>
 
+        <button
+          onClick={onOpenLoyalty}
+          style={{
+            width: "32px",
+            height: "32px",
+            background: "rgba(255,255,255,0.2)",
+            color: "white",
+            border: "none",
+            borderRadius: "50%",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          title="Đổi quà"
+        >
+          <Gift size={16} />
+        </button>
+
         <div style={{ position: "relative" }}>
           <button
             onClick={() => {
@@ -427,27 +446,6 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
                 onMouseLeave={(e) => e.target.style.background = "none"}
               >
                 Phím tắt
-              </button>
-              <button
-                onClick={() => {
-                  setShowSettings(false);
-                  navigate('/login');
-                }}
-                style={{
-                  width: "100%",
-                  padding: "10px 15px",
-                  textAlign: "left",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#dc3545",
-                  fontSize: "13px",
-                  fontWeight: "500"
-                }}
-                onMouseEnter={(e) => e.target.style.background = "#fff5f5"}
-                onMouseLeave={(e) => e.target.style.background = "none"}
-              >
-                Đăng xuất
               </button>
             </div>
           )}

@@ -6,6 +6,8 @@ import { useFetchCustomers } from '../../hooks/Customers';
 import { useToast, ToastContainer } from '../../hooks/useToast.jsx';
 import { useGifts } from '../../hooks/useGifts';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { useAuth } from '../../context/AuthContext';
+import { CASHIER_ROLES, hasAnyRole } from '../../utils/rolePermissions';
 
 // ─── STAT CARD ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, color }) => (
@@ -21,6 +23,8 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 );
 
 const GiftRewardManagement = () => {
+  const { user } = useAuth();
+  const isCashier = hasAnyRole(user, CASHIER_ROLES);
   const { gifts, loading: loadingGifts, refetch: refetchGifts } = useGifts();
   const [searchPhone, setSearchPhone] = useState('');
   const [giftSearch, setGiftSearch] = useState('');
@@ -107,6 +111,7 @@ const GiftRewardManagement = () => {
   };
 
   const openModal = () => {
+    if (isCashier) return;
     setSkuInput(''); setSkuVariants([]); setSelectedVariant(null);
     setFormData({ name: '', requiredPoints: '', stock: '' });
     setIsModalOpen(true);
@@ -128,6 +133,7 @@ const GiftRewardManagement = () => {
 
   const handleSubmitGift = async (e) => {
     e.preventDefault();
+    if (isCashier) return;
     if (!selectedVariant) { showToast('Vui lòng chọn sản phẩm!', 'warning'); return; }
     try {
       setSavingGift(true);
@@ -148,10 +154,12 @@ const GiftRewardManagement = () => {
   };
 
   const handleDeleteGift = async (id) => {
+    if (isCashier) return;
     setConfirmDialog({ open: true, type: 'delete', payload: id });
   };
 
   const startEditGift = (gift) => {
+    if (isCashier) return;
     setEditingGiftId(gift.id);
     setEditGiftForm({
       name: gift.name || '',
@@ -166,6 +174,7 @@ const GiftRewardManagement = () => {
   };
 
   const saveEditGift = async (giftId) => {
+    if (isCashier) return;
     if (!editGiftForm.name.trim()) {
       showToast('Tên quà tặng không được để trống', 'warning');
       return;
@@ -197,6 +206,7 @@ const GiftRewardManagement = () => {
   };
 
   const executeDeleteGift = async (id) => {
+    if (isCashier) return;
     try {
       await loyaltyService.deleteGift(id);
       await refetchGifts();
@@ -255,12 +265,14 @@ const GiftRewardManagement = () => {
           <h1 className="text-2xl font-bold text-slate-800">Quản lý Loyalty & Quà tặng</h1>
           <p className="text-slate-500 mt-1">Tra cứu điểm tích lũy và quản lý kho quà đổi thưởng.</p>
         </div>
-        <button
-          onClick={openModal}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/30 transition-all text-sm font-medium flex items-center gap-2"
-        >
-          <Plus size={16} /> Thêm quà tặng
-        </button>
+        {!isCashier && (
+          <button
+            onClick={openModal}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/30 transition-all text-sm font-medium flex items-center gap-2"
+          >
+            <Plus size={16} /> Thêm quà tặng
+          </button>
+        )}
       </div>
 
       {/* ── STAT CARDS ── */}
@@ -478,7 +490,7 @@ const GiftRewardManagement = () => {
                           >
                             {!currentCustomer ? 'Nhập khách hàng' : outOfStock ? 'Hết' : !canAfford ? 'Thiếu điểm' : 'Đổi ngay'}
                           </button>
-                          {isEditing ? (
+                          {!isCashier && (isEditing ? (
                             <>
                               <button
                                 onClick={() => saveEditGift(gift.id)}
@@ -505,14 +517,16 @@ const GiftRewardManagement = () => {
                             >
                               <Pencil size={16} />
                             </button>
+                          ))}
+                          {!isCashier && (
+                            <button
+                              onClick={() => handleDeleteGift(gift.id)}
+                              className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-500"
+                              title="Xóa"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           )}
-                          <button
-                            onClick={() => handleDeleteGift(gift.id)}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-500"
-                            title="Xóa"
-                          >
-                            <Trash2 size={16} />
-                          </button>
                         </div>
                       </td>
                     </tr>
