@@ -486,7 +486,7 @@ INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, s
 (1, 3, '2026-02-24', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
 (1, 3, '2026-02-25', 'ASSIGNED', NULL, NOW(), NOW()),
 (1, 3, '2026-02-26', 'ASSIGNED', NULL, NOW(), NOW()),
-(1, 3, '2026-02-27', 'ABSENT', 'Xin nghỉ không lương', NOW(), NOW()),
+(1, 3, '2026-02-27', 'ASSIGNED', 'Yeu cau nghi ca dang cho xu ly ticket', NOW(), NOW()),
 (1, 5, '2026-02-24', 'ASSIGNED', 'Quản lý kho ca sáng', NOW(), NOW()),
 (1, 5, '2026-02-25', 'ASSIGNED', NULL, NOW(), NOW()),
 (1, 5, '2026-02-26', 'ASSIGNED', NULL, NOW(), NOW()),
@@ -776,10 +776,11 @@ INSERT IGNORE INTO tickets (
    created_by_user_id, assigned_to_user_id, resolved_by_user_id,
    related_entity_type, related_entity_id, resolution, resolved_at
 ) VALUES
-('TCK-SWAP-001', 'SWAP_SHIFT', 'Swap shift ngày 15/02 - Ca sáng <-> Ca chiều', 'Nhân viên A muốn đổi ca sáng sang ca chiều với nhân viên B do có lịch cá nhân', 'OPEN', 'NORMAL', 2, 3, NULL, 'WorkShift', 1, NULL, NULL),
-('TCK-HAND-001', 'HANDOVER', 'Bàn giao ca tối 14/02/2026', 'Bàn giao ca tối: Quầy 1 có 2,500,000 VND trong két, 15 giao dịch hoàn tất, cần kiểm kê lại kệ đồ uống', 'RESOLVED', 'HIGH', 2, 3, 2, 'CashRegister', 1, 'Đã bàn giao thành công. Nhân viên ca tối xác nhận đã nhận đầy đủ tiền mặt và ghi chú', '2026-02-21 22:00:00'),
+('TCK-SHF-001', 'SHIFT_CHANGE', 'Yêu cầu đổi ca: 2026-03-10', 'Nhờ đổi ca ngày 10/03 do bận việc gia đình.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=1]\n[SWAP_REQUESTER_USER_ID=3]\n[SWAP_TARGET_USER_ID=4]', 'OPEN', 'HIGH', 3, 4, NULL, 'SHIFT_SWAP', 1, NULL, NULL),
+('TCK-SHF-002', 'SHIFT_CHANGE', 'Yêu cầu nghỉ ca: 2026-03-12', 'Xin nghỉ ca ngày 12/03 vì có lịch khám bệnh. Manager vui lòng điều chỉnh phân ca thay thế.', 'OPEN', 'HIGH', 7, NULL, NULL, 'SHIFT_ASSIGNMENT', 2, NULL, NULL),
+('TCK-SHF-003', 'SHIFT_CHANGE', 'Yêu cầu nghỉ ca: 2026-03-06', 'Xin nghỉ ca ngày 06/03 vì lý do cá nhân.', 'RESOLVED', 'NORMAL', 6, 2, 2, 'SHIFT_ASSIGNMENT', 3, 'Manager đã điều chỉnh phân ca và hoàn tất ticket.', '2026-03-05 15:20:00'),
 ('TCK-REF-001', 'REFUND', 'Hoàn tiền đơn hàng ORD-2026-001', 'Khách hàng mua nhầm sản phẩm, yêu cầu hoàn tiền. Sản phẩm còn nguyên seal, trong thời hạn đổi trả', 'IN_PROGRESS', 'URGENT', 2, 1, NULL, 'Order', 1, NULL, NULL),
-('TCK-COMP-001', 'COMPLAINT', 'Khiếu nại về chất lượng sản phẩm', 'Khách hàng phàn nàn sữa hết hạn sử dụng. Cần kiểm tra lại quy trình kiểm kê', 'OPEN', 'HIGH', 3, 1, NULL, 'Product', 1, NULL, NULL);
+('TCK-ISS-001', 'ISSUE', 'Khiếu nại về chất lượng sản phẩm', 'Khách hàng phàn nàn sữa hết hạn sử dụng. Cần kiểm tra lại quy trình kiểm kê', 'OPEN', 'HIGH', 3, 1, NULL, 'Product', 1, NULL, NULL);
 
 -- 22. USER CREDENTIALS
 INSERT IGNORE INTO user_credentials (user_id, username, password_hash) VALUES
@@ -1038,10 +1039,10 @@ INSERT IGNORE INTO shift_swap_requests (
     reason, status, approved_by, approved_at,
     rejection_reason, expiry_time, notes, created_at, updated_at
 ) VALUES
-('SWAP-REQ-001', 3, 1, '2026-02-26', 4, 2, '2026-02-26', 'DIRECT_SWAP', 'Có việc gia đình buổi trưa, xin đổi ca sáng sang ca chiều', 'ACCEPTED', 2, '2026-02-21 10:15:00', NULL, '2026-02-26 23:59:59', 'Được phép - hai nhân viên đã thoả thuận', NOW(), NOW()),
-('SWAP-REQ-002', 4, 2, '2026-02-28', 3, 1, '2026-02-28', 'DIRECT_SWAP', 'Xin đổi ca để hỗ trợ ca sáng tuần sau', 'PENDING', NULL, NULL, NULL, '2026-02-28 23:59:59', 'Nhờ đồng nghiệp đổi ca chiều thứ 6', NOW(), NOW()),
-('SWAP-REQ-003', 6, 4, '2026-02-22', 7, 1, '2026-02-22', 'DIRECT_SWAP', 'Muốn đổi từ ca cuối tuần sang ca sáng', 'REJECTED', 2, '2026-02-19 15:00:00', 'Không đủ nhân sự ca sáng', '2026-02-26 23:59:59', 'Từ chối bởi quản lý', NOW(), NOW()),
-('SWAP-REQ-004', 5, 1, '2026-02-25', 6, 4, '2026-02-25', 'DIRECT_SWAP', 'Trao đổi ca làm việc', 'CANCELLED', NULL, NULL, NULL, '2026-02-25 23:59:59', 'Tự huỷ do đã giải quyết việc cá nhân', NOW(), NOW());
+('SWAP-REQ-001', 3, 1, '2026-03-10', 4, 2, '2026-03-10', 'DIRECT_SWAP', 'Có việc gia đình buổi trưa, xin đổi ca sáng sang ca chiều', 'PENDING', NULL, NULL, NULL, '2026-03-10 23:59:59', 'Đang chờ người nhận ca bấm chấp thuận/từ chối', NOW(), NOW()),
+('SWAP-REQ-002', 4, 2, '2026-03-08', 3, 1, '2026-03-08', 'DIRECT_SWAP', 'Xin đổi ca để hỗ trợ ca sáng tuần sau', 'ACCEPTED', 2, '2026-03-07 10:15:00', NULL, '2026-03-08 23:59:59', 'Đã duyệt và hệ thống tự động đổi ca', NOW(), NOW()),
+('SWAP-REQ-003', 6, 4, '2026-03-09', 7, 1, '2026-03-09', 'DIRECT_SWAP', 'Muốn đổi từ ca cuối tuần sang ca sáng', 'REJECTED', 2, '2026-03-08 15:00:00', 'Không đủ nhân sự ca sáng', '2026-03-09 23:59:59', 'Từ chối bởi quản lý', NOW(), NOW()),
+('SWAP-REQ-004', 5, 1, '2026-03-06', 6, 4, '2026-03-06', 'DIRECT_SWAP', 'Trao đổi ca làm việc', 'CANCELLED', NULL, NULL, NULL, '2026-03-06 23:59:59', 'Tự huỷ do đã giải quyết việc cá nhân', NOW(), NOW());
 
 -- 30. STOCK MOVEMENTS (Ghi chép chuyển động tồn kho)
 INSERT IGNORE INTO stock_movements (

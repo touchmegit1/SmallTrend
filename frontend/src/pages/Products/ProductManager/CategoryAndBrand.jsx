@@ -10,8 +10,12 @@ import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchProducts } from "../../../hooks/products";
 import { useFetchSuppliers } from "../../../hooks/useSuppliers";
+import { useAuth } from "../../../context/AuthContext";
+import { canManageProducts } from "../../../utils/roleUtils";
 
 const Category_Brand = () => {
+  const { user } = useAuth();
+  const canEditProducts = canManageProducts(user);
   // Trạng thái quản lý điều hướng và modal
   const [activeTab, setActiveTab] = useState('categories'); // Quyết định xem đang ở tab "Danh mục" hay "Thương hiệu"
   const [showModal, setShowModal] = useState(false); // Biến kiểm soát việc đóng/mở form thêm/sửa
@@ -75,6 +79,7 @@ const Category_Brand = () => {
 
   // Hàm mở Modal cho mục đích Tạo mới Item
   const handleAdd = () => {
+    if (!canEditProducts) return;
     setModalMode('add');
     setFormData({
       code: '',
@@ -91,6 +96,7 @@ const Category_Brand = () => {
 
   // Hàm mở Modal cho mục đích Chỉnh sửa Item có sẵn trên bảng
   const handleEdit = (item) => {
+    if (!canEditProducts) return;
     setModalMode('edit');
     setSelectedItem(item);
     setFormData({
@@ -107,12 +113,14 @@ const Category_Brand = () => {
 
   // Gọi xác nhận quyền xoá an toàn
   const handleDelete = (item) => {
+    if (!canEditProducts) return;
     setSelectedItem(item);
     setShowDeleteConfirm(true);
   };
 
   // Logic kết nối API xoá item khỏi Database & hiển thị toast phản hồi
   const confirmDelete = async () => {
+    if (!canEditProducts) return;
     try {
       await (activeTab === 'categories' ? deleteCategory : deleteBrand)(selectedItem.id);
       setToastMessage(`Xóa ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} thành công!`);
@@ -128,6 +136,7 @@ const Category_Brand = () => {
 
   // Logic kết nối API lưu bản phân bổ mới hoặc cập nhật Item
   const handleSave = async () => {
+    if (!canEditProducts) return;
     // Validate kiểm tra tên bắt buộc
     if (!formData.name?.trim()) {
       setToastMessage(`Vui lòng nhập tên ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}!`);
@@ -266,10 +275,12 @@ const Category_Brand = () => {
           >
             Làm mới
           </Button>
-          <Button onClick={handleAdd} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md">
-            <Plus className="w-4 h-4 mr-2" />
-            Thêm mới
-          </Button>
+          {canEditProducts && (
+            <Button onClick={handleAdd} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md">
+              <Plus className="w-4 h-4 mr-2" />
+              Thêm mới
+            </Button>
+          )}
         </div>
       </div>
 
@@ -467,12 +478,16 @@ const Category_Brand = () => {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} title="Chỉnh sửa" className="hover:bg-blue-100 text-blue-600">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} title="Xóa" className="hover:bg-red-100 text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {canEditProducts && (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} title="Chỉnh sửa" className="hover:bg-blue-100 text-blue-600">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} title="Xóa" className="hover:bg-red-100 text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -494,7 +509,7 @@ const Category_Brand = () => {
       </Card>
 
       {/* KHỐI HIỂN THỊ: Form Popup dùng để chèn thông tin Tạo Bản Ghi Mới hoặc Sửa thông tin */}
-      {showModal && (
+      {canEditProducts && showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
             <div className="relative p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -621,7 +636,7 @@ const Category_Brand = () => {
       )}
 
       {/* KHỐI HIỂN THỊ: Popup Confirm Xóa dữ liệu */}
-      {showDeleteConfirm && (
+      {canEditProducts && showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
             <div className="p-6 bg-gradient-to-r from-red-50 to-orange-50 rounded-t-2xl">

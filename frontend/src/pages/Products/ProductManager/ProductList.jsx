@@ -16,6 +16,8 @@ import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchTaxRates } from "../../../hooks/taxRates";
 import api from "../../../config/axiosConfig";
+import { useAuth } from "../../../context/AuthContext";
+import { canManageProducts } from "../../../utils/roleUtils";
 
 /**
  * Màn hình danh sách Sản phẩm (ProductListScreen)
@@ -25,6 +27,8 @@ import api from "../../../config/axiosConfig";
 export function ProductListScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const canEditProducts = canManageProducts(user);
 
   // --- STATE QUẢN LÝ FILTER PHÂN CẤP ---
   const [filterCategory, setFilterCategory] = useState(null);
@@ -420,15 +424,17 @@ export function ProductListScreen() {
               {hasAnyFilter && <span className="text-gray-400">(đang lọc)</span>}
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => navigate("/products/addproduct")}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 border border-transparent"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Thêm sản phẩm mới
-            </Button>
-          </div>
+          {canEditProducts && (
+            <div className="flex gap-3">
+              <Button
+                onClick={() => navigate("/products/addproduct")}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 border border-transparent"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Thêm sản phẩm mới
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* ============================================================ */}
@@ -905,23 +911,27 @@ export function ProductListScreen() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm" variant="ghost"
-                            onClick={() => handleToggleStatus(product)}
-                            className={`hover:bg-amber-100 rounded-lg p-1 ${product.is_active ? 'text-green-600 hover:text-amber-600' : 'text-gray-400 hover:text-green-600'}`}
-                            title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
-                          >
-                            <Power className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm" variant="ghost"
-                            onClick={() => handleEditClick(product)}
-                            className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg p-1"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          {canDeleteProduct(product.created_at) && (
+                          {canEditProducts && (
+                            <>
+                              <Button
+                                size="sm" variant="ghost"
+                                onClick={() => handleToggleStatus(product)}
+                                className={`hover:bg-amber-100 rounded-lg p-1 ${product.is_active ? 'text-green-600 hover:text-amber-600' : 'text-gray-400 hover:text-green-600'}`}
+                                title={product.is_active ? "Ngừng bán" : "Kích hoạt"}
+                              >
+                                <Power className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm" variant="ghost"
+                                onClick={() => handleEditClick(product)}
+                                className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg p-1"
+                                title="Chỉnh sửa"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          {canEditProducts && canDeleteProduct(product.created_at) && (
                             <Button
                               size="sm" variant="ghost"
                               onClick={() => handleDeleteClick(product)}
@@ -945,7 +955,7 @@ export function ProductListScreen() {
       {/* MODAL CHỈNH SỬA */}
       <EditProductModal
         product={selectedProduct}
-        isOpen={isEditModalOpen}
+        isOpen={canEditProducts && isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleSaveProduct}
       />

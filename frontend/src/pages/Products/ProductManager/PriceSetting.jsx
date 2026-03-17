@@ -23,6 +23,8 @@ import CreatePriceModal from "./CreatePriceModal";
 import PriceHistoryModal from "./PriceHistoryModal";
 import TaxRateManagerModal from "./TaxRateManagerModal";
 import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
+import { useAuth } from "../../../context/AuthContext";
+import { canManageProducts } from "../../../utils/roleUtils";
 
 /**
  * Thiết lập Giá sản phẩm — phiên bản đơn giản.
@@ -62,6 +64,8 @@ const buildSyncSuccessMessage = (syncedItems = [], syncedCount = 0, orderNumber 
 };
 
 const PriceSetting = () => {
+    const { user } = useAuth();
+    const canEditProducts = canManageProducts(user);
     // ─── Data ────────────────────────────────
     const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -570,14 +574,16 @@ const PriceSetting = () => {
                                 )}
                             </div>
 
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsTaxModalOpen(true)}
-                                className="h-11 px-4 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 rounded-xl whitespace-nowrap"
-                            >
-                                <Percent className="w-4 h-4 mr-2" />
-                                Thiết lập thuế
-                            </Button>
+                            {canEditProducts && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsTaxModalOpen(true)}
+                                    className="h-11 px-4 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 rounded-xl whitespace-nowrap"
+                                >
+                                    <Percent className="w-4 h-4 mr-2" />
+                                    Thiết lập thuế
+                                </Button>
+                            )}
 
                             <div className="relative">
                                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -663,25 +669,28 @@ const PriceSetting = () => {
                 )}
 
                 {/* ─── BULK UPDATE ─── */}
-                <BulkUpdatePanel
-                    selectedCount={selectedIds.length}
-                    onIncreaseByPercent={handleBulkIncrease}
-                    onImportExcel={handleImportExcel}
-                />
+                {canEditProducts && (
+                    <BulkUpdatePanel
+                        selectedCount={selectedIds.length}
+                        onIncreaseByPercent={handleBulkIncrease}
+                        onImportExcel={handleImportExcel}
+                    />
+                )}
 
                 {/* ─── TABLE ─── */}
                 <PriceTable
                     variants={paginatedVariants}
                     loading={loading}
+                    readOnly={!canEditProducts}
                     selectedIds={selectedIds}
                     onToggleSelect={handleToggleSelect}
                     onToggleSelectAll={handleToggleSelectAll}
                     sortConfig={sortConfig}
                     onSort={handleSort}
-                    onCreatePriceModalOpen={(v) => setCreatePriceVariant(v)}
+                    onCreatePriceModalOpen={canEditProducts ? (v) => setCreatePriceVariant(v) : undefined}
                     onViewHistory={(v) => setHistoryVariant(v)}
-                    onEffectiveDateChange={handleEffectiveDateChange}
-                    onExpiryDateChange={handleExpiryDateChange}
+                    onEffectiveDateChange={canEditProducts ? handleEffectiveDateChange : undefined}
+                    onExpiryDateChange={canEditProducts ? handleExpiryDateChange : undefined}
                 />
 
                 {/* ─── PAGINATION ─── */}
@@ -761,7 +770,7 @@ const PriceSetting = () => {
             </div>
 
             {/* ─── MODALS ─── */}
-            {isTaxModalOpen && (
+            {canEditProducts && isTaxModalOpen && (
                 <TaxRateManagerModal onClose={() => setIsTaxModalOpen(false)} onDataChange={fetchVariants} />
             )}
             {historyVariant && (
@@ -772,7 +781,7 @@ const PriceSetting = () => {
                     onStatusChanged={fetchVariants}
                 />
             )}
-            {createPriceVariant && (
+            {canEditProducts && createPriceVariant && (
                 <CreatePriceModal
                     isOpen={true}
                     variant={createPriceVariant}

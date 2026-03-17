@@ -24,7 +24,7 @@ import Button from "./button";
 import { Input } from "./input";
 import { calculateProfit, formatCurrency } from "../../../utils/priceCalculation";
 
-const DateInput = ({ dateValue, onChange }) => {
+const DateInput = ({ dateValue, onChange, disabled = false }) => {
     const [focused, setFocused] = React.useState(false);
     const dateOnly = dateValue ? dateValue.split('T')[0] : '';
 
@@ -40,6 +40,7 @@ const DateInput = ({ dateValue, onChange }) => {
             onChange={(e) => onChange(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
+            disabled={disabled}
             className="w-[85px] text-center text-[11px] font-semibold text-gray-700 bg-gray-50 hover:bg-white border rounded-md px-1 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
         />
     );
@@ -48,6 +49,7 @@ const DateInput = ({ dateValue, onChange }) => {
 export default function PriceTable({
     variants,
     loading,
+    readOnly = false,
     // Edit
     editingId,
     editPrice,
@@ -104,6 +106,7 @@ export default function PriceTable({
                                     checked={allSelected}
                                     ref={(el) => { if (el) el.indeterminate = someSelected; }}
                                     onChange={onToggleSelectAll}
+                                    disabled={readOnly}
                                     className="w-3.5 h-3.5 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
                                 />
                             </th>
@@ -173,6 +176,7 @@ export default function PriceTable({
                                                 type="checkbox"
                                                 checked={isSelected}
                                                 onChange={() => onToggleSelect(variant.id)}
+                                                disabled={readOnly}
                                                 className="w-3.5 h-3.5 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
                                             />
                                         </td>
@@ -253,6 +257,7 @@ export default function PriceTable({
                                                 <DateInput
                                                     dateValue={variant.activeEffectiveDate}
                                                     onChange={(val) => onEffectiveDateChange?.(variant, val)}
+                                                    disabled={readOnly}
                                                 />
                                             ) : (
                                                 <span className="text-[11px] text-gray-400 font-medium">Chưa có giá</span>
@@ -265,6 +270,7 @@ export default function PriceTable({
                                                 <DateInput
                                                     dateValue={variant.activeExpiryDate}
                                                     onChange={(val) => onExpiryDateChange?.(variant, val)}
+                                                    disabled={readOnly}
                                                 />
                                             ) : (
                                                 <span className="text-[11px] text-gray-400 italic">—</span>
@@ -274,13 +280,15 @@ export default function PriceTable({
                                         {/* Actions */}
                                         <td className="px-2 py-2 text-center shadow-[-5px_0_10px_-3px_rgba(0,0,0,0.03)] sticky right-0 bg-white group-hover:bg-blue-50/30 transition-colors">
                                             <div className="flex items-center justify-center gap-1">
-                                                <button
-                                                    onClick={() => onCreatePriceModalOpen(variant)}
-                                                    className="w-7 h-7 flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-emerald-100/50 hover:border-emerald-500 transition-all duration-200"
-                                                    title="Tạo giá mới"
-                                                >
-                                                    <DollarSign className="w-[13px] h-[13px]" />
-                                                </button>
+                                                {!readOnly && (
+                                                    <button
+                                                        onClick={() => onCreatePriceModalOpen?.(variant)}
+                                                        className="w-7 h-7 flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-emerald-100/50 hover:border-emerald-500 transition-all duration-200"
+                                                        title="Tạo giá mới"
+                                                    >
+                                                        <DollarSign className="w-[13px] h-[13px]" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => onViewHistory(variant)}
                                                     className="w-7 h-7 flex items-center justify-center text-purple-600 bg-purple-50 hover:bg-purple-500 hover:text-white rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-purple-100/50 hover:border-purple-500 transition-all duration-200"

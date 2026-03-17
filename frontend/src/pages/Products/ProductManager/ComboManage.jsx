@@ -7,12 +7,16 @@ import { Badge } from "../ProductComponents/badge";
 import { Plus, Search, Edit, Package2, Eye, CheckCircle, Trash2, Power } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditComboModal from "./EditComboModal";
+import { useAuth } from "../../../context/AuthContext";
+import { canManageProducts } from "../../../utils/roleUtils";
 
 import { useProductCombos } from "../../../hooks/product_combos";
 
 // Component quản lý danh sách các Combo Sản phẩm
 // Nơi hiển thị, lọc, tìm kiếm và thao tác các combo như xoá, sửa
 const ComboManage = () => {
+  const { user } = useAuth();
+  const canEditProducts = canManageProducts(user);
   const { combos, loading, error, deleteCombo, updateCombo, toggleComboStatus } = useProductCombos();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -72,6 +76,7 @@ const ComboManage = () => {
   // Hàm xử lý xoá một Combo Sản phẩm từ danh sách
   // Cập nhật lại UI thông qua mutate để đồng bộ dữ liệu sau khi API gọi thành công
   const handleDeleteCombo = async (comboId) => {
+    if (!canEditProducts) return;
     if (confirm("Bạn có chắc muốn xóa combo này?")) {
       try {
         await deleteCombo(comboId);
@@ -85,6 +90,7 @@ const ComboManage = () => {
   };
 
   const handleToggleStatus = async (comboId) => {
+    if (!canEditProducts) return;
     try {
       await toggleComboStatus(comboId);
       setToastMessage("Chuyển trạng thái thành công!");
@@ -97,6 +103,7 @@ const ComboManage = () => {
 
   // Bật Modal sửa thông tin khi người dùng nhấn Sửa trên một dòng
   const handleEditCombo = (combo) => {
+    if (!canEditProducts) return;
     setSelectedCombo(combo);
     setIsEditModalOpen(true);
   };
@@ -104,6 +111,7 @@ const ComboManage = () => {
   // Hàm xử lý sau khi lưu thay đổi Combo qua Edit Modal thành công
   // Gọi API cập nhật và fetch lại danh sách Combo để hiển thị bản ghi mới
   const handleSaveCombo = async (updatedCombo) => {
+    if (!canEditProducts) return;
     try {
       await updateCombo(updatedCombo.id, updatedCombo);
       setToastMessage("Cập nhật combo thành công!");
@@ -150,15 +158,17 @@ const ComboManage = () => {
               Tổng số: <span className="font-semibold text-blue-600">{filteredCombos.length}</span> combo
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => navigate("/products/create_combo")}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Tạo combo mới
-            </Button>
-          </div>
+          {canEditProducts && (
+            <div className="flex gap-3">
+              <Button
+                onClick={() => navigate("/products/create_combo")}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Tạo combo mới
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Filters */}
@@ -308,33 +318,37 @@ const ComboManage = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEditCombo(combo)}
-                            className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleToggleStatus(combo.id)}
-                            className="hover:bg-amber-100 hover:text-amber-600 rounded-lg"
-                            title="Chuyển trạng thái"
-                          >
-                            <Power className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteCombo(combo.id)}
-                            className="hover:bg-red-100 hover:text-red-600 rounded-lg"
-                            title="Xóa"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {canEditProducts && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditCombo(combo)}
+                                className="hover:bg-indigo-100 hover:text-indigo-600 rounded-lg"
+                                title="Chỉnh sửa"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleToggleStatus(combo.id)}
+                                className="hover:bg-amber-100 hover:text-amber-600 rounded-lg"
+                                title="Chuyển trạng thái"
+                              >
+                                <Power className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteCombo(combo.id)}
+                                className="hover:bg-red-100 hover:text-red-600 rounded-lg"
+                                title="Xóa"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -349,7 +363,7 @@ const ComboManage = () => {
       <EditComboModal
         combo={selectedCombo}
         combos={combos}
-        isOpen={isEditModalOpen}
+        isOpen={canEditProducts && isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleSaveCombo}
       />
