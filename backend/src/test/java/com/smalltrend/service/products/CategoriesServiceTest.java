@@ -6,6 +6,7 @@ import com.smalltrend.entity.Category;
 import com.smalltrend.mapper.CategoryMapper;
 import com.smalltrend.repository.CategoryRepository;
 import com.smalltrend.repository.ProductRepository;
+import com.smalltrend.validation.product.CategoryValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,9 @@ class CategoriesServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private CategoryValidator categoryValidator;
 
     @InjectMocks
     private CategoriesServiceImpl categoriesService;
@@ -103,7 +107,7 @@ class CategoriesServiceTest {
         updateReq.setName("Computers");
         updateReq.setDescription("PC & Laptops");
 
-        when(categoryRepository.findById(1)).thenReturn(Optional.of(testCategory));
+        when(categoryValidator.requireExistingCategory(1)).thenReturn(testCategory);
         
         Category savedCategory = new Category();
         savedCategory.setId(1);
@@ -125,46 +129,45 @@ class CategoriesServiceTest {
         // Assert: Đảm bảo dữ liệu mới được trả về chính xác
         assertNotNull(result);
         assertEquals("Computers", result.getName());
-        verify(categoryRepository).findById(1);
+        verify(categoryValidator).requireExistingCategory(1);
         verify(categoryRepository).save(testCategory);
     }
 
     @Test
     void update_shouldThrowException_whenCategoryDoesNotExist() {
         // Arrange: Mock trả về empty khi không tìm thấy danh mục
-        when(categoryRepository.findById(99)).thenReturn(Optional.empty());
+        when(categoryValidator.requireExistingCategory(99)).thenThrow(new RuntimeException("Không tìm thấy danh mục"));
 
         // Act & Assert: Phải ném ra lỗi RuntimeException
         RuntimeException exception = assertThrows(RuntimeException.class, () -> categoriesService.update(99, new CategoriesRequest()));
 
-        assertEquals("Không tìm thấy danh mục (Category not found)", exception.getMessage());
-        verify(categoryRepository).findById(99);
+        assertEquals("Không tìm thấy danh mục", exception.getMessage());
+        verify(categoryValidator).requireExistingCategory(99);
         verify(categoryRepository, never()).save(any());
     }
 
     @Test
     void delete_shouldThrowException_whenCategoryHasProducts() {
         // Arrange: Mock danh mục đang chứa sản phẩm
-        when(productRepository.existsByCategoryId(1)).thenReturn(true);
+        doThrow(new RuntimeException("Không thể xoá danh mục vì đang có sản phẩm thuộc danh mục này"))
+            .when(categoryValidator).validateDeletable(1);
 
         // Act & Assert: Cố gắng xóa phải ném lỗi
         RuntimeException exception = assertThrows(RuntimeException.class, () -> categoriesService.delete(1));
 
         assertEquals("Không thể xoá danh mục vì đang có sản phẩm thuộc danh mục này", exception.getMessage());
-        verify(productRepository).existsByCategoryId(1);
+        verify(categoryValidator).validateDeletable(1);
         verify(categoryRepository, never()).deleteById(any());
     }
 
     @Test
     void delete_shouldDeleteCategory_whenNoProductsLinked() {
         // Arrange: Mock danh mục rỗng (không chứa sản phẩm)
-        when(productRepository.existsByCategoryId(1)).thenReturn(false);
-
         // Act: Tiến hành xóa
         categoriesService.delete(1);
 
         // Assert: Đảm bảo lệnh xóa theo id được gọi
-        verify(productRepository).existsByCategoryId(1);
+        verify(categoryValidator).validateDeletable(1);
         verify(categoryRepository).deleteById(1);
     }
 }
