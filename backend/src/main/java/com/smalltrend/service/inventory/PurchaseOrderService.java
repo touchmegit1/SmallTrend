@@ -945,12 +945,12 @@ public class PurchaseOrderService {
     }
 
     private boolean sameItemSnapshot(List<PurchaseOrderItem> existingItems, List<PurchaseOrderItemRequest> requestItems) {
-        List<String> existingSnapshot = (existingItems == null ? new ArrayList<>() : existingItems).stream()
+        List<String> existingSnapshot = (existingItems == null ? new ArrayList<PurchaseOrderItem>() : existingItems).stream()
                 .map(this::toExistingItemSnapshot)
                 .sorted()
                 .collect(Collectors.toList());
 
-        List<String> requestSnapshot = (requestItems == null ? new ArrayList<>() : requestItems).stream()
+        List<String> requestSnapshot = (requestItems == null ? new ArrayList<PurchaseOrderItemRequest>() : requestItems).stream()
                 .map(this::toRequestItemSnapshot)
                 .sorted()
                 .collect(Collectors.toList());

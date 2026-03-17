@@ -2,6 +2,7 @@ package com.smalltrend.controller.inventory;
 
 import com.smalltrend.dto.inventory.disposal.*;
 import com.smalltrend.service.inventory.DisposalVoucherService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +41,7 @@ public class DisposalVoucherController {
 
     @PostMapping("/draft")
     public ResponseEntity<DisposalVoucherResponse> saveDraft(
-            @RequestBody DisposalVoucherRequest request,
+            @Valid @RequestBody DisposalVoucherRequest request,
             @RequestParam("userId") Long userId) {
         return ResponseEntity.ok(disposalVoucherService.saveDraft(request, userId));
     }

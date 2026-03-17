@@ -22,6 +22,7 @@ import {
   calcOrderFinancials,
   validateDraft,
 } from "../utils/purchaseOrder";
+import { classifyStock, STOCK_STATUS } from "../utils/inventory";
 
 const mapExistingOrderItem = (item, products) => {
   const unitPrice = Number(item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0);
@@ -400,6 +401,34 @@ export function usePurchaseOrder(initialId = null) {
         s.contactInfo?.toLowerCase().includes(q),
     );
   }, [suppliers, supplierQuery]);
+
+  const lowStockSuggestions = useMemo(() => {
+    const statusPriority = {
+      [STOCK_STATUS.OUT_OF_STOCK]: 0,
+      [STOCK_STATUS.CRITICAL]: 1,
+      [STOCK_STATUS.LOW]: 2,
+    };
+
+    const selectedVariantIds = new Set(items.map((item) => item.variant_id));
+
+    return products
+      .map((product) => {
+        const stockQty = Number(product.stock_quantity ?? 0);
+        const stockStatus = classifyStock(stockQty, 50);
+        return { ...product, stockStatus, stockQty };
+      })
+      .filter(
+        (product) =>
+          statusPriority[product.stockStatus] != null &&
+          !selectedVariantIds.has(product.id),
+      )
+      .sort((a, b) => {
+        const statusDiff =
+          statusPriority[a.stockStatus] - statusPriority[b.stockStatus];
+        if (statusDiff !== 0) return statusDiff;
+        return a.stockQty - b.stockQty;
+      });
+  }, [products, items]);
 
   const updateOrder = useCallback((field, value) => {
     setOrder((prev) => ({ ...prev, [field]: value }));
@@ -928,6 +957,7 @@ export function usePurchaseOrder(initialId = null) {
     suppliers,
     locations,
     filteredSuppliers,
+    lowStockSuggestions,
     loading,
     saving,
     error,

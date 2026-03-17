@@ -359,10 +359,10 @@ function UrgentModal({ products, batches, onClose }) {
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={`text-sm font-bold ${cfg.text}`}>
-                    {formatNumber(b.quantity)}
+                  <p className={`text-sm font-bold ${cfg.text}`}>Đã hết hạn</p>
+                  <p className="text-xs text-slate-400">
+                    còn lại · {formatNumber(b.quantity ?? 0)} đơn vị
                   </p>
-                  <p className="text-xs text-slate-400">đơn vị</p>
                 </div>
                 <Badge label="Hết hạn" badgeBg={cfg.badgeBg} text={cfg.text} />
               </div>
@@ -400,7 +400,9 @@ function UrgentModal({ products, batches, onClose }) {
                   <p className={`text-sm font-bold ${cfg.text}`}>
                     {b.daysRemaining != null ? `${b.daysRemaining} ngày` : "—"}
                   </p>
-                  <p className="text-xs text-slate-400">còn lại</p>
+                  <p className="text-xs text-slate-400">
+                    còn lại · {formatNumber(b.quantity ?? 0)} đơn vị
+                  </p>
                 </div>
                 <Badge
                   label={cfg.label}

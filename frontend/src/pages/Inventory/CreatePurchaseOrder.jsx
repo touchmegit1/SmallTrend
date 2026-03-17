@@ -23,6 +23,7 @@ function CreatePurchaseOrder() {
     products,
     suppliers,
     locations,
+    lowStockSuggestions,
     loading,
     saving,
     error,
@@ -274,6 +275,7 @@ function CreatePurchaseOrder() {
               {isEditable && (
                 <ProductSearchBar
                   products={products}
+                  suggestedProducts={lowStockSuggestions}
                   onAddProduct={addProduct}
                   onImportProducts={importProducts}
                 />

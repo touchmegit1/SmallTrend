@@ -63,6 +63,7 @@ const parseImportedRow = (row, products) => {
 
 function ProductSearchBar({
   products,
+  suggestedProducts = [],
   onAddProduct,
   onImportProducts,
 }) {
@@ -188,6 +189,8 @@ function ProductSearchBar({
     }
   };
 
+  const displayedSuggestions = suggestedProducts.slice(0, 5);
+
   return (
     <div className="relative">
       <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50/70 border-b border-slate-200">
@@ -236,6 +239,47 @@ function ProductSearchBar({
           </label>
         </div>
       </div>
+
+      {displayedSuggestions.length > 0 && (
+        <div className="border-b border-slate-200 bg-amber-50/40 px-4 py-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold text-amber-700">Gợi ý cần nhập hàng</p>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+              {suggestedProducts.length}
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            {displayedSuggestions.map((product) => (
+              <button
+                key={`suggest-${product.id}`}
+                type="button"
+                onClick={() => selectProduct(product)}
+                className="flex w-full items-center justify-between rounded-lg border border-amber-100 bg-white px-3 py-2 text-left hover:bg-amber-50"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-slate-800">
+                    {product.name}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">{product.sku}</p>
+                </div>
+                <div className="ml-3 shrink-0 text-right">
+                  <p className="text-[11px] font-semibold text-amber-700">
+                    {Number(product.stock_quantity ?? 0).toLocaleString("vi-VN")} {product.unit}
+                  </p>
+                  <p className="text-[10px] text-slate-400">đang còn</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {suggestedProducts.length > displayedSuggestions.length && (
+            <p className="mt-2 text-center text-[11px] text-slate-500">
+              +{suggestedProducts.length - displayedSuggestions.length} sản phẩm nữa
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ─── Dropdown ──────────────────────────────────────── */}
       {showDropdown && filtered.length > 0 && (
@@ -296,8 +340,21 @@ ProductSearchBar.propTypes = {
       purchase_price: PropTypes.number,
     }),
   ).isRequired,
+  suggestedProducts: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      sku: PropTypes.string,
+      name: PropTypes.string,
+      unit: PropTypes.string,
+      stock_quantity: PropTypes.number,
+    }),
+  ),
   onAddProduct: PropTypes.func.isRequired,
   onImportProducts: PropTypes.func,
+};
+
+ProductSearchBar.defaultProps = {
+  suggestedProducts: [],
 };
 
 export default ProductSearchBar;

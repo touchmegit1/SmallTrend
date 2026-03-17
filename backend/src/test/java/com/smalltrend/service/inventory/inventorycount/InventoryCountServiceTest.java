@@ -5,6 +5,7 @@ import com.smalltrend.entity.*;
 import com.smalltrend.service.inventory.InventoryCountService;
 import com.smalltrend.service.inventory.InventoryOutOfStockNotificationService;
 import com.smalltrend.repository.*;
+import com.smalltrend.validation.inventory.count.InventoryCountRequestValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,8 @@ class InventoryCountServiceTest {
     private ProductBatchRepository productBatchRepository;
     @Mock
     private InventoryOutOfStockNotificationService outOfStockNotificationService;
+    @Mock
+    private InventoryCountRequestValidator inventoryCountRequestValidator;
 
     @InjectMocks
     private InventoryCountService inventoryCountService;

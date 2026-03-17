@@ -7,6 +7,7 @@ import com.smalltrend.service.inventory.InventoryOutOfStockNotificationService;
 import com.smalltrend.service.inventory.InventoryStockService;
 import com.smalltrend.entity.enums.StockTransactionType;
 import com.smalltrend.repository.*;
+import com.smalltrend.validation.inventory.stock.InventoryStockRequestValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +41,8 @@ class InventoryStockServiceTest {
     private LocationRepository locationRepository;
     @Mock
     private InventoryOutOfStockNotificationService outOfStockNotificationService;
+    @Mock
+    private InventoryStockRequestValidator inventoryStockRequestValidator;
 
     private InventoryStockService inventoryStockService;
 
@@ -58,7 +61,8 @@ class InventoryStockServiceTest {
                 unitConversionRepository,
                 productBatchRepository,
                 locationRepository,
-                outOfStockNotificationService
+                outOfStockNotificationService,
+                inventoryStockRequestValidator
         );
         lenient().when(inventoryStockRepository.save(any(InventoryStock.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
