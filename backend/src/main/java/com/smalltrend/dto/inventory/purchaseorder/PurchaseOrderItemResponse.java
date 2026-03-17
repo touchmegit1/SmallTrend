@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Data
 @Builder
@@ -18,6 +19,7 @@ public class PurchaseOrderItemResponse {
     private String sku;
     private String name;
     private String imageUrl;
+    private Map<String, String> attributes;
     private String unit;
     private String checkingUnit;
     private Integer quantity;

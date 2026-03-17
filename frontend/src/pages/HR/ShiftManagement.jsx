@@ -281,6 +281,22 @@ const ShiftManagement = () => {
             return;
         }
         try {
+            const shiftCode = String(shiftForm.shiftCode || '').trim();
+            if (shiftCode) {
+                const matchedShifts = await shiftService.getShifts({ query: shiftCode, includeExpired: true });
+                const duplicateShift = (Array.isArray(matchedShifts) ? matchedShifts : []).find(
+                    (item) =>
+                        String(item.shiftCode || '').trim().toLowerCase() === shiftCode.toLowerCase()
+                        && String(item.id) !== String(editingShift?.id || ''),
+                );
+
+                if (duplicateShift) {
+                    setShiftFormErrors({ shiftCode: 'Mã ca đã tồn tại.' });
+                    setError('Mã ca đã tồn tại. Vui lòng chọn mã khác.');
+                    return;
+                }
+            }
+
             const payload = buildShiftPayload(shiftForm);
             if (editingShift) {
                 await shiftService.updateShift(editingShift.id, payload);
@@ -314,6 +330,31 @@ const ShiftManagement = () => {
             return;
         }
         try {
+            const userId = Number(assignmentForm.userId);
+            const workShiftId = Number(assignmentForm.workShiftId);
+            const shiftDate = assignmentForm.shiftDate;
+
+            const rowsOnDate = await shiftService.getAssignments({
+                userId,
+                startDate: shiftDate,
+                endDate: shiftDate,
+            });
+
+            const duplicateAssignment = (Array.isArray(rowsOnDate) ? rowsOnDate : []).find(
+                (item) =>
+                    Number(item?.user?.id) === userId
+                    && Number(item?.shift?.id) === workShiftId
+                    && String(item?.shiftDate || '') === String(shiftDate)
+                    && String(item?.id) !== String(editingAssignment?.id || ''),
+            );
+
+            if (duplicateAssignment) {
+                const duplicateErrors = { workShiftId: 'Phân công này đã tồn tại cho nhân viên trong ngày đã chọn.' };
+                setAssignmentFormErrors(duplicateErrors);
+                setError(duplicateErrors.workShiftId);
+                return;
+            }
+
             const payload = buildAssignmentPayload(assignmentForm);
             if (editingAssignment) {
                 await shiftService.updateAssignment(editingAssignment.id, payload);

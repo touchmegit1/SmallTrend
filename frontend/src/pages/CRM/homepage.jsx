@@ -431,29 +431,37 @@ export default function EcommerceUI() {
 
       <div className="mx-auto max-w-7xl px-4 py-6 md:py-8">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="overflow-hidden rounded-[32px] bg-slate-950 text-white shadow-[0_30px_80px_-40px_rgba(15,23,42,0.8)]">
-            <div
-              className="relative h-full min-h-[380px] overflow-hidden px-6 py-8 md:px-8 md:py-10"
-              style={{
-                background: activeCampaign?.bannerImageUrl
-                  ? `linear-gradient(rgba(15,23,42,0.74), rgba(15,23,42,0.82)), url('${activeCampaign.bannerImageUrl}') center/cover no-repeat`
-                  : "linear-gradient(135deg, #0f172a 0%, #1e293b 48%, #7c2d12 100%)",
-              }}
-            >
-              <div className="relative z-10 max-w-2xl">
-                <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-amber-200 backdrop-blur">
-                  <MapPin className="h-4 w-4" />
-                  Ưu đãi áp dụng trực tiếp tại cửa hàng
-                </span>
+          <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_30px_80px_-40px_rgba(15,23,42,0.55)]">
+            <div className="relative h-[280px] overflow-hidden md:h-[340px]">
+              {activeCampaign?.bannerImageUrl ? (
+                <img
+                  src={activeCampaign.bannerImageUrl}
+                  alt={activeCampaign?.campaignName || "Banner sự kiện"}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.target.src = PLACEHOLDER;
+                  }}
+                />
+              ) : (
+                <div className="h-full w-full bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_48%,#7c2d12_100%)]" />
+              )}
 
-                <h2 className="mt-6 text-4xl font-bold leading-tight md:text-5xl">
-                  {activeCampaign?.campaignName || "Cửa hàng trưng bày giá tốt và khuyến mãi đang áp dụng hôm nay"}
-                </h2>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-black/5 to-transparent" />
 
-                <p className="mt-4 max-w-xl text-base leading-7 text-slate-200 md:text-lg">
-                  {activeCampaign?.description || "Trang chủ này dành cho mô hình local store POS: khách xem nhanh sản phẩm nổi bật, mức giá hiện tại và các chương trình đang áp dụng ngay tại quầy."}
-                </p>
-              </div>
+              <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-black/45 px-4 py-2 text-sm font-medium text-amber-100 backdrop-blur-sm">
+                <MapPin className="h-4 w-4" />
+                Ưu đãi áp dụng trực tiếp tại cửa hàng
+              </span>
+            </div>
+
+            <div className="px-6 py-6 md:px-8 md:py-7">
+              <h2 className="text-3xl font-bold leading-tight text-slate-950 md:text-4xl">
+                {activeCampaign?.campaignName || "Cửa hàng trưng bày giá tốt và khuyến mãi đang áp dụng hôm nay"}
+              </h2>
+
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">
+                {activeCampaign?.description || "Trang chủ này dành cho mô hình local store POS: khách xem nhanh sản phẩm nổi bật, mức giá hiện tại và các chương trình đang áp dụng ngay tại quầy."}
+              </p>
             </div>
           </div>
 

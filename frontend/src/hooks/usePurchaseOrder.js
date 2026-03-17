@@ -58,6 +58,8 @@ const mapExistingOrderItem = (item, products) => {
     unit: item.unit || matchedProduct?.unit || "",
     checking_unit: item.checkingUnit || item.checking_unit || item.unit || matchedProduct?.unit || "",
     name: item.name || matchedProduct?.name || "Sản phẩm",
+    image_url: item.imageUrl || item.image_url || matchedProduct?.image_url || matchedProduct?.imageUrl || null,
+    attributes: item.attributes || matchedProduct?.attributes || null,
   };
 };
 
@@ -107,6 +109,13 @@ const buildReceiptPayloadItems = (receiptItems) =>
     expiryDate: ri.expiryDate || ri.expiry_date || null,
   }));
 
+const normalizeFinancialInput = (value) => {
+  if (value === null || value === undefined || value === "") return "";
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "";
+  return num === 0 ? "" : num;
+};
+
 const mapOrderResponseToFrontend = (existingOrder) => ({
   ...existingOrder,
   po_number: existingOrder.orderNumber || existingOrder.po_number,
@@ -124,9 +133,9 @@ const mapOrderResponseToFrontend = (existingOrder) => ({
   rejection_reason:
     existingOrder.rejectionReason || existingOrder.rejection_reason || "",
   discount: Number(existingOrder.discountAmount || existingOrder.discount || 0),
-  tax_percent: Number(existingOrder.taxPercent || existingOrder.tax_percent || 0),
-  shipping_fee: Number(existingOrder.shippingFee || existingOrder.shipping_fee || 0),
-  paid_amount: Number(existingOrder.paidAmount || existingOrder.paid_amount || 0),
+  tax_percent: normalizeFinancialInput(existingOrder.taxPercent ?? existingOrder.tax_percent),
+  shipping_fee: normalizeFinancialInput(existingOrder.shippingFee ?? existingOrder.shipping_fee),
+  paid_amount: normalizeFinancialInput(existingOrder.paidAmount ?? existingOrder.paid_amount),
   subtotal: Number(existingOrder.subtotal || 0),
   tax_amount: Number(existingOrder.taxAmount || existingOrder.tax_amount || 0),
   total_amount: Number(existingOrder.totalAmount || existingOrder.total_amount || 0),
@@ -192,11 +201,14 @@ const addOrIncreaseProduct = (prevItems, product) => {
 
 const removeItemByKey = (prevItems, key) => prevItems.filter((i) => i._key !== key);
 
-const updateItemQuantity = (prevItems, key, field, value) => {
-  if (field !== "quantity") return prevItems;
-  return prevItems.map((item) =>
-    item._key === key ? { ...item, quantity: value } : item,
-  );
+const updateItemField = (prevItems, key, field, value) => {
+  return prevItems.map((item) => {
+    if (item._key !== key) return item;
+    if (field === "quantity") {
+      return { ...item, quantity: value };
+    }
+    return { ...item, [field]: value };
+  });
 };
 
 const updateItemBatchesByKey = (prevItems, key, batches) =>
@@ -515,7 +527,7 @@ export function usePurchaseOrder(initialId = null) {
   }, []);
 
   const updateItem = useCallback((_key, field, value) => {
-    setItems((prev) => updateItemQuantity(prev, _key, field, value));
+    setItems((prev) => updateItemField(prev, _key, field, value));
   }, []);
 
   const openBatchEditor = useCallback((_key) => {
@@ -554,9 +566,9 @@ export function usePurchaseOrder(initialId = null) {
           ...order,
           status: PO_STATUS.DRAFT,
           discount: toNumber(order.discount),
-          tax_percent: toNumber(order.tax_percent),
-          shipping_fee: toNumber(order.shipping_fee),
-          paid_amount: toNumber(order.paid_amount),
+          tax_percent: order.tax_percent,
+          shipping_fee: order.shipping_fee,
+          paid_amount: order.paid_amount,
           subtotal: financials.subtotal,
           tax_amount: financials.taxAmount,
           total_amount: financials.total,
@@ -611,9 +623,9 @@ export function usePurchaseOrder(initialId = null) {
           ...order,
           status: PO_STATUS.PENDING,
           discount: toNumber(order.discount),
-          tax_percent: toNumber(order.tax_percent),
-          shipping_fee: toNumber(order.shipping_fee),
-          paid_amount: toNumber(order.paid_amount),
+          tax_percent: order.tax_percent,
+          shipping_fee: order.shipping_fee,
+          paid_amount: order.paid_amount,
           subtotal: financials.subtotal,
           tax_amount: financials.taxAmount,
           total_amount: financials.total,
@@ -734,6 +746,10 @@ export function usePurchaseOrder(initialId = null) {
         toast.warning("Phí vận chuyển không được âm.");
         return false;
       }
+      if (toNumber(order.paid_amount) < 0) {
+        toast.warning("Số tiền đã thanh toán không được âm.");
+        return false;
+      }
 
       const hasShortage = items.some((item) => {
         const identity = item.id ?? item._key;
@@ -757,6 +773,7 @@ export function usePurchaseOrder(initialId = null) {
           locationId: order.location_id,
           taxPercent: toNumber(order.tax_percent),
           shippingFee: toNumber(order.shipping_fee),
+          paidAmount: toNumber(order.paid_amount),
           subtotal: checkingFinancials.subtotal,
           taxAmount: checkingFinancials.taxAmount,
           totalAmount: checkingFinancials.total,
@@ -821,6 +838,7 @@ export function usePurchaseOrder(initialId = null) {
       order.location_id,
       order.tax_percent,
       order.shipping_fee,
+      order.paid_amount,
       order.po_number,
       checkingFinancials,
     ],

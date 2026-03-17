@@ -21,5 +21,10 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     List<Ticket> findByTicketCode(String ticketCode);
 
+    List<Ticket> findByTicketTypeAndCreatedByIdAndStatusIn(
+            TicketType ticketType,
+            Integer createdByUserId,
+            List<TicketStatus> statuses);
+
     long countByTicketType(TicketType ticketType);
 }

@@ -254,6 +254,8 @@ export function createCountItem(product) {
     variant_id: variantId,
     sku: product.sku,
     name: product.name,
+    image_url: product.image_url || product.imageUrl || null,
+    attributes: product.attributes || null,
     unit: product.unit,
     purchase_price: product.purchase_price || 0,
     system_quantity: product.stock_quantity || 0,

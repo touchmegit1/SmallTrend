@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle, XCircle, Box } from "lucide-react";
 import { formatVND } from "../../../utils/purchaseOrder";
+import { resolveInventoryImageUrl } from "../../../utils/inventory";
 
 export default function GoodsReceiptTable({
   items,
@@ -121,14 +122,31 @@ export default function GoodsReceiptTable({
                 <td className="px-5 py-3 text-sm text-slate-400">{idx + 1}</td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
-                      <Box size={13} />
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center shrink-0 overflow-hidden">
+                      {item.image_url ? (
+                        <img
+                          src={resolveInventoryImageUrl(item.image_url)}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Box size={13} />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-slate-800 leading-tight truncate whitespace-nowrap">{item.name}</p>
                       <p className="text-xs text-slate-400 truncate">
                         {item.sku} • {formatVND(item.unit_price ?? item.unitCost)}
                       </p>
+                      {item.attributes && Object.keys(item.attributes).length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {Object.entries(item.attributes).map(([key, value]) => (
+                            <span key={key} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                              {key}: {value}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>

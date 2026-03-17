@@ -28,7 +28,7 @@ public class ProductComboController {
 
     // Lấy thông tin chi tiết một combo theo ID
     @GetMapping("/{id}")
-    public ResponseEntity<ProductComboResponse> getById(@PathVariable Integer id) {
+    public ResponseEntity<ProductComboResponse> getById(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(productComboService.getComboById(id));
     }
 
@@ -40,21 +40,21 @@ public class ProductComboController {
 
     // Cập nhật thông tin của một combo hiện có
     @PutMapping("/{id}")
-    public ResponseEntity<ProductComboResponse> update(@PathVariable Integer id,
+    public ResponseEntity<ProductComboResponse> update(@PathVariable("id") Integer id,
             @RequestBody CreateProductComboRequest request) {
         return ResponseEntity.ok(productComboService.updateCombo(id, request));
     }
 
     // Bật/Tắt trạng thái hoạt động (mở bán/ngừng bán) của combo
     @PutMapping("/{id}/toggle-status")
-    public ResponseEntity<String> toggleStatus(@PathVariable Integer id) {
+    public ResponseEntity<String> toggleStatus(@PathVariable("id") Integer id) {
         productComboService.toggleStatus(id);
         return ResponseEntity.ok("Đã thay đổi trạng thái combo");
     }
 
     // Xóa một combo theo ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Integer id) {
+    public ResponseEntity<String> delete(@PathVariable("id") Integer id) {
         productComboService.deleteCombo(id);
         return ResponseEntity.ok("Đã xóa combo thành công");
     }

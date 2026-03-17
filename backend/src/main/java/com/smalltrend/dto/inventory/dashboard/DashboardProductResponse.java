@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 /**
  * Flat product shape that matches what the frontend Dashboard expects.
@@ -37,4 +38,5 @@ public class DashboardProductResponse {
     private String categoryName;
     private Integer brandId;
     private String brandName;
+    private Map<String, String> attributes;
 }

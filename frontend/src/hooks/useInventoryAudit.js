@@ -19,6 +19,8 @@ export function useInventoryAudit() {
           stt: index + 1,
           code: p.sku,
           name: p.name,
+          image_url: p.image_url || p.imageUrl || null,
+          attributes: p.attributes || null,
           unit: p.unit,
           systemStock: p.stock_quantity || 0,
           actualStock: null,

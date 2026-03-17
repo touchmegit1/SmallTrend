@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import { Box, Trash2 } from "lucide-react";
+import { resolveInventoryImageUrl } from "../../../utils/inventory";
 
 const PurchaseItemRow = memo(function PurchaseItemRow({
   item,
@@ -16,14 +17,31 @@ const PurchaseItemRow = memo(function PurchaseItemRow({
 
       <td className="px-6 py-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
-            <Box size={14} />
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0 overflow-hidden">
+            {item.image_url ? (
+              <img
+                src={resolveInventoryImageUrl(item.image_url)}
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Box size={14} />
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-sm leading-tight font-semibold text-slate-900 truncate">
               {item.name}
             </p>
             <p className="text-xs text-indigo-500 truncate">{item.sku}</p>
+            {item.attributes && Object.keys(item.attributes).length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {Object.entries(item.attributes).map(([key, value]) => (
+                  <span key={key} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                    {key}: {value}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </td>

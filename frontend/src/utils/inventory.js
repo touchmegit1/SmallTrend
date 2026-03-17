@@ -37,6 +37,18 @@ export function formatNumber(value) {
   return value.toLocaleString("vi-VN");
 }
 
+export function resolveInventoryImageUrl(imageUrl) {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+    return imageUrl;
+  }
+
+  const inventoryApiBase =
+    import.meta.env.VITE_INVENTORY_API_BASE_URL || "http://localhost:8081/api/inventory";
+  const apiOrigin = inventoryApiBase.replace(/\/api\/inventory\/?$/, "");
+  return `${apiOrigin}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
+}
+
 // ─── Batch Status Classification ─────────────────────────────
 // EXPIRED: expiry_date < today
 // EXPIRING_CRITICAL: 0–7 days left

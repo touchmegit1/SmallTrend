@@ -99,7 +99,7 @@ public class ProductController {
     @GetMapping("/{id}/generate-sku")
     public ResponseEntity<java.util.Map<String, String>> generateSku(
             @PathVariable("id") Integer id,
-            @RequestParam(required = false) Integer unitId) {
+            @RequestParam(value = "unitId", required = false) Integer unitId) {
         String sku = productVariantService.generateSku(id, unitId);
         return ResponseEntity.ok(java.util.Map.of("sku", sku));
     }

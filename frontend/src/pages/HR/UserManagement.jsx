@@ -5,12 +5,7 @@ import {
   Trash2,
   X,
   Search,
-  Filter,
-  UserCheck,
-  Clock,
   Plus,
-  Check,
-  Ban,
   Upload,
   ImageIcon,
 } from "lucide-react";
@@ -26,7 +21,6 @@ const UserManagement = () => {
   const [isCreate, setIsCreate] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("approved");
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -55,7 +49,7 @@ const UserManagement = () => {
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, statusFilter, activeTab]);
+  }, [users, searchTerm, statusFilter]);
 
   const fetchUsers = async () => {
     try {
@@ -66,7 +60,7 @@ const UserManagement = () => {
       setUsers([]);
       setError(
         "Không thể tải danh sách người dùng: " +
-          (err.response?.data?.message || err.message),
+        (err.response?.data?.message || err.message),
       );
     } finally {
       setLoading(false);
@@ -75,16 +69,6 @@ const UserManagement = () => {
 
   const filterUsers = () => {
     let filtered = normalizeUsers(users);
-
-    if (activeTab === "pending") {
-      filtered = filtered.filter(
-        (user) => normalizeStatus(user.status) === "pending",
-      );
-    } else {
-      filtered = filtered.filter(
-        (user) => normalizeStatus(user.status) !== "pending",
-      );
-    }
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -95,7 +79,7 @@ const UserManagement = () => {
       );
     }
 
-    if (activeTab === "approved" && statusFilter !== "all") {
+    if (statusFilter !== "all") {
       filtered = filtered.filter(
         (user) => normalizeStatus(user.status) === statusFilter,
       );
@@ -106,36 +90,83 @@ const UserManagement = () => {
 
   const validateForm = () => {
     const errors = {};
+    const trimmedUsername = formData.username.trim();
+    const trimmedFullName = formData.fullName.trim();
+    const trimmedEmail = formData.email.trim();
+    const trimmedPhone = formData.phone.trim();
+    const trimmedAddress = formData.address.trim();
+    const normalizedEmail = trimmedEmail.toLowerCase();
+    const normalizedUsername = trimmedUsername.toLowerCase();
+    const currentUserId = selectedUser?.id;
 
     if (isCreate) {
       const usernameRegex = /^[a-zA-Z0-9_]+$/;
       if (
-        !formData.username ||
-        formData.username.length < 3 ||
-        formData.username.length > 50 ||
-        !usernameRegex.test(formData.username)
+        !trimmedUsername ||
+        trimmedUsername.length < 3 ||
+        trimmedUsername.length > 50 ||
+        !usernameRegex.test(trimmedUsername)
       ) {
         errors.username = "Username 3-50 ký tự, chỉ a-z, 0-9, _";
+      } else if (
+        users.some(
+          (user) =>
+            user.id !== currentUserId &&
+            String(user.username || "").trim().toLowerCase() === normalizedUsername,
+        )
+      ) {
+        errors.username = "Username đã tồn tại";
       }
       if (!formData.password || formData.password.length < 6) {
         errors.password = "Mật khẩu tối thiểu 6 ký tự";
       }
-      if (formData.password !== formData.confirmPassword) {
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = "Xác nhận mật khẩu không được để trống";
+      } else if (formData.password !== formData.confirmPassword) {
         errors.confirmPassword = "Mật khẩu xác nhận không khớp";
       }
     }
 
-    if (!formData.fullName || formData.fullName.trim().length < 2) {
+    if (!trimmedFullName || trimmedFullName.length < 2) {
       errors.fullName = "Họ tên phải có ít nhất 2 ký tự";
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email || !emailRegex.test(formData.email)) {
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
       errors.email = "Email không hợp lệ";
+    } else if (
+      users.some(
+        (user) =>
+          user.id !== currentUserId &&
+          String(user.email || "").trim().toLowerCase() === normalizedEmail,
+      )
+    ) {
+      errors.email = "Email đã tồn tại";
     }
 
-    if (formData.phone && !/^[0-9]{10,11}$/.test(formData.phone)) {
+    if (!trimmedPhone) {
+      errors.phone = "Số điện thoại không được để trống";
+    } else if (!/^[0-9]{10,11}$/.test(trimmedPhone)) {
       errors.phone = "Số điện thoại phải có 10-11 chữ số";
+    } else if (
+      users.some(
+        (user) =>
+          user.id !== currentUserId && String(user.phone || "").trim() === trimmedPhone,
+      )
+    ) {
+      errors.phone = "Số điện thoại đã tồn tại";
+    }
+
+    if (!trimmedAddress) {
+      errors.address = "Địa chỉ không được để trống";
+    }
+
+    if (!formData.roleId) {
+      errors.roleId = "Vai trò không được để trống";
+    }
+
+    if (!formData.status) {
+      errors.status = "Trạng thái không được để trống";
     }
 
     setValidationErrors(errors);
@@ -272,12 +303,12 @@ const UserManagement = () => {
     try {
       if (isCreate) {
         const payload = {
-          username: formData.username,
+          username: formData.username.trim(),
           password: formData.password,
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || undefined,
-          address: formData.address || undefined,
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
           roleId: formData.roleId,
           status: (formData.status || "active").toUpperCase(),
         };
@@ -290,10 +321,10 @@ const UserManagement = () => {
         }
       } else {
         const updatePayload = {
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || undefined,
-          address: formData.address || undefined,
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
           roleId: formData.roleId,
           status: (formData.status || "active").toUpperCase(),
         };
@@ -324,7 +355,7 @@ const UserManagement = () => {
       } catch (err) {
         setError(
           "Không thể xóa người dùng: " +
-            (err.response?.data?.message || err.message),
+          (err.response?.data?.message || err.message),
         );
       }
     }
@@ -337,7 +368,7 @@ const UserManagement = () => {
     } catch (err) {
       setError(
         "Không thể cập nhật trạng thái: " +
-          (err.response?.data?.message || err.message),
+        (err.response?.data?.message || err.message),
       );
     }
   };
@@ -349,43 +380,10 @@ const UserManagement = () => {
     } catch (err) {
       setError(
         "Không thể cập nhật vai trò: " +
-          (err.response?.data?.message || err.message),
+        (err.response?.data?.message || err.message),
       );
     }
   };
-
-  const handleApprove = async (userId) => {
-    try {
-      await userService.updateStatus(userId, "active");
-      fetchUsers();
-    } catch (err) {
-      setError(
-        "Không thể duyệt người dùng: " +
-          (err.response?.data?.message || err.message),
-      );
-    }
-  };
-
-  const handleReject = async (userId) => {
-    if (window.confirm("Bạn có chắc muốn từ chối yêu cầu đăng ký này?")) {
-      try {
-        await userService.remove(userId);
-        fetchUsers();
-      } catch (err) {
-        setError(
-          "Không thể từ chối: " + (err.response?.data?.message || err.message),
-        );
-      }
-    }
-  };
-
-  const safeUsers = normalizeUsers(users);
-  const pendingCount = safeUsers.filter(
-    (u) => normalizeStatus(u.status) === "pending",
-  ).length;
-  const approvedCount = safeUsers.filter(
-    (u) => normalizeStatus(u.status) !== "pending",
-  ).length;
 
   if (loading) {
     return (
@@ -417,31 +415,6 @@ const UserManagement = () => {
         </div>
       )}
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveTab("approved")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-            activeTab === "approved"
-              ? "bg-indigo-600 text-white shadow-md"
-              : "bg-white text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          <UserCheck size={20} />
-          Đã duyệt ({approvedCount})
-        </button>
-        <button
-          onClick={() => setActiveTab("pending")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-            activeTab === "pending"
-              ? "bg-orange-600 text-white shadow-md"
-              : "bg-white text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          <Clock size={20} />
-          Chờ duyệt ({pendingCount})
-        </button>
-      </div>
-
       <div className="bg-white p-4 rounded-xl border border-slate-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
@@ -459,35 +432,29 @@ const UserManagement = () => {
               />
             </div>
           </div>
-          {activeTab === "approved" && (
-            <div>
-              <CustomSelect
-                value={statusFilter}
-                onChange={(val) => setStatusFilter(val)}
-                variant="status"
-                options={[
-                  { value: "all", label: "Tất cả trạng thái" },
-                  { value: "active", label: "Hoạt động" },
-                  { value: "inactive", label: "Vô hiệu" },
-                ]}
-              />
-            </div>
-          )}
+          <div>
+            <CustomSelect
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val)}
+              variant="status"
+              options={[
+                { value: "all", label: "Tất cả trạng thái" },
+                { value: "active", label: "Hoạt động" },
+                { value: "inactive", label: "Vô hiệu" },
+              ]}
+            />
+          </div>
         </div>
         <div className="mt-3 text-sm text-slate-600">
           Hiển thị <span className="font-semibold">{filteredUsers.length}</span>{" "}
-          / {activeTab === "pending" ? pendingCount : approvedCount} người dùng
+          người dùng
         </div>
       </div>
 
       {filteredUsers.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
           <Users size={48} className="mx-auto text-slate-300 mb-4" />
-          <p className="text-slate-600">
-            {activeTab === "pending"
-              ? "Không có yêu cầu đăng ký nào"
-              : "Không tìm thấy người dùng nào"}
-          </p>
+          <p className="text-slate-600">Không tìm thấy người dùng nào</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -503,11 +470,9 @@ const UserManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Vai trò
                 </th>
-                {activeTab === "approved" && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Trạng thái
-                  </th>
-                )}
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Trạng thái
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Thao tác
                 </th>
@@ -559,58 +524,35 @@ const UserManagement = () => {
                       ]}
                     />
                   </td>
-                  {activeTab === "approved" && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <CustomSelect
-                        value={(user.status || "").toLowerCase()}
-                        onChange={(newStatus) =>
-                          handleStatusToggle(user.id, newStatus)
-                        }
-                        variant="status"
-                        options={[
-                          { value: "active", label: "Hoạt động" },
-                          { value: "inactive", label: "Vô hiệu" },
-                        ]}
-                      />
-                    </td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <CustomSelect
+                      value={(user.status || "").toLowerCase()}
+                      onChange={(newStatus) =>
+                        handleStatusToggle(user.id, newStatus)
+                      }
+                      variant="status"
+                      options={[
+                        { value: "active", label: "Hoạt động" },
+                        { value: "inactive", label: "Vô hiệu" },
+                      ]}
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      {activeTab === "pending" ? (
-                        <>
-                          <button
-                            onClick={() => handleApprove(user.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-medium"
-                            title="Duyệt"
-                          >
-                            <Check size={14} /> Duyệt
-                          </button>
-                          <button
-                            onClick={() => handleReject(user.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xs font-medium"
-                            title="Từ chối"
-                          >
-                            <Ban size={14} /> Từ chối
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleEdit(user)}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                            title="Xóa"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => handleEdit(user)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                        title="Chỉnh sửa"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title="Xóa"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -717,12 +659,11 @@ const UserManagement = () => {
                               onDragLeave={handleDragLeave}
                               onDrop={handleDrop}
                               onClick={() => !uploadingImage && fileInputRef.current?.click()}
-                              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition ${
-                                uploadingImage ? "border-slate-300 bg-slate-100 opacity-50" :
+                              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition ${uploadingImage ? "border-slate-300 bg-slate-100 opacity-50" :
                                 isDragging
                                   ? "border-indigo-500 bg-indigo-50"
                                   : "border-slate-300 bg-white hover:bg-slate-50"
-                              }`}
+                                }`}
                               style={{ pointerEvents: uploadingImage ? "none" : "auto" }}
                             >
                               <ImageIcon size={24} className="mx-auto text-slate-400 mb-1" />
@@ -765,6 +706,7 @@ const UserManagement = () => {
                             onChange={(e) =>
                               setFormData({ ...formData, username: e.target.value })
                             }
+                            required
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.username ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                             placeholder="nhap_username"
                           />
@@ -784,6 +726,7 @@ const UserManagement = () => {
                             onChange={(e) =>
                               setFormData({ ...formData, password: e.target.value })
                             }
+                            required
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.password ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                             placeholder="••••••"
                           />
@@ -806,6 +749,7 @@ const UserManagement = () => {
                                 confirmPassword: e.target.value,
                               })
                             }
+                            required
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.confirmPassword ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                             placeholder="••••••"
                           />
@@ -830,6 +774,7 @@ const UserManagement = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, fullName: e.target.value })
                           }
+                          required
                           className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.fullName ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                           placeholder="Nhập họ tên đầy đủ"
                         />
@@ -849,6 +794,7 @@ const UserManagement = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, email: e.target.value })
                           }
+                          required
                           className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.email ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                           placeholder="example@email.com"
                         />
@@ -864,7 +810,7 @@ const UserManagement = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Số điện thoại
+                          Số điện thoại <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -872,6 +818,7 @@ const UserManagement = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, phone: e.target.value })
                           }
+                          required
                           className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.phone ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                           placeholder="0123456789"
                         />
@@ -883,7 +830,7 @@ const UserManagement = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Địa chỉ
+                          Địa chỉ <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -891,9 +838,15 @@ const UserManagement = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, address: e.target.value })
                           }
-                          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          required
+                          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${validationErrors.address ? "border-red-300 bg-red-50 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"}`}
                           placeholder="Nhập địa chỉ"
                         />
+                        {validationErrors.address && (
+                          <p className="text-red-600 text-xs mt-1.5">
+                            {validationErrors.address}
+                          </p>
+                        )}
                       </div>
                     </div>
 

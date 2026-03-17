@@ -104,7 +104,10 @@ export const createPurchaseOrder = async (orderData) => {
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Failed to save draft");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Failed to save draft");
+  }
   return response.json();
 };
 
@@ -115,7 +118,10 @@ export const confirmPurchaseOrder = async (orderData) => {
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Failed to confirm order");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Failed to confirm order");
+  }
   return response.json();
 };
 
@@ -153,7 +159,10 @@ export const updatePurchaseOrder = async (id, orderData) => {
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("Failed to update purchase order");
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Failed to update purchase order");
+  }
   return response.json();
 };
 
@@ -326,6 +335,7 @@ export const getProducts = async () => {
     stock_quantity: p.stockQuantity ?? p.stock_quantity ?? 0,
     image_url: p.imageUrl || p.image_url,
     unit: p.unit || "",
+    attributes: p.attributes || null,
   }));
 };
 
@@ -351,6 +361,7 @@ export const getDashboardProducts = async () => {
     category_name: p.categoryName,
     brand_id: p.brandId,
     brand_name: p.brandName,
+    attributes: p.attributes || null,
   }));
 };
 

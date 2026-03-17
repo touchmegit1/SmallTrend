@@ -6,6 +6,7 @@ import {
   COUNT_ITEM_STATUS,
   formatVNDCount,
 } from "../../../utils/inventoryCount";
+import { resolveInventoryImageUrl } from "../../../utils/inventory";
 
 // ─── Single row (memoized for performance) ─────────────
 const InventoryCountRow = memo(function InventoryCountRow({
@@ -52,8 +53,16 @@ const InventoryCountRow = memo(function InventoryCountRow({
       {/* Product Info */}
       <td className="px-3 py-2.5">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-            <Package size={14} className="text-slate-400" />
+          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+            {item.image_url ? (
+              <img
+                src={resolveInventoryImageUrl(item.image_url)}
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Package size={14} className="text-slate-400" />
+            )}
           </div>
           <div className="min-w-0">
             <div className="text-sm font-medium text-slate-900 truncate">
@@ -62,6 +71,15 @@ const InventoryCountRow = memo(function InventoryCountRow({
             <div className="text-[11px] text-slate-400 font-mono">
               {item.sku}
             </div>
+            {item.attributes && Object.keys(item.attributes).length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {Object.entries(item.attributes).map(([key, value]) => (
+                  <span key={key} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                    {key}: {value}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </td>
