@@ -12,7 +12,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/inventory/disposal-vouchers")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class DisposalVoucherController {
 
     private final DisposalVoucherService disposalVoucherService;

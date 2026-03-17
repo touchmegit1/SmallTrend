@@ -14,7 +14,6 @@ import com.smalltrend.service.Module1.ProductVariantService;
 
 @RestController
 @RequestMapping("/api/pos")
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class ProductVariantController {
 
     private final ProductVariantService productService;
@@ -23,19 +22,25 @@ public class ProductVariantController {
         this.productService = productService;
     }
 
-    /** Lấy tất cả product variants */
+    /**
+     * Lấy tất cả product variants
+     */
     @GetMapping("/product")
     public ResponseEntity<List<ProductVariantRespone>> getAllProductVariants() {
         return ResponseEntity.ok(productService.getAllProductVariants());
     }
 
-    /** Lấy chỉ những variant đang có coupon (dùng cho Event Promotion section) */
+    /**
+     * Lấy chỉ những variant đang có coupon (dùng cho Event Promotion section)
+     */
     @GetMapping("/product/with-coupon")
     public ResponseEntity<List<ProductVariantRespone>> getVariantsWithCoupon() {
         return ResponseEntity.ok(productService.getVariantsWithCoupon());
     }
 
-    /** Áp coupon cho sản phẩm theo SKU */
+    /**
+     * Áp coupon cho sản phẩm theo SKU
+     */
     @PutMapping("/product/{sku}/coupon/{couponId}")
     public ResponseEntity<?> applyCoupon(@PathVariable String sku, @PathVariable Integer couponId) {
         try {
@@ -48,7 +53,9 @@ public class ProductVariantController {
         }
     }
 
-    /** Xóa coupon khỏi sản phẩm theo SKU */
+    /**
+     * Xóa coupon khỏi sản phẩm theo SKU
+     */
     @DeleteMapping("/product/{sku}/coupon")
     public ResponseEntity<?> removeCoupon(@PathVariable String sku) {
         try {
