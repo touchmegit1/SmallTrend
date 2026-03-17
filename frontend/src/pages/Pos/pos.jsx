@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import TopBar from "./TopBar";
 import EmptyCart from "./EmptyCart";
 import Cart from "./Cart";
@@ -13,6 +14,7 @@ import eventService from "../../services/eventService";
 
 export default function POS() {
   const searchInputRef = useRef(null);
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [combos, setCombos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,9 @@ export default function POS() {
       printInvoice: parsed?.printInvoice || 'F9',
       comboFocus: parsed?.comboFocus || 'F11',
       newOrder: parsed?.newOrder || 'F8',
+      loyaltyPage: parsed?.loyaltyPage || 'F6',
+      closePaymentModal: parsed?.closePaymentModal || 'F4',
+      deleteCartItem: parsed?.deleteCartItem || 'F7',
       deleteOrder: parsed?.deleteOrder || 'Delete'
     };
   });
@@ -134,6 +139,14 @@ export default function POS() {
       return;
     }
 
+    if (e.key === shortcuts.deleteCartItem) {
+      e.preventDefault();
+      if (activeOrder.cart.length > 0) {
+        updateCart(activeOrder.cart.slice(0, -1));
+      }
+      return;
+    }
+
     if (filteredProducts.length === 0 && e.key !== 'Enter') return;
 
     if (e.key === 'ArrowDown') {
@@ -197,11 +210,14 @@ export default function POS() {
       } else if (e.key === shortcuts.newOrder) {
         e.preventDefault();
         addNewOrder();
+      } else if (e.key === shortcuts.loyaltyPage) {
+        e.preventDefault();
+        navigate('/crm/loyalty');
       }
     };
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [activeOrder.cart, showPaymentModal, showInvoice, showShortcuts, orders, activeOrderId, shortcuts]);
+  }, [activeOrder.cart, showPaymentModal, showInvoice, showShortcuts, orders, activeOrderId, shortcuts, navigate]);
 
   const loadProducts = async () => {
     try {
@@ -668,7 +684,10 @@ export default function POS() {
 
     setShowPaymentModal(false);
     setShowSuccessNotification(true);
-    setTimeout(() => setShowSuccessNotification(false), 3000);
+    setTimeout(() => {
+      setShowSuccessNotification(false);
+      setShowInvoice(false);
+    }, 5000);
 
     setSelectedTransaction(transaction);
     setShowInvoice(true);
@@ -812,7 +831,10 @@ export default function POS() {
     }
 
     setShowSuccessNotification(true);
-    setTimeout(() => setShowSuccessNotification(false), 3000);
+    setTimeout(() => {
+      setShowSuccessNotification(false);
+      setShowInvoice(false);
+    }, 5000);
     setSelectedTransaction(transaction);
     setShowInvoice(true);
 
@@ -891,6 +913,7 @@ export default function POS() {
           setActiveOrderId={setActiveOrderId}
           deleteOrder={deleteOrder}
           onPrintInvoice={handlePrintCurrentInvoice}
+          onOpenLoyalty={() => navigate('/crm/loyalty')}
           onKeyDown={handleKeyDown}
           selectedProductIndex={selectedProductIndex}
           setShowShortcuts={setShowShortcuts}
@@ -951,6 +974,30 @@ export default function POS() {
                 <input
                   value={shortcuts.newOrder}
                   onChange={(e) => setShortcuts({ ...shortcuts, newOrder: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Mở trang Đổi quà</span>
+                <input
+                  value={shortcuts.loyaltyPage}
+                  onChange={(e) => setShortcuts({ ...shortcuts, loyaltyPage: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Đóng popup thanh toán (nút X)</span>
+                <input
+                  value={shortcuts.closePaymentModal}
+                  onChange={(e) => setShortcuts({ ...shortcuts, closePaymentModal: e.target.value.toUpperCase() })}
+                  style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Xóa SP cuối trong giỏ</span>
+                <input
+                  value={shortcuts.deleteCartItem}
+                  onChange={(e) => setShortcuts({ ...shortcuts, deleteCartItem: e.target.value.toUpperCase() })}
                   style={{ width: "80px", padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", textAlign: "center" }}
                 />
               </div>
@@ -1018,6 +1065,7 @@ export default function POS() {
       {showInvoice && (
         <Invoice
           transaction={selectedTransaction}
+          shortcuts={shortcuts}
           onClose={() => setShowInvoice(false)}
         />
       )}
@@ -1038,16 +1086,29 @@ export default function POS() {
           gap: "10px",
           fontSize: "14px",
           fontWeight: "500",
-          animation: "slideIn 0.3s ease-out"
+          animation: "slideIn 0.3s ease-out",
+          overflow: "hidden"
         }}>
           <style>{`
             @keyframes slideIn {
               from { transform: translateX(400px); opacity: 0; }
               to { transform: translateX(0); opacity: 1; }
             }
+            @keyframes successBorderProgress {
+              from { width: 100%; }
+              to { width: 0%; }
+            }
           `}</style>
           <span style={{ fontSize: "20px" }}>✓</span>
           <span>Thanh toán thành công!</span>
+          <div style={{
+            position: "absolute",
+            left: 0,
+            bottom: 0,
+            height: "3px",
+            background: "rgba(255,255,255,0.95)",
+            animation: "successBorderProgress 5s linear forwards"
+          }} />
         </div>
       )}
 
