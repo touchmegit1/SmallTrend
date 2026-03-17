@@ -15,7 +15,6 @@ import com.smalltrend.service.CRM.CustomerService;
 @RestController
 @RequestMapping("/api/crm")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"})
 public class CustomerController {
 
     private final CustomerService customerService;

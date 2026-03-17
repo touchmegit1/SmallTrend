@@ -3,6 +3,7 @@ package com.smalltrend.service.products;
 import com.smalltrend.entity.Brand;
 import com.smalltrend.repository.BrandRepository;
 import com.smalltrend.repository.ProductRepository;
+import com.smalltrend.validation.product.BrandValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,9 @@ class BrandServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private BrandValidator brandValidator;
 
     @InjectMocks
     private BrandServiceImpl brandService;
@@ -70,8 +74,7 @@ class BrandServiceTest {
 
     @Test
     void getById_shouldReturnBrand_whenFound() {
-        // Arrange: Trả về brand khi tìm theo ID
-        when(brandRepository.findById(1)).thenReturn(Optional.of(testBrand));
+        when(brandValidator.requireExistingBrand(1)).thenReturn(testBrand);
 
         // Act: Gọi hàm getById
         Brand result = brandService.getById(1);
@@ -79,19 +82,18 @@ class BrandServiceTest {
         // Assert: Đảm bảo kết quả đúng
         assertNotNull(result);
         assertEquals(1, result.getId());
-        verify(brandRepository).findById(1);
+        verify(brandValidator).requireExistingBrand(1);
     }
 
     @Test
     void getById_shouldThrowException_whenNotFound() {
-        // Arrange: Trả về empty khi không tìm thấy ID
-        when(brandRepository.findById(99)).thenReturn(Optional.empty());
+        when(brandValidator.requireExistingBrand(99)).thenThrow(new RuntimeException("Không tìm thấy thương hiệu"));
 
         // Act & Assert: Kiểm tra ngoại lệ được ném ra
         RuntimeException exception = assertThrows(RuntimeException.class, () -> brandService.getById(99));
 
-        assertEquals("Brand not found", exception.getMessage());
-        verify(brandRepository).findById(99);
+        assertEquals("Không tìm thấy thương hiệu", exception.getMessage());
+        verify(brandValidator).requireExistingBrand(99);
     }
 
     @Test
@@ -102,7 +104,7 @@ class BrandServiceTest {
         updateInfo.setCountry("US");
         updateInfo.setDescription("New Desc");
 
-        when(brandRepository.findById(1)).thenReturn(Optional.of(testBrand));
+        when(brandValidator.requireExistingBrand(1)).thenReturn(testBrand);
         
         Brand updatedBrand = new Brand();
         updatedBrand.setId(1);
@@ -118,33 +120,30 @@ class BrandServiceTest {
         // Assert: Kiểm tra dữ liệu sau cập nhật
         assertNotNull(result);
         assertEquals("Sony Updated", result.getName());
-        verify(brandRepository).findById(1);
+        verify(brandValidator).requireExistingBrand(1);
         verify(brandRepository).save(testBrand);
     }
 
     @Test
     void delete_shouldThrowException_whenBrandHasProducts() {
-        // Arrange: Trả về true khi kiểm tra brand có sản phẩm
-        when(productRepository.existsByBrandId(1)).thenReturn(true);
+        doThrow(new RuntimeException("Không thể xoá thương hiệu vì đang có sản phẩm thuộc thương hiệu này"))
+            .when(brandValidator).validateDeletable(1);
 
         // Act & Assert: Đảm bảo ném lỗi khi cố xóa
         RuntimeException exception = assertThrows(RuntimeException.class, () -> brandService.delete(1));
 
         assertEquals("Không thể xoá thương hiệu vì đang có sản phẩm thuộc thương hiệu này", exception.getMessage());
-        verify(productRepository).existsByBrandId(1);
+        verify(brandValidator).validateDeletable(1);
         verify(brandRepository, never()).deleteById(any()); // Đảm bảo hàm xóa không bao giờ được gọi
     }
 
     @Test
     void delete_shouldDeleteBrand_whenBrandHasNoProducts() {
-        // Arrange: Trả về false khi kiểm tra brand có sản phẩm
-        when(productRepository.existsByBrandId(1)).thenReturn(false);
-
         // Act: Gọi hàm xóa
         brandService.delete(1);
 
         // Assert: Xác minh hàm deleteById được gọi
-        verify(productRepository).existsByBrandId(1);
+        verify(brandValidator).validateDeletable(1);
         verify(brandRepository).deleteById(1);
     }
 }

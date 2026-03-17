@@ -11,13 +11,11 @@ import java.util.List;
 
 /**
  * Controller xử lý các HTTP request liên quan đến Product Combo (Combo Sản
- * phẩm)
- * Cho phép tạo, sửa, xóa và truy vấn các gói combo sản phẩm
+ * phẩm) Cho phép tạo, sửa, xóa và truy vấn các gói combo sản phẩm
  */
 @RestController
 @RequestMapping("/api/product-combos")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class ProductComboController {
 
     private final ProductComboService productComboService;

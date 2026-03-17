@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @RestController
 @RequestMapping("/api/audit-logs")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" })
 public class AuditLogController {
 
     private final AuditLogService auditLogService;
