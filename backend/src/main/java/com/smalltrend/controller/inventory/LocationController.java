@@ -63,11 +63,6 @@ public class LocationController {
         return ResponseEntity.ok(Map.of("message", "Location deleted successfully"));
     }
 
-    @PutMapping("/{id:\\d+}/toggle-status")
-    public ResponseEntity<FullLocationResponse> toggleLocationStatus(@PathVariable Integer id) {
-        return ResponseEntity.ok(locationService.toggleLocationStatus(id));
-    }
-
     @PostMapping("/transfer")
     public ResponseEntity<Map<String, String>> transferStock(@Valid @RequestBody LocationTransferRequest request) {
         locationService.transferStock(

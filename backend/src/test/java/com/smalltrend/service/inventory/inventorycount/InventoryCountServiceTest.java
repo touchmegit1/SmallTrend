@@ -3,6 +3,7 @@ package com.smalltrend.service.inventory.inventorycount;
 import com.smalltrend.dto.inventory.inventorycount.*;
 import com.smalltrend.entity.*;
 import com.smalltrend.service.inventory.InventoryCountService;
+import com.smalltrend.service.inventory.InventoryOutOfStockNotificationService;
 import com.smalltrend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,8 @@ class InventoryCountServiceTest {
     private ProductVariantRepository productVariantRepository;
     @Mock
     private ProductBatchRepository productBatchRepository;
+    @Mock
+    private InventoryOutOfStockNotificationService outOfStockNotificationService;
 
     @InjectMocks
     private InventoryCountService inventoryCountService;
@@ -55,6 +58,7 @@ class InventoryCountServiceTest {
 
     private InventoryCount draftCount;
     private InventoryCount pendingCount;
+    private InventoryCount countingCount;
     private InventoryCount confirmedCount;
     private Location location;
     private InventoryCountItemRequest itemRequest;
@@ -81,22 +85,33 @@ class InventoryCountServiceTest {
                 .location(location)
                 .build();
 
-        confirmedCount = InventoryCount.builder()
-                .id(3)
+        countingCount = InventoryCount.builder()
+                .id(1)
                 .code("IC-2026-0003")
+                .status("COUNTING")
+                .location(location)
+                .build();
+
+        confirmedCount = InventoryCount.builder()
+                .id(4)
+                .code("IC-2026-0004")
                 .status("CONFIRMED")
                 .location(location)
                 .build();
 
         itemRequest = new InventoryCountItemRequest();
         itemRequest.setProductId(1);
+        itemRequest.setVariantId(1);
         itemRequest.setSystemQuantity(10);
         itemRequest.setActualQuantity(12);
         itemRequest.setDifferenceQuantity(2);
         itemRequest.setDifferenceValue(new BigDecimal("20.0"));
 
         variant = ProductVariant.builder().id(1).build();
-        stock = InventoryStock.builder().id(1).quantity(10).variant(variant).batch(ProductBatch.builder().id(1).build()).build();
+        stock = InventoryStock.builder().id(1).quantity(10).variant(variant).batch(ProductBatch.builder().id(1).build()).location(location).build();
+
+        lenient().when(inventoryStockRepository.save(any(InventoryStock.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -182,9 +197,9 @@ class InventoryCountServiceTest {
 
     @Test
     void updateCount_shouldThrowExceptionForConfirmed() {
-        when(countRepository.findById(3)).thenReturn(Optional.of(confirmedCount));
+        when(countRepository.findById(4)).thenReturn(Optional.of(confirmedCount));
         InventoryCountRequest req = new InventoryCountRequest();
-        assertThrows(RuntimeException.class, () -> inventoryCountService.updateCount(3, req));
+        assertThrows(RuntimeException.class, () -> inventoryCountService.updateCount(4, req));
     }
 
     @Test
@@ -193,18 +208,18 @@ class InventoryCountServiceTest {
         req.setLocationId(1);
         req.setItems(List.of(itemRequest));
 
-        when(countRepository.findById(1)).thenReturn(Optional.of(draftCount));
+        when(countRepository.findById(1)).thenReturn(Optional.of(countingCount));
         when(locationRepository.findById(1)).thenReturn(Optional.of(location));
-        when(countRepository.save(any())).thenReturn(draftCount);
-        
-        InventoryCountItem it = InventoryCountItem.builder().id(1).inventoryCount(draftCount).productId(1).differenceQuantity(2).build();
+        when(countRepository.save(any())).thenReturn(countingCount);
+
+        InventoryCountItem it = InventoryCountItem.builder().id(1).inventoryCount(countingCount).productId(1).variantId(1).differenceQuantity(2).build();
         when(itemRepository.findByInventoryCountId(1)).thenReturn(List.of(it));
-        when(productVariantRepository.findByProductId(1)).thenReturn(List.of(variant));
-        when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(List.of(stock));
+        when(productVariantRepository.findById(1)).thenReturn(Optional.of(variant));
+        when(inventoryStockRepository.findByVariantId(1)).thenReturn(List.of(stock));
 
         InventoryCountResponse res = inventoryCountService.confirmCount(1, req);
 
-        assertEquals("CONFIRMED", draftCount.getStatus());
+        assertEquals("CONFIRMED", countingCount.getStatus());
         
         // Stock logic checks
         verify(inventoryStockRepository).save(stockCaptor.capture());
@@ -267,8 +282,115 @@ class InventoryCountServiceTest {
         when(countRepository.findById(1)).thenReturn(Optional.of(draftCount));
 
         inventoryCountService.deleteCount(1);
-        
+
         verify(itemRepository).deleteByInventoryCountId(1);
         verify(countRepository).delete(draftCount);
+    }
+
+    @Test
+    void createAndSubmitForApproval_shouldCreatePendingCount() {
+        InventoryCountRequest req = new InventoryCountRequest();
+        req.setLocationId(1);
+        req.setNotes("Pending note");
+        req.setItems(List.of(itemRequest));
+
+        when(locationRepository.findById(1)).thenReturn(Optional.of(location));
+        when(countRepository.findAll()).thenReturn(List.of());
+        when(countRepository.save(any())).thenAnswer(i -> {
+            InventoryCount count = i.getArgument(0);
+            count.setId(99);
+            return count;
+        });
+        when(itemRepository.findByInventoryCountId(99)).thenReturn(List.of(
+                InventoryCountItem.builder().id(1).variantId(1).actualQuantity(12).differenceQuantity(2).differenceValue(new BigDecimal("20.0")).build()
+        ));
+
+        InventoryCountResponse response = inventoryCountService.createAndSubmitForApproval(req);
+
+        assertEquals("PENDING", response.getStatus());
+        assertEquals(1, response.getItems().size());
+    }
+
+    @Test
+    void createAndConfirm_shouldThrowWhenItemsMissing() {
+        InventoryCountRequest req = new InventoryCountRequest();
+        req.setLocationId(1);
+        req.setItems(List.of());
+
+        assertThrows(RuntimeException.class, () -> inventoryCountService.createAndConfirm(req));
+    }
+
+    @Test
+    void approveCount_shouldCreateNewStockWhenPositiveDiffAndNoStockAtLocation() {
+        pendingCount.setId(2);
+        pendingCount.setLocation(location);
+
+        InventoryCountItem item = InventoryCountItem.builder()
+                .id(2)
+                .inventoryCount(pendingCount)
+                .variantId(1)
+                .differenceQuantity(3)
+                .reason("add")
+                .build();
+
+        ProductBatch batch = ProductBatch.builder().id(22).build();
+
+        when(countRepository.findById(2)).thenReturn(Optional.of(pendingCount));
+        when(countRepository.save(any())).thenReturn(pendingCount);
+        when(itemRepository.findByInventoryCountId(2)).thenReturn(List.of(item));
+        when(productVariantRepository.findById(1)).thenReturn(Optional.of(variant));
+        when(inventoryStockRepository.findByVariantId(1)).thenReturn(List.of());
+        when(productBatchRepository.findByVariantId(1)).thenReturn(List.of(batch));
+
+        inventoryCountService.approveCount(2);
+
+        verify(inventoryStockRepository).save(stockCaptor.capture());
+        assertEquals(3, stockCaptor.getValue().getQuantity());
+        assertEquals(batch, stockCaptor.getValue().getBatch());
+        verify(stockMovementRepository).save(movementCaptor.capture());
+        assertEquals(3, movementCaptor.getValue().getQuantity());
+    }
+
+    @Test
+    void approveCount_shouldDeductAcrossMultipleStocksWhenNegativeDiff() {
+        pendingCount.setId(2);
+        pendingCount.setLocation(location);
+
+        InventoryCountItem item = InventoryCountItem.builder()
+                .id(3)
+                .inventoryCount(pendingCount)
+                .variantId(1)
+                .differenceQuantity(-6)
+                .reason("missing")
+                .build();
+
+        InventoryStock s1 = InventoryStock.builder().id(10).variant(variant).location(location).batch(ProductBatch.builder().id(1).build()).quantity(4).build();
+        InventoryStock s2 = InventoryStock.builder().id(11).variant(variant).location(location).batch(ProductBatch.builder().id(2).build()).quantity(5).build();
+
+        when(countRepository.findById(2)).thenReturn(Optional.of(pendingCount));
+        when(countRepository.save(any())).thenReturn(pendingCount);
+        when(itemRepository.findByInventoryCountId(2)).thenReturn(List.of(item));
+        when(productVariantRepository.findById(1)).thenReturn(Optional.of(variant));
+        when(inventoryStockRepository.findByVariantId(1)).thenReturn(List.of(s1, s2));
+
+        inventoryCountService.approveCount(2);
+
+        assertEquals(0, s1.getQuantity());
+        assertEquals(3, s2.getQuantity());
+        verify(inventoryStockRepository, times(2)).save(any(InventoryStock.class));
+        verify(stockMovementRepository).save(movementCaptor.capture());
+        assertEquals(-6, movementCaptor.getValue().getQuantity());
+    }
+
+    @Test
+    void approveCount_shouldThrowWhenVariantIdMissingInSavedItem() {
+        pendingCount.setId(2);
+        when(countRepository.findById(2)).thenReturn(Optional.of(pendingCount));
+        when(countRepository.save(any())).thenReturn(pendingCount);
+        when(itemRepository.findByInventoryCountId(2)).thenReturn(List.of(
+                InventoryCountItem.builder().id(9).inventoryCount(pendingCount).differenceQuantity(1).build()
+        ));
+
+        assertThrows(RuntimeException.class, () -> inventoryCountService.approveCount(2));
     }
 }

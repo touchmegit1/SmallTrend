@@ -1,8 +1,10 @@
 package com.smalltrend.service.inventory.purchaseorder;
 
+import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.ProductResponse;
 import com.smalltrend.entity.*;
+import com.smalltrend.service.inventory.InventoryManagerNotificationService;
 import com.smalltrend.service.inventory.PurchaseOrderService;
 import com.smalltrend.service.VariantPriceService;
 import com.smalltrend.entity.enums.PurchaseOrderStatus;
@@ -57,6 +59,8 @@ class PurchaseOrderServiceTest {
     private UnitConversionRepository unitConversionRepository;
     @Mock
     private VariantPriceService variantPriceService;
+    @Mock
+    private InventoryManagerNotificationService inventoryManagerNotificationService;
 
     @InjectMocks
     private PurchaseOrderService purchaseOrderService;
@@ -234,7 +238,7 @@ class PurchaseOrderServiceTest {
     void receiveGoods_shouldUpdateStockAndMovement() {
         order.setStatus(PurchaseOrderStatus.CHECKING);
         order.setItems(new ArrayList<>());
-        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(10).purchaseOrder(order).build());
+        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(0).purchaseOrder(order).build());
 
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         // Mock lookup for existing stock
@@ -257,6 +261,94 @@ class PurchaseOrderServiceTest {
         assertNotNull(purchaseOrderService.receiveGoods(1, req));
         verify(inventoryStockRepository, atLeastOnce()).save(any());
         verify(stockMovementRepository, atLeastOnce()).save(any());
+        verify(inventoryManagerNotificationService, never()).notifyManagers(any(), any());
+    }
+
+    @Test
+    void receiveGoods_shouldAutoNotifyManagers_whenShortageDetected() {
+        order.setStatus(PurchaseOrderStatus.CHECKING);
+        order.setItems(new ArrayList<>());
+        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(0).purchaseOrder(order).build());
+
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+        when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(new ArrayList<>());
+        when(inventoryManagerNotificationService.notifyManagers(any(), any())).thenReturn(1);
+
+        GoodsReceiptRequest req = new GoodsReceiptRequest();
+        req.setSupplierId(1);
+        req.setLocationId(1);
+        req.setTaxPercent(BigDecimal.ZERO);
+        req.setShippingFee(BigDecimal.ZERO);
+        req.setShortageReason("Supplier delivered partial quantity");
+        req.setItems(List.of(
+                GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
+                        .itemId(1)
+                        .receivedQuantity(5)
+                        .unitCost(BigDecimal.ONE)
+                        .build()
+        ));
+
+        PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
+
+        assertEquals("SUPPLIER_SUPPLEMENT_PENDING", response.getStatus());
+        verify(inventoryManagerNotificationService, times(1)).notifyManagers(any(), any());
+    }
+
+    @Test
+    void receiveGoods_shouldNotFail_whenAutoNotifyThrowsException() {
+        order.setStatus(PurchaseOrderStatus.CHECKING);
+        order.setItems(new ArrayList<>());
+        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(0).purchaseOrder(order).build());
+
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+        when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(new ArrayList<>());
+        when(inventoryManagerNotificationService.notifyManagers(any(), any()))
+                .thenThrow(new RuntimeException("SMTP down"));
+
+        GoodsReceiptRequest req = new GoodsReceiptRequest();
+        req.setSupplierId(1);
+        req.setLocationId(1);
+        req.setTaxPercent(BigDecimal.ZERO);
+        req.setShippingFee(BigDecimal.ZERO);
+        req.setShortageReason("Supplier delivered partial quantity");
+        req.setItems(List.of(
+                GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
+                        .itemId(1)
+                        .receivedQuantity(5)
+                        .unitCost(BigDecimal.ONE)
+                        .build()
+        ));
+
+        PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
+
+        assertEquals("SUPPLIER_SUPPLEMENT_PENDING", response.getStatus());
+        verify(inventoryManagerNotificationService, times(1)).notifyManagers(any(), any());
+    }
+
+    @Test
+    void receiveGoods_shouldRequireShortageReason_whenShortageDetected() {
+        order.setStatus(PurchaseOrderStatus.CHECKING);
+        order.setItems(new ArrayList<>());
+        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(0).purchaseOrder(order).build());
+
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+        when(inventoryStockRepository.findByLocationIdWithProduct(1)).thenReturn(new ArrayList<>());
+
+        GoodsReceiptRequest req = new GoodsReceiptRequest();
+        req.setSupplierId(1);
+        req.setLocationId(1);
+        req.setTaxPercent(BigDecimal.ZERO);
+        req.setShippingFee(BigDecimal.ZERO);
+        req.setItems(List.of(
+                GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
+                        .itemId(1)
+                        .receivedQuantity(5)
+                        .unitCost(BigDecimal.ONE)
+                        .build()
+        ));
+
+        assertThrows(RuntimeException.class, () -> purchaseOrderService.receiveGoods(1, req));
+        verify(inventoryManagerNotificationService, never()).notifyManagers(any(), any());
     }
 
     @Test
@@ -265,7 +357,7 @@ class PurchaseOrderServiceTest {
         variant.getInventoryStocks().add(existing);
 
         order.setStatus(PurchaseOrderStatus.CHECKING);
-        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(10).purchaseOrder(order).build());
+        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(variant).quantity(10).receivedQuantity(0).purchaseOrder(order).build());
 
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         when(inventoryStockRepository.findByLocationIdWithProduct(any())).thenReturn(List.of(existing));
@@ -295,7 +387,7 @@ class PurchaseOrderServiceTest {
         ProductVariant otherVariant = ProductVariant.builder().id(2).unit(fromUnit).product(product).build();
 
         order.setStatus(PurchaseOrderStatus.CHECKING);
-        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(otherVariant).quantity(5).receivedQuantity(5).purchaseOrder(order).build());
+        order.getItems().add(PurchaseOrderItem.builder().id(1).variant(otherVariant).quantity(5).receivedQuantity(0).purchaseOrder(order).build());
 
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         when(productVariantRepository.findById(2)).thenReturn(Optional.of(otherVariant));
@@ -307,6 +399,7 @@ class PurchaseOrderServiceTest {
         req.setLocationId(1);
         req.setTaxPercent(BigDecimal.ZERO);
         req.setShippingFee(BigDecimal.ZERO);
+        req.setShortageReason("Supplier delivered partial quantity");
         req.setItems(List.of(
                 GoodsReceiptRequest.GoodsReceiptItemRequest.builder()
                         .itemId(1)
@@ -317,7 +410,7 @@ class PurchaseOrderServiceTest {
 
         purchaseOrderService.receiveGoods(1, req);
         verify(inventoryStockRepository).save(stockCaptor.capture());
-        assertEquals(50, stockCaptor.getValue().getQuantity());
+        assertEquals(5, stockCaptor.getValue().getQuantity());
     }
 
     @Test

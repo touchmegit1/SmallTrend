@@ -693,12 +693,11 @@ export function usePurchaseOrder(initialId = null) {
           setReceiptItems(mappedReceiptItems);
         }
 
-        if (response?.status === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING) {
-          toast.success("Đã nhập kho phần hàng nhận được và chuyển sang chờ NCC giao bù.");
+        if (response?.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
+          toast.success("Đã nhập kho phần hàng nhận được và chuyển sang chờ quản lý xử lý thiếu.");
         } else {
           toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
         }
-        setOrder((prev) => ({ ...prev, status: PO_STATUS.RECEIVED }));
         if (syncedCount > 0) {
           toast.info(`Đã đồng bộ giá nhập cho ${syncedCount} sản phẩm từ phiếu nhập này.`);
         }

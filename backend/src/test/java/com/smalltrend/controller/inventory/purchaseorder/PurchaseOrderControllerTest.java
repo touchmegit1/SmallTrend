@@ -1,5 +1,6 @@
 package com.smalltrend.controller.inventory.purchaseorder;
 
+import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.inventory.purchaseorder.*;
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.controller.inventory.PurchaseOrderController;
@@ -165,6 +166,70 @@ class PurchaseOrderControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(expected, response.getBody());
         verify(purchaseOrderService).receiveGoods(1, request);
+    }
+
+    @Test
+    void notifyManagers_shouldReturnOk() {
+        NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
+                .subject("Need decision")
+                .message("Please review shortage")
+                .build();
+        MessageResponse expected = new MessageResponse("Đã gửi thông báo cho 2 quản lý.");
+        when(purchaseOrderService.notifyManagers(1, request)).thenReturn(expected);
+
+        ResponseEntity<MessageResponse> response = controller.notifyManagers(1, request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).notifyManagers(1, request);
+    }
+
+    @Test
+    void closeShortage_shouldPassManagerDecisionNoteWhenPayloadProvided() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.closeShortage(1, "Đóng thiếu hàng")).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.closeShortage(1, Map.of("managerDecisionNote", "Đóng thiếu hàng"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).closeShortage(1, "Đóng thiếu hàng");
+    }
+
+    @Test
+    void closeShortage_shouldPassNullWhenPayloadIsNull() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.closeShortage(1, null)).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.closeShortage(1, null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).closeShortage(1, null);
+    }
+
+    @Test
+    void requestSupplierSupplement_shouldPassManagerDecisionNoteWhenPayloadProvided() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.requestSupplierSupplement(1, "Yêu cầu bù hàng")).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.requestSupplierSupplement(1, Map.of("managerDecisionNote", "Yêu cầu bù hàng"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).requestSupplierSupplement(1, "Yêu cầu bù hàng");
+    }
+
+    @Test
+    void requestSupplierSupplement_shouldPassNullWhenPayloadIsNull() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.requestSupplierSupplement(1, null)).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.requestSupplierSupplement(1, null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).requestSupplierSupplement(1, null);
     }
 
     @Test

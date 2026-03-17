@@ -373,11 +373,11 @@ INSERT IGNORE INTO variant_prices (variant_id, purchase_price, selling_price, ta
 (26, 32000.00, 40000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6));
 -- 10. LOCATIONS
 INSERT IGNORE INTO locations (id, name, type, zone, grid_row, grid_col, grid_level, location_code, address, capacity, status, created_at) VALUES
-(1, 'Main Warehouse A1', 'STORAGE', 'A', 1, 1, 1, 'WH-A1', 'Kho chính, Dãy A, Hàng 1', 500, 'ACTIVE', NOW()),
-(2, 'Main Warehouse A2', 'STORAGE', 'A', 1, 2, 1, 'WH-A2', 'Kho chính, Dãy A, Hàng 2', 500, 'ACTIVE', NOW()),
-(3, 'Cold Storage B1', 'COLD_STORAGE', 'B', 1, 1, 1, 'CS-B1', 'Kho lạnh, Dãy B, Tầng 1', 200, 'ACTIVE', NOW()),
-(4, 'Store Front C1', 'DISPLAY', 'C', 1, 1, 1, 'DF-C1', 'Khu trưng bày, Dãy C, Vị trí 1', 100, 'ACTIVE', NOW()),
-(5, 'POS Display Zone C2', 'DISPLAY', 'C', 1, 2, 1, 'DF-C2', 'Khu trưng bày, Dãy C, Vị trí 2', 150, 'ACTIVE', NOW());
+(1, 'Kho lưu trữ A1', 'STORAGE', 'A', 1, 1, 1, 'WH-A1', 'Kho chính, Dãy A, Hàng 1', 5000, 'ACTIVE', NOW()),
+(2, 'Kệ hàng C3', 'DISPLAY', 'C', 1, 3, 1, 'DF-C3', 'Kệ hàng, Dãy C, Vị trí 3', 1200, 'ACTIVE', NOW()),
+(3, 'Kho lạnh B1', 'COLD_STORAGE', 'B', 1, 1, 1, 'CS-B1', 'Kho lạnh, Dãy B, Tầng 1', 2000, 'ACTIVE', NOW()),
+(4, 'Kệ hàng C1', 'DISPLAY', 'C', 1, 1, 1, 'DF-C1', 'Kệ hàng, Dãy C, Vị trí 1', 1000, 'ACTIVE', NOW()),
+(5, 'Kệ hàng C2', 'DISPLAY', 'C', 1, 2, 1, 'DF-C2', 'Kệ hàng, Dãy C, Vị trí 2', 1500, 'ACTIVE', NOW());
 
 
 -- 11. PRODUCT BATCHES

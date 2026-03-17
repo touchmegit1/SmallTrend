@@ -29,6 +29,7 @@ public class InventoryStockService {
     private final UnitConversionRepository unitConversionRepository;
     private final ProductBatchRepository productBatchRepository;
     private final LocationRepository locationRepository;
+    private final InventoryOutOfStockNotificationService outOfStockNotificationService;
 
     /**
      * Lấy tổng tồn kho của 1 variant (tính gộp các batch và location)
@@ -84,8 +85,10 @@ public class InventoryStockService {
                         .quantity(0)
                         .build());
 
-        stock.setQuantity(stock.getQuantity() + actualQuantity);
-        inventoryStockRepository.save(stock);
+        int oldQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+        stock.setQuantity(oldQty + actualQuantity);
+        InventoryStock savedStock = inventoryStockRepository.save(stock);
+        outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "IMPORT_STOCK");
 
         // Ghi lại lịch sử
         recordMovement(baseVariant, batch, location, StockTransactionType.IMPORT, actualQuantity, "IMPORT", null,
@@ -123,9 +126,11 @@ public class InventoryStockService {
                 break;
 
             if (stock.getQuantity() > 0) {
-                int qtyToTake = Math.min(stock.getQuantity(), remainingToDeduct);
-                stock.setQuantity(stock.getQuantity() - qtyToTake);
-                inventoryStockRepository.save(stock);
+                int oldQty = stock.getQuantity();
+                int qtyToTake = Math.min(oldQty, remainingToDeduct);
+                stock.setQuantity(oldQty - qtyToTake);
+                InventoryStock savedStock = inventoryStockRepository.save(stock);
+                outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "SALE_ORDER");
 
                 // Ghi nhận biến động cho lô này
                 recordMovement(baseVariant, stock.getBatch(), stock.getLocation(),
@@ -160,8 +165,10 @@ public class InventoryStockService {
                 request.getVariantId(), request.getBatchId(), request.getLocationId())
                 .orElseThrow(() -> new RuntimeException("Stock record not found"));
 
-        stock.setQuantity(stock.getQuantity() + request.getAdjustQuantity());
-        inventoryStockRepository.save(stock);
+        int oldQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+        stock.setQuantity(oldQty + request.getAdjustQuantity());
+        InventoryStock savedStock = inventoryStockRepository.save(stock);
+        outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "MANUAL_ADJUSTMENT");
 
         recordMovement(variant, stock.getBatch(), stock.getLocation(), StockTransactionType.ADJUSTMENT,
                 request.getAdjustQuantity(), "MANUAL_ADJUSTMENT", null, request.getReason());

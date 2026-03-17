@@ -103,7 +103,7 @@ function InventoryCountDetail() {
   // ─── Loading ─────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
             <div className="w-12 h-12 rounded-full border-4 border-slate-100" />
@@ -122,7 +122,7 @@ function InventoryCountDetail() {
   // ─── Error ───────────────────────────────────────
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="text-center">
           <p className="text-red-500 font-medium mb-2">Lỗi tải dữ liệu</p>
           <p className="text-sm text-slate-500 mb-3">{error}</p>
@@ -150,7 +150,7 @@ function InventoryCountDetail() {
     session?.status === IC_STATUS.COUNTING;
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex min-h-screen bg-slate-50 flex-col xl:flex-row">
       {/* ─── Left Side: Counting Area ────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
@@ -183,7 +183,7 @@ function InventoryCountDetail() {
       </div>
 
       {/* ─── Right Side: Summary + Actions ───────────── */}
-      <div className="flex flex-col shrink-0">
+      <div className="flex flex-col w-full xl:w-80 xl:min-w-[320px] shrink-0 border-t xl:border-t-0 xl:border-l border-slate-200 bg-white">
         <CountSummaryPanel
           session={session}
           stats={stats}

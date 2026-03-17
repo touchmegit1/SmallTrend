@@ -76,7 +76,7 @@ export default function DisposalList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600" />
       </div>
     );
@@ -84,7 +84,7 @@ export default function DisposalList() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen p-6">
+      <div className="flex items-center justify-center min-h-screen p-6">
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 max-w-md w-full text-center">
           <p className="font-semibold text-lg mb-1">Lỗi tải dữ liệu</p>
           <p className="text-sm">{error}</p>
@@ -111,7 +111,7 @@ export default function DisposalList() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       {/* ── HEADER ─────────────────────────────────────────────── */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 shrink-0">
         <div className="flex items-center justify-between gap-4">

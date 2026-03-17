@@ -18,6 +18,7 @@ export default function SummaryPanel({
   onLocationChange,
   updateOrder,
   allowMetaEdit = false,
+  lockMetaFields = false,
   checkingFinancials = null,
 }) {
   const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
@@ -179,6 +180,7 @@ export default function SummaryPanel({
                     label: supplier.name,
                   })),
                 ]}
+                disabled={lockMetaFields}
               />
             </div>
 
@@ -197,6 +199,7 @@ export default function SummaryPanel({
                     label: `${loc.location_name} (${loc.location_code})`,
                   })),
                 ]}
+                disabled={lockMetaFields}
               />
               {locationCapacityWarning && locationCapacityMeta && (
                 <div role="alert" aria-live="polite" className={locationCapacityWarning.containerClass}>

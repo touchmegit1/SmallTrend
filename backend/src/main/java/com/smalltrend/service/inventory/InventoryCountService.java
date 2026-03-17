@@ -44,6 +44,7 @@ public class InventoryCountService {
     private final StockMovementRepository stockMovementRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductBatchRepository productBatchRepository;
+    private final InventoryOutOfStockNotificationService outOfStockNotificationService;
 
     private static final Map<String, Set<String>> ALLOWED_STATUS_TRANSITIONS = buildAllowedTransitions();
     private static final Set<String> FINALIZED_STATUSES = Set.of("CONFIRMED", "CANCELLED");
@@ -360,8 +361,8 @@ public class InventoryCountService {
 
     /**
      * Điều chỉnh tồn kho dựa trên kết quả kiểm kê.
-     * Với mỗi item trong phiếu kiểm kê, tìm tất cả InventoryStock
-     * tại location tương ứng cho product đó và điều chỉnh số lượng.
+     * Khi thiếu hàng (diff < 0), trừ dần trên toàn bộ stock của variant trong location
+     * để tổng tồn kho sau kiểm kê khớp với số thực tế.
      */
     private void adjustStock(InventoryCount count) {
         List<InventoryCountItem> items = itemRepository.findByInventoryCountId(count.getId());
@@ -369,7 +370,7 @@ public class InventoryCountService {
 
         for (InventoryCountItem item : items) {
             int diff = item.getDifferenceQuantity() != null ? item.getDifferenceQuantity() : 0;
-            if (diff == 0) continue; // Không có chênh lệch, bỏ qua
+            if (diff == 0) continue;
 
             Integer variantId = item.getVariantId();
             if (variantId == null) {
@@ -379,65 +380,68 @@ public class InventoryCountService {
             ProductVariant variant = productVariantRepository.findById(variantId)
                     .orElseThrow(() -> new RuntimeException("Khong tim thay variant: " + variantId));
 
-            // Tìm tất cả stock records của variant tại location
-            List<InventoryStock> stocks;
-            if (location != null) {
-                stocks = inventoryStockRepository.findByLocationIdWithProduct(location.getId())
-                        .stream()
-                        .filter(s -> s.getVariant().getId().equals(variantId))
-                        .collect(Collectors.toList());
+            List<InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId).stream()
+                    .filter(s -> location == null || (s.getLocation() != null && s.getLocation().getId().equals(location.getId())))
+                    .collect(Collectors.toList());
+
+            ProductBatch movementBatch = null;
+
+            if (diff < 0) {
+                int remaining = -diff;
+
+                for (InventoryStock stock : stocks) {
+                    if (remaining <= 0) break;
+
+                    int currentQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                    if (currentQty <= 0) continue;
+
+                    int deducted = Math.min(currentQty, remaining);
+                    stock.setQuantity(currentQty - deducted);
+                    InventoryStock savedStock = inventoryStockRepository.save(stock);
+                    outOfStockNotificationService.handleStockTransition(savedStock, currentQty, savedStock.getQuantity(), "INVENTORY_COUNT");
+
+                    if (movementBatch == null) {
+                        movementBatch = stock.getBatch();
+                    }
+
+                    remaining -= deducted;
+                }
             } else {
-                stocks = inventoryStockRepository.findByVariantId(variantId);
+                if (!stocks.isEmpty()) {
+                    InventoryStock stock = stocks.get(0);
+                    int currentQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                    stock.setQuantity(currentQty + diff);
+                    InventoryStock savedStock = inventoryStockRepository.save(stock);
+                    outOfStockNotificationService.handleStockTransition(savedStock, currentQty, savedStock.getQuantity(), "INVENTORY_COUNT");
+                    movementBatch = stock.getBatch();
+                } else {
+                    List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());
+                    ProductBatch batch = batches.isEmpty() ? null : batches.get(0);
+
+                    InventoryStock newStock = InventoryStock.builder()
+                            .variant(variant)
+                            .batch(batch)
+                            .location(location)
+                            .quantity(diff)
+                            .build();
+                    InventoryStock savedNewStock = inventoryStockRepository.save(newStock);
+                    outOfStockNotificationService.handleStockTransition(savedNewStock, 0, savedNewStock.getQuantity(), "INVENTORY_COUNT");
+                    movementBatch = batch;
+                }
             }
 
-            if (!stocks.isEmpty()) {
-                // Điều chỉnh stock record đầu tiên tìm được
-                InventoryStock stock = stocks.get(0);
-                int newQty = stock.getQuantity() + diff;
-                if (newQty < 0) newQty = 0;
-                stock.setQuantity(newQty);
-                inventoryStockRepository.save(stock);
-
-                // Tạo StockMovement để ghi lại
-                StockMovement movement = StockMovement.builder()
-                        .variant(variant)
-                        .batch(stock.getBatch())
-                        .location(location)
-                        .type("ADJUSTMENT")
-                        .quantity(diff)
-                        .referenceType("inventory_count")
-                        .referenceId(count.getId().longValue())
-                        .notes("Kiểm kê " + count.getCode() + ": chênh lệch " + diff
-                                + (item.getReason() != null ? " - " + item.getReason() : ""))
-                        .build();
-                stockMovementRepository.save(movement);
-            } else if (diff > 0) {
-                // Nếu chưa có stock record nào (số lượng = 0 trong hệ thống, nhưng thực tế có)
-                // Lấy một batch bất kỳ của sản phẩm hoặc tạo mới tuỳ logic, ở đây lấy batch đầu tiên (nếu có)
-                List<ProductBatch> batches = productBatchRepository.findByVariantId(variant.getId());
-                ProductBatch batch = batches.isEmpty() ? null : batches.get(0);
-
-                InventoryStock newStock = InventoryStock.builder()
-                        .variant(variant)
-                        .batch(batch)
-                        .location(location)
-                        .quantity(diff)
-                        .build();
-                inventoryStockRepository.save(newStock);
-
-                 StockMovement movement = StockMovement.builder()
-                        .variant(variant)
-                        .batch(batch)
-                        .location(location)
-                        .type("ADJUSTMENT")
-                        .quantity(diff)
-                        .referenceType("inventory_count")
-                        .referenceId(count.getId().longValue())
-                        .notes("Kiểm kê " + count.getCode() + ": thêm mới " + diff
-                                + (item.getReason() != null ? " - " + item.getReason() : ""))
-                        .build();
-                stockMovementRepository.save(movement);
-            }
+            StockMovement movement = StockMovement.builder()
+                    .variant(variant)
+                    .batch(movementBatch)
+                    .location(location)
+                    .type("ADJUSTMENT")
+                    .quantity(diff)
+                    .referenceType("inventory_count")
+                    .referenceId(count.getId().longValue())
+                    .notes("Kiểm kê " + count.getCode() + ": chênh lệch " + diff
+                            + (item.getReason() != null ? " - " + item.getReason() : ""))
+                    .build();
+            stockMovementRepository.save(movement);
         }
     }
 
