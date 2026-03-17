@@ -5,12 +5,7 @@ import {
   Trash2,
   X,
   Search,
-  Filter,
-  UserCheck,
-  Clock,
   Plus,
-  Check,
-  Ban,
   Upload,
   ImageIcon,
 } from "lucide-react";
@@ -26,7 +21,6 @@ const UserManagement = () => {
   const [isCreate, setIsCreate] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("approved");
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -55,7 +49,7 @@ const UserManagement = () => {
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, statusFilter, activeTab]);
+  }, [users, searchTerm, statusFilter]);
 
   const fetchUsers = async () => {
     try {
@@ -76,16 +70,6 @@ const UserManagement = () => {
   const filterUsers = () => {
     let filtered = normalizeUsers(users);
 
-    if (activeTab === "pending") {
-      filtered = filtered.filter(
-        (user) => normalizeStatus(user.status) === "pending",
-      );
-    } else {
-      filtered = filtered.filter(
-        (user) => normalizeStatus(user.status) !== "pending",
-      );
-    }
-
     if (searchTerm) {
       filtered = filtered.filter(
         (user) =>
@@ -95,7 +79,7 @@ const UserManagement = () => {
       );
     }
 
-    if (activeTab === "approved" && statusFilter !== "all") {
+    if (statusFilter !== "all") {
       filtered = filtered.filter(
         (user) => normalizeStatus(user.status) === statusFilter,
       );
@@ -354,39 +338,6 @@ const UserManagement = () => {
     }
   };
 
-  const handleApprove = async (userId) => {
-    try {
-      await userService.updateStatus(userId, "active");
-      fetchUsers();
-    } catch (err) {
-      setError(
-        "Không thể duyệt người dùng: " +
-          (err.response?.data?.message || err.message),
-      );
-    }
-  };
-
-  const handleReject = async (userId) => {
-    if (window.confirm("Bạn có chắc muốn từ chối yêu cầu đăng ký này?")) {
-      try {
-        await userService.remove(userId);
-        fetchUsers();
-      } catch (err) {
-        setError(
-          "Không thể từ chối: " + (err.response?.data?.message || err.message),
-        );
-      }
-    }
-  };
-
-  const safeUsers = normalizeUsers(users);
-  const pendingCount = safeUsers.filter(
-    (u) => normalizeStatus(u.status) === "pending",
-  ).length;
-  const approvedCount = safeUsers.filter(
-    (u) => normalizeStatus(u.status) !== "pending",
-  ).length;
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -417,31 +368,6 @@ const UserManagement = () => {
         </div>
       )}
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveTab("approved")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-            activeTab === "approved"
-              ? "bg-indigo-600 text-white shadow-md"
-              : "bg-white text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          <UserCheck size={20} />
-          Đã duyệt ({approvedCount})
-        </button>
-        <button
-          onClick={() => setActiveTab("pending")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-            activeTab === "pending"
-              ? "bg-orange-600 text-white shadow-md"
-              : "bg-white text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          <Clock size={20} />
-          Chờ duyệt ({pendingCount})
-        </button>
-      </div>
-
       <div className="bg-white p-4 rounded-xl border border-slate-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
@@ -459,35 +385,29 @@ const UserManagement = () => {
               />
             </div>
           </div>
-          {activeTab === "approved" && (
-            <div>
-              <CustomSelect
-                value={statusFilter}
-                onChange={(val) => setStatusFilter(val)}
-                variant="status"
-                options={[
-                  { value: "all", label: "Tất cả trạng thái" },
-                  { value: "active", label: "Hoạt động" },
-                  { value: "inactive", label: "Vô hiệu" },
-                ]}
-              />
-            </div>
-          )}
+          <div>
+            <CustomSelect
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val)}
+              variant="status"
+              options={[
+                { value: "all", label: "Tất cả trạng thái" },
+                { value: "active", label: "Hoạt động" },
+                { value: "inactive", label: "Vô hiệu" },
+              ]}
+            />
+          </div>
         </div>
         <div className="mt-3 text-sm text-slate-600">
           Hiển thị <span className="font-semibold">{filteredUsers.length}</span>{" "}
-          / {activeTab === "pending" ? pendingCount : approvedCount} người dùng
+          người dùng
         </div>
       </div>
 
       {filteredUsers.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
           <Users size={48} className="mx-auto text-slate-300 mb-4" />
-          <p className="text-slate-600">
-            {activeTab === "pending"
-              ? "Không có yêu cầu đăng ký nào"
-              : "Không tìm thấy người dùng nào"}
-          </p>
+          <p className="text-slate-600">Không tìm thấy người dùng nào</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -503,11 +423,9 @@ const UserManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Vai trò
                 </th>
-                {activeTab === "approved" && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Trạng thái
-                  </th>
-                )}
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Trạng thái
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Thao tác
                 </th>
@@ -559,58 +477,35 @@ const UserManagement = () => {
                       ]}
                     />
                   </td>
-                  {activeTab === "approved" && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <CustomSelect
-                        value={(user.status || "").toLowerCase()}
-                        onChange={(newStatus) =>
-                          handleStatusToggle(user.id, newStatus)
-                        }
-                        variant="status"
-                        options={[
-                          { value: "active", label: "Hoạt động" },
-                          { value: "inactive", label: "Vô hiệu" },
-                        ]}
-                      />
-                    </td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <CustomSelect
+                      value={(user.status || "").toLowerCase()}
+                      onChange={(newStatus) =>
+                        handleStatusToggle(user.id, newStatus)
+                      }
+                      variant="status"
+                      options={[
+                        { value: "active", label: "Hoạt động" },
+                        { value: "inactive", label: "Vô hiệu" },
+                      ]}
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      {activeTab === "pending" ? (
-                        <>
-                          <button
-                            onClick={() => handleApprove(user.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-medium"
-                            title="Duyệt"
-                          >
-                            <Check size={14} /> Duyệt
-                          </button>
-                          <button
-                            onClick={() => handleReject(user.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xs font-medium"
-                            title="Từ chối"
-                          >
-                            <Ban size={14} /> Từ chối
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleEdit(user)}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                            title="Xóa"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => handleEdit(user)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                        title="Chỉnh sửa"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title="Xóa"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </td>
                 </tr>
