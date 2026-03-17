@@ -212,6 +212,7 @@ export default function CRMReport() {
     const [search, setSearch] = useState('');
     const [campaignChartMode, setCampaignChartMode] = useState('monthly');
     const [giftPage, setGiftPage] = useState(0);
+    const [customerPage, setCustomerPage] = useState(0);
 
     React.useEffect(() => {
         const loadAds = async () => {
@@ -278,8 +279,7 @@ export default function CRMReport() {
         .sort((a, b) => (b.currentUsageCount || 0) - (a.currentUsageCount || 0))
         .slice(0, 5);
     const topCustomersBySpend = [...customers]
-        .sort((a, b) => (Number(b.spentAmount) || 0) - (Number(a.spentAmount) || 0))
-        .slice(0, 5);
+        .sort((a, b) => (Number(b.spentAmount) || 0) - (Number(a.spentAmount) || 0));
     const maxCustomerSpend = Math.max(...topCustomersBySpend.map(customer => Number(customer.spentAmount) || 0), 1);
 
     const eventBudgetComparison = [...campaigns]
@@ -451,21 +451,50 @@ export default function CRMReport() {
                 <AnalyticsPanel
                     title="Top khách hàng theo chi tiêu"
                 >
-                    {topCustomersBySpend.length === 0 ? <Empty text="Chưa có dữ liệu chi tiêu khách hàng." /> : (
-                        <div className="space-y-4">
-                            {topCustomersBySpend.map((customer) => (
-                                <HorizontalBar
-                                    key={customer.id}
-                                    label={customer.name}
-                                    labelTag={getCustomerTierLabel(customer)}
-                                    helper={`${customer.phone || 'Không có SĐT'} · ${(customer.loyaltyPoints || 0).toLocaleString()} pts`}
-                                    value={fmt(customer.spentAmount)}
-                                    percent={((Number(customer.spentAmount) || 0) / maxCustomerSpend) * 100}
-                                    color="emerald"
-                                />
-                            ))}
-                        </div>
-                    )}
+                    {topCustomersBySpend.length === 0 ? <Empty text="Chưa có dữ liệu chi tiêu khách hàng." /> : (() => {
+                        const CUST_PAGE_SIZE = 5;
+                        const totalCustomerPages = Math.max(1, Math.ceil(topCustomersBySpend.length / CUST_PAGE_SIZE));
+                        const safeCustPage = Math.min(customerPage, totalCustomerPages - 1);
+                        const pageCustomers = topCustomersBySpend.slice(safeCustPage * CUST_PAGE_SIZE, safeCustPage * CUST_PAGE_SIZE + CUST_PAGE_SIZE);
+                        return (
+                            <>
+                                <div className="space-y-4 min-h-[120px]">
+                                    {pageCustomers.map((customer) => (
+                                        <HorizontalBar
+                                            key={customer.id}
+                                            label={customer.name}
+                                            labelTag={getCustomerTierLabel(customer)}
+                                            helper={`${customer.phone || 'Không có SĐT'} · ${(customer.loyaltyPoints || 0).toLocaleString()} pts`}
+                                            value={fmt(customer.spentAmount)}
+                                            percent={((Number(customer.spentAmount) || 0) / maxCustomerSpend) * 100}
+                                            color="emerald"
+                                        />
+                                    ))}
+                                </div>
+                                {totalCustomerPages > 1 && (
+                                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+                                        <button
+                                            onClick={() => setCustomerPage(p => Math.max(0, p - 1))}
+                                            disabled={safeCustPage === 0}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            ← Trước
+                                        </button>
+                                        <span className="text-xs text-slate-400">
+                                            {safeCustPage + 1} / {totalCustomerPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setCustomerPage(p => Math.min(totalCustomerPages - 1, p + 1))}
+                                            disabled={safeCustPage >= totalCustomerPages - 1}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Sau →
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </AnalyticsPanel>
                 <AnalyticsPanel
                     title="Kho quà loyalty"
