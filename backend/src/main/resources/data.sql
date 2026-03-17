@@ -48,6 +48,7 @@ TRUNCATE TABLE inventory_stock;
 TRUNCATE TABLE product_batches;
 TRUNCATE TABLE locations;
 TRUNCATE TABLE variant_prices;
+TRUNCATE TABLE variant_attributes;
 TRUNCATE TABLE product_variants;
 TRUNCATE TABLE gift_redemption_history;
 TRUNCATE TABLE loyalty_gifts;
