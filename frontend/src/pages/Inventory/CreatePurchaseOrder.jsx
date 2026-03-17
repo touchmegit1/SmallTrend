@@ -23,6 +23,7 @@ function CreatePurchaseOrder() {
     products,
     suppliers,
     locations,
+    lowStockSuggestions,
     loading,
     saving,
     error,
@@ -209,7 +210,7 @@ function CreatePurchaseOrder() {
             receiptItems={receiptItems}
             onUpdateReceiptItem={updateReceiptItem}
             isReadOnly={!isChecking}
-            lockExpiryDate={isChecking}
+            lockExpiryDate={false}
           />
         ) : (
           <div className="flex-1 overflow-auto px-6 py-5">
@@ -228,6 +229,16 @@ function CreatePurchaseOrder() {
                 {order.status === PO_STATUS.CONFIRMED && (
                   <div className="mb-3 text-xs text-blue-600">
                     Phiếu đã duyệt · chờ bắt đầu kiểm kê
+                  </div>
+                )}
+                {order.status === PO_STATUS.REJECTED && order.rejection_reason && (
+                  <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-red-700">
+                      Lý do quản lý từ chối
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-red-800">
+                      {order.rejection_reason}
+                    </p>
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-3">
@@ -264,6 +275,7 @@ function CreatePurchaseOrder() {
               {isEditable && (
                 <ProductSearchBar
                   products={products}
+                  suggestedProducts={lowStockSuggestions}
                   onAddProduct={addProduct}
                   onImportProducts={importProducts}
                 />
@@ -312,7 +324,7 @@ function CreatePurchaseOrder() {
             updateOrder={updateOrder}
             isEditable={isEditable}
             allowMetaEdit={isChecking}
-            lockMetaFields={isChecking}
+            lockMetaFields={!isChecking}
             checkingFinancials={checkingFinancials}
           />
 

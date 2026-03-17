@@ -16,6 +16,7 @@ import com.smalltrend.repository.StockMovementRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.LocationRepository;
 import com.smalltrend.repository.ProductBatchRepository;
+import com.smalltrend.validation.inventory.count.InventoryCountRequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,7 @@ public class InventoryCountService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductBatchRepository productBatchRepository;
     private final InventoryOutOfStockNotificationService outOfStockNotificationService;
+    private final InventoryCountRequestValidator inventoryCountRequestValidator;
 
     private static final Map<String, Set<String>> ALLOWED_STATUS_TRANSITIONS = buildAllowedTransitions();
     private static final Set<String> FINALIZED_STATUSES = Set.of("CONFIRMED", "CANCELLED");
@@ -139,8 +141,7 @@ public class InventoryCountService {
         InventoryCount count = findCountOrThrow(id);
 
         assertNotFinalized(count, "xác nhận");
-        validateItemsRequired(request.getItems());
-        validateLocationRequired(request.getLocationId());
+        inventoryCountRequestValidator.validateRequiredForWorkflow(request);
 
         assertTransition(count.getStatus(), "CONFIRMED");
         count.setStatus("CONFIRMED");
@@ -164,8 +165,7 @@ public class InventoryCountService {
 
     @Transactional
     public InventoryCountResponse createAndConfirm(InventoryCountRequest request) {
-        validateItemsRequired(request.getItems());
-        validateLocationRequired(request.getLocationId());
+        inventoryCountRequestValidator.validateRequiredForWorkflow(request);
 
         String code = generateCode();
 
@@ -197,8 +197,7 @@ public class InventoryCountService {
     public InventoryCountResponse submitForApproval(Integer id, InventoryCountRequest request) {
         InventoryCount count = findCountOrThrow(id);
 
-        validateItemsRequired(request.getItems());
-        validateLocationRequired(request.getLocationId());
+        inventoryCountRequestValidator.validateRequiredForWorkflow(request);
 
         assertTransition(count.getStatus(), "PENDING");
         count.setStatus("PENDING");
@@ -220,8 +219,7 @@ public class InventoryCountService {
 
     @Transactional
     public InventoryCountResponse createAndSubmitForApproval(InventoryCountRequest request) {
-        validateItemsRequired(request.getItems());
-        validateLocationRequired(request.getLocationId());
+        inventoryCountRequestValidator.validateRequiredForWorkflow(request);
 
         String code = generateCode();
 
@@ -344,18 +342,6 @@ public class InventoryCountService {
     private void assertNotFinalized(InventoryCount count, String action) {
         if (FINALIZED_STATUSES.contains(count.getStatus())) {
             throw InventoryCountException.countAlreadyFinalized(action, count.getStatus());
-        }
-    }
-
-    private void validateItemsRequired(List<InventoryCountItemRequest> items) {
-        if (items == null || items.isEmpty()) {
-            throw InventoryCountException.countItemsRequired();
-        }
-    }
-
-    private void validateLocationRequired(Integer locationId) {
-        if (locationId == null) {
-            throw InventoryCountException.locationRequired();
         }
     }
 

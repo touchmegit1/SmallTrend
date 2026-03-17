@@ -70,14 +70,18 @@ public class ProductComboServiceImpl implements ProductComboService {
     @Override
     @Transactional
     public ProductComboResponse createCombo(CreateProductComboRequest request) {
+        productComboValidator.validateForCreate(request);
+
         // Tự sinh comboCode nếu frontend không gửi
         String comboCode = request.getComboCode();
         if (comboCode == null || comboCode.trim().isEmpty()) {
             comboCode = generateComboCode();
             request.setComboCode(comboCode);
         } else {
+            String normalizedComboCode = comboCode.trim();
             // Chỉ kiểm tra trùng khi user tự nhập comboCode
-            productComboValidator.validateComboCodeUniqueForCreate(comboCode);
+            productComboValidator.validateComboCodeUniqueForCreate(normalizedComboCode);
+            request.setComboCode(normalizedComboCode);
         }
 
         ProductCombo combo = new ProductCombo();
@@ -119,6 +123,7 @@ public class ProductComboServiceImpl implements ProductComboService {
     @Transactional
     public ProductComboResponse updateCombo(Integer id, CreateProductComboRequest request) {
         ProductCombo combo = productComboValidator.requireExistingCombo(id);
+        productComboValidator.validateForUpdate(id, request);
 
         // Check if combo code changing and existing
         productComboValidator.validateComboCodeUniqueForUpdate(combo, request.getComboCode());
@@ -174,7 +179,7 @@ public class ProductComboServiceImpl implements ProductComboService {
 
     private void applyRequestToCombo(CreateProductComboRequest request, ProductCombo combo) {
         combo.setComboCode(request.getComboCode());
-        combo.setComboName(request.getComboName());
+        combo.setComboName(request.getComboName() != null ? request.getComboName().trim() : null);
         combo.setDescription(request.getDescription());
         if (request.getImageUrl() != null) {
             combo.setImageUrl(request.getImageUrl());

@@ -39,13 +39,13 @@ public class PurchaseOrderController {
     }
 
     @PostMapping("/purchase-orders/draft")
-    public ResponseEntity<PurchaseOrderResponse> saveDraft(@RequestBody PurchaseOrderRequest request) {
+    public ResponseEntity<PurchaseOrderResponse> saveDraft(@Valid @RequestBody PurchaseOrderRequest request) {
         return ResponseEntity.ok(purchaseOrderService.saveDraft(request));
     }
 
     @PostMapping("/purchase-orders/confirm")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
-    public ResponseEntity<PurchaseOrderResponse> confirmOrder(@RequestBody PurchaseOrderRequest request) {
+    public ResponseEntity<PurchaseOrderResponse> confirmOrder(@Valid @RequestBody PurchaseOrderRequest request) {
         return ResponseEntity.ok(purchaseOrderService.confirmOrder(request));
     }
 
@@ -56,7 +56,7 @@ public class PurchaseOrderController {
     }
 
     @PutMapping("/purchase-orders/{id}")
-    public ResponseEntity<PurchaseOrderResponse> updateOrder(@PathVariable("id") Integer id, @RequestBody PurchaseOrderRequest request) {
+    public ResponseEntity<PurchaseOrderResponse> updateOrder(@PathVariable("id") Integer id, @Valid @RequestBody PurchaseOrderRequest request) {
         return ResponseEntity.ok(purchaseOrderService.updateOrder(id, request));
     }
 
@@ -82,7 +82,7 @@ public class PurchaseOrderController {
 
     @PutMapping("/purchase-orders/{id}/receive")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'INVENTORY_STAFF', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_INVENTORY_STAFF')")
-    public ResponseEntity<PurchaseOrderResponse> receiveGoods(@PathVariable("id") Integer id, @RequestBody GoodsReceiptRequest request) {
+    public ResponseEntity<PurchaseOrderResponse> receiveGoods(@PathVariable("id") Integer id, @Valid @RequestBody GoodsReceiptRequest request) {
         return ResponseEntity.ok(purchaseOrderService.receiveGoods(id, request));
     }
 

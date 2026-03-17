@@ -130,7 +130,7 @@ const Category_Brand = () => {
   const handleSave = async () => {
     // Validate kiểm tra tên bắt buộc
     if (!formData.name?.trim()) {
-      setToastMessage('Vui lòng nhập tên!');
+      setToastMessage(`Vui lòng nhập tên ${activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}!`);
       setTimeout(() => setToastMessage(""), 3000);
       return;
     }
@@ -208,7 +208,7 @@ const Category_Brand = () => {
     <div className="space-y-6">
       {/* KHỐI HIỂN THỊ: Thông báo Toast UI phản hồi thành công và lỗi */}
       {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right">
+        <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-right">
           <div className={`flex items-center gap-3 text-white rounded-xl px-6 py-4 shadow-2xl transition-all duration-300 ${toastMessage.startsWith("Lỗi") || toastMessage.startsWith("Vui lòng")
             ? "bg-gradient-to-r from-red-500 to-rose-500 ring-4 ring-red-500/20"
             : "bg-gradient-to-r from-green-500 to-emerald-500 ring-4 ring-green-500/20"

@@ -188,7 +188,7 @@ function StockByProductChart({ products }) {
         data={highStock}
         colors={HIGH_COLORS}
         maxStock={maxHigh}
-        emptyMsg="✅ Không có sản phẩm tồn kho cao"
+        emptyMsg="Không có sản phẩm tồn kho cao"
       />
 
       {/* Biểu đồ 2: Tồn kho thấp */}
@@ -200,7 +200,7 @@ function StockByProductChart({ products }) {
         data={lowStock}
         colors={LOW_COLORS}
         maxStock={maxLow}
-        emptyMsg="✅ Không có sản phẩm cần cảnh báo tồn kho"
+        emptyMsg="Không có sản phẩm cần cảnh báo tồn kho"
       />
     </div>
   );

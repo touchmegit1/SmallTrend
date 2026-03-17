@@ -23,6 +23,7 @@ public class BrandServiceImpl implements BrandService {
     // Lưu mới Thương hiệu vào Database
     @Override
     public Brand create(Brand brand) {
+        brandValidator.validateNameUniqueForCreate(brand.getName());
         return brandRepository.save(brand);
     }
 
@@ -42,6 +43,7 @@ public class BrandServiceImpl implements BrandService {
     @Override
     public Brand update(Integer id, Brand brand) {
         Brand existing = getById(id);
+        brandValidator.validateNameUniqueForUpdate(brand.getName(), id);
         existing.setName(brand.getName());
         existing.setCountry(brand.getCountry());
         existing.setDescription(brand.getDescription());

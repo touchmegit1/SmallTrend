@@ -28,6 +28,7 @@ const CreateCombo = () => {
   const [showVariantPicker, setShowVariantPicker] = useState(false);
   const [availableVariants, setAvailableVariants] = useState([]); // Renamed from allVariants to match original
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Thêm state upload image
   const [imageFile, setImageFile] = useState(null);
@@ -37,7 +38,7 @@ const CreateCombo = () => {
   const fileInputRef = useRef(null);
 
   const navigate = useNavigate();
-  const { createCombo } = useProductCombos();
+  const { combos, createCombo } = useProductCombos();
 
   useEffect(() => {
     // Gọi API lấy danh sách các variant (sản phẩm con) để hiển thị trên ô tìm kiếm
@@ -56,9 +57,9 @@ const CreateCombo = () => {
   // Hàm xử lý việc gõ text nội dung của thông tin Combo
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setErrorMsg("");
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
@@ -163,11 +164,55 @@ const CreateCombo = () => {
     }
   };
 
+  const validateForm = () => {
+    const normalizedName = (formData.comboName || "").trim();
+    const parsedComboPrice = Number(formData.comboPrice);
+
+    if (!normalizedName) {
+      return "Vui lòng nhập tên combo";
+    }
+
+    if (!Number.isFinite(parsedComboPrice) || parsedComboPrice <= 0) {
+      return "Giá combo phải lớn hơn 0";
+    }
+
+    if (selectedVariants.length === 0) {
+      return "Vui lòng chọn ít nhất 1 sản phẩm";
+    }
+
+    const seen = new Set();
+    for (const variant of selectedVariants) {
+      if (!variant?.id) {
+        return "Sản phẩm trong combo không hợp lệ";
+      }
+      if (variant.quantity < 1) {
+        return "Số lượng sản phẩm trong combo phải lớn hơn 0";
+      }
+      if (seen.has(variant.id)) {
+        return "Không được thêm trùng sản phẩm trong combo";
+      }
+      seen.add(variant.id);
+    }
+
+    const duplicateName = combos.some(
+      (combo) => (combo.comboName || "").trim().toLowerCase() === normalizedName.toLowerCase(),
+    );
+
+    if (duplicateName) {
+      return "Tên combo đã tồn tại";
+    }
+
+    return null;
+  };
+
   // Xử lý gửi API để lưu danh sách con thành Combo duy nhất
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedVariants.length === 0) { // Changed condition from < 2 to === 0
-      alert("Vui lòng chọn ít nhất 1 sản phẩm!"); // Used alert instead of setToast
+    setErrorMsg("");
+
+    const validationError = validateForm();
+    if (validationError) {
+      setErrorMsg(validationError);
       return;
     }
 
@@ -180,6 +225,7 @@ const CreateCombo = () => {
 
       const payload = {
         ...formData,
+        comboName: formData.comboName.trim(),
         imageUrl,
         comboPrice: Number(formData.comboPrice),
         originalPrice: totalPrice,
@@ -195,7 +241,7 @@ const CreateCombo = () => {
         state: { message: "Tạo combo thành công!" },
       });
     } catch (err) {
-      alert(err.message || "Có lỗi xảy ra khi tạo combo");
+      setErrorMsg(err.message || "Có lỗi xảy ra khi tạo combo");
       setIsSubmitting(false);
     }
   };
@@ -203,6 +249,11 @@ const CreateCombo = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-medium">
+            {errorMsg}
+          </div>
+        )}
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -277,6 +328,8 @@ const CreateCombo = () => {
                     <Input
                       className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       type="number"
+                      min="0.01"
+                      step="0.01"
                       placeholder="0"
                       name="comboPrice"
                       value={formData.comboPrice}

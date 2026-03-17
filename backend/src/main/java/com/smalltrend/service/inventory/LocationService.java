@@ -16,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -240,6 +242,21 @@ public class LocationService {
     }
 
     private LocationStockItemResponse toStockItemResponse(InventoryStock stock) {
+        LocalDate expiryDate = stock.getBatch() != null ? stock.getBatch().getExpiryDate() : null;
+        Integer daysUntilExpiry = null;
+        String warningStatus = null;
+
+        if (expiryDate != null) {
+            daysUntilExpiry = (int) ChronoUnit.DAYS.between(LocalDate.now(), expiryDate);
+            if (daysUntilExpiry < 0) {
+                warningStatus = "EXPIRED";
+            } else if (daysUntilExpiry <= 7) {
+                warningStatus = "EXPIRING_CRITICAL";
+            } else if (daysUntilExpiry <= 30) {
+                warningStatus = "EXPIRING_WARNING";
+            }
+        }
+
         return LocationStockItemResponse.builder()
                 .variantId(stock.getVariant() != null ? stock.getVariant().getId() : null)
                 .sku(stock.getVariant() != null ? stock.getVariant().getSku() : "")
@@ -250,6 +267,9 @@ public class LocationService {
                 .quantity(stock.getQuantity() != null ? stock.getQuantity() : 0)
                 .batchCode(stock.getBatch() != null ? stock.getBatch().getBatchNumber() : "")
                 .batchId(stock.getBatch() != null ? stock.getBatch().getId() : null)
+                .expiryDate(expiryDate != null ? expiryDate.toString() : null)
+                .daysUntilExpiry(daysUntilExpiry)
+                .warningStatus(warningStatus)
                 .build();
     }
 }

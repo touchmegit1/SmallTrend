@@ -40,16 +40,17 @@ export const getPurchaseOrders = async () => {
     contract_number: order.contractNumber || order.contract_number,
     contract_title: order.contractTitle || order.contract_title,
     location_id: order.locationId || order.location_id,
-    total_amount: order.totalAmount || order.total_amount,
+    total_amount: order.totalAmount ?? order.total_amount,
     created_at: order.createdAt || order.created_at,
     confirmed_at: order.confirmedAt || order.confirmed_at,
-    tax_percent: order.taxPercent || order.tax_percent,
-    shipping_fee: order.shippingFee || order.shipping_fee,
-    paid_amount: order.paidAmount || order.paid_amount,
-    remaining_amount: order.remainingAmount || order.remaining_amount,
-    tax_amount: order.taxAmount || order.tax_amount,
+    tax_percent: order.taxPercent ?? order.tax_percent,
+    shipping_fee: order.shippingFee ?? order.shipping_fee,
+    paid_amount: order.paidAmount ?? order.paid_amount,
+    remaining_amount: order.remainingAmount ?? order.remaining_amount,
+    tax_amount: order.taxAmount ?? order.tax_amount,
     shortage_reason: order.shortageReason || order.shortage_reason,
     manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
+    rejection_reason: order.rejectionReason || order.rejection_reason,
   }));
 };
 
@@ -71,16 +72,17 @@ export const getPurchaseOrderById = async (id) => {
     contract_number: order.contractNumber || order.contract_number,
     contract_title: order.contractTitle || order.contract_title,
     location_id: order.locationId || order.location_id,
-    total_amount: order.totalAmount || order.total_amount,
+    total_amount: order.totalAmount ?? order.total_amount,
     created_at: order.createdAt || order.created_at,
     confirmed_at: order.confirmedAt || order.confirmed_at,
-    tax_percent: order.taxPercent || order.tax_percent,
-    shipping_fee: order.shippingFee || order.shipping_fee,
-    paid_amount: order.paidAmount || order.paid_amount,
-    remaining_amount: order.remainingAmount || order.remaining_amount,
-    tax_amount: order.taxAmount || order.tax_amount,
+    tax_percent: order.taxPercent ?? order.tax_percent,
+    shipping_fee: order.shippingFee ?? order.shipping_fee,
+    paid_amount: order.paidAmount ?? order.paid_amount,
+    remaining_amount: order.remainingAmount ?? order.remaining_amount,
+    tax_amount: order.taxAmount ?? order.tax_amount,
     shortage_reason: order.shortageReason || order.shortage_reason,
     manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
+    rejection_reason: order.rejectionReason || order.rejection_reason,
   };
 };
 
@@ -575,6 +577,9 @@ export const getActiveLocations = async () => {
       variant_unit: item.variantUnit || item.variant_unit,
       batch_code: item.batchCode || item.batch_code,
       batch_id: item.batchId || item.batch_id,
+      expiry_date: item.expiryDate || item.expiry_date,
+      days_until_expiry: item.daysUntilExpiry ?? item.days_until_expiry,
+      warning_status: item.warningStatus || item.warning_status || null,
     })),
   }));
 };
@@ -621,6 +626,9 @@ export const getLocations = async () => {
       variant_unit: item.variantUnit || item.variant_unit,
       batch_code: item.batchCode || item.batch_code,
       batch_id: item.batchId || item.batch_id,
+      expiry_date: item.expiryDate || item.expiry_date,
+      days_until_expiry: item.daysUntilExpiry ?? item.days_until_expiry,
+      warning_status: item.warningStatus || item.warning_status || null,
     })),
   }));
 };

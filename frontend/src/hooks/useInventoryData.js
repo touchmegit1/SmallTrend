@@ -111,6 +111,7 @@ export function useInventoryDashboard() {
         status,
         expiry_date: expiryDate,
         received_date: receivedDate,
+        location_name: b.locationName || b.location_name || b.locationCode || b.location_code || null,
         quantity: b.quantity ?? 0,
         daysRemaining: expiryDate ? days : null,
       };
@@ -206,7 +207,7 @@ export function useInventoryDashboard() {
       totalStockUnits,
       totalInventoryValue: dashboardSummary.totalInventoryValue,
       outOfStock,
-      criticalStock: dashboardSummary.lowStockCount,
+      criticalStock,
       lowStock,
       healthyStock,
       expiredBatches: dashboardSummary.expiredBatchCount,
