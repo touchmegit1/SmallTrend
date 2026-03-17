@@ -1,11 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Trash, Zap, Barcode, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import Button from "../ProductComponents/button";
 import { Input } from "../ProductComponents/input";
 import { Label } from "../ProductComponents/label";
+import { Badge } from "../ProductComponents/badge";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useFetchUnits } from "../../../hooks/product_variants";
+import { useFetchUnits, useFetchVariants } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 
 // Màn hình Thêm mới một Variant (Sản phẩm biến thể)
@@ -20,6 +21,7 @@ const AddNewProductVariant = () => {
   const product = location.state?.product;
 
   const { units, loading: unitsLoading } = useFetchUnits();
+  const { variants } = useFetchVariants(product?.id);
 
   const [formData, setFormData] = useState({
     sku: "",
@@ -36,6 +38,8 @@ const AddNewProductVariant = () => {
   const [errorMsg, setErrorMsg] = useState("");
   const [generatingSku, setGeneratingSku] = useState(false);
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
+  const [showAllAttributeSuggestions, setShowAllAttributeSuggestions] = useState(false);
+  const [showAllPairSuggestions, setShowAllPairSuggestions] = useState(false);
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -135,6 +139,77 @@ const AddNewProductVariant = () => {
     const newAttrs = [...attributes];
     newAttrs[index][field] = value;
     setAttributes(newAttrs);
+  };
+
+  const normalizeAttrText = (value) =>
+    (value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[đĐ]/g, "d")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+  const hasAttributeName = (name) => {
+    const normalizedName = normalizeAttrText(name);
+    return attributes.some((attr) => normalizeAttrText(attr.name) === normalizedName);
+  };
+
+  const hasAttributePair = (name, value) => {
+    const normalizedName = normalizeAttrText(name);
+    const normalizedValue = normalizeAttrText(value);
+    return attributes.some(
+      (attr) =>
+        normalizeAttrText(attr.name) === normalizedName &&
+        normalizeAttrText(attr.value) === normalizedValue
+    );
+  };
+
+  const attributeSuggestions = useMemo(() => {
+    const map = new Map();
+    variants.forEach((variant) => {
+      const attrs = variant?.attributes || {};
+      Object.entries(attrs).forEach(([name, value]) => {
+        if (!name || !String(name).trim()) return;
+        const normalizedName = normalizeAttrText(name);
+        if (!normalizedName || map.has(normalizedName)) return;
+        map.set(normalizedName, String(name).trim());
+      });
+    });
+    return Array.from(map.values());
+  }, [variants]);
+
+  const attributePairSuggestions = useMemo(() => {
+    const map = new Map();
+    variants.forEach((variant) => {
+      const attrs = variant?.attributes || {};
+      Object.entries(attrs).forEach(([name, value]) => {
+        if (!name || !String(name).trim()) return;
+        if (value === null || value === undefined || !String(value).trim()) return;
+        const normalizedKey = `${normalizeAttrText(name)}::${normalizeAttrText(value)}`;
+        if (!normalizedKey || map.has(normalizedKey)) return;
+        map.set(normalizedKey, { name: String(name).trim(), value: String(value).trim() });
+      });
+    });
+    return Array.from(map.values());
+  }, [variants]);
+
+  const visibleAttributeSuggestions = showAllAttributeSuggestions
+    ? attributeSuggestions
+    : attributeSuggestions.slice(0, 8);
+
+  const visiblePairSuggestions = showAllPairSuggestions
+    ? attributePairSuggestions
+    : attributePairSuggestions.slice(0, 8);
+
+  const handleApplyAttributeNameSuggestion = (name) => {
+    if (!name || hasAttributeName(name)) return;
+    setAttributes([...attributes, { name, value: "" }]);
+  };
+
+  const handleApplyAttributePairSuggestion = ({ name, value }) => {
+    if (!name || !value || hasAttributePair(name, value)) return;
+    setAttributes([...attributes, { name, value }]);
   };
 
   const handleAddConversion = () => {
@@ -526,6 +601,92 @@ const AddNewProductVariant = () => {
                         ))}
                       </div>
                     )}
+
+                    {(attributeSuggestions.length > 0 || attributePairSuggestions.length > 0) && (
+                      <div className="mt-4 space-y-3 rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                        {attributeSuggestions.length > 0 && (
+                          <div>
+                            <p className="mb-2 text-xs font-semibold text-indigo-700">Gợi ý tên thuộc tính</p>
+                            <div className="flex flex-wrap gap-2">
+                              {visibleAttributeSuggestions.map((name) => {
+                                const disabled = hasAttributeName(name);
+                                return (
+                                  <button
+                                    key={name}
+                                    type="button"
+                                    onClick={() => handleApplyAttributeNameSuggestion(name)}
+                                    disabled={disabled}
+                                    className="disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    <Badge
+                                      variant="outline"
+                                      className={`cursor-pointer border-indigo-200 text-indigo-700 ${disabled ? "bg-gray-100 text-gray-400" : "bg-white hover:bg-indigo-100"}`}
+                                    >
+                                      {name}
+                                    </Badge>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {attributeSuggestions.length > 8 && (
+                              <button
+                                type="button"
+                                onClick={() => setShowAllAttributeSuggestions((prev) => !prev)}
+                                className="mt-2 text-xs font-medium text-indigo-700 hover:underline"
+                              >
+                                {showAllAttributeSuggestions ? "Thu gọn" : `Xem thêm ${attributeSuggestions.length - 8} gợi ý`}
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {attributePairSuggestions.length > 0 && (
+                          <div>
+                            <p className="mb-2 text-xs font-semibold text-indigo-700">Gợi ý nhanh thuộc tính + giá trị</p>
+                            <div className="flex flex-wrap gap-2">
+                              {visiblePairSuggestions.map((pair) => {
+                                const key = `${pair.name}:${pair.value}`;
+                                const disabled = hasAttributePair(pair.name, pair.value);
+                                return (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => handleApplyAttributePairSuggestion(pair)}
+                                    disabled={disabled}
+                                    className="disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    <Badge
+                                      variant="secondary"
+                                      className={`cursor-pointer ${disabled ? "bg-gray-100 text-gray-400" : "bg-indigo-100 text-indigo-800 hover:bg-indigo-200"}`}
+                                    >
+                                      {pair.name}: {pair.value}
+                                    </Badge>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {attributePairSuggestions.length > 8 && (
+                              <button
+                                type="button"
+                                onClick={() => setShowAllPairSuggestions((prev) => !prev)}
+                                className="mt-2 text-xs font-medium text-indigo-700 hover:underline"
+                              >
+                                {showAllPairSuggestions ? "Thu gọn" : `Xem thêm ${attributePairSuggestions.length - 8} gợi ý`}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {variants.length > 0 && attributeSuggestions.length === 0 && attributePairSuggestions.length === 0 && (
+                      <p className="mt-3 text-xs text-gray-500 italic">Chưa có dữ liệu thuộc tính để gợi ý từ các biến thể hiện có.</p>
+                    )}
+
+                    {variants.length === 0 && (
+                      <p className="mt-3 text-xs text-gray-500 italic">Khi sản phẩm có biến thể trước đó, hệ thống sẽ hiện gợi ý thuộc tính tại đây.</p>
+                    )}
+
                   </div>
 
                   {/* DYNAMIC CONVERSIONS */}

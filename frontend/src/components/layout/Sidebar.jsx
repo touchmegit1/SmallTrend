@@ -106,20 +106,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
           { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
         ],
     },
-    {
-      icon: BarChart3,
-      label: "Báo cáo & AI",
-      path: "/reports",
-      children: [
-        { label: "Tạo báo cáo", path: "/reports/create" },
-        { label: "Quản lý báo cáo", path: "/reports/manage" },
-        { label: "AI dự báo", path: "/reports/ai-chat" },
-        { label: "Báo cáo doanh thu", path: "/reports/sales" },
-        { label: "Báo cáo kho", path: "/reports/inventory" },
-        { label: "Nhật ký kiểm toán", path: "/reports/audit-logs" },
-        { label: "Nhật ký hoạt động", path: "/reports/logs" },
-      ],
-    },
   ];
 
   return (
@@ -128,8 +114,7 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         <div
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-slate-50 rounded-lg p-2`}
           onClick={() => {
-            const isAdminRole = isAdmin;
-            navigate(isAdminRole ? "/dashboard" : "/pos");
+            navigate("/crm/homepage");
           }}
           title="Về trang chính"
         >
@@ -213,28 +198,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
                   }
                 >
                   Quản lý người dùng
-                </NavLink>
-                <NavLink
-                  to="/admin/ticket-center"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Trung tâm Báo cáo
-                </NavLink>
-                <NavLink
-                  to="/admin/audit-logs"
-                  className={({ isActive }) =>
-                    `block px-3 py-2 rounded-md text-sm transition-colors ${isActive
-                      ? "bg-indigo-100 text-indigo-700 font-medium"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  Nhật ký Audit
                 </NavLink>
               </div>
             )}

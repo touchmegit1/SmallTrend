@@ -1,310 +1,528 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Search,
+  Ticket,
+} from "lucide-react";
 import { useActiveCampaigns, useDiscountedVariants, useAllVariants } from '../../hooks/useEventData';
-import SideAds from "./Component/SideAds";
+import { useVouchers } from '../../hooks/useVouchers';
+import { useFetchCategories } from '../../hooks/categories';
+import adService from '../../services/adService';
 
-// ─── PLACEHOLDER IMAGE ────────────────────────────────────────────────────────
-const PLACEHOLDER = "https://placehold.co/400x300?text=No+Image";
+const PLACEHOLDER = "https://placehold.co/640x480?text=SmallTrend";
+const PAGE_SIZE = 3;
 
-// ─── DISCOUNT BADGE helper ────────────────────────────────────────────────────
+const fmt = (value) => (value != null ? `${Number(value).toLocaleString("vi-VN")}đ` : "-");
+
+const getProductName = (variant) => variant?.name || variant?.productName || variant?.sku || "Sản phẩm";
+
+const getCategoryName = (variant) =>
+  variant?.categoryName || variant?.category_name || variant?.category?.name || "";
+
+const getCategoryId = (variant) =>
+  variant?.categoryId ?? variant?.category_id ?? variant?.category?.id;
+
+const getSearchText = (variant) => [
+  variant?.name,
+  variant?.productName,
+  variant?.sku,
+  variant?.brandName,
+  getCategoryName(variant),
+].filter(Boolean).join(" ").toLowerCase();
+
+const getSaving = (variant) => {
+  const originalPrice = Number(variant?.sellPrice ?? 0);
+  const finalPrice = Number(variant?.discountedPrice ?? variant?.sellPrice ?? 0);
+  return Math.max(0, originalPrice - finalPrice);
+};
+
+const isVoucherCurrentlyActive = (voucher) => {
+  const rawStatus = (voucher?.status || "").toUpperCase();
+  if (rawStatus !== "ACTIVE") return false;
+
+  if (!voucher?.endDate) return true;
+  const endDate = new Date(voucher.endDate);
+  if (Number.isNaN(endDate.getTime())) return true;
+
+  // Keep voucher active until the end of its endDate in local time.
+  endDate.setHours(23, 59, 59, 999);
+  return endDate >= new Date();
+};
+
+const formatVoucherBenefit = (voucher) => {
+  if (voucher?.couponType === "PERCENTAGE") {
+    return `Giảm ${voucher?.discountPercent || 0}%`;
+  }
+  if (voucher?.couponType === "FIXED_AMOUNT") {
+    return `Giảm ${fmt(voucher?.discountAmount)}`;
+  }
+  return voucher?.couponName || "Ưu đãi tại quầy";
+};
+
 function DiscountBadge({ couponType, discountPercent, discountAmount }) {
-  if (couponType === "PERCENTAGE" && discountPercent)
+  if (couponType === "PERCENTAGE" && discountPercent) {
     return (
-      <span className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 text-xs rounded font-bold shadow">
-        -{discountPercent}% OFF
+      <span className="absolute left-3 top-3 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
+        Giảm {discountPercent}%
       </span>
     );
-  if (couponType === "FIXED_AMOUNT" && discountAmount)
+  }
+
+  if (couponType === "FIXED_AMOUNT" && discountAmount) {
     return (
-      <span className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-0.5 text-xs rounded font-bold shadow">
-        -{Number(discountAmount).toLocaleString("vi-VN")}đ
+      <span className="absolute left-3 top-3 rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow">
+        Giảm {fmt(discountAmount)}
       </span>
     );
+  }
+
   return null;
 }
 
-// ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
-const fmt = (v) => (v != null ? Number(v).toLocaleString("vi-VN") + "đ" : "-");
+function ProductCard({ v, compact = false, highlight = false }) {
+  const productName = getProductName(v);
+  const currentPrice = v?.discountedPrice ?? v?.sellPrice;
 
-function ProductCard({ v, highlight = false }) {
   return (
-    <div
-      className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col ${highlight ? "ring-2 ring-red-400" : ""
-        }`}
-    >
+    <div className={`overflow-hidden rounded-3xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${highlight ? "border-amber-300 ring-1 ring-amber-200" : "border-slate-200"}`}>
       <div className="relative">
         <img
-          src={v.imageUrl || PLACEHOLDER}
-          className="h-48 w-full object-cover"
-          alt={v.name}
+          src={v?.imageUrl || PLACEHOLDER}
+          className={`${compact ? "h-44" : "h-56"} w-full object-cover`}
+          alt={productName}
           onError={(e) => {
             e.target.src = PLACEHOLDER;
           }}
         />
         <DiscountBadge
-          couponType={v.couponType}
-          discountPercent={v.discountPercent}
-          discountAmount={v.discountAmount}
+          couponType={v?.couponType}
+          discountPercent={v?.discountPercent}
+          discountAmount={v?.discountAmount}
         />
-        {v.couponCode && (
-          <span className="absolute top-2 right-2 bg-purple-700 text-white px-1.5 py-0.5 text-xs rounded font-mono shadow">
+        {v?.couponCode && (
+          <span className="absolute right-3 top-3 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white shadow">
             {v.couponCode}
           </span>
         )}
       </div>
-      <div className="p-3 flex-1 flex flex-col justify-between">
+
+      <div className="space-y-3 p-4">
         <div>
-          <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 mb-0.5">
-            {v.name}
+          <div className="mb-1 flex flex-wrap gap-2 text-xs text-slate-500">
+            {v?.brandName && <span>{v.brandName}</span>}
+            {getCategoryName(v) && <span>• {getCategoryName(v)}</span>}
+          </div>
+          <h3 className={`font-semibold text-slate-900 ${compact ? "text-base" : "text-lg"}`}>
+            {productName}
           </h3>
-          {v.sku && (
-            <p className="text-xs text-gray-400 font-mono mb-1">{v.sku}</p>
+          {v?.sku && <p className="mt-1 text-xs font-mono text-slate-400">SKU: {v.sku}</p>}
+        </div>
+
+        <div className="flex items-end gap-2">
+          <span className="text-2xl font-bold text-slate-950">{fmt(currentPrice)}</span>
+          {v?.discountedPrice != null && (
+            <span className="pb-0.5 text-sm text-slate-400 line-through">{fmt(v.sellPrice)}</span>
           )}
         </div>
-        <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-          <span className="text-base font-bold text-gray-900">
-            {fmt(v.discountedPrice ?? v.sellPrice)}
-          </span>
-          {v.discountedPrice != null && (
-            <span className="text-xs text-gray-400 line-through">
-              {fmt(v.sellPrice)}
-            </span>
-          )}
-        </div>
+
       </div>
     </div>
   );
 }
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
-const PAGE_SIZE = 3; // Số sp hiển thị mỗi "trang" trong slider
+function SectionTitle({ title, description, action }) {
+  return (
+    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-950 md:text-3xl">{title}</h2>
+        {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{description}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function VoucherCard({ voucher }) {
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-white/90 p-3 shadow-sm backdrop-blur-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">{voucher?.couponCode || "Voucher"}</p>
+          <h3 className="mt-1 line-clamp-2 text-sm font-bold text-slate-950">{voucher?.couponName || "Ưu đãi tại quầy"}</h3>
+        </div>
+        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+          ACTIVE
+        </span>
+      </div>
+      <p className="mt-2 text-sm font-medium text-slate-800">{formatVoucherBenefit(voucher)}</p>
+      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+        {voucher?.minPurchaseAmount ? <span>Mua từ {fmt(voucher.minPurchaseAmount)}</span> : <span>Áp dụng tại quầy</span>}
+        {voucher?.endDate ? <span>• HSD {new Date(voucher.endDate).toLocaleDateString("vi-VN")}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function SponsorCard({ ad, fallbackTitle }) {
+  if (!ad) {
+    return (
+      <div className="overflow-hidden rounded-[28px] border border-dashed border-slate-300 bg-white p-5 shadow-sm">
+        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Đối tác hiển thị</p>
+        <h3 className="mt-2 text-lg font-bold text-slate-900">{fallbackTitle}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Chưa có quảng cáo active cho vị trí này.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+      <div className="relative h-40 overflow-hidden bg-slate-100">
+        <img
+          src={ad?.imageUrl || PLACEHOLDER}
+          alt={ad?.title || fallbackTitle}
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            e.target.src = PLACEHOLDER;
+          }}
+        />
+      </div>
+      <div className="space-y-2 p-4">
+        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{ad?.sponsorName || "Nhà tài trợ"}</p>
+        <h3 className="line-clamp-2 text-base font-bold text-slate-950">{ad?.title || fallbackTitle}</h3>
+      </div>
+    </div>
+  );
+}
 
 export default function EcommerceUI() {
-  const { campaigns: activeCampaigns, loading: loadingCampaign } = useActiveCampaigns();
-  const activeCampaign = activeCampaigns.length > 0 ? activeCampaigns[0] : null;
+  const { campaigns: activeCampaigns } = useActiveCampaigns();
+  const activeCampaign = activeCampaigns.find(
+    (campaign) => Boolean(campaign?.isHomepageBanner ?? campaign?.homepageBanner)
+  ) || activeCampaigns[0] || null;
   const { variants: discountedVariants, loading: loadingDiscounted } = useDiscountedVariants();
   const { variants: allVariants, loading: loadingAll } = useAllVariants();
+  const { vouchers, loading: loadingVouchers } = useVouchers();
+  const { categories: fetchedCategories } = useFetchCategories();
   const loadingProducts = loadingDiscounted || loadingAll;
 
-  // Slider state (Event Promotion)
   const [sliderPage, setSliderPage] = useState(0);
-
-  // Modal "View All" state
   const [showViewAll, setShowViewAll] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sponsorAds, setSponsorAds] = useState([]);
 
-  // ── Slider logic ──────────────────────────────────────────────────────────
-  const totalPages = Math.ceil(discountedVariants.length / PAGE_SIZE);
-  const visibleItems = discountedVariants.slice(
+  const categoryOptions = useMemo(() => {
+    const map = new Map();
+
+    fetchedCategories.forEach((category) => {
+      if (!category?.name || category?.id == null) return;
+      map.set(String(category.id), { key: String(category.id), label: category.name });
+    });
+
+    allVariants.forEach((variant) => {
+      const categoryId = getCategoryId(variant);
+      const categoryName = getCategoryName(variant);
+      if (!categoryName) return;
+
+      const key = categoryId != null ? String(categoryId) : `name:${categoryName}`;
+      if (!map.has(key)) {
+        map.set(key, { key, label: categoryName });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "vi"));
+  }, [allVariants, fetchedCategories]);
+
+  const sortedDiscounted = [...discountedVariants].sort((a, b) => getSaving(b) - getSaving(a));
+  const totalPages = Math.max(1, Math.ceil(allVariants.length / PAGE_SIZE));
+  const visibleItems = allVariants.slice(
     sliderPage * PAGE_SIZE,
     sliderPage * PAGE_SIZE + PAGE_SIZE
   );
+  const availableVouchers = vouchers.filter(isVoucherCurrentlyActive).slice(0, 6);
+
+  const modalItems = sortedDiscounted.filter((v) => {
+    const kw = modalSearch.toLowerCase().trim();
+    return !kw || getSearchText(v).includes(kw);
+  });
+
+  const catalogItems = allVariants.filter((v) => {
+    const kw = catalogSearch.toLowerCase().trim();
+    const matchesSearch = !kw || getSearchText(v).includes(kw);
+    const categoryId = getCategoryId(v);
+    const categoryName = getCategoryName(v);
+    const matchedCategory =
+      categoryId == null && categoryName
+        ? fetchedCategories.find((c) => c?.name === categoryName)
+        : null;
+    const categoryKey =
+      categoryId != null
+        ? String(categoryId)
+        : matchedCategory?.id != null
+          ? String(matchedCategory.id)
+          : categoryName
+            ? `name:${categoryName}`
+            : null;
+    const matchesCategory = categoryFilter === "all" || categoryKey === categoryFilter;
+
+    if (!matchesSearch) return false;
+    if (!matchesCategory) return false;
+    return true;
+  });
 
   const prevSlide = () => setSliderPage((p) => Math.max(0, p - 1));
   const nextSlide = () => setSliderPage((p) => Math.min(totalPages - 1, p + 1));
 
-  // ── Modal search filter ───────────────────────────────────────────────────
-  const modalItems = discountedVariants.filter((v) => {
-    const kw = modalSearch.toLowerCase().trim();
-    return !kw || v.name?.toLowerCase().includes(kw) || v.sku?.toLowerCase().includes(kw);
-  });
+  useEffect(() => {
+    let active = true;
+    adService.getActive()
+      .then((data) => {
+        if (!active) return;
+        const nextAds = [data?.LEFT || null, data?.RIGHT || null];
+        setSponsorAds(nextAds);
+      })
+      .catch(() => {
+        if (!active) return;
+        setSponsorAds([null, null]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <SideAds />
-      {/* ── NAVBAR ── */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">SmallTrend</h1>
-          <div className="flex items-center gap-4">
-            <a
-              href="/login"
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600"
-            >
-              Login
-            </a>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#fffaf3_0%,#f8fafc_100%)]">
+      <div className="border-b border-amber-100 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950">SmallTrend</h1>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Localstore POS</p>
           </div>
-        </div>
-      </div>
-
-      {/* ── BANNER ── */}
-      <div className="max-w-7xl mx-auto px-4 mt-6">
-        {activeCampaign ? (
-          <div
-            className="relative rounded-2xl text-white py-14 text-center overflow-hidden"
-            style={{
-              background: activeCampaign.bannerImageUrl
-                ? `linear-gradient(rgba(0,0,0,0.52), rgba(0,0,0,0.52)), url('${activeCampaign.bannerImageUrl}') center/cover no-repeat`
-                : "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
-            }}
+          <Link
+            to="/login"
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-950 hover:text-slate-950"
           >
-            <span className="inline-block bg-red-500 px-4 py-1 text-sm rounded-full mb-3 font-semibold">
-              {activeCampaign.campaignType || "SALE"} · Đang diễn ra
-            </span>
-            <h1 className="text-4xl font-bold mt-2">{activeCampaign.campaignName}</h1>
-            {activeCampaign.description && (
-              <p className="mt-2 text-lg opacity-90 max-w-xl mx-auto">
-                {activeCampaign.description}
-              </p>
-            )}
-            {activeCampaign.endDate && (
-              <p className="mt-3 text-sm opacity-75">
-                Kết thúc: {activeCampaign.endDate}
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="relative rounded-2xl bg-gradient-to-r from-blue-900 to-blue-600 text-white py-12 text-center">
-            <span className="absolute top-5 left-1/2 -translate-x-1/2 bg-red-600 px-4 py-1 text-sm rounded-full">
-              Limited Time Offer
-            </span>
-            <h1 className="text-4xl font-bold mt-6">SmallTrend Store</h1>
-            <p className="mt-2 text-lg opacity-90">Khám phá các ưu đãi hấp dẫn</p>
-          </div>
-        )}
+            Đăng nhập
+          </Link>
+        </div>
       </div>
 
-      {/* ── EVENT PROMOTION – slider ── */}
-      <div className="max-w-7xl mx-auto px-4 mt-10">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold">Event Promotion</h2>
-          {discountedVariants.length > 0 && (
-            <button
-              onClick={() => { setShowViewAll(true); setModalSearch(""); }}
-              className="text-blue-600 text-sm font-medium hover:underline"
+      <div className="mx-auto max-w-7xl px-4 py-6 md:py-8">
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="overflow-hidden rounded-[32px] bg-slate-950 text-white shadow-[0_30px_80px_-40px_rgba(15,23,42,0.8)]">
+            <div
+              className="relative h-full min-h-[380px] overflow-hidden px-6 py-8 md:px-8 md:py-10"
+              style={{
+                background: activeCampaign?.bannerImageUrl
+                  ? `linear-gradient(rgba(15,23,42,0.74), rgba(15,23,42,0.82)), url('${activeCampaign.bannerImageUrl}') center/cover no-repeat`
+                  : "linear-gradient(135deg, #0f172a 0%, #1e293b 48%, #7c2d12 100%)",
+              }}
             >
-              View All →
-            </button>
-          )}
-        </div>
+              <div className="relative z-10 max-w-2xl">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-amber-200 backdrop-blur">
+                  <MapPin className="h-4 w-4" />
+                  Ưu đãi áp dụng trực tiếp tại cửa hàng
+                </span>
 
-        {loadingProducts ? (
-          <div className="text-center py-10 text-gray-400">Đang tải...</div>
-        ) : discountedVariants.length === 0 ? (
-          <div className="text-center py-10 text-gray-400">
-            <p className="text-sm">Chưa có sản phẩm khuyến mãi nào.</p>
+                <h2 className="mt-6 text-4xl font-bold leading-tight md:text-5xl">
+                  {activeCampaign?.campaignName || "Cửa hàng trưng bày giá tốt và khuyến mãi đang áp dụng hôm nay"}
+                </h2>
+
+                <p className="mt-4 max-w-xl text-base leading-7 text-slate-200 md:text-lg">
+                  {activeCampaign?.description || "Trang chủ này dành cho mô hình local store POS: khách xem nhanh sản phẩm nổi bật, mức giá hiện tại và các chương trình đang áp dụng ngay tại quầy."}
+                </p>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="relative">
-            {/* Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {visibleItems.map((v) => (
-                <ProductCard key={v.sku} v={v} highlight />
-              ))}
+
+          <div className="grid gap-4">
+            <div className="rounded-[28px] border border-amber-200 bg-amber-50 p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <Ticket className="h-5 w-5 text-amber-700" />
+                <div>
+                  <h3 className="text-lg font-bold text-slate-950">Voucher</h3>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {loadingVouchers ? (
+                  <div className="rounded-2xl border border-dashed border-amber-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+                    Đang tải voucher...
+                  </div>
+                ) : availableVouchers.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-amber-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+                    Chưa có voucher active.
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {availableVouchers.map((voucher) => (
+                      <VoucherCard key={voucher?.id || voucher?.couponCode} voucher={voucher} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Arrow Prev */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SponsorCard ad={sponsorAds[0]} fallbackTitle="Quảng cáo nhà tài trợ" />
+              <SponsorCard ad={sponsorAds[1]} fallbackTitle="Quảng cáo nhãn hàng hợp tác" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 pb-4">
+        <SectionTitle
+          title="Bestseller tại cửa hàng"
+          description=""
+        />
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 py-4">
+        {loadingProducts ? (
+          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">Đang tải bestseller...</div>
+        ) : visibleItems.length === 0 ? (
+          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">Chưa có sản phẩm để hiển thị.</div>
+        ) : (
+          <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
             {totalPages > 1 && (
               <>
                 <button
                   onClick={prevSlide}
                   disabled={sliderPage === 0}
-                  className={`absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${sliderPage === 0
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-white hover:bg-blue-600 hover:text-white text-gray-700"
-                    }`}
+                  className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:border-slate-950 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  ‹
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
-                {/* Arrow Next */}
                 <button
                   onClick={nextSlide}
                   disabled={sliderPage >= totalPages - 1}
-                  className={`absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${sliderPage >= totalPages - 1
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-white hover:bg-blue-600 hover:text-white text-gray-700"
-                    }`}
+                  className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:border-slate-950 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  ›
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </>
             )}
 
-            {/* Dot indicators */}
-            {totalPages > 1 && (
-              <div className="flex justify-center gap-1.5 mt-5">
-                {Array.from({ length: totalPages }).map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSliderPage(i)}
-                    className={`w-2 h-2 rounded-full transition-all ${i === sliderPage ? "bg-blue-600 w-5" : "bg-gray-300"
-                      }`}
-                  />
+            <div
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${sliderPage * 100}%)` }}
+            >
+              {Array.from({ length: totalPages }).map((_, pageIndex) => {
+                const items = allVariants.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
+
+                return (
+                  <div key={pageIndex} className="w-full shrink-0 px-12 sm:px-14 lg:px-16">
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                      {items.map((v) => (
+                        <ProductCard key={v.sku} v={v} highlight={pageIndex === 0} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 pt-6">
+        <SectionTitle
+          title="Tra cứu nhanh tại cửa hàng"
+          description=""
+        />
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <div className="rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-sm backdrop-blur md:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:max-w-xl">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Tìm theo tên, SKU, thương hiệu hoặc danh mục..."
+                value={catalogSearch}
+                onChange={(e) => setCatalogSearch(e.target.value)}
+                className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-800 outline-none transition focus:border-slate-950 focus:bg-white"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-950"
+              >
+                <option value="all">Tất cả danh mục</option>
+                {categoryOptions.map((category) => (
+                  <option key={category.key} value={category.key}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            {loadingProducts ? (
+              <div className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center text-slate-500">Đang tải sản phẩm...</div>
+            ) : catalogItems.length === 0 ? (
+              <div className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center text-slate-500">Không tìm thấy sản phẩm phù hợp.</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {catalogItems.slice(0, 12).map((v) => (
+                  <ProductCard key={v.sku} v={v} compact />
                 ))}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* ── ALL PRODUCTS ── */}
-      <div className="max-w-7xl mx-auto px-4 mt-10 pb-12">
-        <h2 className="text-2xl font-semibold mb-6">Tất cả Sản phẩm</h2>
-
-        {loadingProducts ? (
-          <div className="text-center py-12 text-gray-400">
-            Đang tải sản phẩm...
-          </div>
-        ) : allVariants.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <p className="mt-2">Chưa có sản phẩm nào.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {allVariants.map((v) => (
-              <ProductCard key={v.sku} v={v} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── MODAL: VIEW ALL DISCOUNTED ── */}
       {showViewAll && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowViewAll(false); }}
         >
-          <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
-            {/* Modal header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b flex-shrink-0">
+          <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b px-6 py-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">🎟️ Event Promotion</h2>
-                <p className="text-sm text-gray-500">
-                  {discountedVariants.length} sản phẩm đang khuyến mãi
-                </p>
+                <h2 className="text-xl font-bold text-slate-950">Danh sách ưu đãi tại cửa hàng</h2>
+                <p className="mt-1 text-sm text-slate-500">{sortedDiscounted.length} sản phẩm đang có giá ưu đãi hoặc coupon.</p>
               </div>
               <button
                 onClick={() => setShowViewAll(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-800 text-xl"
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-950 hover:text-slate-950"
               >
-                ×
+                Đóng
               </button>
             </div>
 
-            {/* Search */}
-            <div className="px-6 py-3 border-b flex-shrink-0">
+            <div className="border-b px-6 py-4">
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Tìm sản phẩm theo tên hoặc SKU..."
+                  placeholder="Tìm sản phẩm theo tên, SKU hoặc thương hiệu..."
                   value={modalSearch}
                   onChange={(e) => setModalSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-800 outline-none transition focus:border-slate-950 focus:bg-white"
                 />
               </div>
             </div>
 
-            {/* Grid */}
-            <div className="overflow-y-auto flex-1 p-6">
+            <div className="flex-1 overflow-y-auto p-6">
               {modalItems.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                  Không tìm thấy sản phẩm.
-                </div>
+                <div className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center text-slate-500">Không tìm thấy sản phẩm.</div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {modalItems.map((v) => (
-                    <ProductCard key={v.sku} v={v} highlight />
+                    <ProductCard key={v.sku} v={v} compact />
                   ))}
                 </div>
               )}

@@ -21,6 +21,11 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.time.LocalDate;
@@ -103,7 +108,7 @@ public class ProductVariantService {
                 .sellPrice(request.getSellPrice())
                 .imageUrl(request.getImageUrl())
                 .isActive(isVariantActive)
-                .attributes(request.getAttributes())
+                .attributes(normalizeAttributesForPersistence(request.getAttributes()))
                 .build();
 
         ProductVariant saved = productVariantRepository.save(variant);
@@ -150,12 +155,13 @@ public class ProductVariantService {
             variant.setActive(request.getIsActive());
         }
         if (request.getAttributes() != null) {
+            Map<String, String> normalized = normalizeAttributesForPersistence(request.getAttributes());
             if (variant.getAttributes() == null) {
-                variant.setAttributes(new java.util.HashMap<>());
+                variant.setAttributes(normalized);
             } else {
                 variant.getAttributes().clear();
+                variant.getAttributes().putAll(normalized);
             }
-            variant.getAttributes().putAll(request.getAttributes());
         }
 
         if (request.getCostPrice() != null) {
@@ -325,6 +331,35 @@ public class ProductVariantService {
         }
         int checkDigit = 10 - (sum % 10);
         return (checkDigit == 10) ? 0 : checkDigit;
+    }
+
+    private Map<String, String> normalizeAttributesForPersistence(Map<String, String> rawAttributes) {
+        if (rawAttributes == null || rawAttributes.isEmpty()) {
+            return new java.util.HashMap<>();
+        }
+
+        Map<String, String> normalizedAttributes = new LinkedHashMap<>();
+        Set<String> normalizedKeys = new HashSet<>();
+
+        for (Map.Entry<String, String> entry : rawAttributes.entrySet()) {
+            String rawKey = entry.getKey();
+            if (rawKey == null || rawKey.isBlank()) {
+                continue;
+            }
+
+            String trimmedKey = rawKey.trim();
+            String normalizedKey = java.text.Normalizer.normalize(trimmedKey, java.text.Normalizer.Form.NFD)
+                    .replaceAll("\\p{M}", "")
+                    .replaceAll("[đĐ]", "d")
+                    .toLowerCase(Locale.ROOT)
+                    .replaceAll("\\s+", " ");
+
+            if (normalizedKeys.add(normalizedKey)) {
+                normalizedAttributes.put(trimmedKey, entry.getValue());
+            }
+        }
+
+        return new java.util.HashMap<>(normalizedAttributes);
     }
 
     public void toggleVariantStatus(Integer variantId) {

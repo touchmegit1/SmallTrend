@@ -51,7 +51,7 @@ class FileUploadControllerTest {
     @Test
     void uploadImage_withEmptyFile_shouldReturnBadRequest() {
         // Act: Gọi API tải lên nhưng cung cấp file rỗng
-        ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(emptyFile);
+        ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(emptyFile, null);
 
         // Assert: Yêu cầu trả về lỗi 400 Bad Request
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -70,7 +70,7 @@ class FileUploadControllerTest {
         when(cloudinaryService.uploadFile(validFile, "user-avatars")).thenReturn(mockUploadResult);
 
         // Act: Gọi API tải hình ảnh
-        ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(validFile);
+        ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(validFile, null);
 
         // Assert: Đảm bảo phản hồi 200 OK cùng với Url hình ảnh
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -87,11 +87,28 @@ class FileUploadControllerTest {
                 .thenThrow(new RuntimeException("Cloudinary network error"));
 
         // Act: Gọi API tải hình ảnh
-        ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(validFile);
+        ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(validFile, null);
 
         // Assert: API phải bắt lỗi và trả về 500 Internal Server Error
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Upload to Cloudinary failed: Cloudinary network error", response.getBody().get("error"));
+    }
+
+    @Test
+    void uploadImage_withCustomFolder_shouldUseProvidedFolder() {
+        Map<String, Object> mockUploadResult = Map.of(
+                "secure_url", "https://res.cloudinary.com/demo/image/upload/v123456/products/test-image.jpg",
+                "public_id", "products/test-image-123"
+        );
+
+        when(cloudinaryService.uploadFile(validFile, "products")).thenReturn(mockUploadResult);
+
+        ResponseEntity<Map<String, ?>> response = fileUploadController.uploadImage(validFile, "products");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("https://res.cloudinary.com/demo/image/upload/v123456/products/test-image.jpg", response.getBody().get("url"));
+        assertEquals("products/test-image-123", response.getBody().get("publicId"));
     }
 }

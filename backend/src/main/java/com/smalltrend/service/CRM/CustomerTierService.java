@@ -29,7 +29,6 @@ public class CustomerTierService {
         if (request.getTierName() != null) tier.setTierName(request.getTierName());
         if (request.getMinSpending() != null) tier.setMinSpending(request.getMinSpending());
         if (request.getPointsMultiplier() != null) tier.setPointsMultiplier(request.getPointsMultiplier());
-        if (request.getDiscountRate() != null) tier.setDiscountRate(request.getDiscountRate());
         if (request.getColor() != null) tier.setColor(request.getColor());
         if (request.getDescription() != null) tier.setDescription(request.getDescription());
         if (request.getIsActive() != null) tier.setIsActive(request.getIsActive());
@@ -45,7 +44,6 @@ public class CustomerTierService {
         resp.setTierName(tier.getTierName());
         resp.setMinSpending(tier.getMinSpending());
         resp.setPointsMultiplier(tier.getPointsMultiplier());
-        resp.setDiscountRate(tier.getDiscountRate());
         resp.setBonusPoints(tier.getBonusPoints());
         resp.setColor(tier.getColor());
         resp.setIsActive(tier.getIsActive());
