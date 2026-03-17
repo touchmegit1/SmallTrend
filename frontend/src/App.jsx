@@ -49,19 +49,16 @@ import TransactionHistory from "./pages/Pos/TransactionHistory";
 import NotFoundPage from "./pages/Common/NotFoundPage";
 import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
 import AccountSettingsPage from "./pages/Account/AccountSettingsPage";
-const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
-const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
-const CASHIER_ROLES = ["CASHIER", "ROLE_CASHIER"];
-const INVENTORY_ROLES = ["INVENTORY_STAFF", "ROLE_INVENTORY_STAFF"];
-const SALES_ROLES = ["SALES_STAFF", "ROLE_SALES_STAFF"];
+import {
+  ADMIN_ROLES,
+  MANAGER_ROLES,
+  STAFF_ROLES,
+  isAdminRole,
+  isManagerRole,
+} from "./utils/roleUtils";
 
-const ALL_APP_ROLES = [
-  ...ADMIN_ROLES,
-  ...MANAGER_ROLES,
-  ...CASHIER_ROLES,
-  ...INVENTORY_ROLES,
-  ...SALES_ROLES,
-];
+const MANAGER_AND_STAFF_ROLES = [...MANAGER_ROLES, ...STAFF_ROLES];
+const PRODUCT_VIEW_ROLES = [...MANAGER_ROLES, ...STAFF_ROLES];
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -125,271 +122,75 @@ function App() {
           }
         />
 
-        <Route path="pos" element={<POS />} />
-        <Route path="pos/history" element={<TransactionHistory />} />
-        <Route path="pos/suspended" element={<ReportforCashier />} />
-        <Route path="pos/complain" element={<PosComplain />} />
-        <Route path="pos/complaints" element={<PosComplain />} />
+        <Route path="pos" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><POS /></ProtectedRoute>} />
+        <Route path="pos/history" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><TransactionHistory /></ProtectedRoute>} />
+        <Route path="pos/suspended" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><ReportforCashier /></ProtectedRoute>} />
+        <Route path="pos/complain" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><PosComplain /></ProtectedRoute>} />
+        <Route path="pos/complaints" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><PosComplain /></ProtectedRoute>} />
 
-        {/* Module 2: Inventory (Kho) */}
-        <Route path="inventory" element={<InventoryDashboard />} />
-        <Route path="inventory/alerts" element={<InventoryCountList />} />
+        <Route path="inventory" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><InventoryDashboard /></ProtectedRoute>} />
+        <Route path="inventory/alerts" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><InventoryCountList /></ProtectedRoute>} />
+        <Route path="inventory-counts" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><InventoryCountList /></ProtectedRoute>} />
+        <Route path="inventory-counts/create" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><InventoryCountDetail /></ProtectedRoute>} />
+        <Route path="inventory-counts/:id" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><InventoryCountDetail /></ProtectedRoute>} />
+        <Route path="inventory/locations" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><LocationManagement /></ProtectedRoute>} />
+        <Route path="inventory/disposal" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><DisposalList /></ProtectedRoute>} />
+        <Route path="inventory/disposal/create" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><DisposalDetail /></ProtectedRoute>} />
+        <Route path="inventory/disposal/:id" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><DisposalDetail /></ProtectedRoute>} />
+        <Route path="inventory/purchase-orders" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><PurchaseOrderList /></ProtectedRoute>} />
+        <Route path="inventory/purchase-orders/create" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><CreatePurchaseOrder /></ProtectedRoute>} />
+        <Route path="inventory/purchase-orders/:id" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><CreatePurchaseOrder /></ProtectedRoute>} />
 
-        <Route path="inventory-counts" element={<InventoryCountList />} />
-        <Route
-          path="inventory-counts/create"
-          element={<InventoryCountDetail />}
-        />
-        <Route path="inventory-counts/:id" element={<InventoryCountDetail />} />
-        <Route path="inventory/locations" element={<LocationManagement />} />
-        <Route path="inventory/disposal" element={<DisposalList />} />
-        <Route path="inventory/disposal/create" element={<DisposalDetail />} />
-        <Route path="inventory/disposal/:id" element={<DisposalDetail />} />
-        <Route path="inventory/purchase-orders" element={<PurchaseOrderList />} />
-        <Route
-          path="inventory/purchase-orders/create"
-          element={<CreatePurchaseOrder />}
-        />
-        <Route
-          path="inventory/purchase-orders/:id"
-          element={<CreatePurchaseOrder />}
-        />
-  
-        {/* Product */}
-        <Route path="products" element={<ProductList />} />
-        <Route path="products/addproduct" element={<AddNewProduct />} />
-        <Route path="products/detail/:id" element={<ProductDetail />} />
-        <Route
-          path="products/addproduct_variant"
-          element={<AddNewProductVariant />}
-        />
-        <Route
-          path="products/categories"
-          element={
-            <div className="p-4">
-              <CategoryAndBrand />
-            </div>
-          }
-        />
-        <Route
-          path="products/price"
-          element={<div className="p-4"><PriceSetting /></div>}
-        />
-        <Route
-          path="products/combo"
-          element={
-            <div className="p-4">
-              <ComboManage />
-            </div>
-          }
-        />
-        <Route
-          path="products/create_combo"
-          element={
-            <div className="p-4">
-              <CreateCombo />
-            </div>
-          }
-        />
-        <Route
-          path="products/combo_detail"
-          element={
-            <div className="p-4">
-              <ComboDetail />
-            </div>
-          }
-        />
-        <Route
-          path="products/suppliers"
-          element={
-            <div className="p-4">
-              <Suppliers />
-            </div>
-          }
-        />
+        <Route path="products" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><ProductList /></ProtectedRoute>} />
+        <Route path="products/addproduct" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><AddNewProduct /></ProtectedRoute>} />
+        <Route path="products/detail/:id" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><ProductDetail /></ProtectedRoute>} />
+        <Route path="products/addproduct_variant" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><AddNewProductVariant /></ProtectedRoute>} />
+        <Route path="products/categories" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><div className="p-4"><CategoryAndBrand /></div></ProtectedRoute>} />
+        <Route path="products/price" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><div className="p-4"><PriceSetting /></div></ProtectedRoute>} />
+        <Route path="products/combo" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><div className="p-4"><ComboManage /></div></ProtectedRoute>} />
+        <Route path="products/create_combo" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4"><CreateCombo /></div></ProtectedRoute>} />
+        <Route path="products/combo_detail" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><div className="p-4"><ComboDetail /></div></ProtectedRoute>} />
+        <Route path="products/suppliers" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><div className="p-4"><Suppliers /></div></ProtectedRoute>} />
 
-        <Route
-          path="crm"
-          element={<div className="p-4">CRM &amp; Promotion</div>}
-        />
-        <Route path="crm/customer" element={<CRMcustomer />} />
-        <Route path="crm/event" element={<CRMevent />} />
-        <Route path="crm/loyalty" element={<CRMloyalty />} />
-        <Route path="crm/ads" element={<AdsManagement />} />
-        <Route path="crm/report" element={<CRMreport />} />
-        <Route
-          path="crm/promotions"
-          element={<div className="p-4">Chương trình KM</div>}
-        />
-        <Route
-          path="crm/vouchers"
-          element={<div className="p-4">Voucher/Coupon</div>}
-        />
+        <Route path="crm" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">CRM &amp; Promotion</div></ProtectedRoute>} />
+        <Route path="crm/customer" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><CRMcustomer /></ProtectedRoute>} />
+        <Route path="crm/event" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><CRMevent /></ProtectedRoute>} />
+        <Route path="crm/loyalty" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><CRMloyalty /></ProtectedRoute>} />
+        <Route path="crm/ads" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><AdsManagement /></ProtectedRoute>} />
+        <Route path="crm/report" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><CRMreport /></ProtectedRoute>} />
+        <Route path="crm/promotions" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Chuong trinh KM</div></ProtectedRoute>} />
+        <Route path="crm/vouchers" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Voucher/Coupon</div></ProtectedRoute>} />
 
         <Route path="hr" element={<Navigate to="/hr/schedule" replace />} />
-        <Route
-          path="hr/workforce"
-          element={
-            <ProtectedRoute
-              allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}
-            >
-              <WorkforceManagement defaultTab="employees" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/employees"
-          element={
-            <ProtectedRoute
-              allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}
-            >
-              <Navigate to="/hr/workforce" replace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/users"
-          element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><UserManagement /></ProtectedRoute>}
-        />
-        <Route
-          path="hr/shifts"
-          element={
-            <ProtectedRoute
-              allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}
-            >
-              <ShiftManagement />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/schedule"
-          element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <ShiftCalendarPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/my-attendance"
-          element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <AttendanceManagement selfOnly={true} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/attendance"
-          element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <MyPayrollSummary defaultTab="attendance" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/shift-tickets"
-          element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <ShiftTicketCenter />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/payroll"
-          element={
-            <ProtectedRoute
-              allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}
-            >
-              <WorkforceManagement defaultTab="payroll" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="hr/my-payroll"
-          element={
-            <ProtectedRoute allowedRoles={ALL_APP_ROLES}>
-              <MyPayrollSummary />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="hr/workforce" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><WorkforceManagement defaultTab="employees" /></ProtectedRoute>} />
+        <Route path="hr/employees" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><Navigate to="/hr/workforce" replace /></ProtectedRoute>} />
+        <Route path="hr/users" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><UserManagement /></ProtectedRoute>} />
+        <Route path="hr/shifts" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><ShiftManagement /></ProtectedRoute>} />
+        <Route path="hr/schedule" element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><ShiftCalendarPage /></ProtectedRoute>} />
+        <Route path="hr/my-attendance" element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><AttendanceManagement selfOnly={true} /></ProtectedRoute>} />
+        <Route path="hr/attendance" element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><MyPayrollSummary defaultTab="attendance" /></ProtectedRoute>} />
+        <Route path="hr/shift-tickets" element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><ShiftTicketCenter /></ProtectedRoute>} />
+        <Route path="hr/ticket-processing" element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><TicketProcessingPage /></ProtectedRoute>} />
+        <Route path="hr/payroll" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><WorkforceManagement defaultTab="payroll" /></ProtectedRoute>} />
+        <Route path="hr/my-payroll" element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><MyPayrollSummary /></ProtectedRoute>} />
 
-        <Route
-          path="account/profile"
-          element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><PersonalInfoPage /></ProtectedRoute>}
-        />
-        <Route
-          path="account/settings"
-          element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><AccountSettingsPage /></ProtectedRoute>}
-        />
+        <Route path="account/profile" element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><PersonalInfoPage /></ProtectedRoute>} />
+        <Route path="account/settings" element={<ProtectedRoute allowedRoles={MANAGER_AND_STAFF_ROLES}><AccountSettingsPage /></ProtectedRoute>} />
 
-        <Route
-          path="admin/report-center"
-          element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ReportCenterPage /></ProtectedRoute>}
-        />
-        <Route
-          path="admin/ticket-center"
-          element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ReportCenterPage /></ProtectedRoute>}
-        />
-        <Route
-          path="admin/audit-logs"
-          element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AuditLogPage /></ProtectedRoute>}
-        />
-        <Route
-          path="admin/ai-settings"
-          element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AiSettingsPage /></ProtectedRoute>}
-        />
+        <Route path="admin/report-center" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ReportCenterPage /></ProtectedRoute>} />
+        <Route path="admin/ticket-center" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ReportCenterPage /></ProtectedRoute>} />
+        <Route path="admin/audit-logs" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AuditLogPage /></ProtectedRoute>} />
+        <Route path="admin/ai-settings" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AiSettingsPage /></ProtectedRoute>} />
 
-        <Route
-          path="reports"
-          element={<div className="p-4">Reports & AI (Báo cáo)</div>}
-        />
-        <Route
-          path="reports/create"
-          element={<div className="p-4">Tạo báo cáo</div>}
-        />
-        <Route
-          path="reports/manage"
-          element={<div className="p-4">Quản lý báo cáo</div>}
-        />
-        <Route
-          path="reports/ai"
-          element={<div className="p-4">AI dự báo</div>}
-        />
-        <Route
-          path="reports"
-          element={<div className="p-4">Reports & AI (Báo cáo)</div>}
-        />
-        <Route
-          path="reports/create"
-          element={<div className="p-4">Tạo báo cáo</div>}
-        />
-        <Route
-          path="reports/manage"
-          element={<div className="p-4">Quản lý báo cáo</div>}
-        />
-        <Route
-          path="reports/ai"
-          element={<div className="p-4">AI dự báo</div>}
-        />
-        <Route
-          path="reports/ai-chat"
-          element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><AiChatPage /></ProtectedRoute>}
-        />
-        <Route
-          path="reports/audit-logs"
-          element={<div className="p-4">Nhật ký kiểm toán</div>}
-        />
-        <Route
-          path="reports/sales"
-          element={<div className="p-4">Báo cáo doanh thu</div>}
-        />
-        <Route
-          path="reports/inventory"
-          element={<div className="p-4">Báo cáo kho</div>}
-        />
-        <Route
-          path="reports/logs"
-          element={<div className="p-4">Nhật ký hoạt động</div>}
-        />
+        <Route path="reports" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Reports & AI (Bao cao)</div></ProtectedRoute>} />
+        <Route path="reports/create" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Tao bao cao</div></ProtectedRoute>} />
+        <Route path="reports/manage" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Quan ly bao cao</div></ProtectedRoute>} />
+        <Route path="reports/ai" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">AI du bao</div></ProtectedRoute>} />
+        <Route path="reports/ai-chat" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><AiChatPage /></ProtectedRoute>} />
+        <Route path="reports/audit-logs" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Nhat ky kiem toan</div></ProtectedRoute>} />
+        <Route path="reports/sales" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Bao cao doanh thu</div></ProtectedRoute>} />
+        <Route path="reports/inventory" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Bao cao kho</div></ProtectedRoute>} />
+        <Route path="reports/logs" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><div className="p-4">Nhat ky hoat dong</div></ProtectedRoute>} />
 
         <Route path="*" element={<NotFoundPage />} />
       </Route>

@@ -24,55 +24,35 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const isManager = isManagerRole(user);
   const isStaff = isStaffRole(user);
   const canManageWorkforce = isAdmin || isManager;
-  const canAccessCrm = isAdmin || isManager || isCashier;
+  const canAccessCrm = isManager;
 
-  const posChildren = [
-    { label: "Giao diện bán hàng", path: "/pos" },
-    { label: "Lịch sử đơn hàng", path: "/pos/history" },
-    { label: "Báo cáo doanh số", path: "/pos/suspended" },
-    { label: "Khiếu nại", path: "/pos/complain" },
+  const toggleMenu = (label) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [label]: !prev[label],
+    }));
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  const inventoryChildren = [
+    { label: "Tổng quan kho", path: "/inventory" },
+    { label: "Nhập hàng", path: "/inventory/purchase-orders" },
+    { label: "Kiểm kê kho", path: "/inventory-counts" },
+    { label: "Quản lý vị trí", path: "/inventory/locations" },
+    { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
   ];
 
-  const inventoryChildren = isCashier
-    ? [
-      { label: "Tổng quan kho", path: "/inventory" },
-      { label: "Quản lý vị trí", path: "/inventory/locations" },
-    ]
-    : [
-      { label: "Tổng quan kho", path: "/inventory" },
-      { label: "Nhập hàng", path: "/inventory/purchase-orders" },
-      { label: "Kiểm kê kho", path: "/inventory-counts" },
-      { label: "Quản lý vị trí", path: "/inventory/locations" },
-      { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
-    ];
-
-  const productChildren = isCashier
-    ? [
-      { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
-      { label: "Danh sách sản phẩm", path: "/products" },
-      { label: "Combo sản phẩm", path: "/products/combo" },
-    ]
-    : [
-      { label: "Danh mục & Thương hiệu", path: "/products/categories" },
-      { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
-      { label: "Danh sách sản phẩm", path: "/products" },
-      { label: "Thiết lập giá", path: "/products/price" },
-      { label: "Combo sản phẩm", path: "/products/combo" },
-    ];
-
-  const hrChildren = canManageWorkforce
-    ? [
-      { label: "Danh sách nhân viên", path: "/hr/workforce" },
-      { label: "Lịch làm việc", path: "/hr/schedule" },
-      { label: "Phân ca làm việc", path: "/hr/shifts" },
-      { label: "Chấm công", path: "/hr/attendance" },
-      { label: "Tính lương", path: "/hr/payroll" },
-      { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
-    ]
-    : [
-      { label: "Lịch làm việc", path: "/hr/schedule" },
-      { label: "Chấm công", path: "/hr/my-attendance" },
-    ];
+  const productChildren = [
+    { label: "Danh mục & Thương hiệu", path: "/products/categories" },
+    { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
+    { label: "Danh sách sản phẩm", path: "/products" },
+    { label: "Thiết lập giá", path: "/products/price" },
+    { label: "Combo sản phẩm", path: "/products/combo" },
+  ];
 
   const managerNavItems = [
     {
@@ -103,18 +83,13 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
         icon: Users,
         label: "Khách hàng & KM",
         path: "/crm",
-        children: isCashier
-          ? [
-            { label: "Danh sách khách hàng", path: "/crm/customer" },
-            { label: "Kho quà tặng", path: "/crm/loyalty" },
-          ]
-          : [
-            { label: "Danh sách khách hàng", path: "/crm/customer" },
-            { label: "Khuyến Mãi", path: "/crm/event" },
-            { label: "Kho quà tặng", path: "/crm/loyalty" },
-            { label: "Quản lý Quảng cáo", path: "/crm/ads" },
-            { label: "Báo Cáo Thống Kê", path: "/crm/report" },
-          ],
+        children: [
+          { label: "Danh sách khách hàng", path: "/crm/customer" },
+          { label: "Khuyến Mãi", path: "/crm/event" },
+          { label: "Kho quà tặng", path: "/crm/loyalty" },
+          { label: "Quản lý Quảng cáo", path: "/crm/ads" },
+          { label: "Báo Cáo Thống Kê", path: "/crm/report" },
+        ],
       }]
       : []),
     {
