@@ -26,10 +26,13 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class TicketService {
+
+    private static final Set<TicketStatus> ACTIVE_TICKET_STATUSES = Set.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS);
 
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
@@ -103,6 +106,10 @@ public class TicketService {
             }
         }
 
+        if (ticketType == TicketType.SHIFT_CHANGE) {
+            validateNoDuplicateActiveShiftTicket(request, requesterAssignment);
+        }
+
         Ticket ticket = Ticket.builder()
                 .ticketCode(generateTicketCode(ticketType))
                 .ticketType(ticketType)
@@ -141,6 +148,85 @@ public class TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
         return mapToResponse(saved);
+    }
+
+    private void validateNoDuplicateActiveShiftTicket(CreateTicketRequest request, WorkShiftAssignment requesterAssignment) {
+        Integer requesterId = request.getRequesterUserId() != null ? request.getRequesterUserId() : request.getCreatedById();
+        if (requesterId == null) {
+            return;
+        }
+
+        List<Ticket> activeTickets = ticketRepository.findByTicketTypeAndCreatedByIdAndStatusIn(
+                TicketType.SHIFT_CHANGE,
+                requesterId,
+                List.copyOf(ACTIVE_TICKET_STATUSES));
+
+        String incomingAction = resolveTicketAction(request.getTitle(), request.getRelatedEntityType());
+        Long incomingRelatedEntityId = resolveRelatedEntityId(request, requesterAssignment);
+        Integer incomingRequesterAssignmentId = request.getSwapRequesterAssignmentId() != null
+                ? request.getSwapRequesterAssignmentId()
+                : requesterAssignment != null ? requesterAssignment.getId() : null;
+        Integer incomingTargetUserId = request.getSwapTargetUserId() != null
+                ? request.getSwapTargetUserId()
+                : request.getAssignedToUserId();
+
+        for (Ticket active : activeTickets) {
+            String existingAction = resolveTicketAction(active.getTitle(), active.getRelatedEntityType());
+            if (!incomingAction.equals(existingAction)) {
+                continue;
+            }
+
+            if ("SHIFT_SWAP".equals(incomingAction)) {
+                Integer existingRequesterAssignmentId = parseMetaInt(active.getDescription(), "SWAP_REQUESTER_ASSIGNMENT_ID");
+                Integer existingTargetUserId = parseMetaInt(active.getDescription(), "SWAP_TARGET_USER_ID");
+
+                if (incomingRequesterAssignmentId != null
+                        && incomingRequesterAssignmentId.equals(existingRequesterAssignmentId)
+                        && incomingTargetUserId != null
+                        && incomingTargetUserId.equals(existingTargetUserId)) {
+                    throw new RuntimeException("Đã có ticket đổi ca đang chờ xử lý cho ca này");
+                }
+                continue;
+            }
+
+            if (incomingRelatedEntityId != null && incomingRelatedEntityId.equals(active.getRelatedEntityId())) {
+                throw new RuntimeException("Đã có ticket cùng loại đang chờ xử lý cho ca đã chọn");
+            }
+        }
+    }
+
+    private String resolveTicketAction(String title, String relatedEntityType) {
+        String normalizedTitle = title == null ? "" : title.trim().toLowerCase();
+        String normalizedEntityType = relatedEntityType == null ? "" : relatedEntityType.trim().toUpperCase();
+
+        if ("SHIFT_SWAP".equals(normalizedEntityType)
+                || normalizedTitle.contains("đổi ca")
+                || normalizedTitle.contains("nhờ nhận ca")) {
+            return "SHIFT_SWAP";
+        }
+        if (normalizedTitle.contains("nghỉ ca")) {
+            return "SHIFT_CANCEL";
+        }
+        if (normalizedTitle.contains("cập nhật ca")) {
+            return "SHIFT_UPDATE";
+        }
+        return normalizedEntityType;
+    }
+
+    private Integer parseMetaInt(String description, String key) {
+        if (description == null || description.isBlank()) {
+            return null;
+        }
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\[" + key + "=(\\d+)\\]");
+        java.util.regex.Matcher matcher = pattern.matcher(description);
+        if (!matcher.find()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private WorkShiftAssignment validateShiftSwapTicketRequest(CreateTicketRequest request) {

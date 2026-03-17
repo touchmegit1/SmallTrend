@@ -414,6 +414,45 @@ const ShiftTicketCenter = () => {
             return;
         }
 
+        const activeStatuses = new Set(['OPEN', 'IN_PROGRESS']);
+        const incomingMode = String(createForm.ticketMode || '').toUpperCase();
+        const incomingAssignmentId = Number(createForm.assignmentId);
+        const incomingTargetUserId = Number(createForm.targetUserId || 0);
+
+        const duplicateActiveTicket = tickets.find((ticket) => {
+            if (!activeStatuses.has(String(ticket?.status || '').toUpperCase())) {
+                return false;
+            }
+
+            if (Number(ticket?.createdByUserId || 0) !== Number(currentUserId || 0)) {
+                return false;
+            }
+
+            const title = String(ticket?.title || '').toLowerCase();
+            const relatedEntityType = String(ticket?.relatedEntityType || '').toUpperCase();
+            const relatedEntityId = Number(ticket?.relatedEntityId || 0);
+
+            if (incomingMode === 'SWAP') {
+                const existingRequesterAssignmentId = extractSwapId(ticket?.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
+                const existingTargetUserId = extractSwapId(ticket?.description, 'SWAP_TARGET_USER_ID')
+                    || Number(ticket?.assignedToUserId || 0);
+                return relatedEntityType === 'SHIFT_SWAP'
+                    && Number(existingRequesterAssignmentId || relatedEntityId) === incomingAssignmentId
+                    && Number(existingTargetUserId || 0) === incomingTargetUserId;
+            }
+
+            if (incomingMode === 'CANCEL') {
+                return title.includes('nghỉ ca') && relatedEntityId === incomingAssignmentId;
+            }
+
+            return title.includes('cập nhật ca') && relatedEntityId === incomingAssignmentId;
+        });
+
+        if (duplicateActiveTicket) {
+            setError('Đã có ticket cùng loại đang chờ xử lý cho ca này. Vui lòng chờ duyệt hoặc cập nhật ticket cũ.');
+            return;
+        }
+
         try {
             setSubmitting(true);
             if (createForm.ticketMode === 'SWAP') {
