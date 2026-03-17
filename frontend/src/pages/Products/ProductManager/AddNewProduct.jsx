@@ -10,6 +10,7 @@ import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchTaxRates } from "../../../hooks/taxRates";
 import { useFetchSuppliers } from "../../../hooks/useSuppliers";
 import api from "../../../config/axiosConfig";
+import { useToast, ToastContainer } from "../../../hooks/useToast";
 
 /**
  * Screen hiển thị Form Tạo Mới Sản Phẩm.
@@ -24,6 +25,7 @@ const AddNewProduct = () => {
   const { suppliers } = useFetchSuppliers();
 
   const navigate = useNavigate();
+  const { toasts, showToast, removeToast } = useToast();
 
   // --- STATE QUẢN LÝ DỮ LIỆU ĐIỀN FORM ---
   const [formData, setFormData] = useState({
@@ -152,7 +154,7 @@ const AddNewProduct = () => {
       setShowCategoryModal(false);
     } catch (error) {
       console.error("Error creating category:", error);
-      alert("Tạo danh mục thất bại!");
+      showToast("Tạo danh mục thất bại!", "error");
     } finally {
       setCreatingCategory(false);
     }
@@ -168,7 +170,7 @@ const AddNewProduct = () => {
       setShowBrandModal(false);
     } catch (error) {
       console.error("Error creating brand:", error);
-      alert("Tạo thương hiệu thất bại!");
+      showToast("Tạo thương hiệu thất bại!", "error");
     } finally {
       setCreatingBrand(false);
     }
@@ -218,7 +220,7 @@ const AddNewProduct = () => {
       if (errorMessage.toLowerCase().includes("tên sản phẩm đã tồn tại")) {
         setErrors((prev) => ({ ...prev, name: "Tên sản phẩm đã tồn tại" }));
       }
-      alert(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setSubmitting(false);
     }
@@ -226,6 +228,7 @@ const AddNewProduct = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="max-w-7xl mx-auto space-y-6">
         {/* HEADER ĐIỀU HƯỚNG */}
         <div className="flex items-center gap-4">
