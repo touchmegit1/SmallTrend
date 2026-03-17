@@ -23,4 +23,16 @@ public class BrandValidator {
             throw new RuntimeException("Không thể xoá thương hiệu vì đang có sản phẩm thuộc thương hiệu này");
         }
     }
+
+    public void validateNameUniqueForCreate(String name) {
+        if (name != null && !name.trim().isEmpty() && brandRepository.existsByName(name)) {
+            throw new RuntimeException("Tên thương hiệu đã tồn tại");
+        }
+    }
+
+    public void validateNameUniqueForUpdate(String name, Integer currentId) {
+        if (name != null && !name.trim().isEmpty() && brandRepository.existsByNameAndIdNot(name, currentId)) {
+            throw new RuntimeException("Tên thương hiệu đã tồn tại");
+        }
+    }
 }
