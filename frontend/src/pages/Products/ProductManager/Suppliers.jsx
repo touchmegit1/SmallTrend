@@ -104,7 +104,6 @@ export function SuppliersScreen() {
   const handleSave = async (e) => {
     if (!canEditProducts) return;
     e.preventDefault();
-    if (isReadOnlyRole) return;
 
     const payload = {
       ...formData,

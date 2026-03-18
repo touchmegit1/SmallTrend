@@ -11,7 +11,6 @@ import { useAuth } from "../../../context/AuthContext";
 import { canManageProducts } from "../../../utils/roleUtils";
 
 import { useProductCombos } from "../../../hooks/product_combos";
-import { isProductReadOnlyRole } from "../../../utils/rolePermissions";
 
 // Component quản lý danh sách các Combo Sản phẩm
 // Nơi hiển thị, lọc, tìm kiếm và thao tác các combo như xoá, sửa
@@ -25,7 +24,6 @@ const ComboManage = () => {
   const [sortOrder, setSortOrder] = useState("asc");
   const navigate = useNavigate();
   const location = useLocation();
-  const isReadOnlyRole = isProductReadOnlyRole(user);
   const [toastMessage, setToastMessage] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCombo, setSelectedCombo] = useState(null);

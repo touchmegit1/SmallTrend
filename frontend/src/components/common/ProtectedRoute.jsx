@@ -1,7 +1,14 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { isAdminRole, isManagerRole, normalizeRoleName } from '../../utils/roleUtils';
+import {
+    ADMIN_ROLES,
+    MANAGER_ROLES,
+    CASHIER_ROLES,
+    INVENTORY_ROLES,
+    hasAnyRole,
+    normalizeRole,
+} from '../../utils/rolePermissions';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     const { isAuthenticated, user, isLoading } = useAuth();
@@ -20,16 +27,26 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     }
 
     if (allowedRoles.length > 0) {
-        const userRole = normalizeRoleName(user);
-        const hasAccess = allowedRoles
-            .map((role) => String(role || '').toUpperCase())
-            .includes(userRole);
+        const hasAccess = hasAnyRole(user, allowedRoles);
 
         if (!hasAccess) {
-            if (isAdminRole(user) || isManagerRole(user)) {
+            if (hasAnyRole(user, ADMIN_ROLES)) {
                 return <Navigate to="/dashboard" replace />;
             }
-            return <Navigate to="/hr/schedule" replace />;
+            if (hasAnyRole(user, MANAGER_ROLES)) {
+                return <Navigate to="/dashboard" replace />;
+            }
+            if (hasAnyRole(user, INVENTORY_ROLES)) {
+                return <Navigate to="/inventory" replace />;
+            }
+            if (hasAnyRole(user, CASHIER_ROLES)) {
+                return <Navigate to="/pos" replace />;
+            }
+            const normalizedRole = normalizeRole(user);
+            if (normalizedRole) {
+                return <Navigate to="/dashboard" replace />;
+            }
+            return <Navigate to="/dashboard" replace />;
         }
     }
 

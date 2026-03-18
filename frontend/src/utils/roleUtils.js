@@ -19,7 +19,8 @@ const canAccessAdminModule = (userOrRole) => isAdminRole(userOrRole);
 const canAccessManagerModules = (userOrRole) => isManagerRole(userOrRole);
 const canAccessStaffHrModules = (userOrRole) => isManagerRole(userOrRole) || isStaffRole(userOrRole);
 const canViewProducts = (userOrRole) => isManagerRole(userOrRole) || isStaffRole(userOrRole);
-const canManageProducts = (userOrRole) => isManagerRole(userOrRole);
+const PRODUCT_MANAGE_ROLES = [...MANAGER_ROLES];
+const canManageProducts = (userOrRole) => PRODUCT_MANAGE_ROLES.includes(normalizeRoleName(userOrRole));
 
 export {
   ADMIN_ROLES,

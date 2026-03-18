@@ -16,9 +16,13 @@ import {
   formatVNDCount,
 } from "../../utils/inventoryCount";
 import CustomSelect from "../../components/common/CustomSelect";
+import { useAuth } from "../../context/AuthContext";
+import { MANAGER_ROLES, hasAnyRole } from "../../utils/rolePermissions";
 
 function InventoryCountList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isManager = hasAnyRole(user, MANAGER_ROLES);
   const {
     loading,
     error,
@@ -116,13 +120,15 @@ function InventoryCountList() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/inventory-counts/create")}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition shadow-sm"
-          >
-            <Plus size={16} />
-            Tạo phiếu mới
-          </button>
+          {!isManager && (
+            <button
+              onClick={() => navigate("/inventory-counts/create")}
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition shadow-sm"
+            >
+              <Plus size={16} />
+              Tạo phiếu mới
+            </button>
+          )}
         </div>
       </div>
 
@@ -176,13 +182,15 @@ function InventoryCountList() {
             <p className="text-sm text-slate-400 mb-4">
               Tạo phiếu kiểm kho đầu tiên để bắt đầu
             </p>
-            <button
-              onClick={() => navigate("/inventory-counts/create")}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
-            >
-              <Plus size={16} />
-              Tạo phiếu mới
-            </button>
+            {!isManager && (
+              <button
+                onClick={() => navigate("/inventory-counts/create")}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
+              >
+                <Plus size={16} />
+                Tạo phiếu mới
+              </button>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

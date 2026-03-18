@@ -13,18 +13,28 @@ import {
   Menu,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { isAdminRole, isManagerRole, isStaffRole } from "../../utils/roleUtils";
+import {
+  ADMIN_ROLES,
+  MANAGER_ROLES,
+  CASHIER_ROLES,
+  INVENTORY_ROLES,
+  hasAnyRole,
+} from "../../utils/rolePermissions";
 
 const Sidebar = ({ collapsed, onToggleSidebar }) => {
   const [openMenus, setOpenMenus] = React.useState({ admin: true });
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const isAdmin = isAdminRole(user);
-  const isManager = isManagerRole(user);
-  const isStaff = isStaffRole(user);
+
+  const isAdmin = hasAnyRole(user, ADMIN_ROLES);
+  const isManager = hasAnyRole(user, MANAGER_ROLES);
+  const isCashier = hasAnyRole(user, CASHIER_ROLES);
+  const isInventoryStaff = hasAnyRole(user, INVENTORY_ROLES);
+
   const canManageWorkforce = isAdmin || isManager;
-  const canAccessCrm = isManager;
+  const canAccessCrm = isManager || isCashier;
+  const showBusinessMenu = !isAdmin;
 
   const toggleMenu = (label) => {
     setOpenMenus((prev) => ({
@@ -38,109 +48,103 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
     navigate("/login");
   };
 
-  const inventoryChildren = [
-    { label: "Tổng quan kho", path: "/inventory" },
-    { label: "Nhập hàng", path: "/inventory/purchase-orders" },
-    { label: "Kiểm kê kho", path: "/inventory-counts" },
-    { label: "Quản lý vị trí", path: "/inventory/locations" },
-    { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
+  const posChildren = [
+    { label: "Giao diện bán hàng", path: "/pos" },
+    { label: "Lịch sử đơn hàng", path: "/pos/history" },
+    { label: "Báo cáo doanh số", path: "/pos/suspended" },
+    { label: "Khiếu nại", path: "/pos/complain" },
   ];
 
-  const productChildren = [
-    { label: "Danh mục & Thương hiệu", path: "/products/categories" },
-    { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
-    { label: "Danh sách sản phẩm", path: "/products" },
-    { label: "Thiết lập giá", path: "/products/price" },
-    { label: "Combo sản phẩm", path: "/products/combo" },
-  ];
+  const inventoryChildren = isCashier
+    ? [
+      { label: "Tổng quan kho", path: "/inventory" },
+      { label: "Quản lý vị trí", path: "/inventory/locations" },
+    ]
+    : [
+      { label: "Tổng quan kho", path: "/inventory" },
+      { label: "Nhập hàng", path: "/inventory/purchase-orders" },
+      { label: "Kiểm kê kho", path: "/inventory-counts" },
+      { label: "Quản lý vị trí", path: "/inventory/locations" },
+      { label: "Xử lý hàng hóa", path: "/inventory/disposal" },
+    ];
 
-  const managerNavItems = [
-    {
-      icon: ShoppingCart,
-      label: "Bán hàng (POS)",
-      path: "/pos",
-      children: [
-        { label: "Giao diện bán hàng", path: "/pos" },
-        { label: "Lịch sử đơn hàng", path: "/pos/history" },
-        { label: "Báo cáo doanh số", path: "/pos/suspended" },
-        { label: "Khiếu nại", path: "/pos/complain" },
-      ],
-    },
-    {
-      icon: Warehouse,
-      label: "Kho (Inventory)",
-      path: "/inventory",
-      children: inventoryChildren,
-    },
-    {
-      icon: Package,
-      label: "Sản phẩm",
-      path: "/products",
-      children: productChildren,
-    },
-    ...(canAccessCrm
-      ? [{
-        icon: Users,
-        label: "Khách hàng & KM",
-        path: "/crm",
-        children: [
-          { label: "Danh sách khách hàng", path: "/crm/customer" },
-          { label: "Khuyến Mãi", path: "/crm/event" },
-          { label: "Kho quà tặng", path: "/crm/loyalty" },
-          { label: "Quản lý Quảng cáo", path: "/crm/ads" },
-          { label: "Báo Cáo Thống Kê", path: "/crm/report" },
-        ],
-      }]
-      : []),
-    {
-      icon: Clock,
-      label: "Nhân sự & Ca",
-      path: "/hr",
-      children: canManageWorkforce
-        ? [
-          { label: "Danh sách nhân viên", path: "/hr/workforce" },
-          { label: "Lịch làm việc", path: "/hr/schedule" },
-          { label: "Phân ca làm việc", path: "/hr/shifts" },
-          { label: "Chấm công", path: "/hr/attendance" },
-          { label: "Tạo ticket ca", path: "/hr/shift-tickets" },
-          { label: "Xử lý ticket", path: "/hr/ticket-processing" },
-        ]
-        : [
-          { label: "Lịch làm việc", path: "/hr/schedule" },
-          { label: "Chấm công", path: "/hr/my-attendance" },
-          { label: "Tạo ticket ca", path: "/hr/shift-tickets" },
-          { label: "Xử lý ticket", path: "/hr/ticket-processing" },
-        ],
-    },
-  ];
+  const productChildren = (isCashier || isInventoryStaff)
+    ? [
+      { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
+      { label: "Danh sách sản phẩm", path: "/products" },
+      { label: "Combo sản phẩm", path: "/products/combo" },
+    ]
+    : [
+      { label: "Danh mục & Thương hiệu", path: "/products/categories" },
+      { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
+      { label: "Danh sách sản phẩm", path: "/products" },
+      { label: "Thiết lập giá", path: "/products/price" },
+      { label: "Combo sản phẩm", path: "/products/combo" },
+    ];
 
-  const staffNavItems = [
-    {
-      icon: Package,
-      label: "Sản phẩm",
-      path: "/products",
-      children: [
-        { label: "Danh mục & Thương hiệu", path: "/products/categories" },
-        { label: "Danh sách nhà cung cấp", path: "/products/suppliers" },
-        { label: "Danh sách sản phẩm", path: "/products" },
-        { label: "Thiết lập giá", path: "/products/price" },
-        { label: "Combo sản phẩm", path: "/products/combo" },
-      ],
-    },
-    {
-      icon: Clock,
-      label: "Nhân sự & Ca",
-      path: "/hr",
-      children: [
-        { label: "Lịch làm việc", path: "/hr/schedule" },
-        { label: "Chấm công", path: "/hr/my-attendance" },
-        { label: "Tạo ticket ca", path: "/hr/shift-tickets" },
-        { label: "Xử lý ticket", path: "/hr/ticket-processing" },
-      ],
-    },
-  ];
+  const hrChildren = canManageWorkforce
+    ? [
+      { label: "Danh sách nhân viên", path: "/hr/workforce" },
+      { label: "Lịch làm việc", path: "/hr/schedule" },
+      { label: "Phân ca làm việc", path: "/hr/shifts" },
+      { label: "Chấm công", path: "/hr/attendance" },
+      { label: "Tính lương", path: "/hr/payroll" },
+      { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+    ]
+    : [
+      { label: "Lịch làm việc", path: "/hr/schedule" },
+      { label: "Chấm công", path: "/hr/my-attendance" },
+    ];
 
-  const navItems = isAdmin ? [] : isManager ? managerNavItems : isStaff ? staffNavItems : [];
+  const navItems = showBusinessMenu
+    ? [
+      ...(isCashier
+        ? [{
+          icon: ShoppingCart,
+          label: "Bán hàng (POS)",
+          path: "/pos",
+          children: posChildren,
+        }]
+        : []),
+      {
+        icon: Warehouse,
+        label: "Kho (Inventory)",
+        path: "/inventory",
+        children: inventoryChildren,
+      },
+      {
+        icon: Package,
+        label: "Sản phẩm",
+        path: "/products",
+        children: productChildren,
+      },
+      ...(canAccessCrm
+        ? [{
+          icon: Users,
+          label: "Khách hàng & KM",
+          path: "/crm",
+          children: isCashier
+            ? [
+              { label: "Danh sách khách hàng", path: "/crm/customer" },
+              { label: "Kho quà tặng", path: "/crm/loyalty" },
+            ]
+            : [
+              { label: "Danh sách khách hàng", path: "/crm/customer" },
+              { label: "Khuyến Mãi", path: "/crm/event" },
+              { label: "Kho quà tặng", path: "/crm/loyalty" },
+              { label: "Quản lý Quảng cáo", path: "/crm/ads" },
+              { label: "Báo Cáo Thống Kê", path: "/crm/report" },
+            ],
+        }]
+        : []),
+      {
+        icon: Clock,
+        label: "Nhân sự & Ca",
+        path: "/hr",
+        children: hrChildren,
+      },
+    ]
+    : [];
 
   return (
     <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 z-50`}>
@@ -162,7 +166,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
           )}
         </div>
 
-        {/* Collapse Button */}
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -175,12 +178,11 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-        {/* Admin Menu - ALWAYS FIRST for ROLE_ADMIN */}
         {isAdmin && (
           <div className="mb-2">
             <div
-              className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname === "/dashboard" ||
-                location.pathname.startsWith("/hr/users") ||
+              className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group ${location.pathname.startsWith("/admin") ||
+                location.pathname === "/hr/users" ||
                 openMenus["admin"]
                 ? "bg-indigo-50 text-indigo-700"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -191,8 +193,8 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
               <Shield
                 size={20}
                 className={
-                  location.pathname === "/dashboard" ||
-                    location.pathname.startsWith("/hr/users") ||
+                  location.pathname.startsWith("/admin") ||
+                    location.pathname === "/hr/users" ||
                     openMenus["admin"]
                     ? "text-indigo-600"
                     : "text-slate-500 group-hover:text-slate-700"
@@ -238,7 +240,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
           </div>
         )}
 
-        {/* Regular Menu Items */}
         {navItems.map((item) => (
           <div key={item.label}>
             <div
@@ -297,7 +298,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       </nav>
 
       <div className="p-4 border-t border-slate-100 space-y-2">
-        {/* Logout Button */}
         <button
           onClick={handleLogout}
           className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-4 py-3 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200`}
