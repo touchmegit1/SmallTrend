@@ -175,7 +175,7 @@ function App() {
         <Route path="products/suppliers" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><div className="p-4"><Suppliers /></div></ProtectedRoute>} />
 
         <Route path="crm" element={<ProtectedRoute allowedRoles={CRM_ROLES}><div className="p-4">CRM &amp; Promotion</div></ProtectedRoute>} />
-        <Route path="crm/customer" element={<ProtectedRoute allowedRoles={CRM_CASHIER_ROLES}><CRMcustomer /></ProtectedRoute>} />
+        <Route path="crm/customer" element={<ProtectedRoute allowedRoles={CRM_ROLES}><CRMcustomer /></ProtectedRoute>} />
         <Route path="crm/event" element={<ProtectedRoute allowedRoles={CRM_ROLES}><CRMevent /></ProtectedRoute>} />
         <Route path="crm/loyalty" element={<ProtectedRoute allowedRoles={CRM_CASHIER_ROLES}><CRMloyalty /></ProtectedRoute>} />
         <Route path="crm/ads" element={<ProtectedRoute allowedRoles={CRM_ROLES}><AdsManagement /></ProtectedRoute>} />

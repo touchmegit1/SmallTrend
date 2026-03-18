@@ -25,6 +25,7 @@ import TaxRateManagerModal from "./TaxRateManagerModal";
 import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
 import { useAuth } from "../../../context/AuthContext";
 import { canManageProducts } from "../../../utils/roleUtils";
+import { calculateProfit, calculateTaxInclusivePrice } from "../../../utils/priceCalculation";
 
 /**
  * Thiết lập Giá sản phẩm — phiên bản đơn giản.
@@ -320,13 +321,25 @@ const PriceSetting = () => {
                         bV = Number(b.costPrice) || 0;
                         break;
                     case "sellPrice":
-                        aV = Number(a.activeSellingPrice) || 0;
-                        bV = Number(b.activeSellingPrice) || 0;
+                    case "activeSellingPrice":
+                        aV = Number(a.activeSellingPrice) || Number(a.sellPrice) || 0;
+                        bV = Number(b.activeSellingPrice) || Number(b.sellPrice) || 0;
                         break;
-                    case "profit":
-                        aV = calculateProfit(Number(a.costPrice) || 0, Number(a.activeSellingPrice) || 0);
-                        bV = calculateProfit(Number(b.costPrice) || 0, Number(b.activeSellingPrice) || 0);
+                    case "profit": {
+                        const aTax = Number(a.activeTaxPercent) || Number(a.taxRate) || 0;
+                        const bTax = Number(b.activeTaxPercent) || Number(b.taxRate) || 0;
+                        const aFinal = Number(a.activeSellingPrice) || Number(a.sellPrice) || 0;
+                        const bFinal = Number(b.activeSellingPrice) || Number(b.sellPrice) || 0;
+                        const aBase = Number.isFinite(Number(a.activeBaseSellingPrice)) && Number(a.activeBaseSellingPrice) > 0
+                            ? Number(a.activeBaseSellingPrice)
+                            : (aTax >= 0 ? aFinal / (1 + aTax / 100) : aFinal);
+                        const bBase = Number.isFinite(Number(b.activeBaseSellingPrice)) && Number(b.activeBaseSellingPrice) > 0
+                            ? Number(b.activeBaseSellingPrice)
+                            : (bTax >= 0 ? bFinal / (1 + bTax / 100) : bFinal);
+                        aV = calculateProfit(Number(a.costPrice) || 0, aBase);
+                        bV = calculateProfit(Number(b.costPrice) || 0, bBase);
                         break;
+                    }
                     default:
                         aV = 0; bV = 0;
                 }
@@ -427,26 +440,51 @@ const PriceSetting = () => {
         let ok = 0, fail = 0, invalid = 0;
 
         for (const v of toUpdate) {
-            const newPrice = Number(((Number(v.activeSellingPrice) || 0) * (1 + percent / 100)).toFixed(2));
             const costPrice = Number(v.costPrice) || 0;
+            const taxPercent = Number(v.activeTaxPercent) || Number(v.taxRate) || 0;
+            const currentFinal = Number(v.activeSellingPrice) || Number(v.sellPrice) || 0;
+            const explicitBase = Number(v.activeBaseSellingPrice);
+            const currentBase = Number.isFinite(explicitBase) && explicitBase > 0
+                ? explicitBase
+                : (taxPercent >= 0 ? currentFinal / (1 + taxPercent / 100) : currentFinal);
 
-            if (newPrice < costPrice) {
+            const increasedBase = Number((currentBase * (1 + percent / 100)).toFixed(2));
+            if (increasedBase <= 0 || increasedBase < costPrice) {
                 invalid++;
                 continue;
             }
 
+            const finalData = calculateTaxInclusivePrice(increasedBase, taxPercent, 100);
+
             try {
-                await api.put(`/products/variants/${v.id}`, {
-                    sku: v.sku, barcode: v.barcode, unitId: v.unitId || 1,
-                    sellPrice: newPrice, imageUrl: v.imageUrl || null, isActive: v.isActive !== false,
+                await api.post(`/products/variants/${v.id}/prices`, {
+                    purchasePrice: costPrice,
+                    baseSellingPrice: increasedBase,
+                    taxPercent,
+                    effectiveDate: new Date().toISOString().split("T")[0],
+                    expiryDate: null,
                 });
-                setVariants((prev) => prev.map((pv) => (pv.id === v.id ? { ...pv, activeSellingPrice: newPrice } : pv)));
+
+                setVariants((prev) => prev.map((pv) => (
+                    pv.id === v.id
+                        ? {
+                            ...pv,
+                            activeBaseSellingPrice: increasedBase,
+                            activeSellingPrice: Number(finalData.sellingPrice) || 0,
+                            activeTaxPercent: taxPercent,
+                            activeEffectiveDate: new Date().toISOString().split("T")[0],
+                            activeExpiryDate: null,
+                        }
+                        : pv
+                )));
                 ok++;
-            } catch { fail++; }
+            } catch {
+                fail++;
+            }
         }
 
         if (fail > 0 || invalid > 0) {
-            const invalidMsg = invalid > 0 ? `, ${invalid} bỏ qua vì giá bán < giá nhập` : "";
+            const invalidMsg = invalid > 0 ? `, ${invalid} bỏ qua vì giá trước VAT không hợp lệ hoặc thấp hơn giá nhập` : "";
             setErrorMsg(`Cập nhật: ${ok} thành công, ${fail} thất bại${invalidMsg}.`);
         } else {
             setSuccessMsg(`Đã tăng giá ${ok} sản phẩm thành công!`);
@@ -460,7 +498,7 @@ const PriceSetting = () => {
     // ═══════════════════════════════════════════
     const handleImportExcel = (file) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const wb = XLSX.read(e.target.result, { type: "binary" });
                 const ws = wb.Sheets[wb.SheetNames[0]];
@@ -468,32 +506,89 @@ const PriceSetting = () => {
 
                 let updated = 0;
                 let invalid = 0;
-                setVariants((prev) => {
-                    const next = [...prev];
-                    rows.forEach((row) => {
-                        const sku = String(row["SKU"] || row["sku"] || "").trim();
-                        const price = parseFloat(row["Selling Price"] || row["sellPrice"] || row["Giá bán"] || 0);
-                        if (sku && !isNaN(price) && price >= 0) {
-                            const idx = next.findIndex((v) => v.sku === sku);
-                            if (idx !== -1) {
-                                const costPrice = Number(next[idx].costPrice) || 0;
-                                if (price < costPrice) {
-                                    invalid++;
-                                } else {
-                                    next[idx] = { ...next[idx], activeSellingPrice: price };
-                                    updated++;
-                                }
-                            }
-                        }
-                    });
-                    return next;
-                });
-                if (invalid > 0) {
-                    setErrorMsg(`Import hoàn tất: ${updated} sản phẩm hợp lệ, ${invalid} sản phẩm bị bỏ qua vì giá bán < giá nhập.`);
-                } else {
-                    setSuccessMsg(`Import thành công! Đã cập nhật ${updated} sản phẩm. Nhấn nút Lưu trên từng dòng để xác nhận.`);
+                let failed = 0;
+                const updatesById = new Map();
+                const effectiveDate = new Date().toISOString().split("T")[0];
+
+                for (const row of rows) {
+                    const sku = String(row["SKU"] || row["sku"] || "").trim();
+                    if (!sku) continue;
+
+                    const variant = variants.find((v) => v.sku === sku);
+                    if (!variant) continue;
+
+                    const taxPercent = Number(variant.activeTaxPercent) || Number(variant.taxRate) || 0;
+                    const costPrice = Number(variant.costPrice) || 0;
+
+                    const baseFromFile = parseFloat(
+                        row["Base Selling Price"]
+                        || row["baseSellingPrice"]
+                        || row["Giá trước VAT"]
+                        || row["Giá bán trước VAT"]
+                        || Number.NaN
+                    );
+
+                    const finalFromFile = parseFloat(
+                        row["Selling Price"]
+                        || row["sellPrice"]
+                        || row["Giá bán"]
+                        || Number.NaN
+                    );
+
+                    const computedBase = !Number.isNaN(baseFromFile)
+                        ? baseFromFile
+                        : (!Number.isNaN(finalFromFile) && taxPercent >= 0
+                            ? finalFromFile / (1 + taxPercent / 100)
+                            : Number.NaN);
+
+                    const baseSellingPrice = Number(computedBase);
+
+                    if (!Number.isFinite(baseSellingPrice) || baseSellingPrice <= 0 || baseSellingPrice < costPrice) {
+                        invalid++;
+                        continue;
+                    }
+
+                    try {
+                        const finalData = calculateTaxInclusivePrice(baseSellingPrice, taxPercent, 100);
+
+                        await api.post(`/products/variants/${variant.id}/prices`, {
+                            purchasePrice: costPrice,
+                            baseSellingPrice,
+                            taxPercent,
+                            effectiveDate,
+                            expiryDate: null,
+                        });
+
+                        updatesById.set(variant.id, {
+                            activeBaseSellingPrice: baseSellingPrice,
+                            activeSellingPrice: Number(finalData.sellingPrice) || 0,
+                            activeTaxPercent: taxPercent,
+                            activeEffectiveDate: effectiveDate,
+                            activeExpiryDate: null,
+                        });
+                        updated++;
+                    } catch {
+                        failed++;
+                    }
                 }
-                setTimeout(() => setSuccessMsg(""), 5000);
+
+                if (updatesById.size > 0) {
+                    setVariants((prev) => prev.map((v) => {
+                        const update = updatesById.get(v.id);
+                        return update ? { ...v, ...update } : v;
+                    }));
+                }
+
+                if (invalid > 0 || failed > 0) {
+                    const invalidMsg = invalid > 0
+                        ? `, ${invalid} dòng bỏ qua do giá trước VAT không hợp lệ hoặc thấp hơn giá nhập`
+                        : "";
+                    const failedMsg = failed > 0 ? `, ${failed} dòng cập nhật thất bại` : "";
+                    setErrorMsg(`Import hoàn tất: ${updated} dòng thành công${invalidMsg}${failedMsg}.`);
+                } else {
+                    setSuccessMsg(`Import thành công! Đã cập nhật ${updated} sản phẩm.`);
+                    setTimeout(() => setSuccessMsg(""), 5000);
+                }
             } catch (err) {
                 console.error("Excel import error:", err);
                 setErrorMsg("Không thể đọc file Excel. Vui lòng kiểm tra định dạng.");

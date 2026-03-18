@@ -156,8 +156,14 @@ export default function PriceTable({
                                 const costPrice = Number(variant.costPrice) || 0;
                                 const taxRate = Number(variant.activeTaxPercent) || Number(variant.taxRate) || 0;
                                 const sellPrice = Number(variant.activeSellingPrice) || Number(variant.sellPrice) || 0;
-                                // Giá bán cho khách = sellPrice
-                                const profit = calculateProfit(costPrice, sellPrice);
+                                const explicitBaseSellingPrice = Number(variant.activeBaseSellingPrice);
+                                const fallbackBaseSellingPrice = taxRate >= 0
+                                    ? (sellPrice / (1 + taxRate / 100))
+                                    : sellPrice;
+                                const baseSellingPrice = Number.isFinite(explicitBaseSellingPrice) && explicitBaseSellingPrice > 0
+                                    ? explicitBaseSellingPrice
+                                    : fallbackBaseSellingPrice;
+                                const profit = calculateProfit(costPrice, baseSellingPrice);
                                 const hasNegativeProfit = profit < 0;
 
                                 return (

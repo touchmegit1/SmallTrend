@@ -493,8 +493,12 @@ public class ProductVariantService {
         variantPriceRepository.findFirstByVariantIdAndStatus(variant.getId(), VariantPriceStatus.ACTIVE)
                 .ifPresent(activePrice -> {
                     response.setActivePurchasePrice(activePrice.getPurchasePrice());
+                    response.setActiveBaseSellingPrice(activePrice.getBaseSellingPrice());
                     response.setActiveSellingPrice(activePrice.getSellingPrice());
                     response.setActiveTaxPercent(activePrice.getTaxPercent());
+                    if (activePrice.getBaseSellingPrice() != null && activePrice.getSellingPrice() != null) {
+                        response.setActiveVatAmount(activePrice.getSellingPrice().subtract(activePrice.getBaseSellingPrice()));
+                    }
                     response.setActiveEffectiveDate(activePrice.getEffectiveDate());
                     response.setActiveExpiryDate(activePrice.getExpiryDate());
                 });

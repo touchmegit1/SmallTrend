@@ -33,6 +33,9 @@ public class VariantPrice {
     @Column(name = "purchase_price")
     private BigDecimal purchasePrice;
 
+    @Column(name = "base_selling_price")
+    private BigDecimal baseSellingPrice;
+
     @Column(name = "selling_price", nullable = false)
     private BigDecimal sellingPrice;
 

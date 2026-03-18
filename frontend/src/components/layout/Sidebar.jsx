@@ -125,7 +125,6 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
           path: "/crm",
           children: isCashier
             ? [
-              { label: "Danh sách khách hàng", path: "/crm/customer" },
               { label: "Kho quà tặng", path: "/crm/loyalty" },
             ]
             : [
