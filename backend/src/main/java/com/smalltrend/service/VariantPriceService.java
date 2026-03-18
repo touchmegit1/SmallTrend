@@ -101,15 +101,38 @@ public class VariantPriceService {
      */
     @Transactional
     public boolean syncActivePurchasePrice(Integer variantId, BigDecimal purchasePrice) {
-        if (purchasePrice == null) {
+        if (variantId == null || purchasePrice == null) {
+            return false;
+        }
+
+        ProductVariant variant = productVariantRepository.findById(variantId).orElse(null);
+        if (variant == null) {
             return false;
         }
 
         VariantPrice activePrice = variantPriceRepository
                 .findFirstByVariantIdAndStatus(variantId, ACTIVE)
                 .orElse(null);
+
         if (activePrice == null) {
-            return false;
+            BigDecimal sellingPrice = variant.getSellPrice() != null ? variant.getSellPrice() : BigDecimal.ZERO;
+            BigDecimal taxPercent =
+                    variant.getProduct() != null && variant.getProduct().getTaxRate() != null
+                            && variant.getProduct().getTaxRate().getRate() != null
+                                    ? variant.getProduct().getTaxRate().getRate()
+                                    : BigDecimal.ZERO;
+
+            VariantPrice newPrice = VariantPrice.builder()
+                    .variant(variant)
+                    .purchasePrice(purchasePrice)
+                    .sellingPrice(sellingPrice)
+                    .taxPercent(taxPercent)
+                    .effectiveDate(LocalDate.now())
+                    .expiryDate(null)
+                    .status(VariantPriceStatus.ACTIVE)
+                    .build();
+            variantPriceRepository.save(newPrice);
+            return true;
         }
 
         activePrice.setPurchasePrice(purchasePrice);

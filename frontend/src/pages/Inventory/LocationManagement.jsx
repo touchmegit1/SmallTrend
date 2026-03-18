@@ -695,7 +695,10 @@ function LocationManagement() {
                             {urgentItemsForSelected.map((item, idx) => (
                               <div key={`${item.variant_id || idx}-${item.batch_id || idx}`} className="flex items-center justify-between gap-3">
                                 <div className="min-w-0">
-                                  <p className="truncate">
+                                  <p
+                                    title={item.product_name || "N/A"}
+                                    className="whitespace-normal break-words"
+                                  >
                                     {item.product_name || "N/A"}
                                     {item.batch_code ? ` • Lô ${item.batch_code}` : ""}
                                   </p>
@@ -802,9 +805,12 @@ function LocationManagement() {
                                   className="text-indigo-600"
                                 />
                               </div>
-                              <span className="text-sm font-semibold text-slate-800 truncate max-w-[200px]">
+                              <p
+                                title={item.product_name || "N/A"}
+                                className="text-sm font-semibold text-slate-800 leading-snug whitespace-normal break-words"
+                              >
                                 {item.product_name || "N/A"}
-                              </span>
+                              </p>
                             </div>
                           </td>
                           <td className="py-3 px-3">

@@ -16,8 +16,27 @@ export default function GoodsReceiptTable({
     return receiptItems.find((ri) => ri.itemId === identity) || {};
   };
 
-  const getOrderedCheckingQuantity = (item) =>
-    Number(item.checking_quantity ?? item.quantity ?? 0);
+  const getOrderedCheckingQuantity = (item) => {
+    const orderedQty = Number(item.quantity ?? 0);
+    const checkingQty = Number(item.checking_quantity);
+    const conversionFactor = Number(item.conversion_factor ?? item.conversionFactor ?? 1);
+    const normalizedFactor = Number.isFinite(conversionFactor) && conversionFactor > 0
+      ? conversionFactor
+      : 1;
+
+    if (Number.isFinite(checkingQty) && checkingQty > 0) {
+      if (normalizedFactor > 1 && orderedQty > 0 && checkingQty === orderedQty) {
+        return orderedQty * normalizedFactor;
+      }
+      return checkingQty;
+    }
+
+    if (normalizedFactor > 1 && orderedQty > 0) {
+      return orderedQty * normalizedFactor;
+    }
+
+    return orderedQty;
+  };
 
   const getDifference = (item) => {
     const ri = getReceiptItem(item);
@@ -41,15 +60,15 @@ export default function GoodsReceiptTable({
 
   const getUnitCostValue = (ri, item) => {
     const unitCost = Number(ri.unitCost ?? item.unit_price ?? item.unitCost ?? 0);
-    return Number.isFinite(unitCost) ? unitCost / 1000 : 0;
+    if (!Number.isFinite(unitCost)) return 0;
+    return unitCost;
   };
 
   const parseUnitCostInput = (value) => {
     const parsed = Number.parseFloat(value);
     if (!Number.isFinite(parsed) || parsed < 0) return 0;
-    return parsed * 1000;
+    return parsed;
   };
-
   return (
     <div className="flex-1 overflow-auto bg-white">
       <div className="sticky top-0 z-10 bg-purple-50 border-b border-purple-200 px-6 py-2.5">
@@ -61,7 +80,7 @@ export default function GoodsReceiptTable({
         </div>
       </div>
 
-      <table className="w-full">
+      <table className="w-full table-fixed">
         <thead className="bg-slate-50 border-b border-slate-200 sticky top-[46px] z-10">
           <tr>
             <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase w-8">
@@ -95,7 +114,9 @@ export default function GoodsReceiptTable({
             const orderedCheckingQty = getOrderedCheckingQuantity(item);
             const unitCostValue = getUnitCostValue(ri, item);
             const hasUnitCost = unitCostValue !== 0;
-            const displayUnit = item.checking_unit || item.unit || "";
+            const checkingUnit = item.checking_unit || item.unit || "";
+            const orderedUnit = item.unit || checkingUnit || "";
+            const orderedQty = Number(item.quantity ?? orderedCheckingQty ?? 0);
             const receivedQuantity = Number(
               ri.receivedQuantity ?? orderedCheckingQty,
             );
@@ -106,12 +127,10 @@ export default function GoodsReceiptTable({
                 : receivedDiff < 0
                   ? "border-red-300 bg-red-50 text-red-700"
                   : "border-amber-300 bg-amber-50 text-amber-700";
-            const conversionFactor = Number(item.conversion_factor ?? 1);
-            const originalQty = Number(item.quantity ?? 0);
-            const showConversionHint = conversionFactor > 1 && originalQty > 0;
-            const originalUnit = item.unit || "";
+            const conversionFactor = Number(item.conversion_factor ?? item.conversionFactor ?? 1);
+            const showConversionHint = conversionFactor > 1 && orderedQty > 0 && checkingUnit;
             const conversionHint = showConversionHint
-              ? `${originalQty} ${originalUnit} = ${orderedCheckingQty} ${displayUnit}`
+              ? `${orderedCheckingQty} ${checkingUnit}`
               : "";
 
             return (
@@ -188,21 +207,16 @@ export default function GoodsReceiptTable({
                       disabled={isReadOnly}
                       className="w-28 px-3 py-1.5 pr-11 text-right text-sm border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500"
                     />
-                    {hasUnitCost && (
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-indigo-300">
-                        .000
-                      </span>
-                    )}
                   </div>
                 </td>
                 <td className="px-5 py-3.5 text-center">
                   <div className="flex flex-col items-center">
                     <span className="text-base font-semibold text-slate-700">
-                      {orderedCheckingQty}
+                      {orderedQty}
                     </span>
-                    {displayUnit && (
+                    {orderedUnit && (
                       <span className="mt-0.5 text-[10px] font-medium text-slate-500 uppercase tracking-wide">
-                        {displayUnit}
+                        {orderedUnit}
                       </span>
                     )}
                     {showConversionHint && (

@@ -22,19 +22,32 @@ import {
   calcOrderFinancials,
   validateDraft,
 } from "../utils/purchaseOrder";
-import { classifyStock, STOCK_STATUS } from "../utils/inventory";
 
 const mapExistingOrderItem = (item, products) => {
   const unitPrice = Number(item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0);
   const quantity = Number(item.quantity ?? 0);
   const checkingQuantityRaw = item.checkingQuantity ?? item.checking_quantity;
+  const conversionFactor = Number(item.conversionFactor ?? item.conversion_factor ?? 1) || 1;
+  const derivedCheckingQuantity =
+    conversionFactor > 1 && Number.isFinite(quantity) && quantity > 0
+      ? quantity * conversionFactor
+      : quantity;
   const checkingQuantity = Number(
-    checkingQuantityRaw ?? item.quantity ?? 0,
+    derivedCheckingQuantity ?? checkingQuantityRaw ?? item.quantity ?? 0,
   );
   const receivedQuantityRaw = item.receivedQuantity ?? item.received_quantity;
   const receivedQuantity = Number(
-    receivedQuantityRaw ?? checkingQuantityRaw ?? item.quantity ?? 0,
+    receivedQuantityRaw ?? derivedCheckingQuantity ?? checkingQuantityRaw ?? item.quantity ?? 0,
   );
+
+  const normalizedCheckingQuantity = Number.isFinite(checkingQuantity)
+    ? checkingQuantity
+    : Number(derivedCheckingQuantity ?? item.quantity ?? 0);
+  const normalizedReceivedQuantity = Number.isFinite(receivedQuantity)
+    ? receivedQuantity
+    : normalizedCheckingQuantity;
+
+  const normalizedConversionFactor = Number(item.conversionFactor ?? item.conversion_factor ?? 1) || 1;
 
   const matchedProduct = products.find(
     (p) => p.id === (item.variantId || item.variant_id),
@@ -51,9 +64,9 @@ const mapExistingOrderItem = (item, products) => {
     unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
     total: item.totalCost || item.total_cost,
     quantity: Number.isFinite(quantity) ? quantity : 0,
-    checking_quantity: Number.isFinite(checkingQuantity) ? checkingQuantity : 0,
-    received_quantity: Number.isFinite(receivedQuantity) ? receivedQuantity : 0,
-    conversion_factor: Number(item.conversionFactor ?? item.conversion_factor ?? 1) || 1,
+    checking_quantity: normalizedCheckingQuantity,
+    received_quantity: normalizedReceivedQuantity,
+    conversion_factor: normalizedConversionFactor,
     expiry_date: item.expiryDate || item.expiry_date || "",
     unit: item.unit || matchedProduct?.unit || "",
     checking_unit: item.checkingUnit || item.checking_unit || item.unit || matchedProduct?.unit || "",
@@ -68,6 +81,7 @@ const toReceiptItem = (item, orderStatus) => {
     orderStatus === PO_STATUS.RECEIVED ||
     orderStatus === PO_STATUS.SHORTAGE_PENDING_APPROVAL ||
     orderStatus === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING;
+
   const receivedQuantity = Number(
     item.received_quantity ?? item.receivedQuantity,
   );
@@ -81,7 +95,7 @@ const toReceiptItem = (item, orderStatus) => {
     : 1;
   let checkingUnitCost = sourceUnitCost;
   if (!isCompletedReceiptStatus && normalizedFactor > 1) {
-    checkingUnitCost = sourceUnitCost / normalizedFactor;
+    checkingUnitCost = sourceUnitCost;
   }
 
   return {
@@ -99,15 +113,47 @@ const toReceiptItem = (item, orderStatus) => {
 
 const mapReceiptItemToBaseQuantity = (ri) => Number(ri.receivedQuantity) || 0;
 
-const mapReceiptItemToBaseCost = (ri) => Number(ri.unitCost) || 0;
+const mapReceiptItemToBaseCost = (ri) => {
+  return Number(ri.unitCost) || 0;
+};
 
-const buildReceiptPayloadItems = (receiptItems) =>
-  receiptItems.map((ri) => ({
-    ...ri,
-    receivedQuantity: mapReceiptItemToBaseQuantity(ri),
-    unitCost: mapReceiptItemToBaseCost(ri),
-    expiryDate: ri.expiryDate || ri.expiry_date || null,
-  }));
+const normalizeExpiryDate = (value) => {
+  if (!value) return null;
+  const str = String(value).trim();
+  if (!str) return null;
+  return str.includes("T") ? str.split("T")[0] : str;
+};
+
+const buildReceiptPayloadItems = (receiptItems, items) => {
+  const receiptById = new Map((receiptItems || []).map((ri) => [ri.itemId, ri]));
+
+  return (items || []).map((item) => {
+    const identity = item.id ?? item._key;
+    const ri = receiptById.get(identity) || {};
+
+    return {
+      itemId: identity,
+      variantId: ri.variantId ?? item.variantId ?? item.variant_id,
+      receivedQuantity: mapReceiptItemToBaseQuantity({
+        receivedQuantity:
+          ri.receivedQuantity ??
+          item.received_quantity ??
+          item.receivedQuantity ??
+          item.checking_quantity ??
+          item.checkingQuantity ??
+          item.quantity ??
+          0,
+      }),
+      unitCost: mapReceiptItemToBaseCost({
+        unitCost: ri.unitCost ?? item.unit_price ?? item.unitCost ?? 0,
+      }),
+      expiryDate: normalizeExpiryDate(
+        ri.expiryDate ?? ri.expiry_date ?? item.expiry_date ?? item.expiryDate,
+      ),
+      notes: ri.notes ?? item.notes ?? "",
+    };
+  });
+};
 
 const normalizeFinancialInput = (value) => {
   if (value === null || value === undefined || value === "") return "";
@@ -380,17 +426,32 @@ export function usePurchaseOrder(initialId = null) {
   ]);
 
   const checkingFinancials = useMemo(() => {
+    const itemByIdentity = new Map(
+      (items || []).map((item) => [item.id ?? item._key, item]),
+    );
+
     const subtotal = receiptItems.reduce((sum, ri) => {
-      const qty = toNumber(ri.receivedQuantity);
+      const receivedQty = toNumber(ri.receivedQuantity);
       const unitCost = toNumber(ri.unitCost);
-      return sum + qty * unitCost;
+      const sourceItem = itemByIdentity.get(ri.itemId);
+      const conversionFactor = Number(
+        sourceItem?.conversion_factor ?? sourceItem?.conversionFactor ?? 1,
+      );
+      const normalizedFactor = Number.isFinite(conversionFactor) && conversionFactor > 0
+        ? conversionFactor
+        : 1;
+      const orderedEquivalentQty = normalizedFactor > 1
+        ? receivedQty / normalizedFactor
+        : receivedQty;
+      const lineTotal = orderedEquivalentQty * unitCost;
+      return sum + lineTotal;
     }, 0);
     const discount = Math.max(0, toNumber(order.discount));
     const afterDiscount = Math.max(0, subtotal - discount);
     const taxPercent = toNumber(order.tax_percent);
     const shippingFee = toNumber(order.shipping_fee);
     const taxAmount = Math.round((afterDiscount * taxPercent) / 100);
-    const total = afterDiscount + taxAmount + shippingFee;
+    const total = Math.round(afterDiscount + taxAmount + shippingFee);
 
     return {
       subtotal,
@@ -401,7 +462,7 @@ export function usePurchaseOrder(initialId = null) {
       taxAmount,
       total,
     };
-  }, [receiptItems, order.discount, order.tax_percent, order.shipping_fee]);
+  }, [receiptItems, items, order.discount, order.tax_percent, order.shipping_fee]);
 
   const filteredSuppliers = useMemo(() => {
     if (!supplierQuery.trim()) return suppliers;
@@ -415,31 +476,19 @@ export function usePurchaseOrder(initialId = null) {
   }, [suppliers, supplierQuery]);
 
   const lowStockSuggestions = useMemo(() => {
-    const statusPriority = {
-      [STOCK_STATUS.OUT_OF_STOCK]: 0,
-      [STOCK_STATUS.CRITICAL]: 1,
-      [STOCK_STATUS.LOW]: 2,
-    };
-
     const selectedVariantIds = new Set(items.map((item) => item.variant_id));
 
     return products
       .map((product) => {
         const stockQty = Number(product.stock_quantity ?? 0);
-        const stockStatus = classifyStock(stockQty, 50);
-        return { ...product, stockStatus, stockQty };
+        return { ...product, stockQty };
       })
       .filter(
         (product) =>
-          statusPriority[product.stockStatus] != null &&
+          product.stockQty <= 1 &&
           !selectedVariantIds.has(product.id),
       )
-      .sort((a, b) => {
-        const statusDiff =
-          statusPriority[a.stockStatus] - statusPriority[b.stockStatus];
-        if (statusDiff !== 0) return statusDiff;
-        return a.stockQty - b.stockQty;
-      });
+      .sort((a, b) => a.stockQty - b.stockQty);
   }, [products, items]);
 
   const updateOrder = useCallback((field, value) => {
@@ -777,7 +826,7 @@ export function usePurchaseOrder(initialId = null) {
           subtotal: checkingFinancials.subtotal,
           taxAmount: checkingFinancials.taxAmount,
           totalAmount: checkingFinancials.total,
-          items: buildReceiptPayloadItems(receiptItems).map((ri) => ({
+          items: buildReceiptPayloadItems(receiptItems, items).map((ri) => ({
             ...ri,
             receivedQuantity: toNumber(ri.receivedQuantity),
             unitCost: toNumber(ri.unitCost),

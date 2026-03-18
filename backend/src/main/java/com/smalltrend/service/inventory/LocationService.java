@@ -5,6 +5,7 @@ import com.smalltrend.dto.inventory.location.LocationRequest;
 import com.smalltrend.dto.inventory.location.LocationStockItemResponse;
 import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.Location;
+import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.StockMovement;
 import com.smalltrend.repository.DisposalVoucherRepository;
 import com.smalltrend.repository.InventoryCountRepository;
@@ -20,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -215,6 +217,34 @@ public class LocationService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    private String buildDisplayProductName(InventoryStock stock) {
+        ProductVariant variant = stock.getVariant();
+        if (variant == null || variant.getProduct() == null) {
+            return "";
+        }
+
+        String productName = variant.getProduct().getName();
+        Map<String, String> attributes = variant.getAttributes();
+        if (attributes == null || attributes.isEmpty()) {
+            return productName;
+        }
+
+        String attributeText = attributes.entrySet().stream()
+                .filter(entry -> entry.getValue() != null && !entry.getValue().trim().isEmpty())
+                .map(entry -> {
+                    String key = entry.getKey() != null ? entry.getKey().trim() : "";
+                    String value = entry.getValue().trim();
+                    return key.isEmpty() ? value : key + " " + value;
+                })
+                .collect(Collectors.joining(" - "));
+
+        if (attributeText.isBlank()) {
+            return productName;
+        }
+
+        return productName + " - " + attributeText;
+    }
+
     private FullLocationResponse toResponseWithStock(Location loc) {
         List<InventoryStock> stocks = inventoryStockRepository.findByLocationIdWithProduct(loc.getId());
 
@@ -260,8 +290,7 @@ public class LocationService {
         return LocationStockItemResponse.builder()
                 .variantId(stock.getVariant() != null ? stock.getVariant().getId() : null)
                 .sku(stock.getVariant() != null ? stock.getVariant().getSku() : "")
-                .productName(stock.getVariant() != null && stock.getVariant().getProduct() != null
-                        ? stock.getVariant().getProduct().getName() : "")
+                .productName(buildDisplayProductName(stock))
                 .variantUnit(stock.getVariant() != null && stock.getVariant().getUnit() != null
                         ? stock.getVariant().getUnit().getName() : "")
                 .quantity(stock.getQuantity() != null ? stock.getQuantity() : 0)

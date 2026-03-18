@@ -468,6 +468,33 @@ public class ProductVariantService {
                 .stream()
                 .mapToInt(stock -> stock.getQuantity() != null ? stock.getQuantity() : 0)
                 .sum();
+
+        if (product != null && product.getId() != null && variant.getUnit() != null && variant.getUnit().getId() != null) {
+            List<UnitConversion> conversions = unitConversionRepository.findByProductIdAndToUnitId(
+                    product.getId(),
+                    variant.getUnit().getId());
+
+            UnitConversion matchedConversion = conversions.stream()
+                    .filter(conversion -> conversion != null
+                    && conversion.getVariant() != null
+                    && conversion.getVariant().getId() != null
+                    && !conversion.getVariant().getId().equals(variant.getId())
+                    && conversion.getConversionFactor() != null
+                    && conversion.getConversionFactor().intValue() > 0)
+                    .findFirst()
+                    .orElse(null);
+
+            if (matchedConversion != null) {
+                Integer baseVariantId = matchedConversion.getVariant().getId();
+                int conversionFactor = matchedConversion.getConversionFactor().intValue();
+                int baseStockQty = inventoryStockRepository.findByVariantId(baseVariantId)
+                        .stream()
+                        .mapToInt(stock -> stock.getQuantity() != null ? stock.getQuantity() : 0)
+                        .sum();
+                stockQty = baseStockQty / conversionFactor;
+            }
+        }
+
         response.setStockQuantity(stockQty);
 
         // Get cost price from latest batch
@@ -493,6 +520,9 @@ public class ProductVariantService {
         variantPriceRepository.findFirstByVariantIdAndStatus(variant.getId(), VariantPriceStatus.ACTIVE)
                 .ifPresent(activePrice -> {
                     response.setActivePurchasePrice(activePrice.getPurchasePrice());
+                    if (activePrice.getPurchasePrice() != null) {
+                        response.setCostPrice(activePrice.getPurchasePrice());
+                    }
                     response.setActiveSellingPrice(activePrice.getSellingPrice());
                     response.setActiveTaxPercent(activePrice.getTaxPercent());
                     response.setActiveEffectiveDate(activePrice.getEffectiveDate());

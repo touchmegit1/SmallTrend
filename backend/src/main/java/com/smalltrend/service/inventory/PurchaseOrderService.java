@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.math.RoundingMode;
 import java.util.concurrent.CompletableFuture;
 import java.util.Comparator;
 import java.util.stream.Collectors;
@@ -311,22 +312,27 @@ public class PurchaseOrderService {
                     orderItem.setExpiryDate(receiptItem.getExpiryDate());
                 }
 
+                BigDecimal orderedEquivalentQty = BigDecimal.valueOf(newReceivedQty)
+                        .divide(BigDecimal.valueOf(conversionFactor), 4, RoundingMode.HALF_UP);
+
                 orderItem.setReceivedQuantity(newReceivedQty);
                 orderItem.setUnitCost(receiptItem.getUnitCost());
-                orderItem.setTotalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(newReceivedQty)));
+                orderItem.setTotalCost(receiptItem.getUnitCost().multiply(orderedEquivalentQty));
                 if (receiptItem.getNotes() != null) {
                     orderItem.setNotes(receiptItem.getNotes());
                 }
                 purchaseOrderItemRepository.save(orderItem);
 
                 if (deltaReceivedQty > 0) {
+                    BigDecimal deltaOrderedEquivalentQty = BigDecimal.valueOf(deltaReceivedQty)
+                            .divide(BigDecimal.valueOf(conversionFactor), 4, RoundingMode.HALF_UP);
                     stockItemRequests.add(PurchaseOrderItemRequest.builder()
                             .variantId(orderItem.getVariant() != null ? orderItem.getVariant().getId().intValue() : null)
                             .productId(orderItem.getVariant() != null && orderItem.getVariant().getProduct() != null
                                     ? orderItem.getVariant().getProduct().getId().intValue() : null)
                             .quantity(deltaReceivedQty)
                             .unitCost(receiptItem.getUnitCost())
-                            .totalCost(receiptItem.getUnitCost().multiply(BigDecimal.valueOf(deltaReceivedQty)))
+                            .totalCost(receiptItem.getUnitCost().multiply(deltaOrderedEquivalentQty))
                             .expiryDate(orderItem.getExpiryDate())
                             .build());
                 }
@@ -346,7 +352,11 @@ public class PurchaseOrderService {
                 .map(item -> {
                     int receivedQty = item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0;
                     BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
-                    return unitCost.multiply(BigDecimal.valueOf(receivedQty));
+                    Integer factorValue = resolveConversionFactor(item.getVariant());
+                    int factor = factorValue != null && factorValue > 0 ? factorValue : 1;
+                    BigDecimal orderedEquivalentQty = BigDecimal.valueOf(receivedQty)
+                            .divide(BigDecimal.valueOf(factor), 4, RoundingMode.HALF_UP);
+                    return unitCost.multiply(orderedEquivalentQty);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal discountAmount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
@@ -374,7 +384,9 @@ public class PurchaseOrderService {
             updateStock(order, stockItemRequests, false);
         }
 
-        int syncedPurchasePriceCount = syncPurchasePrices(order);
+        List<SyncedPurchasePriceItemResponse> syncedPurchasePriceItems = syncPurchasePrices(order);
+        int syncedPurchasePriceCount = syncedPurchasePriceItems.size();
+        LocalDateTime syncedPurchasePriceAt = syncedPurchasePriceCount > 0 ? LocalDateTime.now() : null;
 
         if (hasShortage) {
             if (receiptRequest.getShortageReason() == null || receiptRequest.getShortageReason().isBlank()) {
@@ -404,6 +416,8 @@ public class PurchaseOrderService {
 
         PurchaseOrderResponse response = toDetailResponse(order);
         response.setSyncedPurchasePriceCount(syncedPurchasePriceCount);
+        response.setSyncedPurchasePriceAt(syncedPurchasePriceAt);
+        response.setSyncedPurchasePriceItems(syncedPurchasePriceItems);
         return response;
     }
 
@@ -422,11 +436,15 @@ public class PurchaseOrderService {
         order.setStatus(PurchaseOrderStatus.RECEIVED);
         purchaseOrderRepository.save(order);
 
-        int syncedPurchasePriceCount = syncPurchasePrices(order);
+        List<SyncedPurchasePriceItemResponse> syncedPurchasePriceItems = syncPurchasePrices(order);
+        int syncedPurchasePriceCount = syncedPurchasePriceItems.size();
+        LocalDateTime syncedPurchasePriceAt = syncedPurchasePriceCount > 0 ? LocalDateTime.now() : null;
 
         log.info("Purchase Order {} shortage closed by manager. Stock updated.", order.getOrderNumber());
         PurchaseOrderResponse response = toDetailResponse(order);
         response.setSyncedPurchasePriceCount(syncedPurchasePriceCount);
+        response.setSyncedPurchasePriceAt(syncedPurchasePriceAt);
+        response.setSyncedPurchasePriceItems(syncedPurchasePriceItems);
         return response;
     }
 
@@ -647,6 +665,23 @@ public class PurchaseOrderService {
                         }
                     }
 
+                    Integer conversionFactorValue = resolveConversionFactor(v);
+                    int conversionFactor = conversionFactorValue != null && conversionFactorValue > 0
+                            ? conversionFactorValue
+                            : 1;
+                    ProductVariant baseVariant = resolveBaseVariant(v);
+                    Integer baseVariantId = baseVariant != null ? baseVariant.getId() : null;
+                    Integer currentVariantId = v.getId();
+                    if (conversionFactor > 1
+                            && baseVariantId != null
+                            && currentVariantId != null
+                            && !baseVariantId.equals(currentVariantId)) {
+                        int baseStockQty = inventoryStockRepository.findByVariantId(baseVariantId).stream()
+                                .mapToInt(stock -> stock.getQuantity() != null ? stock.getQuantity() : 0)
+                                .sum();
+                        totalStock = baseStockQty / conversionFactor;
+                    }
+
                     builder.stockQuantity(totalStock);
                     return builder.build();
                 })
@@ -777,29 +812,36 @@ public class PurchaseOrderService {
             }
 
             // --- Quy đổi đơn vị (Unit Conversion) ---
-            ProductVariant baseVariant = variant;
+            ProductVariant baseVariant = resolveBaseVariant(variant);
+            if (baseVariant == null) {
+                baseVariant = variant;
+            }
+
             int finalQty = qty;
-            String conversionNote = "khong quy doi";
+            String conversionNote = "da nhan so luong quy doi";
 
-            if (applyUnitConversion && variant.getProduct() != null && variant.getProduct().getVariants() != null) {
-                for (ProductVariant bv : variant.getProduct().getVariants()) {
-                    if (bv.getId().equals(variant.getId())) {
-                        continue;
-                    }
-
-                    if (variant.getUnit() != null) {
-                        java.util.Optional<UnitConversion> conversionOpt = unitConversionRepository.findByVariantIdAndToUnitId(bv.getId(), variant.getUnit().getId());
-                        if (conversionOpt.isPresent()) {
-                            UnitConversion conversion = conversionOpt.get();
-                            baseVariant = bv;
-                            finalQty = qty * conversion.getConversionFactor().intValue();
-                            conversionNote = "quy doi x" + conversion.getConversionFactor().intValue();
-                            break;
-                        }
+            if (applyUnitConversion) {
+                conversionNote = "khong quy doi";
+                if (baseVariant.getId() != null
+                        && variant.getId() != null
+                        && !baseVariant.getId().equals(variant.getId())
+                        && variant.getUnit() != null) {
+                    java.util.Optional<UnitConversion> conversionOpt = unitConversionRepository
+                            .findByVariantIdAndToUnitId(baseVariant.getId(), variant.getUnit().getId());
+                    if (conversionOpt.isPresent()) {
+                        UnitConversion conversion = conversionOpt.get();
+                        finalQty = qty * conversion.getConversionFactor().intValue();
+                        conversionNote = "quy doi x" + conversion.getConversionFactor().intValue();
                     }
                 }
-            } else if (!applyUnitConversion) {
-                conversionNote = "da nhan so luong quy doi";
+            } else if (baseVariant.getId() != null
+                    && variant.getId() != null
+                    && !baseVariant.getId().equals(variant.getId())) {
+                conversionNote = "luu ton kho theo don vi goc";
+            }
+
+            if (finalQty <= 0) {
+                continue;
             }
 
             BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
@@ -844,23 +886,18 @@ public class PurchaseOrderService {
     }
 
     // ─── Sync Purchase Price from Receipt ────────────────────
-    private int syncPurchasePrices(PurchaseOrder order) {
+    private List<SyncedPurchasePriceItemResponse> syncPurchasePrices(PurchaseOrder order) {
         if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
-            return 0;
+            return new ArrayList<>();
         }
 
         Set<Integer> syncedVariantIds = new HashSet<>();
-        int syncedCount = 0;
+        List<SyncedPurchasePriceItemResponse> syncedItems = new ArrayList<>();
 
         for (PurchaseOrderItem item : order.getItems()) {
             if (item == null || item.getVariant() == null || item.getVariant().getId() == null) {
                 continue;
             }
-            Integer variantId = item.getVariant().getId().intValue();
-            if (!syncedVariantIds.add(variantId)) {
-                continue;
-            }
-
             if (item.getReceivedQuantity() == null || item.getReceivedQuantity() <= 0) {
                 continue;
             }
@@ -868,45 +905,300 @@ public class PurchaseOrderService {
                 continue;
             }
 
-            try {
-                boolean synced = variantPriceService.syncActivePurchasePrice(variantId, item.getUnitCost());
-                if (synced) {
-                    syncedCount++;
+            ProductVariant sourceVariant = item.getVariant();
+            Integer conversionFactorValue = resolveConversionFactor(sourceVariant);
+            int conversionFactor = conversionFactorValue != null && conversionFactorValue > 0
+                    ? conversionFactorValue
+                    : 1;
+
+            SyncedPurchasePriceItemResponse sourceSyncedItem = syncPurchasePriceSafely(
+                    sourceVariant,
+                    item.getUnitCost(),
+                    syncedVariantIds,
+                    order
+            );
+            if (sourceSyncedItem != null) {
+                syncedItems.add(sourceSyncedItem);
+            }
+
+            ProductVariant baseVariant = resolveBaseVariant(sourceVariant);
+            if (conversionFactor > 1
+                    && baseVariant != null
+                    && baseVariant.getId() != null
+                    && !baseVariant.getId().equals(sourceVariant.getId())) {
+                BigDecimal baseUnitCost = item.getUnitCost()
+                        .divide(BigDecimal.valueOf(conversionFactor), 4, RoundingMode.HALF_UP);
+                SyncedPurchasePriceItemResponse baseSyncedItem = syncPurchasePriceSafely(
+                        baseVariant,
+                        baseUnitCost,
+                        syncedVariantIds,
+                        order
+                );
+                if (baseSyncedItem != null) {
+                    syncedItems.add(baseSyncedItem);
                 }
-            } catch (Exception ex) {
-                log.warn("Không thể đồng bộ giá nhập cho variant {} từ PO {}: {}",
-                        variantId,
-                        order.getOrderNumber(),
-                        ex.getMessage());
             }
         }
 
-        return syncedCount;
+        return syncedItems;
     }
 
-    // ─── Resolve Variant ─────────────────────────────────────
+    private SyncedPurchasePriceItemResponse syncPurchasePriceSafely(ProductVariant variant, BigDecimal purchasePrice,
+            Set<Integer> syncedVariantIds, PurchaseOrder order) {
+        try {
+            if (variant == null || variant.getId() == null) {
+                return null;
+            }
+            if (purchasePrice == null || purchasePrice.compareTo(BigDecimal.ZERO) <= 0) {
+                return null;
+            }
+            if (!syncedVariantIds.add(variant.getId())) {
+                return null;
+            }
+
+            variantPriceService.syncActivePurchasePrice(variant.getId(), purchasePrice);
+            log.info("Synced purchase price from PO {} for variant {} ({}) -> {}",
+                    order != null ? order.getOrderNumber() : "N/A",
+                    variant.getId(),
+                    variant.getSku(),
+                    purchasePrice);
+
+            return SyncedPurchasePriceItemResponse.builder()
+                    .variantId(variant.getId())
+                    .productName(variant.getProduct() != null ? variant.getProduct().getName() : null)
+                    .sku(variant.getSku())
+                    .purchasePrice(purchasePrice)
+                    .build();
+        } catch (Exception ex) {
+            log.warn("Skip syncing purchase price for variant {} from PO {} due to error: {}",
+                    variant != null ? variant.getId() : null,
+                    order != null ? order.getOrderNumber() : "N/A",
+                    ex.getMessage());
+            return null;
+        }
+    }
+
+    private String generateBatchNumber(ProductVariant variant) {
+        String skuPrefix = "BATCH";
+        if (variant != null && variant.getSku() != null && !variant.getSku().isBlank()) {
+            skuPrefix = variant.getSku().replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+            if (skuPrefix.length() > 6) {
+                skuPrefix = skuPrefix.substring(0, 6);
+            }
+            if (skuPrefix.isBlank()) {
+                skuPrefix = "BATCH";
+            }
+        }
+        long count = productBatchRepository.count() + 1;
+        return skuPrefix + String.format("-%06d", count);
+    }
+
     private ProductVariant resolveVariant(PurchaseOrderItemRequest itemReq) {
+        if (itemReq == null) {
+            return null;
+        }
+
         if (itemReq.getVariantId() != null) {
             return productVariantRepository.findById(itemReq.getVariantId()).orElse(null);
         }
+
         if (itemReq.getProductId() != null) {
             Product product = productRepository.findById(Integer.valueOf(itemReq.getProductId())).orElse(null);
             if (product != null && product.getVariants() != null && !product.getVariants().isEmpty()) {
                 return product.getVariants().get(0);
             }
         }
+
         return null;
     }
 
-    // ─── Generate Batch Number ───────────────────────────────
-    private String generateBatchNumber(ProductVariant variant) {
-        String prefix = variant.getSku() != null
-                ? variant.getSku().substring(0, Math.min(2, variant.getSku().length())).toUpperCase()
-                : "BT";
-        int year = LocalDate.now().getYear();
-        long count = productBatchRepository.count() + 1;
-        return prefix + year + String.format("%03d", count);
+    private void validateOrderUpdatable(PurchaseOrder order) {
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.PENDING
+                && order.getStatus() != PurchaseOrderStatus.REJECTED) {
+            throw new RuntimeException("Chỉ có thể cập nhật phiếu ở trạng thái DRAFT, PENDING hoặc REJECTED.");
+        }
     }
+
+    private boolean hasMeaningfulResubmissionChanges(PurchaseOrder order, PurchaseOrderRequest request) {
+        if (request == null) {
+            return false;
+        }
+
+        Integer existingSupplierId = order.getSupplier() != null ? order.getSupplier().getId() : null;
+        Integer incomingSupplierId = request.getSupplierId();
+        if (!Objects.equals(existingSupplierId, incomingSupplierId)) {
+            return true;
+        }
+
+        if (!Objects.equals(order.getLocationId(), request.getLocationId())) {
+            return true;
+        }
+
+        Long existingContractId = order.getContract() != null ? order.getContract().getId() : null;
+        if (!Objects.equals(existingContractId, request.getContractId())) {
+            return true;
+        }
+
+        if (!Objects.equals(order.getExpectedDeliveryDate(), request.getExpectedDeliveryDate())) {
+            return true;
+        }
+
+        if (!sameMoney(order.getDiscountAmount(), request.getDiscountAmount())) {
+            return true;
+        }
+
+        if (!sameMoney(order.getTaxPercent(), request.getTaxPercent())) {
+            return true;
+        }
+
+        if (!sameMoney(order.getShippingFee(), request.getShippingFee())) {
+            return true;
+        }
+
+        if (!sameMoney(order.getPaidAmount(), request.getPaidAmount())) {
+            return true;
+        }
+
+        if (!Objects.equals(trimToNull(order.getNotes()), trimToNull(request.getNotes()))) {
+            return true;
+        }
+
+        List<String> existingItems = normalizeOrderItems(order.getItems());
+        List<String> incomingItems = normalizeRequestItems(request.getItems());
+        return !existingItems.equals(incomingItems);
+    }
+
+    private List<String> normalizeOrderItems(List<PurchaseOrderItem> items) {
+        if (items == null || items.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return items.stream()
+                .map(this::normalizeOrderItem)
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    private String normalizeOrderItem(PurchaseOrderItem item) {
+        if (item == null) {
+            return "";
+        }
+
+        Integer variantId = item.getVariant() != null ? item.getVariant().getId() : null;
+        Integer productId = item.getVariant() != null && item.getVariant().getProduct() != null
+                ? item.getVariant().getProduct().getId()
+                : null;
+        BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
+        Integer quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+        LocalDate expiryDate = item.getExpiryDate();
+
+        return String.format("%s|%s|%s|%s|%s|%s",
+                String.valueOf(variantId),
+                String.valueOf(productId),
+                String.valueOf(quantity),
+                normalizeMoney(unitCost).toPlainString(),
+                String.valueOf(expiryDate),
+                String.valueOf(trimToNull(item.getNotes())));
+    }
+
+    private List<String> normalizeRequestItems(List<PurchaseOrderItemRequest> items) {
+        if (items == null || items.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return items.stream()
+                .map(this::normalizeRequestItem)
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    private String normalizeRequestItem(PurchaseOrderItemRequest item) {
+        if (item == null) {
+            return "";
+        }
+
+        BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
+        Integer quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+
+        return String.format("%s|%s|%s|%s|%s|%s",
+                String.valueOf(item.getVariantId()),
+                String.valueOf(item.getProductId()),
+                String.valueOf(quantity),
+                normalizeMoney(unitCost).toPlainString(),
+                String.valueOf(item.getExpiryDate()),
+                String.valueOf(trimToNull(item.getNotes())));
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean sameMoney(BigDecimal left, BigDecimal right) {
+        return normalizeMoney(left).compareTo(normalizeMoney(right)) == 0;
+    }
+
+    private BigDecimal normalizeMoney(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value.stripTrailingZeros();
+    }
+
+    private boolean shouldUseReceivedFinancials(PurchaseOrder order) {
+        if (order == null || order.getStatus() == null) {
+            return false;
+        }
+        return order.getStatus() == PurchaseOrderStatus.RECEIVED
+                || order.getStatus() == PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL
+                || order.getStatus() == PurchaseOrderStatus.SUPPLIER_SUPPLEMENT_PENDING;
+    }
+
+    private BigDecimal calculateReceivedSubtotal(PurchaseOrder order) {
+        if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        return order.getItems().stream()
+                .filter(Objects::nonNull)
+                .map(item -> {
+                    int receivedQty = item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0;
+                    BigDecimal unitCost = item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO;
+                    Integer factorValue = resolveConversionFactor(item.getVariant());
+                    int factor = factorValue != null && factorValue > 0 ? factorValue : 1;
+                    BigDecimal orderedEquivalentQty = BigDecimal.valueOf(receivedQty)
+                            .divide(BigDecimal.valueOf(factor), 4, RoundingMode.HALF_UP);
+                    return unitCost.multiply(orderedEquivalentQty);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal calculateTaxAmount(BigDecimal subtotal, BigDecimal taxPercent) {
+        BigDecimal safeSubtotal = subtotal != null ? subtotal : BigDecimal.ZERO;
+        BigDecimal safeTaxPercent = taxPercent != null ? taxPercent : BigDecimal.ZERO;
+        return safeSubtotal.multiply(safeTaxPercent).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateTotalAmount(
+            BigDecimal subtotal,
+            BigDecimal discountAmount,
+            BigDecimal taxAmount,
+            BigDecimal shippingFee
+    ) {
+        BigDecimal safeSubtotal = subtotal != null ? subtotal : BigDecimal.ZERO;
+        BigDecimal safeDiscountAmount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+        BigDecimal safeTaxAmount = taxAmount != null ? taxAmount : BigDecimal.ZERO;
+        BigDecimal safeShippingFee = shippingFee != null ? shippingFee : BigDecimal.ZERO;
+
+        BigDecimal afterDiscount = safeSubtotal.subtract(safeDiscountAmount);
+        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) {
+            afterDiscount = BigDecimal.ZERO;
+        }
+
+        return afterDiscount.add(safeTaxAmount).add(safeShippingFee);
+    }
+
+    // ─── Validation ──────────────────────────────────────────
 
     private boolean hasResubmissionChanges(PurchaseOrder existingOrder, PurchaseOrderRequest request) {
         if (existingOrder == null || request == null) {
@@ -990,23 +1282,6 @@ public class PurchaseOrderService {
                 String.valueOf(trimToNull(item.getNotes())));
     }
 
-    private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private boolean sameMoney(BigDecimal left, BigDecimal right) {
-        return normalizeMoney(left).compareTo(normalizeMoney(right)) == 0;
-    }
-
-    private BigDecimal normalizeMoney(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value.stripTrailingZeros();
-    }
-
-    // ─── Validation ──────────────────────────────────────────
     private void validateDraft(PurchaseOrderRequest request) {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("Phiếu nhập phải có ít nhất 1 sản phẩm.");
@@ -1027,6 +1302,20 @@ public class PurchaseOrderService {
 
     // ─── Mappers ─────────────────────────────────────────────
     private PurchaseOrderResponse toListResponse(PurchaseOrder order) {
+        BigDecimal subtotal = order.getSubtotal() != null ? order.getSubtotal() : BigDecimal.ZERO;
+        BigDecimal taxAmount = order.getTaxAmount() != null ? order.getTaxAmount() : BigDecimal.ZERO;
+        BigDecimal totalAmount = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+
+        if (shouldUseReceivedFinancials(order)) {
+            subtotal = calculateReceivedSubtotal(order);
+            taxAmount = calculateTaxAmount(subtotal, order.getTaxPercent());
+            totalAmount = calculateTotalAmount(
+                    subtotal,
+                    order.getDiscountAmount(),
+                    taxAmount,
+                    order.getShippingFee());
+        }
+
         PurchaseOrderResponse.PurchaseOrderResponseBuilder builder = PurchaseOrderResponse.builder()
                 .id(order.getId() != null ? order.getId().intValue() : null)
                 .orderNumber(order.getOrderNumber())
@@ -1035,11 +1324,11 @@ public class PurchaseOrderService {
                 .status(order.getStatus() != null ? order.getStatus().name() : "DRAFT")
                 .orderDate(order.getOrderDate())
                 .createdAt(order.getCreatedAt())
-                .subtotal(order.getSubtotal())
+                .subtotal(subtotal)
                 .discountAmount(order.getDiscountAmount())
-                .taxAmount(order.getTaxAmount())
+                .taxAmount(taxAmount)
                 .taxPercent(order.getTaxPercent())
-                .totalAmount(order.getTotalAmount())
+                .totalAmount(totalAmount)
                 .shippingFee(order.getShippingFee())
                 .paidAmount(order.getPaidAmount())
                 .locationId(order.getLocationId())
@@ -1148,13 +1437,48 @@ public class PurchaseOrderService {
     }
 
     private ProductVariant resolveBaseVariant(ProductVariant variant) {
-        if (variant == null || variant.getProduct() == null || variant.getProduct().getVariants() == null) {
+        if (variant == null || variant.getProduct() == null) {
+            return variant;
+        }
+
+        Integer productId = variant.getProduct().getId();
+        Integer unitId = variant.getUnit() != null ? variant.getUnit().getId() : null;
+        if (productId != null && unitId != null) {
+            List<UnitConversion> conversions = unitConversionRepository.findByProductIdAndToUnitId(productId, unitId);
+            ProductVariant fallbackCandidate = null;
+            for (UnitConversion conversion : conversions) {
+                if (conversion == null || conversion.getVariant() == null || conversion.getVariant().getId() == null) {
+                    continue;
+                }
+                ProductVariant candidate = conversion.getVariant();
+                if (candidate.getId().equals(variant.getId())) {
+                    continue;
+                }
+                if (candidate.isBaseUnit()) {
+                    return candidate;
+                }
+                if (fallbackCandidate == null) {
+                    fallbackCandidate = candidate;
+                }
+            }
+            if (fallbackCandidate != null) {
+                return fallbackCandidate;
+            }
+
+            ProductVariant declaredBaseVariant = productVariantRepository
+                    .findByProductIdAndIsBaseUnitTrue(productId)
+                    .orElse(null);
+            if (declaredBaseVariant != null && declaredBaseVariant.getId() != null
+                    && !declaredBaseVariant.getId().equals(variant.getId())) {
+                return declaredBaseVariant;
+            }
+        }
+
+        if (variant.getProduct().getVariants() == null) {
             return variant;
         }
 
         Integer variantId = variant.getId();
-        Integer unitId = variant.getUnit() != null ? variant.getUnit().getId() : null;
-
         for (ProductVariant candidate : variant.getProduct().getVariants()) {
             if (candidate == null || candidate.getId() == null) {
                 continue;
