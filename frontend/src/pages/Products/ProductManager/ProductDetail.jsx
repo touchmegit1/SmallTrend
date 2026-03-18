@@ -17,7 +17,7 @@ import UnitsManagerModal from "./UnitsManagerModal";
 import { useFetchVariants, useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
 import { useAuth } from "../../../context/AuthContext";
-import { isProductReadOnlyRole } from "../../../utils/rolePermissions";
+import { canManageProducts } from "../../../utils/roleUtils";
 
 /**
  * Màn hình chi tiết sản phẩm (ProductDetail).
@@ -29,8 +29,7 @@ function ProductDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const isReadOnlyRole = isProductReadOnlyRole(user);
-  const canManageProduct = !isReadOnlyRole;
+  const canManageProduct = canManageProducts(user);
 
   // --- QUẢN LÝ STATE THÔNG TIN SẢN PHẨM CHA ---
   const [product, setProduct] = useState(location.state?.product || null);
