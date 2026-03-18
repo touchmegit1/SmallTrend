@@ -454,6 +454,7 @@ public class ProductVariantService {
         response.setImageUrl(variant.getImageUrl());
         response.setSellPrice(variant.getSellPrice());
         response.setIsActive(variant.isActive());
+        response.setProductActive(product != null ? product.getIsActive() : null);
         response.setAttributes(variant.getAttributes());
         response.setCreatedAt(variant.getCreatedAt());
 

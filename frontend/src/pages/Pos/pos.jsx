@@ -14,6 +14,8 @@ import eventService from "../../services/eventService";
 
 export default function POS() {
   const searchInputRef = useRef(null);
+  const discontinuedModalOpenedAtRef = useRef(0);
+  const discontinuedConfirmButtonRef = useRef(null);
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [combos, setCombos] = useState([]);
@@ -114,6 +116,14 @@ export default function POS() {
 
   // Keyboard navigation handler
   const handleKeyDown = (e) => {
+    if (showDiscontinuedModal) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        discontinuedConfirmButtonRef.current?.click();
+      }
+      return;
+    }
+
     // Không xử lý phím tắt nếu đang focus vào ô input trong modal cài đặt
     if (showShortcuts) return;
 
@@ -234,6 +244,7 @@ export default function POS() {
         category: item.categoryName,
         brand: item.brandName,
         isActive: item.isActive,
+        productActive: item.productActive,
         active: item.active,
         status: item.status
       }));
@@ -356,6 +367,7 @@ export default function POS() {
   };
 
   const showUnavailableWarning = (message) => {
+    discontinuedModalOpenedAtRef.current = Date.now();
     setDiscontinuedMessage(message);
     setShowDiscontinuedModal(true);
   };
@@ -431,10 +443,14 @@ export default function POS() {
   useEffect(() => {
     if (!showDiscontinuedModal) return;
 
+    discontinuedConfirmButtonRef.current?.focus();
+
     const handleDiscontinuedModalEnter = (e) => {
       if (e.key === 'Enter') {
+        const elapsed = Date.now() - discontinuedModalOpenedAtRef.current;
+        if (elapsed < 150) return;
         e.preventDefault();
-        closeDiscontinuedModal();
+        discontinuedConfirmButtonRef.current?.click();
       }
     };
 
@@ -456,7 +472,7 @@ export default function POS() {
   };
 
   const isInactiveItem = (item) => {
-    return item?.isActive === false || item?.active === false || isInactiveStatus(item?.status);
+    return item?.isActive === false || item?.productActive === false || item?.active === false || isInactiveStatus(item?.status);
   };
 
   const addToCart = (product) => {
@@ -1272,6 +1288,8 @@ export default function POS() {
               {discontinuedMessage}
             </p>
             <button
+              ref={discontinuedConfirmButtonRef}
+              autoFocus
               onClick={closeDiscontinuedModal}
               style={{
                 marginTop: "18px",
