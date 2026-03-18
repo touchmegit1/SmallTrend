@@ -21,6 +21,7 @@ public class ProductComboItemResponse {
     private String sku;
     private String barcode;
     private BigDecimal sellPrice;
+    private BigDecimal costPrice;
     private String imageUrl;
 
     private Integer quantity;

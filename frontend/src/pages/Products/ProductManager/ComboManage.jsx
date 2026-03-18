@@ -289,7 +289,11 @@ const ComboManage = () => {
                             {combo.comboPrice?.toLocaleString()}đ
                           </span>
                           <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-0 font-semibold text-xs">
-                            -{Math.round((1 - (combo.comboPrice / combo.originalPrice)) * 100)}%
+                            -{Number.isFinite(Number(combo.discountPercent))
+                              ? Math.round(Number(combo.discountPercent))
+                              : (Number(combo.originalPrice) > 0 && Number(combo.comboPrice) >= 0
+                                ? Math.round((1 - (Number(combo.comboPrice) / Number(combo.originalPrice))) * 100)
+                                : 0)}%
                           </Badge>
                         </div>
                       </TableCell>
