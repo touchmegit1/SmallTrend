@@ -250,7 +250,7 @@ public class ProductController {
 
     // Lấy danh sách giá sắp hết hiệu lực theo số ngày cảnh báo
     @GetMapping("/price-expiry-alerts")
-    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ROLE_ADMIN','MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<PriceExpiryAlertResponse>> getPriceExpiryAlerts(
             @RequestParam(name = "days", defaultValue = "1") int days) {
         return ResponseEntity.ok(variantPriceService.getPriceExpiryAlerts(days));
