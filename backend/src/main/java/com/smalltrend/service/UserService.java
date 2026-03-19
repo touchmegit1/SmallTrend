@@ -399,6 +399,28 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
+    public void resetPasswordByEmail(String email, String newPassword, String confirmPassword) {
+        if (newPassword == null || !newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Xac nhan mat khau moi khong khop");
+        }
+
+        String normalizedEmail = Optional.ofNullable(email).orElse("").trim().toLowerCase();
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay tai khoan voi email nay"));
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+
+        Optional<UserCredential> credentials = userCredentialsRepository.findByUserId(user.getId());
+        if (credentials.isPresent()) {
+            UserCredential credential = credentials.get();
+            credential.setPasswordHash(encodedPassword);
+            userCredentialsRepository.save(credential);
+        }
+    }
+
+    @Transactional
     public UserDTO updateUserAvatar(Integer userId, MultipartFile file) {
         User user = getUserById(userId);
         user.setAvatarUrl(storeAvatarFile(file));

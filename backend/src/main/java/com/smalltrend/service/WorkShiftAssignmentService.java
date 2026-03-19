@@ -3,6 +3,7 @@ package com.smalltrend.service;
 import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
 import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
+import com.smalltrend.entity.Attendance;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.WorkShift;
 import com.smalltrend.entity.WorkShiftAssignment;
@@ -46,7 +47,7 @@ public class WorkShiftAssignmentService {
                 .workShift(shift)
                 .user(user)
                 .shiftDate(request.getShiftDate())
-                .status(normalizeStatus(request.getStatus()))
+                .status("ASSIGNED")
                 .notes(request.getNotes())
                 .build();
 
@@ -78,7 +79,7 @@ public class WorkShiftAssignmentService {
         assignment.setWorkShift(shift);
         assignment.setUser(user);
         assignment.setShiftDate(request.getShiftDate());
-        assignment.setStatus(normalizeStatus(request.getStatus()));
+        assignment.setStatus(normalizeEditableStatus(request.getStatus(), assignment.getStatus()));
         assignment.setNotes(request.getNotes());
 
         WorkShiftAssignment saved = assignmentRepository.save(assignment);
@@ -183,8 +184,31 @@ public class WorkShiftAssignmentService {
 
             requesterAssignment.setUser(targetUser);
             targetAssignment.setUser(requesterUser);
+            requesterAssignment.setStatus("ASSIGNED");
+            targetAssignment.setStatus("ASSIGNED");
+
+            reassignPendingAttendanceIfNeeded(
+                    requesterUser,
+                    targetUser,
+                    requesterAssignment.getShiftDate(),
+                    requesterAssignment.getId(),
+                    requesterAssignment.getWorkShift());
+            reassignPendingAttendanceIfNeeded(
+                    targetUser,
+                    requesterUser,
+                    targetAssignment.getShiftDate(),
+                    targetAssignment.getId(),
+                    targetAssignment.getWorkShift());
         } else {
+            User requesterUser = requesterAssignment.getUser();
             requesterAssignment.setUser(accepterUser);
+            requesterAssignment.setStatus("ASSIGNED");
+            reassignPendingAttendanceIfNeeded(
+                    requesterUser,
+                    accepterUser,
+                    requesterAssignment.getShiftDate(),
+                    requesterAssignment.getId(),
+                    requesterAssignment.getWorkShift());
         }
 
         String requesterOldNote = requesterAssignment.getNotes() == null ? "" : requesterAssignment.getNotes();
@@ -215,6 +239,39 @@ public class WorkShiftAssignmentService {
                     return "PRESENT".equals(status) || "LATE".equals(status);
                 })
                 .orElse(false);
+    }
+
+    private void reassignPendingAttendanceIfNeeded(
+            User oldUser,
+            User newUser,
+            LocalDate shiftDate,
+            Integer assignmentId,
+            WorkShift shift) {
+        if (oldUser == null || newUser == null || shiftDate == null || assignmentId == null) {
+            return;
+        }
+
+        Optional<Attendance> pendingAttendanceOpt = attendanceRepository.findByUserIdAndDate(oldUser.getId(), shiftDate)
+                .filter(attendance -> {
+                    String status = Optional.ofNullable(attendance.getStatus()).orElse("").trim().toUpperCase();
+                    return "PENDING".equals(status);
+                });
+
+        if (pendingAttendanceOpt.isEmpty()) {
+            return;
+        }
+
+        Attendance pendingAttendance = pendingAttendanceOpt.get();
+        pendingAttendance.setUser(newUser);
+        pendingAttendance.setAssignmentIdSnapshot(assignmentId);
+        if (shift != null) {
+            pendingAttendance.setShiftIdSnapshot(shift.getId());
+            pendingAttendance.setShiftNameSnapshot(shift.getShiftName());
+            pendingAttendance.setShiftStartSnapshot(shift.getStartTime());
+            pendingAttendance.setShiftEndSnapshot(shift.getEndTime());
+            pendingAttendance.setShiftWorkingMinutesSnapshot(shift.getWorkingMinutes());
+        }
+        attendanceRepository.save(pendingAttendance);
     }
 
     private void validateShiftForDate(WorkShift shift, LocalDate shiftDate) {
@@ -266,5 +323,13 @@ public class WorkShiftAssignmentService {
             return "ASSIGNED";
         }
         return status.trim().toUpperCase();
+    }
+
+    private String normalizeEditableStatus(String requestedStatus, String currentStatus) {
+        String normalized = normalizeStatus(requestedStatus);
+        if ("COMPLETED".equals(normalized) || "CANCELLED".equals(normalized)) {
+            return normalizeStatus(currentStatus);
+        }
+        return normalized;
     }
 }

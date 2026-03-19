@@ -21,10 +21,16 @@ import {
 } from "../../services/inventoryService";
 import { useToast } from "../../components/ui/Toast";
 import CustomSelect from "../../components/common/CustomSelect";
+import { useAuth } from "../../context/AuthContext";
+import { canPerform } from "../../utils/rolePermissions";
 
 function LocationManagement() {
   const toast = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canViewLocationProducts = canPerform(user, "inventory.location.viewStock");
+  const canTransferLocationStock = canPerform(user, "inventory.location.transfer");
+  const canEditLocation = canPerform(user, "inventory.location.edit");
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -246,6 +252,7 @@ function LocationManagement() {
   });
 
   const handleOpenModal = (location) => {
+    if (!canEditLocation) return;
     setEditingLocation(location);
     setFormData(normalizeFormData(location));
     setIsModalOpen(true);
@@ -253,6 +260,7 @@ function LocationManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canEditLocation) return;
     if (!validateLocationForm() || !editingLocation) return;
 
     const payload = buildLocationPayload();
@@ -271,17 +279,20 @@ function LocationManagement() {
   };
 
   const openStockModal = (loc) => {
+    if (!canViewLocationProducts) return;
     setStockModalData(loc);
     setIsStockModalOpen(true);
   };
 
   const openTransferModal = (loc) => {
+    if (!canTransferLocationStock) return;
     setTransferModal({ isOpen: true, location: loc });
     setTransferData(createInitialTransferData());
   };
 
   const handleTransfer = async (e) => {
     e.preventDefault();
+    if (!canTransferLocationStock) return;
     const validated = validateTransferForm();
     if (!validated) return;
 
@@ -652,24 +663,30 @@ function LocationManagement() {
                         </div>
 
                         <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => openStockModal(selectedLocation)}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
-                          >
-                            <Eye size={15} /> Xem sản phẩm
-                          </button>
-                          <button
-                            onClick={() => openTransferModal(selectedLocation)}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors"
-                          >
-                            <ArrowRightLeft size={15} /> Chuyển hàng
-                          </button>
-                          <button
-                            onClick={() => handleOpenModal(selectedLocation)}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors"
-                          >
-                            <Edit2 size={15} /> Chỉnh sửa
-                          </button>
+                          {canViewLocationProducts && (
+                            <button
+                              onClick={() => openStockModal(selectedLocation)}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                            >
+                              <Eye size={15} /> Xem sản phẩm
+                            </button>
+                          )}
+                          {canTransferLocationStock && (
+                            <button
+                              onClick={() => openTransferModal(selectedLocation)}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors"
+                            >
+                              <ArrowRightLeft size={15} /> Chuyển hàng
+                            </button>
+                          )}
+                          {canEditLocation && (
+                            <button
+                              onClick={() => handleOpenModal(selectedLocation)}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                            >
+                              <Edit2 size={15} /> Chỉnh sửa
+                            </button>
+                          )}
                         </div>
                       </div>
 

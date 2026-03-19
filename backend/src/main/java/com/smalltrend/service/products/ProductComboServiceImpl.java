@@ -4,18 +4,22 @@ import com.smalltrend.dto.products.CreateProductComboItemRequest;
 import com.smalltrend.dto.products.CreateProductComboRequest;
 import com.smalltrend.dto.products.ProductComboItemResponse;
 import com.smalltrend.dto.products.ProductComboResponse;
+import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.entity.ProductCombo;
 import com.smalltrend.entity.ProductComboItem;
 import com.smalltrend.entity.ProductVariant;
+import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.ProductComboItemRepository;
 import com.smalltrend.repository.ProductComboRepository;
-import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.validation.product.ProductComboValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -25,9 +29,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductComboServiceImpl implements ProductComboService {
 
+    private static final BigDecimal PRICE_ROUND_STEP = BigDecimal.valueOf(100);
+
     private final ProductComboRepository productComboRepository;
     private final ProductComboItemRepository productComboItemRepository;
-    private final ProductVariantRepository productVariantRepository;
+    private final ProductBatchRepository productBatchRepository;
     private final ProductComboValidator productComboValidator;
 
     @Override
@@ -50,7 +56,6 @@ public class ProductComboServiceImpl implements ProductComboService {
         String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "COMBO-" + datePart + "-";
 
-        // Tìm combo code lớn nhất theo prefix hiện tại
         List<ProductCombo> allCombos = productComboRepository.findAll();
         int maxSeq = 0;
         for (ProductCombo c : allCombos) {
@@ -72,29 +77,29 @@ public class ProductComboServiceImpl implements ProductComboService {
     public ProductComboResponse createCombo(CreateProductComboRequest request) {
         productComboValidator.validateForCreate(request);
 
-        // Tự sinh comboCode nếu frontend không gửi
         String comboCode = request.getComboCode();
         if (comboCode == null || comboCode.trim().isEmpty()) {
             comboCode = generateComboCode();
             request.setComboCode(comboCode);
         } else {
             String normalizedComboCode = comboCode.trim();
-            // Chỉ kiểm tra trùng khi user tự nhập comboCode
             productComboValidator.validateComboCodeUniqueForCreate(normalizedComboCode);
             request.setComboCode(normalizedComboCode);
         }
 
+        BigDecimal normalizedComboPrice = normalizeComboPrice(request.getComboPrice());
+        BigDecimal totalCost = calculateTotalCost(request.getItems());
+        validateComboPriceAgainstCost(normalizedComboPrice, totalCost);
+        request.setComboPrice(normalizedComboPrice);
+
         ProductCombo combo = new ProductCombo();
-        // Base mapping
         applyRequestToCombo(request, combo);
 
-        // Before saving combo, calculate Original Price
         BigDecimal originalPrice = calculateOriginalPrice(request.getItems());
         combo.setOriginalPrice(originalPrice != null ? originalPrice : BigDecimal.ZERO);
 
         ProductCombo savedCombo = productComboRepository.save(combo);
 
-        // Save Items
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (CreateProductComboItemRequest itemReq : request.getItems()) {
                 ProductVariant variant = productComboValidator.requireExistingVariant(itemReq.getProductVariantId());
@@ -104,8 +109,7 @@ public class ProductComboServiceImpl implements ProductComboService {
                 item.setProductVariant(variant);
                 item.setQuantity(itemReq.getQuantity() != null ? itemReq.getQuantity() : 1);
                 item.setMinQuantity(itemReq.getMinQuantity() != null ? itemReq.getMinQuantity() : 1);
-                item.setMaxQuantity(
-                        itemReq.getMaxQuantity() != null ? itemReq.getMaxQuantity() : itemReq.getQuantity());
+                item.setMaxQuantity(itemReq.getMaxQuantity() != null ? itemReq.getMaxQuantity() : itemReq.getQuantity());
                 item.setIsOptional(itemReq.getIsOptional() != null ? itemReq.getIsOptional() : false);
                 item.setCanSubstitute(itemReq.getCanSubstitute() != null ? itemReq.getCanSubstitute() : false);
                 item.setDisplayOrder(itemReq.getDisplayOrder() != null ? itemReq.getDisplayOrder() : 0);
@@ -115,7 +119,6 @@ public class ProductComboServiceImpl implements ProductComboService {
             }
         }
 
-        // Force reload and map
         return mapToResponse(savedCombo);
     }
 
@@ -125,8 +128,12 @@ public class ProductComboServiceImpl implements ProductComboService {
         ProductCombo combo = productComboValidator.requireExistingCombo(id);
         productComboValidator.validateForUpdate(id, request);
 
-        // Check if combo code changing and existing
         productComboValidator.validateComboCodeUniqueForUpdate(combo, request.getComboCode());
+
+        BigDecimal normalizedComboPrice = normalizeComboPrice(request.getComboPrice());
+        BigDecimal totalCost = calculateTotalCost(request.getItems());
+        validateComboPriceAgainstCost(normalizedComboPrice, totalCost);
+        request.setComboPrice(normalizedComboPrice);
 
         applyRequestToCombo(request, combo);
 
@@ -135,7 +142,6 @@ public class ProductComboServiceImpl implements ProductComboService {
 
         ProductCombo savedCombo = productComboRepository.save(combo);
 
-        // Replace all items
         productComboItemRepository.deleteByComboId(savedCombo.getId());
 
         if (request.getItems() != null && !request.getItems().isEmpty()) {
@@ -147,8 +153,7 @@ public class ProductComboServiceImpl implements ProductComboService {
                 item.setProductVariant(variant);
                 item.setQuantity(itemReq.getQuantity() != null ? itemReq.getQuantity() : 1);
                 item.setMinQuantity(itemReq.getMinQuantity() != null ? itemReq.getMinQuantity() : 1);
-                item.setMaxQuantity(
-                        itemReq.getMaxQuantity() != null ? itemReq.getMaxQuantity() : itemReq.getQuantity());
+                item.setMaxQuantity(itemReq.getMaxQuantity() != null ? itemReq.getMaxQuantity() : itemReq.getQuantity());
                 item.setIsOptional(itemReq.getIsOptional() != null ? itemReq.getIsOptional() : false);
                 item.setCanSubstitute(itemReq.getCanSubstitute() != null ? itemReq.getCanSubstitute() : false);
                 item.setDisplayOrder(itemReq.getDisplayOrder() != null ? itemReq.getDisplayOrder() : 0);
@@ -198,6 +203,16 @@ public class ProductComboServiceImpl implements ProductComboService {
         combo.setStatus(request.getStatus());
     }
 
+    private BigDecimal normalizeComboPrice(BigDecimal rawPrice) {
+        if (rawPrice == null) {
+            return BigDecimal.ZERO;
+        }
+        return rawPrice
+                .divide(PRICE_ROUND_STEP, 0, RoundingMode.HALF_UP)
+                .multiply(PRICE_ROUND_STEP)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
     private BigDecimal calculateOriginalPrice(List<CreateProductComboItemRequest> items) {
         if (items == null || items.isEmpty()) {
             return BigDecimal.ZERO;
@@ -206,12 +221,42 @@ public class ProductComboServiceImpl implements ProductComboService {
         BigDecimal total = BigDecimal.ZERO;
         for (CreateProductComboItemRequest itemReq : items) {
             ProductVariant variant = productComboValidator.requireExistingVariant(itemReq.getProductVariantId());
-
             BigDecimal variantPrice = variant.getSellPrice() != null ? variant.getSellPrice() : BigDecimal.ZERO;
             int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 1;
             total = total.add(variantPrice.multiply(BigDecimal.valueOf(qty)));
         }
         return total;
+    }
+
+    private BigDecimal calculateTotalCost(List<CreateProductComboItemRequest> items) {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (CreateProductComboItemRequest itemReq : items) {
+            ProductVariant variant = productComboValidator.requireExistingVariant(itemReq.getProductVariantId());
+            BigDecimal variantCost = getVariantCostPrice(variant);
+            int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 1;
+            total = total.add(variantCost.multiply(BigDecimal.valueOf(qty)));
+        }
+        return total;
+    }
+
+    private BigDecimal getVariantCostPrice(ProductVariant variant) {
+        ProductBatch latestBatch = productBatchRepository.findFirstByVariantIdOrderByIdDesc(variant.getId()).orElse(null);
+        if (latestBatch == null || latestBatch.getCostPrice() == null) {
+            return BigDecimal.ZERO;
+        }
+        return latestBatch.getCostPrice();
+    }
+
+    private void validateComboPriceAgainstCost(BigDecimal comboPrice, BigDecimal totalCost) {
+        if (comboPrice.compareTo(totalCost) <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Giá combo sau làm tròn phải lớn hơn tổng giá nhập của các sản phẩm trong combo");
+        }
     }
 
     private ProductComboResponse mapToResponse(ProductCombo combo) {
@@ -222,10 +267,9 @@ public class ProductComboServiceImpl implements ProductComboService {
             resp.setId(item.getId());
             resp.setComboId(combo.getId());
             resp.setProductVariantId(item.getProductVariant().getId());
-            // Build variant name consistent with ProductVariantService
+
             String productName = item.getProductVariant().getProduct().getName();
-            String unitName = item.getProductVariant().getUnit() != null ? item.getProductVariant().getUnit().getName()
-                    : null;
+            String unitName = item.getProductVariant().getUnit() != null ? item.getProductVariant().getUnit().getName() : null;
 
             StringBuilder nameBuilder = new StringBuilder(productName != null ? productName : "");
             if (unitName != null && !unitName.isEmpty()) {
@@ -240,10 +284,12 @@ public class ProductComboServiceImpl implements ProductComboService {
                     }
                 }
             }
+
             resp.setProductVariantName(nameBuilder.toString());
             resp.setSku(item.getProductVariant().getSku());
             resp.setBarcode(item.getProductVariant().getBarcode());
             resp.setSellPrice(item.getProductVariant().getSellPrice());
+            resp.setCostPrice(getVariantCostPrice(item.getProductVariant()));
             resp.setImageUrl(item.getProductVariant().getImageUrl());
 
             resp.setQuantity(item.getQuantity());
@@ -256,6 +302,14 @@ public class ProductComboServiceImpl implements ProductComboService {
             return resp;
         }).collect(Collectors.toList());
 
+        BigDecimal totalCost = mappedItems.stream()
+                .map(item -> {
+                    BigDecimal itemCost = item.getCostPrice() != null ? item.getCostPrice() : BigDecimal.ZERO;
+                    int qty = item.getQuantity() != null ? item.getQuantity() : 1;
+                    return itemCost.multiply(BigDecimal.valueOf(qty));
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return ProductComboResponse.builder()
                 .id(combo.getId())
                 .comboCode(combo.getComboCode())
@@ -263,6 +317,7 @@ public class ProductComboServiceImpl implements ProductComboService {
                 .description(combo.getDescription())
                 .imageUrl(combo.getImageUrl())
                 .originalPrice(combo.getOriginalPrice())
+                .totalCost(totalCost)
                 .comboPrice(combo.getComboPrice())
                 .savedAmount(combo.getSavedAmount())
                 .discountPercent(combo.getDiscountPercent())

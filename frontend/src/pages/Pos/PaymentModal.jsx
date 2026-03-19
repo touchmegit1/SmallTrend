@@ -245,6 +245,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   const notesRef = useRef(null);
   const cashInputRef = useRef(null);
   const paymentButtonRef = useRef(null);
+  const closeButtonRef = useRef(null);
   const suggestedAmountsRef = useRef([]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -523,11 +524,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
         } else {
           paymentButtonRef.current?.click();
         }
+      } else if (shortcuts && e.key === shortcuts.closePaymentModal) {
+        e.preventDefault();
+        closeButtonRef.current?.focus();
+        onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedField, paymentMethod, cashAmount, finalTotal, suggestedIndex, shortcuts]);
+  }, [focusedField, paymentMethod, cashAmount, finalTotal, suggestedIndex, shortcuts, onClose]);
 
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
@@ -686,6 +691,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
         >
           <h2 style={{ margin: 0, fontSize: "20px" }}>Thanh toán</h2>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             style={{
               background: "none",

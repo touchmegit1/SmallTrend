@@ -605,12 +605,14 @@ const ShiftTicketCenter = () => {
                         <p className="text-slate-600 text-sm">Tạo yêu cầu đổi/nhường/nghỉ ca và xử lý phê duyệt nhanh cho quản lý.</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                >
-                    <Plus size={16} /> Tạo ticket ca làm
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                    >
+                        <Plus size={16} /> Tạo ticket ca làm
+                    </button>
+                </div>
             </div>
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -715,10 +717,8 @@ const ShiftTicketCenter = () => {
                         <TicketCard
                             key={ticket.id}
                             ticket={ticket}
-                            canApprove={(isAdmin || isManager)}
-                            canAcceptSwap={!(isAdmin || isManager)
-                                && ticket.relatedEntityType === 'SHIFT_SWAP'
-                                && Number(ticket.assignedToUserId) === Number(currentUserId)}
+                            canApprove={false}
+                            canAcceptSwap={false}
                             onApprove={handleApprove}
                             onReject={handleReject}
                             onAcceptSwap={handleAcceptSwap}

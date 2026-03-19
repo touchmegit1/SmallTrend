@@ -19,6 +19,7 @@ import com.smalltrend.service.UnitService;
 import com.smalltrend.service.VariantPriceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,24 +42,28 @@ public class ProductController {
 
     // Lấy danh sách tất cả sản phẩm
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<ProductResponse>> getAll() {
         return ResponseEntity.ok(productService.getAll());
     }
 
     // Lấy thông tin chi tiết một sản phẩm theo ID
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<ProductResponse> getById(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(productService.getById(id));
     }
 
     // Lấy danh sách các biến thể (variants) của một sản phẩm
     @GetMapping("/{id}/variants")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<ProductVariantRespone>> getVariantsByProductId(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(productVariantService.getVariantsByProductId(id));
     }
 
     // Lấy danh sách tất cả các biến thể
     @GetMapping("/variants")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<ProductVariantRespone>> getAllVariants(
             @RequestParam(name = "search", required = false) String search,
             @RequestParam(name = "barcode", required = false) String barcode) {
@@ -67,6 +72,7 @@ public class ProductController {
 
     // Tạo mới một biến thể cho sản phẩm
     @PostMapping("/{id}/variants")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<ProductVariantRespone> createVariant(
             @PathVariable("id") Integer id,
             @RequestBody CreateVariantRequest request) {
@@ -75,6 +81,7 @@ public class ProductController {
 
     // Cập nhật thông tin của một biến thể
     @PutMapping("/variants/{variantId}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<ProductVariantRespone> updateVariant(
             @PathVariable("variantId") Integer variantId,
             @RequestBody CreateVariantRequest request) {
@@ -83,6 +90,7 @@ public class ProductController {
 
     // Bật/Tắt trạng thái hoạt động (active/inactive) của một biến thể
     @PutMapping("/variants/{variantId}/toggle-status")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<String> toggleVariantStatus(@PathVariable("variantId") Integer variantId) {
         productVariantService.toggleVariantStatus(variantId);
         return ResponseEntity.ok("Đã thay đổi trạng thái biến thể");
@@ -90,6 +98,7 @@ public class ProductController {
 
     // Xóa một biến thể (chỉ trong 2 phút đầu sau khi tạo)
     @DeleteMapping("/variants/{variantId}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<String> deleteVariant(@PathVariable("variantId") Integer variantId) {
         productVariantService.deleteVariant(variantId);
         return ResponseEntity.ok("Đã xóa biến thể");
@@ -97,15 +106,17 @@ public class ProductController {
 
     // Tự động tạo mã SKU dựa trên thông tin sản phẩm
     @GetMapping("/{id}/generate-sku")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<java.util.Map<String, String>> generateSku(
             @PathVariable("id") Integer id,
-            @RequestParam(required = false) Integer unitId) {
+            @RequestParam(value = "unitId", required = false) Integer unitId) {
         String sku = productVariantService.generateSku(id, unitId);
         return ResponseEntity.ok(java.util.Map.of("sku", sku));
     }
 
     // Tự động tạo mã Barcode nội bộ (dành cho sản phẩm đóng gói tại cửa hàng)
     @GetMapping("/{id}/generate-barcode")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<java.util.Map<String, String>> generateBarcode(@PathVariable("id") Integer id) {
         String barcode = productVariantService.generateInternalBarcode(id);
         return ResponseEntity.ok(java.util.Map.of("barcode", barcode));
@@ -113,12 +124,14 @@ public class ProductController {
 
     // Lấy danh sách quy đổi đơn vị của biến thể
     @GetMapping("/variants/{variantId}/conversions")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<UnitConversionResponse>> getConversionsByVariantId(@PathVariable("variantId") Integer variantId) {
         return ResponseEntity.ok(unitConversionService.getConversionsByVariantId(variantId));
     }
 
     // Thêm quy đổi đơn vị mới
     @PostMapping("/variants/{variantId}/conversions")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<UnitConversionResponse> addConversion(
             @PathVariable("variantId") Integer variantId,
             @RequestBody UnitConversionRequest request) {
@@ -127,6 +140,7 @@ public class ProductController {
 
     // Cập nhật quy đổi đơn vị
     @PutMapping("/conversions/{conversionId}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<UnitConversionResponse> updateConversion(
             @PathVariable("conversionId") Integer conversionId,
             @RequestBody UnitConversionRequest request) {
@@ -135,6 +149,7 @@ public class ProductController {
 
     // Xóa quy đổi đơn vị
     @DeleteMapping("/conversions/{conversionId}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<String> deleteConversion(@PathVariable("conversionId") Integer conversionId) {
         unitConversionService.deleteConversion(conversionId);
         return ResponseEntity.ok("Đã xóa quy đổi đơn vị");
@@ -142,18 +157,21 @@ public class ProductController {
 
     // Lấy danh sách tất cả các đơn vị tính có trong hệ thống
     @GetMapping("/units")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<UnitResponse>> getAllUnits() {
         return ResponseEntity.ok(unitService.getAllUnits());
     }
 
     // Thêm đơn vị tính mới
     @PostMapping("/units")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<UnitResponse> createUnit(@RequestBody UnitRequest request) {
         return ResponseEntity.ok(unitService.createUnit(request));
     }
 
     // Cập nhật đơn vị tính
     @PutMapping("/units/{id}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<UnitResponse> updateUnit(
             @PathVariable("id") Integer id,
             @RequestBody UnitRequest request) {
@@ -162,6 +180,7 @@ public class ProductController {
 
     // Xóa đơn vị tính
     @DeleteMapping("/units/{id}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<String> deleteUnit(@PathVariable("id") Integer id) {
         unitService.deleteUnit(id);
         return ResponseEntity.ok("Đã xóa đơn vị tính");
@@ -170,6 +189,7 @@ public class ProductController {
     // ─── Variant Prices ──────────────────────────────────────────────────────
     // Tạo giá mới cho variant (giá cũ chuyển INACTIVE)
     @PostMapping("/variants/{variantId}/prices")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<VariantPriceResponse> createVariantPrice(
             @PathVariable("variantId") Integer variantId,
             @RequestBody VariantPriceRequest request) {
@@ -178,12 +198,14 @@ public class ProductController {
 
     // Lấy lịch sử giá của variant
     @GetMapping("/variants/{variantId}/prices")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<VariantPriceResponse>> getVariantPriceHistory(@PathVariable("variantId") Integer variantId) {
         return ResponseEntity.ok(variantPriceService.getPriceHistory(variantId));
     }
 
     // Lấy giá ACTIVE hiện tại của variant
     @GetMapping("/variants/{variantId}/prices/active")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<VariantPriceResponse> getActiveVariantPrice(@PathVariable("variantId") Integer variantId) {
         VariantPriceResponse price = variantPriceService.getActivePrice(variantId);
         if (price == null) {
@@ -194,6 +216,7 @@ public class ProductController {
 
     // Cập nhật ngày hiệu lực cho giá ACTIVE hiện tại
     @PutMapping("/variants/{variantId}/prices/active/date")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<VariantPriceResponse> updateActivePriceDate(
             @PathVariable("variantId") Integer variantId,
             @RequestBody java.util.Map<String, String> request) {
@@ -207,6 +230,7 @@ public class ProductController {
 
     // Cập nhật ngày hết hiệu lực cho giá ACTIVE hiện tại
     @PutMapping("/variants/{variantId}/prices/active/expiry")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<VariantPriceResponse> updateActivePriceExpiry(
             @PathVariable("variantId") Integer variantId,
             @RequestBody java.util.Map<String, String> request) {
@@ -219,12 +243,14 @@ public class ProductController {
 
     // Toggle trạng thái active/inactive của một bản ghi giá
     @PutMapping("/prices/{priceId}/toggle-status")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<VariantPriceResponse> togglePriceStatus(@PathVariable("priceId") Integer priceId) {
         return ResponseEntity.ok(variantPriceService.togglePriceStatus(priceId));
     }
 
     // Lấy danh sách giá sắp hết hiệu lực theo số ngày cảnh báo
     @GetMapping("/price-expiry-alerts")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ROLE_ADMIN','MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<PriceExpiryAlertResponse>> getPriceExpiryAlerts(
             @RequestParam(name = "days", defaultValue = "1") int days) {
         return ResponseEntity.ok(variantPriceService.getPriceExpiryAlerts(days));
@@ -232,6 +258,7 @@ public class ProductController {
 
     // Trigger gửi email cảnh báo ngay lập tức để test
     @PostMapping("/price-expiry-alerts/send-now")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<java.util.Map<String, Object>> sendPriceExpiryAlertsNow() {
         int sentCount = priceExpiryAlertEmailScheduler.sendPriceExpiryAlertsNow();
         return ResponseEntity.ok(java.util.Map.of(
@@ -245,18 +272,21 @@ public class ProductController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<ProductResponse> create(@RequestBody CreateProductRequest request) {
         return ResponseEntity.ok(productService.create(request));
     }
 
     // Cập nhật thông tin của một sản phẩm hiện có
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<ProductResponse> update(@PathVariable("id") Integer id, @RequestBody CreateProductRequest request) {
         return ResponseEntity.ok(productService.update(id, request));
     }
 
     // Bật/Tắt trạng thái hoạt động của một sản phẩm
     @PutMapping("/{id}/toggle-status")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<String> toggleStatus(@PathVariable("id") Integer id) {
         productService.toggleStatus(id);
         return ResponseEntity.ok("Đã thay đổi trạng thái sản phẩm");
@@ -264,6 +294,7 @@ public class ProductController {
 
     // Xóa một sản phẩm theo ID
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<String> delete(@PathVariable("id") Integer id) {
         productService.delete(id);
         return ResponseEntity.ok("Đã xóa sản phẩm");

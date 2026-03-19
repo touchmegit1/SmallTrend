@@ -2,8 +2,11 @@ package com.smalltrend.controller;
 
 import com.smalltrend.dto.auth.AuthRequest;
 import com.smalltrend.dto.auth.AuthResponse;
+import com.smalltrend.dto.auth.ForgotPasswordOtpRequest;
+import com.smalltrend.dto.auth.ResetPasswordOtpRequest;
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.entity.User;
+import com.smalltrend.service.PasswordResetOtpService;
 import com.smalltrend.service.UserService;
 import com.smalltrend.validation.UserManagementValidator;
 import jakarta.validation.Valid;
@@ -30,6 +33,7 @@ import java.util.List;
 public class AuthController {
 
     private final UserService userService;
+    private final PasswordResetOtpService passwordResetOtpService;
     private final AuthenticationManager authenticationManager;
     private final UserManagementValidator validator;
 
@@ -141,6 +145,43 @@ public class AuthController {
             log.error("Token validation error: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Token không hợp lệ"));
+        }
+    }
+
+    @PostMapping("/forgot-password/otp")
+    public ResponseEntity<?> requestPasswordOtp(@Valid @RequestBody ForgotPasswordOtpRequest request) {
+        try {
+            passwordResetOtpService.requestOtp(request.getEmail());
+            return ResponseEntity.ok(new MessageResponse("OTP da duoc gui den email"));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new MessageResponse(ex.getMessage()));
+        } catch (Exception ex) {
+            log.error("Request password OTP error for email {}", request.getEmail(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Khong the gui OTP, vui long thu lai sau"));
+        }
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<?> resetPasswordWithOtp(@Valid @RequestBody ResetPasswordOtpRequest request) {
+        try {
+            passwordResetOtpService.resetPassword(
+                    request.getEmail(),
+                    request.getOtp(),
+                    request.getNewPassword(),
+                    request.getConfirmPassword());
+            return ResponseEntity.ok(new MessageResponse("Dat lai mat khau thanh cong"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new MessageResponse(ex.getMessage()));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new MessageResponse(ex.getMessage()));
+        } catch (Exception ex) {
+            log.error("Reset password by OTP failed for email {}", request.getEmail(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Khong the dat lai mat khau, vui long thu lai sau"));
         }
     }
 }

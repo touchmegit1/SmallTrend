@@ -30,16 +30,15 @@ export default function ActionButtons({
 }) {
   const { user } = useAuth();
   const userRole = String(user?.role?.name || user?.role || "").toUpperCase();
-  const isManagerOrAdmin = [
-    "MANAGER",
-    "ROLE_MANAGER",
-    "ADMIN",
-    "ROLE_ADMIN",
-  ].includes(userRole);
+  const isManager = ["MANAGER", "ROLE_MANAGER"].includes(userRole);
+  const isAdmin = ["ADMIN", "ROLE_ADMIN"].includes(userRole);
+  const isManagerOrAdmin = isManager || isAdmin;
   const isInventoryStaff = ["INVENTORY_STAFF", "ROLE_INVENTORY_STAFF"].includes(
     userRole,
   );
-  const canCheckAndReceive = isManagerOrAdmin || isInventoryStaff;
+  const canCheckAndReceive = isAdmin || isInventoryStaff;
+  const canStartChecking = isInventoryStaff;
+  const canCreatePurchaseRequest = isAdmin || isInventoryStaff;
 
   const isDraft = status === PO_STATUS.DRAFT || status === PO_STATUS.REJECTED;
   const isPending = status === PO_STATUS.PENDING;
@@ -54,10 +53,14 @@ export default function ActionButtons({
   const isManagerActionableShortage =
     isShortagePendingApproval && isManagerOrAdmin;
   const canRestartChecking =
-    (isConfirmed || isSupplierSupplementPending) && canCheckAndReceive;
+    (isConfirmed || isSupplierSupplementPending) && canStartChecking;
 
   const renderActionGroup = () => {
     if (isDraft) {
+      if (!canCreatePurchaseRequest) {
+        return null;
+      }
+
       return (
         <>
           <button

@@ -149,6 +149,11 @@ public class ShiftWorkforceService {
 
         Attendance saved = attendanceRepository.save(attendance);
 
+        if (assignment != null && shouldMarkAssignmentCompleted(saved.getStatus())) {
+            assignment.setStatus("COMPLETED");
+            assignmentRepository.save(assignment);
+        }
+
         WorkShift shift = assignment != null ? assignment.getWorkShift() : null;
 
         return AttendanceResponse.builder()
@@ -612,6 +617,11 @@ public class ShiftWorkforceService {
             return "PENDING";
         }
         return status.trim().toUpperCase();
+    }
+
+    private boolean shouldMarkAssignmentCompleted(String attendanceStatus) {
+        String normalized = Optional.ofNullable(attendanceStatus).orElse("").trim().toUpperCase();
+        return "PRESENT".equals(normalized) || "LATE".equals(normalized);
     }
 
     private String resolveAttendanceStatus(Attendance attendance,

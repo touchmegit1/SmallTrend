@@ -2,11 +2,15 @@ import React from "react";
 import { RefreshCw, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInventoryDashboard } from "../../hooks/useInventoryData";
+import { useAuth } from "../../context/AuthContext";
+import { MANAGER_ROLES, hasAnyRole } from "../../utils/rolePermissions";
 import StatsCards from "../../components/inventory/StatsCards";
 import StockByProductChart from "../../components/inventory/StockByProductChart";
 
 function InventoryDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isManager = hasAnyRole(user, MANAGER_ROLES);
   const {
     products,
     allProducts,
@@ -83,13 +87,15 @@ function InventoryDashboard() {
             Làm mới
           </button>
 
-          <button
-            onClick={() => navigate("/inventory/purchase-orders/create")}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition"
-          >
-            <Plus size={16} />
-            Nhập hàng mới
-          </button>
+          {!isManager && (
+            <button
+              onClick={() => navigate("/inventory/purchase-orders/create")}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition"
+            >
+              <Plus size={16} />
+              Nhập hàng mới
+            </button>
+          )}
         </div>
       </div>
 

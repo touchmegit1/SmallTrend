@@ -21,6 +21,7 @@ public class ProductComboResponse {
     private String description;
     private String imageUrl;
     private BigDecimal originalPrice;
+    private BigDecimal totalCost;
     private BigDecimal comboPrice;
     private BigDecimal savedAmount;
     private BigDecimal discountPercent;
