@@ -4,7 +4,7 @@ import { userService } from '../../services/userService';
 import { ClipboardCheck, CalendarDays, Users, Clock3, TriangleAlert, RotateCcw } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 
-const AttendanceManagement = ({ viewMode = 'full' }) => {
+const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
     const isSummaryOnly = viewMode === 'summary';
     const isDetailOnly = viewMode === 'detail';
     const showHeader = !isDetailOnly;
@@ -25,6 +25,17 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
         userId: '',
         status: 'ALL',
     });
+
+    useEffect(() => {
+        if (!initialFilters) {
+            return;
+        }
+
+        setFilters((prev) => ({
+            ...prev,
+            ...initialFilters,
+        }));
+    }, [initialFilters]);
 
     useEffect(() => {
         loadUsers();
@@ -171,14 +182,37 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="grid gap-3 md:grid-cols-4">
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-600">Ngày chấm công</label>
-                            <input
-                                type="date"
-                                value={filters.date}
-                                onChange={(event) => setFilters((prev) => ({ ...prev, date: event.target.value }))}
-                                className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.date ? 'border-rose-400' : 'border-slate-200'}`}
+                            <label className="text-xs font-medium text-slate-600">Phạm vi</label>
+                            <CustomSelect
+                                value={filters.scope}
+                                onChange={(value) => setFilters((prev) => ({ ...prev, scope: value }))}
+                                options={[
+                                    { value: 'DAY', label: 'Theo ngày' },
+                                    { value: 'MONTH', label: 'Theo tháng' },
+                                ]}
                             />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-600">
+                                {filters.scope === 'MONTH' ? 'Tháng chấm công' : 'Ngày chấm công'}
+                            </label>
+                            {filters.scope === 'MONTH' ? (
+                                <input
+                                    type="month"
+                                    value={filters.month}
+                                    onChange={(event) => setFilters((prev) => ({ ...prev, month: event.target.value }))}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.month ? 'border-rose-400' : 'border-slate-200'}`}
+                                />
+                            ) : (
+                                <input
+                                    type="date"
+                                    value={filters.date}
+                                    onChange={(event) => setFilters((prev) => ({ ...prev, date: event.target.value }))}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm ${filterErrors.date ? 'border-rose-400' : 'border-slate-200'}`}
+                                />
+                            )}
                             {filterErrors.date && <p className="text-xs text-rose-600">{filterErrors.date}</p>}
+                            {filterErrors.month && <p className="text-xs text-rose-600">{filterErrors.month}</p>}
                         </div>
                         <div className="space-y-1">
                             <label className="text-xs font-medium text-slate-600">Nhân viên</label>
@@ -207,7 +241,7 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
                             />
                         </div>
                         <button
-                            onClick={() => setFilters({ date: toDateInput(new Date()), userId: '', status: 'ALL' })}
+                            onClick={() => setFilters({ scope: 'DAY', date: toDateInput(new Date()), month: toMonthInput(new Date()), userId: '', status: 'ALL' })}
                             className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
                             <RotateCcw size={14} />
@@ -329,11 +363,34 @@ const validateAttendancePatch = (record, patch) => {
 const validateAttendanceFilters = (filters) => {
     const errors = {};
 
-    if (!filters.date) {
+    if (filters.scope === 'MONTH' && !filters.month) {
+        errors.month = 'Vui lòng chọn tháng chấm công.';
+    }
+
+    if (filters.scope !== 'MONTH' && !filters.date) {
         errors.date = 'Vui lòng chọn ngày chấm công.';
     }
 
     return errors;
+};
+
+const toMonthInput = (value) => {
+    const date = value instanceof Date ? value : new Date(value);
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    return `${year}-${month}`;
+};
+
+const monthToDateRange = (month) => {
+    const [year, monthValue] = String(month || '').split('-').map(Number);
+    if (!year || !monthValue) {
+        return { startDate: null, endDate: null };
+    }
+    const lastDay = new Date(year, monthValue, 0).getDate();
+    return {
+        startDate: `${year}-${String(monthValue).padStart(2, '0')}-01`,
+        endDate: `${year}-${String(monthValue).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+    };
 };
 
 export default AttendanceManagement;

@@ -3,8 +3,13 @@ import { shiftService } from '../../services/shiftService';
 import { userService } from '../../services/userService';
 import { Wallet, Users, Clock3, BadgeDollarSign, Settings, X } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
+import { useAuth } from '../../context/AuthContext';
 
 const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken = 0 }) => {
+    const { user } = useAuth();
+    const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+    const isAdmin = roleName === 'ADMIN' || roleName === 'ROLE_ADMIN';
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [users, setUsers] = useState([]);
@@ -246,14 +251,18 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                                     <td className="px-4 py-3 whitespace-nowrap">{formatCurrency(row.hourlyRate)}</td>
                                     <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{formatCurrency(row.netPay)}</td>
                                     <td className="px-4 py-3 whitespace-nowrap">
-                                        <button
-                                            type="button"
-                                            onClick={() => openSalaryModal(row)}
-                                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                        >
-                                            <Settings size={13} />
-                                            Sửa lương
-                                        </button>
+                                        {isAdmin ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => openSalaryModal(row)}
+                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                            >
+                                                <Settings size={13} />
+                                                Sửa lương
+                                            </button>
+                                        ) : (
+                                            <span className="text-xs text-slate-400">-</span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -285,7 +294,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
 
                         <div className="p-5 space-y-4">
                             <div>
-                                <label className="text-sm font-medium text-slate-700">Chế độ lương</label>
+                                <label className="text-sm font-medium text-slate-700">Chế độ lương <span className="text-rose-500">*</span></label>
                                 <div className="mt-1">
                                     <CustomSelect
                                         value={salaryForm.salaryType}
@@ -302,7 +311,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Lương cơ bản (VND)</label>
+                                    <label className="text-sm font-medium text-slate-700">Lương cơ bản (VND) <span className="text-rose-500">*</span></label>
                                     <input
                                         type="number"
                                         value={salaryForm.baseSalary}
@@ -314,7 +323,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                                     {salaryFormErrors.baseSalary && <p className="mt-1 text-xs text-rose-600">{salaryFormErrors.baseSalary}</p>}
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Đơn giá giờ (VND)</label>
+                                    <label className="text-sm font-medium text-slate-700">Đơn giá giờ (VND) <span className="text-rose-500">*</span></label>
                                     <input
                                         type="number"
                                         value={salaryForm.hourlyRate}
@@ -329,7 +338,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Số ca tối thiểu/tháng</label>
+                                    <label className="text-sm font-medium text-slate-700">Số ca tối thiểu/tháng <span className="text-rose-500">*</span></label>
                                     <input
                                         type="number"
                                         value={salaryForm.minRequiredShifts}
@@ -341,7 +350,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                                     {salaryFormErrors.minRequiredShifts && <p className="mt-1 text-xs text-rose-600">{salaryFormErrors.minRequiredShifts}</p>}
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Giờ chuẩn/tháng</label>
+                                    <label className="text-sm font-medium text-slate-700">Giờ chuẩn/tháng <span className="text-rose-500">*</span></label>
                                     <input
                                         type="number"
                                         value={salaryForm.workingHoursPerMonth}
@@ -389,6 +398,9 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
     );
 
     function openSalaryModal(row) {
+        if (!isAdmin) {
+            return;
+        }
         const user = users.find((entry) => String(entry.id) === String(row.userId));
         setSelectedEmployee({
             id: row.userId,

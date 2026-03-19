@@ -479,11 +479,16 @@ INSERT IGNORE INTO work_shifts (
     early_clock_in_minutes, late_clock_out_minutes, grace_peroid_minutes, status, effective_from, effective_to,
    requires_approval, description
 ) VALUES
-('SHIFT-MORNING', 'Ca Sáng', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 2, 5, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca sáng từ 8h đến 17h, nghỉ trưa 1 tiếng'),
-('SHIFT-AFTERNOON', 'Ca Chiều', '13:00:00', '22:00:00', '18:00:00', '18:30:00', 'REGULAR', 1.50, 10.00, 0.00, 0.00, 2, 4, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca chiều từ 13h đến 22h, nghỉ 30 phút'),
-('SHIFT-EVENING', 'Ca Tối', '18:00:00', '23:00:00', NULL, NULL, 'NIGHT', 1.50, 15.00, 0.00, 0.00, 2, 3, TRUE, TRUE, 10, 20, 5, 'ACTIVE', NULL, NULL, FALSE, 'Ca tối từ 18h đến 23h, phụ cấp ca đêm 15%'),
-('SHIFT-WEEKEND', 'Ca Cuối Tuần', '09:00:00', '18:00:00', '12:30:00', '13:30:00', 'WEEKEND', 2.00, 0.00, 20.00, 0.00, 3, 6, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, TRUE, 'Ca cuối tuần từ 9h đến 18h, phụ cấp 20%'),
-('SHIFT-FULLTIME', 'Ca Full-time', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 1, 3, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca full-time chuẩn 8 tiếng');
+('SHIFT-MORNING', 'Ca Sáng', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 2, 5, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca sáng chuẩn cửa hàng'),
+('SHIFT-AFTERNOON', 'Ca Chiều', '13:00:00', '22:00:00', '18:00:00', '18:30:00', 'REGULAR', 1.50, 10.00, 0.00, 0.00, 2, 4, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca chiều chuẩn cửa hàng'),
+('SHIFT-EVENING', 'Ca Tối', '18:00:00', '23:00:00', NULL, NULL, 'NIGHT', 1.50, 15.00, 0.00, 0.00, 2, 3, TRUE, TRUE, 10, 20, 5, 'ACTIVE', NULL, NULL, FALSE, 'Ca tối ngắn'),
+('SHIFT-WEEKEND', 'Ca Cuối Tuần', '09:00:00', '18:00:00', '12:30:00', '13:30:00', 'WEEKEND', 2.00, 0.00, 20.00, 0.00, 3, 6, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, TRUE, 'Ca cuối tuần phụ cấp 20%'),
+('SHIFT-FULLTIME', 'Ca Full-time', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 1, 3, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca full-time chuẩn'),
+('SHIFT-OPENING', 'Ca Mở Cửa', '06:30:00', '14:30:00', '10:30:00', '11:00:00', 'REGULAR', 1.25, 0.00, 0.00, 0.00, 1, 2, TRUE, TRUE, 20, 20, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca mở cửa đầu ngày'),
+('SHIFT-CLOSING', 'Ca Đóng Cửa', '15:00:00', '23:30:00', '19:00:00', '19:30:00', 'REGULAR', 1.50, 10.00, 0.00, 0.00, 1, 2, TRUE, TRUE, 10, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca đóng cửa cuối ngày'),
+('SHIFT-NIGHT-GUARD', 'Ca Đêm Qua Ngày', '22:00:00', '06:00:00', '02:00:00', '02:30:00', 'NIGHT', 1.75, 20.00, 0.00, 0.00, 1, 2, TRUE, TRUE, 10, 20, 5, 'ACTIVE', NULL, NULL, TRUE, 'Ca qua đêm 22h-06h'),
+('SHIFT-HOLIDAY-MORNING', 'Ca Sáng Ngày Lễ', '07:00:00', '15:00:00', '11:00:00', '11:30:00', 'HOLIDAY', 2.50, 0.00, 0.00, 30.00, 2, 4, TRUE, TRUE, 15, 20, 10, 'ACTIVE', NULL, NULL, TRUE, 'Ca ngày lễ buổi sáng'),
+('SHIFT-TEMP-CAMPAIGN', 'Ca Tạm Chiến Dịch', '10:00:00', '19:00:00', '14:00:00', '14:30:00', 'TEMPORARY', 1.50, 0.00, 5.00, 0.00, 1, 3, TRUE, TRUE, 15, 20, 10, 'ACTIVE', '2026-03-01', '2026-04-30', FALSE, 'Ca tạm thời cho chiến dịch theo mùa');
 
 -- 13. WORK SHIFT ASSIGNMENTS (with expanded employee coverage)
 INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, status, notes, created_at, updated_at) VALUES
@@ -561,6 +566,19 @@ INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, s
 (1, 5, '2026-03-06', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
 (3, 6, '2026-03-06', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
 (1, 7, '2026-03-06', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW());
+
+-- Mẫu phân ca bổ sung cho các ca mới (shift_id 6-10)
+INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, status, notes, created_at, updated_at) VALUES
+(6, 5, '2026-03-07', 'ASSIGNED', 'Mở cửa kho sáng sớm', NOW(), NOW()),
+(6, 3, '2026-03-08', 'ASSIGNED', 'Mở quầy thu ngân đầu ngày', NOW(), NOW()),
+(7, 2, '2026-03-07', 'ASSIGNED', 'Quản lý đóng cửa', NOW(), NOW()),
+(7, 4, '2026-03-08', 'ASSIGNED', 'Đóng quầy POS', NOW(), NOW()),
+(8, 1, '2026-03-09', 'ASSIGNED', 'Giám sát ca đêm', NOW(), NOW()),
+(8, 6, '2026-03-10', 'ASSIGNED', 'Nhân viên trực đêm', NOW(), NOW()),
+(9, 2, '2026-03-30', 'ASSIGNED', 'Manager trực lễ', NOW(), NOW()),
+(9, 7, '2026-03-30', 'ASSIGNED', 'Nhân viên lễ ca sáng', NOW(), NOW()),
+(10, 3, '2026-03-12', 'ASSIGNED', 'Chiến dịch khuyến mãi tháng 3', NOW(), NOW()),
+(10, 4, '2026-03-13', 'ASSIGNED', 'Chiến dịch khuyến mãi tháng 3', NOW(), NOW());
 
 -- 14. CAMPAIGNS
 INSERT IGNORE INTO campaigns (campaign_code, campaign_name, campaign_type, description, start_date, end_date, status, budget, target_revenue, is_public, created_by, created_at, updated_at) VALUES
@@ -787,6 +805,34 @@ INSERT IGNORE INTO tickets (
 ('TCK-SHF-001', 'SHIFT_CHANGE', 'Yêu cầu đổi ca: 2026-03-10', 'Nhờ đổi ca ngày 10/03 do bận việc gia đình.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=1]\n[SWAP_REQUESTER_USER_ID=3]\n[SWAP_TARGET_USER_ID=4]', 'OPEN', 'HIGH', 3, 4, NULL, 'SHIFT_SWAP', 1, NULL, NULL),
 ('TCK-SHF-002', 'SHIFT_CHANGE', 'Yêu cầu nghỉ ca: 2026-03-12', 'Xin nghỉ ca ngày 12/03 vì có lịch khám bệnh. Manager vui lòng điều chỉnh phân ca thay thế.', 'OPEN', 'HIGH', 7, NULL, NULL, 'SHIFT_ASSIGNMENT', 2, NULL, NULL),
 ('TCK-SHF-003', 'SHIFT_CHANGE', 'Yêu cầu nghỉ ca: 2026-03-06', 'Xin nghỉ ca ngày 06/03 vì lý do cá nhân.', 'RESOLVED', 'NORMAL', 6, 2, 2, 'SHIFT_ASSIGNMENT', 3, 'Manager đã điều chỉnh phân ca và hoàn tất ticket.', '2026-03-05 15:20:00'),
+('TCK-SHF-004', 'SHIFT_CHANGE', 'Yêu cầu cập nhật ca: 2026-03-07', 'Xin cập nhật giờ vào ca sớm 30 phút để hỗ trợ mở cửa.', 'OPEN', 'NORMAL', 5, 2, NULL, 'SHIFT_ASSIGNMENT', 4, NULL, NULL),
+('TCK-SHF-005', 'SHIFT_CHANGE', 'Yêu cầu đổi ca với đồng nghiệp', 'Nhờ nhận ca tối 07/03.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=5]\n[SWAP_REQUESTER_USER_ID=4]\n[SWAP_TARGET_USER_ID=6]', 'IN_PROGRESS', 'HIGH', 4, 6, NULL, 'SHIFT_SWAP', 5, NULL, NULL),
+('TCK-SHF-006', 'SHIFT_CHANGE', 'Yêu cầu nghỉ ca đột xuất: 2026-03-08', 'Gia đình có việc gấp nên xin nghỉ ca ngày 08/03.', 'CLOSED', 'HIGH', 3, 2, 2, 'SHIFT_ASSIGNMENT', 6, 'Không duyệt do thiếu nhân sự thay thế.', '2026-03-07 18:30:00'),
+('TCK-SHF-007', 'SHIFT_CHANGE', 'Yêu cầu đổi ca đêm 2026-03-09', 'Xin đổi ca đêm với đồng nghiệp có kinh nghiệm.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=7]\n[SWAP_REQUESTER_USER_ID=6]\n[SWAP_TARGET_USER_ID=1]', 'OPEN', 'HIGH', 6, 1, NULL, 'SHIFT_SWAP', 7, NULL, NULL),
+('TCK-SHF-008', 'SHIFT_CHANGE', 'Yêu cầu cập nhật vị trí ca 2026-03-10', 'Đề nghị cập nhật vị trí làm việc sang quầy trung tâm trong ca đã phân.', 'OPEN', 'NORMAL', 7, 2, NULL, 'SHIFT_ASSIGNMENT', 8, NULL, NULL),
+('TCK-SHF-009', 'SHIFT_CHANGE', 'Yêu cầu đổi ca lễ 2026-03-30', 'Xin đổi ca lễ do vướng lịch học.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=9]\n[SWAP_REQUESTER_USER_ID=7]\n[SWAP_TARGET_USER_ID=3]', 'OPEN', 'URGENT', 7, 3, NULL, 'SHIFT_SWAP', 9, NULL, NULL),
+('TCK-SHF-010', 'SHIFT_CHANGE', 'Yêu cầu nghỉ ca chiến dịch 2026-03-12', 'Cần nghỉ ca chiến dịch vì lý do sức khỏe.', 'RESOLVED', 'NORMAL', 3, 2, 2, 'SHIFT_ASSIGNMENT', 10, 'Đã sắp xếp nhân sự thay thế.', '2026-03-11 14:10:00'),
+-- 20 new shift swap tickets for testing
+('TCK-SWAP-001', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-15', 'Xin đổi ca buổi sáng 15/03 để đi khám răng.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=11]\n[SWAP_REQUESTER_USER_ID=3]\n[SWAP_TARGET_USER_ID=5]', 'OPEN', 'HIGH', 3, 5, NULL, 'SHIFT_SWAP', 11, NULL, NULL),
+('TCK-SWAP-002', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-16', 'Xin đổi ca chiều 16/03 vì sự cố gia đình.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=12]\n[SWAP_REQUESTER_USER_ID=4]\n[SWAP_TARGET_USER_ID=6]', 'OPEN', 'URGENT', 4, 6, NULL, 'SHIFT_SWAP', 12, NULL, NULL),
+('TCK-SWAP-003', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-17', 'Cần đổi ca tối 17/03 để tham dự sự kiện.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=13]\n[SWAP_REQUESTER_USER_ID=6]\n[SWAP_TARGET_USER_ID=4]', 'IN_PROGRESS', 'HIGH', 6, 4, NULL, 'SHIFT_SWAP', 13, NULL, NULL),
+('TCK-SWAP-004', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-18', 'Xin đổi ca sáng 18/03 do lịch tập thể thao.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=14]\n[SWAP_REQUESTER_USER_ID=5]\n[SWAP_TARGET_USER_ID=3]', 'OPEN', 'NORMAL', 5, 3, NULL, 'SHIFT_SWAP', 14, NULL, NULL),
+('TCK-SWAP-005', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-19', 'Xin đổi ca chiều 19/03 vì vướng lịch học.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=15]\n[SWAP_REQUESTER_USER_ID=7]\n[SWAP_TARGET_USER_ID=4]', 'OPEN', 'HIGH', 7, 4, NULL, 'SHIFT_SWAP', 15, NULL, NULL),
+('TCK-SWAP-006', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-20', 'Nhờ đổi ca tối 20/03 để chăm sóc thành viên gia đình.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=16]\n[SWAP_REQUESTER_USER_ID=4]\n[SWAP_TARGET_USER_ID=7]', 'OPEN', 'HIGH', 4, 7, NULL, 'SHIFT_SWAP', 16, NULL, NULL),
+('TCK-SWAP-007', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-21', 'Xin đổi ca sáng 21/03 do có bệnh.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=17]\n[SWAP_REQUESTER_USER_ID=3]\n[SWAP_TARGET_USER_ID=6]', 'RESOLVED', 'HIGH', 3, 6, 2, 'SHIFT_SWAP', 17, 'Đã chấp thuận và điều chỉnh phân công.', '2026-03-20 16:45:00'),
+('TCK-SWAP-008', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-22', 'Yêu cầu đổi ca chiều 22/03 để dự sự kiện công ty.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=18]\n[SWAP_REQUESTER_USER_ID=5]\n[SWAP_TARGET_USER_ID=4]', 'OPEN', 'NORMAL', 5, 4, NULL, 'SHIFT_SWAP', 18, NULL, NULL),
+('TCK-SWAP-009', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-23', 'Xin đổi ca tối 23/03 vì lịch trình cá nhân.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=19]\n[SWAP_REQUESTER_USER_ID=6]\n[SWAP_TARGET_USER_ID=3]', 'OPEN', 'NORMAL', 6, 3, NULL, 'SHIFT_SWAP', 19, NULL, NULL),
+('TCK-SWAP-010', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-24', 'Xin đổi ca sáng 24/03 để tham gia khoá đào tạo.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=20]\n[SWAP_REQUESTER_USER_ID=7]\n[SWAP_TARGET_USER_ID=5]', 'IN_PROGRESS', 'HIGH', 7, 5, NULL, 'SHIFT_SWAP', 20, NULL, NULL),
+('TCK-SWAP-011', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-25', 'Cần đổi ca chiều 25/03 vì sự cố xe cộ.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=21]\n[SWAP_REQUESTER_USER_ID=4]\n[SWAP_TARGET_USER_ID=3]', 'OPEN', 'URGENT', 4, 3, NULL, 'SHIFT_SWAP', 21, NULL, NULL),
+('TCK-SWAP-012', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-26', 'Xin đổi ca tối 26/03 do có khách từ xa.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=22]\n[SWAP_REQUESTER_USER_ID=3]\n[SWAP_TARGET_USER_ID=7]', 'OPEN', 'HIGH', 3, 7, NULL, 'SHIFT_SWAP', 22, NULL, NULL),
+('TCK-SWAP-013', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-27', 'Xin đổi ca sáng 27/03 vì có lịch cá nhân.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=23]\n[SWAP_REQUESTER_USER_ID=5]\n[SWAP_TARGET_USER_ID=4]', 'OPEN', 'NORMAL', 5, 4, NULL, 'SHIFT_SWAP', 23, NULL, NULL),
+('TCK-SWAP-014', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-28', 'Yêu cầu đổi ca chiều 28/03 để xem bác sĩ.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=24]\n[SWAP_REQUESTER_USER_ID=6]\n[SWAP_TARGET_USER_ID=5]', 'RESOLVED', 'HIGH', 6, 5, 2, 'SHIFT_SWAP', 24, 'Đã phê duyệt và sắp xếp nhân sự.', '2026-03-27 13:20:00'),
+('TCK-SWAP-015', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-29', 'Xin đổi ca tối 29/03 vì công việc bận rộn.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=25]\n[SWAP_REQUESTER_USER_ID=7]\n[SWAP_TARGET_USER_ID=6]', 'OPEN', 'NORMAL', 7, 6, NULL, 'SHIFT_SWAP', 25, NULL, NULL),
+('TCK-SWAP-016', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-30', 'Cần đổi ca ngày lễ 30/03 vì có rủi ro.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=26]\n[SWAP_REQUESTER_USER_ID=3]\n[SWAP_TARGET_USER_ID=1]', 'OPEN', 'URGENT', 3, 1, NULL, 'SHIFT_SWAP', 26, NULL, NULL),
+('TCK-SWAP-017', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-03-31', 'Xin đổi ca sáng 31/03 để hoàn thành nhiệm vụ cá nhân.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=27]\n[SWAP_REQUESTER_USER_ID=4]\n[SWAP_TARGET_USER_ID=5]', 'IN_PROGRESS', 'HIGH', 4, 5, NULL, 'SHIFT_SWAP', 27, NULL, NULL),
+('TCK-SWAP-018', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-04-01', 'Xin đổi ca chiều 01/04 do lịch học thêm.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=28]\n[SWAP_REQUESTER_USER_ID=6]\n[SWAP_TARGET_USER_ID=3]', 'OPEN', 'NORMAL', 6, 3, NULL, 'SHIFT_SWAP', 28, NULL, NULL),
+('TCK-SWAP-019', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-04-02', 'Xin đổi ca tối 02/04 vì có buổi họp mặt.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=29]\n[SWAP_REQUESTER_USER_ID=5]\n[SWAP_TARGET_USER_ID=7]', 'OPEN', 'HIGH', 5, 7, NULL, 'SHIFT_SWAP', 29, NULL, NULL),
+('TCK-SWAP-020', 'SHIFT_CHANGE', 'Yêu cầu đổi ca 2026-04-03', 'Yêu cầu cuối cùng đổi ca sáng 03/04 để dự sự kiện.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=30]\n[SWAP_REQUESTER_USER_ID=7]\n[SWAP_TARGET_USER_ID=4]', 'OPEN', 'HIGH', 7, 4, NULL, 'SHIFT_SWAP', 30, NULL, NULL),
 ('TCK-REF-001', 'REFUND', 'Hoàn tiền đơn hàng ORD-2026-001', 'Khách hàng mua nhầm sản phẩm, yêu cầu hoàn tiền. Sản phẩm còn nguyên seal, trong thời hạn đổi trả', 'IN_PROGRESS', 'URGENT', 2, 1, NULL, 'Order', 1, NULL, NULL),
 ('TCK-ISS-001', 'ISSUE', 'Khiếu nại về chất lượng sản phẩm', 'Khách hàng phàn nàn sữa hết hạn sử dụng. Cần kiểm tra lại quy trình kiểm kê', 'OPEN', 'HIGH', 3, 1, NULL, 'Product', 1, NULL, NULL);
 

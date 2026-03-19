@@ -27,8 +27,8 @@ public class ShiftValidator {
         LocalTime endTime = request.getEndTime();
         if (startTime == null || endTime == null) {
             errors.add("Start time and end time are required");
-        } else if (!endTime.isAfter(startTime)) {
-            errors.add("End time must be after start time");
+        } else if (endTime.equals(startTime)) {
+            errors.add("Start time and end time cannot be equal");
         }
 
         LocalTime breakStart = request.getBreakStartTime();
@@ -38,10 +38,12 @@ public class ShiftValidator {
         }
 
         if (breakStart != null && breakEnd != null) {
-            if (!breakEnd.isAfter(breakStart)) {
-                errors.add("Break end must be after break start");
+            if (breakEnd.equals(breakStart)) {
+                errors.add("Break end and break start cannot be equal");
             }
-            if (startTime != null && (breakStart.isBefore(startTime) || breakEnd.isAfter(endTime))) {
+
+            if (startTime != null && endTime != null
+                    && !isRangeInsideShift(startTime, endTime, breakStart, breakEnd)) {
                 errors.add("Break time must be within shift time");
             }
         }
@@ -119,5 +121,40 @@ public class ShiftValidator {
 
     public String errorsToString(List<String> errors) {
         return String.join("; ", errors);
+    }
+
+    private boolean isRangeInsideShift(LocalTime shiftStart,
+            LocalTime shiftEnd,
+            LocalTime rangeStart,
+            LocalTime rangeEnd) {
+        List<long[]> shiftRanges = expandRange(shiftStart, shiftEnd);
+        List<long[]> breakRanges = expandRange(rangeStart, rangeEnd);
+
+        for (long[] breakRange : breakRanges) {
+            boolean covered = shiftRanges.stream()
+                    .anyMatch(shiftRange -> breakRange[0] >= shiftRange[0] && breakRange[1] <= shiftRange[1]);
+            if (!covered) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private List<long[]> expandRange(LocalTime start, LocalTime end) {
+        long dayMinutes = 24 * 60;
+        long from = start.toSecondOfDay() / 60;
+        long to = end.toSecondOfDay() / 60;
+
+        List<long[]> ranges = new ArrayList<>();
+        if (to <= from) {
+            ranges.add(new long[]{from, to + dayMinutes});
+            ranges.add(new long[]{from - dayMinutes, to});
+            return ranges;
+        }
+
+        ranges.add(new long[]{from, to});
+        ranges.add(new long[]{from + dayMinutes, to + dayMinutes});
+        return ranges;
     }
 }

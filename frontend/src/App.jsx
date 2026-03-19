@@ -11,8 +11,9 @@ import WorkforceManagement from "./pages/HR/WorkforceManagement";
 import ShiftManagement from "./pages/HR/ShiftManagement";
 import ShiftCalendarPage from "./pages/HR/ShiftCalendarPage";
 import MyPayrollSummary from "./pages/HR/MyPayrollSummary";
-import ShiftTicketCenter from "./pages/HR/ShiftTicketCenter";
 import TicketProcessingPage from "./pages/HR/TicketProcessingPage";
+import AdminShiftMonitorPage from "./pages/HR/AdminShiftMonitorPage";
+import EmployeeDetailPage from "./pages/HR/EmployeeDetailPage";
 import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
 import InventoryCountList from "./pages/Inventory/InventoryCountList";
 import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
@@ -54,6 +55,7 @@ import {
   MANAGER_ROLES,
   CASHIER_ROLES,
   INVENTORY_ROLES,
+  STAFF_ROLES,
   POS_ROLES,
   INVENTORY_OVERVIEW_ROLES,
   INVENTORY_FULL_ROLES,
@@ -67,7 +69,8 @@ const PRODUCT_VIEW_ROLES = [...MANAGER_ROLES, ...CASHIER_ROLES, ...INVENTORY_ROL
 const PRODUCT_MANAGE_ROLES = [...MANAGER_ROLES];
 const CRM_CASHIER_ROLES = [...CRM_ROLES, ...CASHIER_ROLES];
 const HR_MANAGE_ROLES = [...MANAGER_ROLES];
-const ACCOUNT_ROLES = [...ADMIN_ROLES, ...MANAGER_ROLES, ...CASHIER_ROLES, ...INVENTORY_ROLES];
+const HR_MONITOR_ROLES = [...ADMIN_ROLES, ...MANAGER_ROLES];
+const ACCOUNT_ROLES = [...ADMIN_ROLES, ...MANAGER_ROLES, ...CASHIER_ROLES, ...INVENTORY_ROLES, ...STAFF_ROLES];
 const REPORT_ROLES = [...MANAGER_ROLES];
 const POS_REPORT_VIEW_ROLES = [...MANAGER_ROLES, ...CASHIER_ROLES];
 const POS_COMPLAINT_VIEW_ROLES = [...MANAGER_ROLES, ...CASHIER_ROLES];
@@ -92,7 +95,7 @@ function RootRedirect() {
   }
 
   if (hasAnyRole(user, MANAGER_ROLES)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/hr/workforce" replace />;
   }
 
   if (hasAnyRole(user, CASHIER_ROLES)) {
@@ -101,6 +104,10 @@ function RootRedirect() {
 
   if (hasAnyRole(user, INVENTORY_ROLES)) {
     return <Navigate to="/inventory" replace />;
+  }
+
+  if (hasAnyRole(user, STAFF_ROLES)) {
+    return <Navigate to="/hr/schedule" replace />;
   }
 
   return <Navigate to="/login" replace />;
@@ -187,14 +194,21 @@ function App() {
 
         <Route path="hr" element={<Navigate to="/hr/schedule" replace />} />
         <Route path="hr/workforce" element={<ProtectedRoute allowedRoles={HR_MANAGE_ROLES}><WorkforceManagement defaultTab="employees" /></ProtectedRoute>} />
+        <Route path="hr/workforce/employee/:id" element={<ProtectedRoute allowedRoles={HR_SCHEDULE_ATTENDANCE_ROLES}><EmployeeDetailPage /></ProtectedRoute>} />
         <Route path="hr/employees" element={<ProtectedRoute allowedRoles={HR_MANAGE_ROLES}><Navigate to="/hr/workforce" replace /></ProtectedRoute>} />
         <Route path="hr/users" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><UserManagement /></ProtectedRoute>} />
         <Route path="hr/shifts" element={<ProtectedRoute allowedRoles={HR_MANAGE_ROLES}><ShiftManagement /></ProtectedRoute>} />
         <Route path="hr/schedule" element={<ProtectedRoute allowedRoles={HR_SCHEDULE_ATTENDANCE_ROLES}><ShiftCalendarPage /></ProtectedRoute>} />
+        <Route path="hr/my-schedule" element={<Navigate to="/hr/schedule" replace />} />
+        <Route path="hr/my-shift-requests" element={<Navigate to="/hr/ticket-processing" replace />} />
+        <Route path="hr/shift-exchange" element={<Navigate to="/hr/ticket-processing" replace />} />
+        <Route path="hr/admin-shift-monitor" element={<ProtectedRoute allowedRoles={HR_MONITOR_ROLES}><AdminShiftMonitorPage /></ProtectedRoute>} />
         <Route path="hr/my-attendance" element={<ProtectedRoute allowedRoles={HR_SCHEDULE_ATTENDANCE_ROLES}><AttendanceManagement selfOnly={true} /></ProtectedRoute>} />
         <Route path="hr/attendance" element={<ProtectedRoute allowedRoles={HR_SCHEDULE_ATTENDANCE_ROLES}><MyPayrollSummary defaultTab="attendance" /></ProtectedRoute>} />
-        <Route path="hr/shift-tickets" element={<ProtectedRoute allowedRoles={HR_MANAGE_ROLES}><ShiftTicketCenter /></ProtectedRoute>} />
-        <Route path="hr/ticket-processing" element={<ProtectedRoute allowedRoles={HR_MANAGE_ROLES}><TicketProcessingPage /></ProtectedRoute>} />
+        <Route path="hr/shift-tickets" element={<Navigate to="/hr/ticket-processing" replace />} />
+        <Route path="hr/shift-swap-tickets" element={<Navigate to="/hr/shift-exchange" replace />} />
+        <Route path="hr/shift-leave-tickets" element={<Navigate to="/hr/ticket-processing" replace />} />
+        <Route path="hr/ticket-processing" element={<ProtectedRoute allowedRoles={HR_SCHEDULE_ATTENDANCE_ROLES}><TicketProcessingPage /></ProtectedRoute>} />
         <Route path="hr/payroll" element={<ProtectedRoute allowedRoles={HR_MANAGE_ROLES}><WorkforceManagement defaultTab="payroll" /></ProtectedRoute>} />
         <Route path="hr/my-payroll" element={<ProtectedRoute allowedRoles={HR_SCHEDULE_ATTENDANCE_ROLES}><MyPayrollSummary /></ProtectedRoute>} />
 

@@ -1,5 +1,28 @@
 import api from '../config/axiosConfig';
 
+const toIsoDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const withAssignmentDateRange = (params = {}) => {
+    if (params.startDate && params.endDate) {
+        return params;
+    }
+
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    return {
+        ...params,
+        startDate: params.startDate || toIsoDate(startDate),
+        endDate: params.endDate || toIsoDate(endDate),
+    };
+};
+
 export const shiftService = {
     async getShifts(params = {}) {
         const res = await api.get('/shifts', { params });
@@ -22,7 +45,7 @@ export const shiftService = {
         return res.data;
     },
     async getAssignments(params = {}) {
-        const res = await api.get('/shifts/assignments', { params });
+        const res = await api.get('/shifts/assignments', { params: withAssignmentDateRange(params) });
         return res.data;
     },
     async getAssignment(id) {
