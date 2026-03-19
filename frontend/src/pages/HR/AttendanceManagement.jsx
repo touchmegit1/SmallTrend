@@ -19,7 +19,9 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
     const [filterErrors, setFilterErrors] = useState({});
 
     const [filters, setFilters] = useState({
+        scope: 'DAY',
         date: toDateInput(new Date()),
+        month: toMonthInput(new Date()),
         userId: '',
         status: 'ALL',
     });
@@ -30,7 +32,7 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
 
     useEffect(() => {
         loadAttendance();
-    }, [filters.date, filters.userId, filters.status]);
+    }, [filters.scope, filters.date, filters.month, filters.userId, filters.status]);
 
     const loadUsers = async () => {
         try {
@@ -55,9 +57,17 @@ const AttendanceManagement = ({ viewMode = 'full' }) => {
         try {
             setLoading(true);
             const params = {
-                date: filters.date,
                 status: filters.status,
             };
+
+            if (filters.scope === 'DAY') {
+                params.date = filters.date;
+            } else if (filters.scope === 'MONTH') {
+                const range = monthToDateRange(filters.month);
+                params.startDate = range.startDate;
+                params.endDate = range.endDate;
+            }
+
             if (filters.userId) {
                 params.userId = filters.userId;
             }

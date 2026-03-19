@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Users, Gift, Megaphone, Tag, TrendingUp,
-    ChevronRight, X, Calendar, Search, BarChart2, Award
+    X, Calendar, Search, BarChart2, Award
 } from 'lucide-react';
 import { useFetchCustomers } from '../../hooks/Customers';
 import { useCustomerTiers } from '../../hooks/useCustomerTiers';
@@ -10,22 +10,37 @@ import { useCoupons } from '../../hooks/useCoupons';
 import { useGifts } from '../../hooks/useGifts';
 import adService from '../../services/adService';
 
-// ─── STAT CARD (clickable) ────────────────────────────────────────────────────
-const ReportCard = ({ icon: Icon, label, value, sub, color, onClick }) => (
+// ─── ICON ACTIONS ──────────────────────────────────────────────────────────────
+const IconActionButton = ({ icon: Icon, label, color, onClick }) => (
     <button
         onClick={onClick}
-        className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 w-full text-left hover:shadow-md hover:border-indigo-200 transition-all group"
+        className="group flex flex-col items-center gap-2 rounded-xl p-3 hover:bg-slate-50 transition-colors"
     >
-        <div className={`p-3 rounded-xl ${color} flex-shrink-0 group-hover:scale-110 transition-transform`}>
-            <Icon size={22} className="text-white" />
+        <div className={`p-3 rounded-xl ${color} group-hover:scale-110 transition-transform`}>
+            <Icon size={20} className="text-white" />
         </div>
-        <div className="flex-1 min-w-0">
-            <p className="text-xs text-slate-500 font-medium">{label}</p>
-            <p className="text-2xl font-bold text-slate-800">{value}</p>
-            {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
-        </div>
-        <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-400 transition-colors flex-shrink-0" />
+        <span className="text-xs font-medium text-slate-600 text-center leading-tight">{label}</span>
     </button>
+);
+
+const IconGroupCard = ({ title, subtitle, actions }) => (
+    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <div className="mb-4">
+            <h3 className="text-base font-bold text-slate-800">{title}</h3>
+            {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {actions.map((action) => (
+                <IconActionButton
+                    key={action.key}
+                    icon={action.icon}
+                    label={action.label}
+                    color={action.color}
+                    onClick={action.onClick}
+                />
+            ))}
+        </div>
+    </div>
 );
 
 // ─── MODAL WRAPPER ────────────────────────────────────────────────────────────
@@ -208,7 +223,7 @@ export default function CRMReport() {
     const [ads, setAds] = useState([]);
     const [loadingAds, setLoadingAds] = useState(true);
 
-    const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'ads'
+    const [activeModal, setActiveModal] = useState(null); // 'customers' | 'campaigns' | 'coupons' | 'gifts' | 'ads' | 'overview-voucher' | 'overview-customer' | 'overview-operation'
     const [search, setSearch] = useState('');
     const [campaignChartMode, setCampaignChartMode] = useState('monthly');
     const [giftPage, setGiftPage] = useState(0);
@@ -358,92 +373,28 @@ export default function CRMReport() {
                 <p className="text-slate-500 mt-1">Tổng quan toàn bộ hệ thống CRM. Nhấn vào thẻ để xem chi tiết.</p>
             </div>
 
-            {/* REPORT CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <ReportCard
-                    icon={Users}
-                    label="Khách hàng"
-                    value={loadingCustomers ? '...' : customers.length}
-                    sub={customers.length > 0 ? `Chi tiêu trung bình: ${fmt(avgSpentPerCustomer)}` : 'Chưa có dữ liệu khách hàng'}
-                    color="bg-indigo-500"
-                    onClick={() => openModal('customers')}
+            {/* REPORT ACTION GROUPS */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <IconGroupCard
+                    title="Báo cáo CRM"
+                    actions={[
+                        { key: 'customers', icon: Users, label: `Khách hàng (${loadingCustomers ? '...' : customers.length})`, color: 'bg-indigo-500', onClick: () => openModal('customers') },
+                        { key: 'campaigns', icon: Megaphone, label: `Campaign (${loadingCampaigns ? '...' : campaigns.length})`, color: 'bg-blue-500', onClick: () => openModal('campaigns') },
+                        { key: 'coupons', icon: Tag, label: `Coupon (${loadingCoupons ? '...' : coupons.length})`, color: 'bg-purple-500', onClick: () => openModal('coupons') },
+                        { key: 'gifts', icon: Gift, label: `Kho quà (${loadingGifts ? '...' : gifts.length})`, color: 'bg-amber-500', onClick: () => openModal('gifts') },
+                        { key: 'ads', icon: TrendingUp, label: `Quảng cáo (${loadingAds ? '...' : ads.length})`, color: 'bg-sky-500', onClick: () => openModal('ads') },
+                        { key: 'loyalty', icon: Award, label: `Top Loyalty (${topLoyaltyCustomer ? `${(topLoyaltyCustomer.loyaltyPoints || 0).toLocaleString()} pts` : '0'})`, color: 'bg-emerald-500', onClick: () => openModal('customers') },
+                    ]}
                 />
-                <ReportCard
-                    icon={Megaphone}
-                    label="Sự kiện / Campaign"
-                    value={loadingCampaigns ? '...' : campaigns.length}
-                    sub={`${activeCampaigns} ACTIVE · ${draftCampaigns} draft`}
-                    color="bg-blue-500"
-                    onClick={() => openModal('campaigns')}
-                />
-                <ReportCard
-                    icon={Tag}
-                    label="Coupon"
-                    value={loadingCoupons ? '...' : coupons.length}
-                    sub={`${totalCouponUsage.toLocaleString()} lượt sử dụng · ${activeCoupons} ACTIVE`}
-                    color="bg-purple-500"
-                    onClick={() => openModal('coupons')}
-                />
-                <ReportCard
-                    icon={Gift}
-                    label="Kho quà tặng Loyalty"
-                    value={loadingGifts ? '...' : gifts.length}
-                    sub={`Tổng tồn: ${totalGiftStock} · Hết hàng: ${outOfStockGifts}`}
-                    color="bg-amber-500"
-                    onClick={() => openModal('gifts')}
-                />
-                <ReportCard
-                    icon={TrendingUp}
-                    label="Quảng cáo"
-                    value={loadingAds ? '...' : ads.length}
-                    sub={`${activeAds} đang hiển thị trên ${activeAdSlots} vị trí`}
-                    color="bg-sky-500"
-                    onClick={() => openModal('ads')}
-                />
-                <ReportCard
-                    icon={Award}
-                    label="Top Loyalty khách hàng"
-                    value={topLoyaltyCustomer ? `${(topLoyaltyCustomer.loyaltyPoints || 0).toLocaleString()} pts` : '0'}
-                    sub={topSpentCustomer ? `Chi tiêu cao nhất: ${fmt(topSpentCustomer.spentAmount)}` : 'Chưa có dữ liệu'}
-                    color="bg-emerald-500"
-                    onClick={() => openModal('customers')}
-                />
-            </div>
 
-            {/* ANALYTICS OVERVIEW */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                <AnalyticsPanel
-                    title="Hiệu suất voucher"
-                >
-                    <div className="grid grid-cols-2 gap-3">
-                        <MiniMetric label="Tổng coupon" value={coupons.length} sub={`${activeCoupons} ACTIVE`} tone="purple" />
-                        <MiniMetric label="Lượt sử dụng" value={totalCouponUsage.toLocaleString()} sub={`${couponUsageRate.toFixed(1)}% trên quota`} tone="emerald" />
-                        <MiniMetric label="Coupon %" value={percentageCoupons} sub="Theo phần trăm" tone="amber" />
-                        <MiniMetric label="Coupon cố định" value={fixedCoupons} sub={`${expiredCoupons} đã hết hạn`} tone="rose" />
-                    </div>
-                </AnalyticsPanel>
-
-                <AnalyticsPanel
-                    title="Giá trị khách hàng"
-                >
-                    <div className="grid grid-cols-2 gap-3">
-                        <MiniMetric label="Total spent" value={fmt(totalSpent)} sub="Toàn bộ khách CRM" tone="indigo" />
-                        <MiniMetric label="Chi tiêu TB" value={fmt(avgSpentPerCustomer)} sub="Mỗi khách đăng ký" tone="sky" />
-                        <MiniMetric label="Tổng loyalty" value={`${totalLoyaltyPts.toLocaleString()} pts`} sub="Điểm đang tích lũy" tone="emerald" />
-                        <MiniMetric label="Top spender" value={topCustomersBySpend[0]?.name || '-'} sub={topCustomersBySpend[0] ? fmt(topCustomersBySpend[0].spentAmount) : 'Chưa có dữ liệu'} tone="amber" />
-                    </div>
-                </AnalyticsPanel>
-
-                <AnalyticsPanel
-                    title="Vận hành CRM"
-                >
-                    <div className="grid grid-cols-2 gap-3">
-                        <MiniMetric label="Campaign active" value={activeCampaigns} sub={`${draftCampaigns} draft`} tone="sky" />
-                        <MiniMetric label="Ads active" value={activeAds} sub={`${activeAdSlots} vị trí có hiển thị`} tone="indigo" />
-                        <MiniMetric label="Tồn quà loyalty" value={totalGiftStock.toLocaleString()} sub={`${outOfStockGifts} quà đã hết`} tone="amber" />
-                        <MiniMetric label="Ngân sách campaign" value={fmt(campaigns.reduce((sum, campaign) => sum + (Number(campaign.budget) || 0), 0))} sub="Tổng ngân sách khai báo" tone="emerald" />
-                    </div>
-                </AnalyticsPanel>
+                <IconGroupCard
+                    title="Phân tích tổng quan"
+                    actions={[
+                        { key: 'overview-voucher', icon: Tag, label: 'Hiệu suất voucher', color: 'bg-purple-500', onClick: () => openModal('overview-voucher') },
+                        { key: 'overview-customer', icon: Users, label: 'Giá trị khách hàng', color: 'bg-indigo-500', onClick: () => openModal('overview-customer') },
+                        { key: 'overview-operation', icon: TrendingUp, label: 'Vận hành CRM', color: 'bg-sky-500', onClick: () => openModal('overview-operation') },
+                    ]}
+                />
             </div>
 
             {/* DETAILED INSIGHTS */}
@@ -642,6 +593,54 @@ export default function CRMReport() {
                     )}
                 </AnalyticsPanel>
             </div>
+
+            {/* ── MODAL: OVERVIEW VOUCHER ── */}
+            {activeModal === 'overview-voucher' && (
+                <Modal
+                    title="Hiệu suất voucher"
+                    subtitle="Tổng hợp nhanh dữ liệu coupon"
+                    onClose={closeModal}
+                >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <MiniMetric label="Tổng coupon" value={coupons.length} sub={`${activeCoupons} ACTIVE`} tone="purple" />
+                        <MiniMetric label="Lượt sử dụng" value={totalCouponUsage.toLocaleString()} sub={`${couponUsageRate.toFixed(1)}% trên quota`} tone="emerald" />
+                        <MiniMetric label="Coupon %" value={percentageCoupons} sub="Theo phần trăm" tone="amber" />
+                        <MiniMetric label="Coupon cố định" value={fixedCoupons} sub={`${expiredCoupons} đã hết hạn`} tone="rose" />
+                    </div>
+                </Modal>
+            )}
+
+            {/* ── MODAL: OVERVIEW CUSTOMER VALUE ── */}
+            {activeModal === 'overview-customer' && (
+                <Modal
+                    title="Giá trị khách hàng"
+                    subtitle="Các chỉ số chính về chi tiêu và loyalty"
+                    onClose={closeModal}
+                >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <MiniMetric label="Total spent" value={fmt(totalSpent)} sub="Toàn bộ khách CRM" tone="indigo" />
+                        <MiniMetric label="Chi tiêu TB" value={fmt(avgSpentPerCustomer)} sub="Mỗi khách đăng ký" tone="sky" />
+                        <MiniMetric label="Tổng loyalty" value={`${totalLoyaltyPts.toLocaleString()} pts`} sub="Điểm đang tích lũy" tone="emerald" />
+                        <MiniMetric label="Top spender" value={topCustomersBySpend[0]?.name || '-'} sub={topCustomersBySpend[0] ? fmt(topCustomersBySpend[0].spentAmount) : 'Chưa có dữ liệu'} tone="amber" />
+                    </div>
+                </Modal>
+            )}
+
+            {/* ── MODAL: OVERVIEW OPERATIONS ── */}
+            {activeModal === 'overview-operation' && (
+                <Modal
+                    title="Vận hành CRM"
+                    subtitle="Các chỉ số vận hành campaign, ads và loyalty"
+                    onClose={closeModal}
+                >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <MiniMetric label="Campaign active" value={activeCampaigns} sub={`${draftCampaigns} draft`} tone="sky" />
+                        <MiniMetric label="Ads active" value={activeAds} sub={`${activeAdSlots} vị trí có hiển thị`} tone="indigo" />
+                        <MiniMetric label="Tồn quà loyalty" value={totalGiftStock.toLocaleString()} sub={`${outOfStockGifts} quà đã hết`} tone="amber" />
+                        <MiniMetric label="Ngân sách campaign" value={fmt(campaigns.reduce((sum, campaign) => sum + (Number(campaign.budget) || 0), 0))} sub="Tổng ngân sách khai báo" tone="emerald" />
+                    </div>
+                </Modal>
+            )}
 
             {/* ── MODAL: CUSTOMERS ── */}
             {activeModal === 'customers' && (
