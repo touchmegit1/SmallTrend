@@ -101,31 +101,73 @@ function TransactionHistory() {
     };
 
     try {
-      const validItems = items
-        .map(item => {
-          const productId = item.productId || item.id;
-          const numericProductId = Number(productId);
-          if (!Number.isInteger(numericProductId) || numericProductId <= 0) {
-            return null;
-          }
+      const validItemsMap = new Map();
 
-          const quantity = Number(item.qty || item.quantity || 1);
-          const price = Number(item.price);
-          const subtotal = quantity * price;
+      items.forEach(item => {
+        if (item?.isCombo) {
+          const comboQty = Number(item.qty || item.quantity || 1);
+          if (!Number.isFinite(comboQty) || comboQty <= 0) return;
 
-          if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0 || !Number.isFinite(subtotal) || subtotal < 0) {
-            return null;
-          }
+          (item.items || []).forEach(comboItem => {
+            const productId = Number(comboItem?.productVariantId || comboItem?.productId || comboItem?.id);
+            const comboItemQty = Number(comboItem?.quantity || 0);
+            if (!Number.isInteger(productId) || productId <= 0 || !Number.isFinite(comboItemQty) || comboItemQty <= 0) {
+              return;
+            }
 
-          return {
-            productId: numericProductId,
-            productName: item.name,
-            quantity,
-            price,
-            subtotal
-          };
-        })
-        .filter(Boolean);
+            const quantity = comboQty * comboItemQty;
+            const price = Number(comboItem?.price || 0);
+            const subtotal = quantity * price;
+
+            if (!Number.isFinite(price) || price < 0 || !Number.isFinite(subtotal) || subtotal < 0) {
+              return;
+            }
+
+            const existing = validItemsMap.get(productId);
+            if (existing) {
+              existing.quantity += quantity;
+              existing.subtotal = existing.price * existing.quantity;
+              return;
+            }
+
+            validItemsMap.set(productId, {
+              productId,
+              productName: comboItem?.productName || comboItem?.name || item.name || item.productName || '',
+              quantity,
+              price,
+              subtotal
+            });
+          });
+          return;
+        }
+
+        const productId = Number(item.productId || item.id);
+        const quantity = Number(item.qty || item.quantity || 1);
+        const price = Number(item.price);
+        const subtotal = quantity * price;
+
+        if (!Number.isInteger(productId) || productId <= 0) return;
+        if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0 || !Number.isFinite(subtotal) || subtotal < 0) {
+          return;
+        }
+
+        const existing = validItemsMap.get(productId);
+        if (existing) {
+          existing.quantity += quantity;
+          existing.subtotal = existing.price * existing.quantity;
+          return;
+        }
+
+        validItemsMap.set(productId, {
+          productId,
+          productName: item.name || item.productName || '',
+          quantity,
+          price,
+          subtotal
+        });
+      });
+
+      const validItems = Array.from(validItemsMap.values());
 
       if (validItems.length === 0) {
         markTransactionAsSyncFailed();
@@ -264,24 +306,60 @@ function TransactionHistory() {
       return;
     }
 
-    const refundItems = items
-      .map((item, i) => {
-        const quantity = refundQtys[i] || 0;
-        if (quantity <= 0) return null;
+    const refundItemsMap = new Map();
 
-        const rawProductId = item.productId || item.id;
-        const productId = Number(rawProductId);
-        if (!Number.isInteger(productId) || productId <= 0) return null;
+    items.forEach((item, i) => {
+      const refundQty = Number(refundQtys[i] || 0);
+      if (refundQty <= 0) return;
 
-        return {
-          productId,
-          productName: item.name || item.productName || '',
-          quantity,
-          price: item.price || 0,
-          subtotal: (item.price || 0) * quantity
-        };
-      })
-      .filter(Boolean);
+      if (item?.isCombo) {
+        (item.items || []).forEach(comboItem => {
+          const productId = Number(comboItem?.productVariantId || comboItem?.productId || comboItem?.id);
+          const comboItemQty = Number(comboItem?.quantity || 0);
+          if (!Number.isInteger(productId) || productId <= 0 || comboItemQty <= 0) return;
+
+          const quantity = refundQty * comboItemQty;
+          const existing = refundItemsMap.get(productId);
+          if (existing) {
+            existing.quantity += quantity;
+            existing.subtotal = existing.price * existing.quantity;
+            return;
+          }
+
+          const price = Number(comboItem?.price || 0);
+          refundItemsMap.set(productId, {
+            productId,
+            productName: comboItem?.productName || comboItem?.name || item.name || item.productName || '',
+            quantity,
+            price,
+            subtotal: price * quantity
+          });
+        });
+        return;
+      }
+
+      const rawProductId = item.productId || item.id;
+      const productId = Number(rawProductId);
+      if (!Number.isInteger(productId) || productId <= 0) return;
+
+      const price = Number(item.price || 0);
+      const existing = refundItemsMap.get(productId);
+      if (existing) {
+        existing.quantity += refundQty;
+        existing.subtotal = existing.price * existing.quantity;
+        return;
+      }
+
+      refundItemsMap.set(productId, {
+        productId,
+        productName: item.name || item.productName || '',
+        quantity: refundQty,
+        price,
+        subtotal: price * refundQty
+      });
+    });
+
+    const refundItems = Array.from(refundItemsMap.values());
 
     if (refundItems.length === 0) {
       showNotificationModal('Không xác định được sản phẩm hoàn trả hợp lệ để cộng kho.');

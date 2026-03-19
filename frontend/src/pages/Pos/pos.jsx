@@ -875,20 +875,71 @@ export default function POS() {
     // Lưu ngay vào database
     if (transaction.cart && transaction.cart.length > 0) {
       try {
-        const validItems = transaction.cart
-          .map(item => {
-            const rawProductId = item.productId || item.id;
-            const productId = Number(rawProductId);
-            if (!Number.isInteger(productId) || productId <= 0) return null;
-            return {
-              productId,
-              productName: item.name,
-              quantity: item.qty,
-              price: item.price,
-              subtotal: item.price * item.qty
-            };
-          })
-          .filter(Boolean);
+        const validItemsMap = new Map();
+
+        transaction.cart.forEach(item => {
+          if (item?.isCombo) {
+            const comboQty = Number(item.qty || item.quantity || 1);
+            if (!Number.isFinite(comboQty) || comboQty <= 0) return;
+
+            (item.items || []).forEach(comboItem => {
+              const productId = Number(comboItem?.productVariantId || comboItem?.productId || comboItem?.id);
+              const comboItemQty = Number(comboItem?.quantity || 0);
+              if (!Number.isInteger(productId) || productId <= 0 || !Number.isFinite(comboItemQty) || comboItemQty <= 0) {
+                return;
+              }
+
+              const quantity = comboQty * comboItemQty;
+              const price = Number(comboItem?.price || 0);
+              const subtotal = price * quantity;
+
+              const existing = validItemsMap.get(productId);
+              if (existing) {
+                existing.quantity += quantity;
+                existing.subtotal = existing.price * existing.quantity;
+                return;
+              }
+
+              validItemsMap.set(productId, {
+                productId,
+                productName: comboItem?.productName || comboItem?.name || item.name || item.productName || '',
+                quantity,
+                price,
+                subtotal
+              });
+            });
+            return;
+          }
+
+          const productId = Number(item.productId || item.id);
+          if (!Number.isInteger(productId) || productId <= 0) return;
+
+          const quantity = Number(item.qty || item.quantity || 1);
+          const price = Number(item.price || 0);
+          const subtotal = price * quantity;
+
+          const existing = validItemsMap.get(productId);
+          if (existing) {
+            existing.quantity += quantity;
+            existing.subtotal = existing.price * existing.quantity;
+            return;
+          }
+
+          validItemsMap.set(productId, {
+            productId,
+            productName: item.name || item.productName || '',
+            quantity,
+            price,
+            subtotal
+          });
+        });
+
+        const validItems = Array.from(validItemsMap.values()).filter(item =>
+          Number.isInteger(item.productId) && item.productId > 0 &&
+          Number.isFinite(item.quantity) && item.quantity > 0 &&
+          Number.isFinite(item.price) && item.price >= 0 &&
+          Number.isFinite(item.subtotal) && item.subtotal >= 0
+        );
 
         if (validItems.length > 0) {
           const request = {
@@ -1025,20 +1076,71 @@ export default function POS() {
           });
         }
 
-        const validItems = transaction.cart
-          .map(item => {
-            const rawProductId = item.productId || item.id;
-            const productId = Number(rawProductId);
-            if (!Number.isInteger(productId) || productId <= 0) return null;
-            return {
-              productId,
-              productName: item.name,
-              quantity: item.qty,
-              price: item.price,
-              subtotal: item.price * item.qty
-            };
-          })
-          .filter(Boolean);
+        const validItemsMap = new Map();
+
+        transaction.cart.forEach(item => {
+          if (item?.isCombo) {
+            const comboQty = Number(item.qty || item.quantity || 1);
+            if (!Number.isFinite(comboQty) || comboQty <= 0) return;
+
+            (item.items || []).forEach(comboItem => {
+              const productId = Number(comboItem?.productVariantId || comboItem?.productId || comboItem?.id);
+              const comboItemQty = Number(comboItem?.quantity || 0);
+              if (!Number.isInteger(productId) || productId <= 0 || !Number.isFinite(comboItemQty) || comboItemQty <= 0) {
+                return;
+              }
+
+              const quantity = comboQty * comboItemQty;
+              const price = Number(comboItem?.price || 0);
+              const subtotal = price * quantity;
+
+              const existing = validItemsMap.get(productId);
+              if (existing) {
+                existing.quantity += quantity;
+                existing.subtotal = existing.price * existing.quantity;
+                return;
+              }
+
+              validItemsMap.set(productId, {
+                productId,
+                productName: comboItem?.productName || comboItem?.name || item.name || item.productName || '',
+                quantity,
+                price,
+                subtotal
+              });
+            });
+            return;
+          }
+
+          const productId = Number(item.productId || item.id);
+          if (!Number.isInteger(productId) || productId <= 0) return;
+
+          const quantity = Number(item.qty || item.quantity || 1);
+          const price = Number(item.price || 0);
+          const subtotal = price * quantity;
+
+          const existing = validItemsMap.get(productId);
+          if (existing) {
+            existing.quantity += quantity;
+            existing.subtotal = existing.price * existing.quantity;
+            return;
+          }
+
+          validItemsMap.set(productId, {
+            productId,
+            productName: item.name || item.productName || '',
+            quantity,
+            price,
+            subtotal
+          });
+        });
+
+        const validItems = Array.from(validItemsMap.values()).filter(item =>
+          Number.isInteger(item.productId) && item.productId > 0 &&
+          Number.isFinite(item.quantity) && item.quantity > 0 &&
+          Number.isFinite(item.price) && item.price >= 0 &&
+          Number.isFinite(item.subtotal) && item.subtotal >= 0
+        );
 
         if (validItems.length > 0) {
           const request = {
