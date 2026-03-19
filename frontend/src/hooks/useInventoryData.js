@@ -44,7 +44,7 @@ export function useInventoryDashboard() {
         try {
           await reseedStock();
         } catch (e) {
-          console.warn("⚠️ Reseed stock skipped:", e.message);
+          console.warn("Reseed stock skipped:", e.message);
         }
 
         const [productsData, batchesData, categoriesData, brandsData, summaryData, activitiesData] =
@@ -64,7 +64,7 @@ export function useInventoryDashboard() {
         setDashboardSummary(summaryData);
         setStockMovements(activitiesData);
       } catch (err) {
-        console.error("❌ Error fetching inventory data:", err);
+        console.error("Error fetching inventory data:", err);
         setError(err.message);
       } finally {
         setLoading(false);

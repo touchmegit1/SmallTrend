@@ -1,6 +1,5 @@
 package com.smalltrend.dto.inventory.inventorycount;
 
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -30,9 +29,16 @@ public class InventoryCountItemRequest {
 
     private Integer differenceQuantity;
 
-    @DecimalMin(value = "0", message = "Giá trị chênh lệch không được âm")
     private BigDecimal differenceValue;
 
     @Size(max = 1000, message = "Lý do chênh lệch không được vượt quá 1000 ký tự")
     private String reason;
+
+    public Integer getDifferenceQuantity() {
+        return differenceQuantity;
+    }
+
+    public BigDecimal getDifferenceValue() {
+        return differenceValue;
+    }
 }

@@ -31,4 +31,12 @@ public class InventoryCountRequest {
 
     @NotEmpty(message = "Phiếu kiểm kê phải có ít nhất 1 sản phẩm")
     private List<@Valid InventoryCountItemRequest> items;
+
+    public Integer getLocationId() {
+        return locationId;
+    }
+
+    public List<InventoryCountItemRequest> getItems() {
+        return items;
+    }
 }
