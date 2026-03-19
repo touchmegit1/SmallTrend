@@ -471,7 +471,7 @@ public class ProductVariantService {
                 .mapToInt(stock -> stock.getQuantity() != null ? stock.getQuantity() : 0)
                 .sum();
 
-        if (product != null && product.getId() != null && variant.getUnit() != null && variant.getUnit().getId() != null) {
+        if (stockQty == 0 && product != null && product.getId() != null && variant.getUnit() != null && variant.getUnit().getId() != null) {
             List<UnitConversion> conversions = unitConversionRepository.findByProductIdAndToUnitId(
                     product.getId(),
                     variant.getUnit().getId());
@@ -482,7 +482,8 @@ public class ProductVariantService {
                     && conversion.getVariant().getId() != null
                     && !conversion.getVariant().getId().equals(variant.getId())
                     && conversion.getConversionFactor() != null
-                    && conversion.getConversionFactor().intValue() > 0)
+                    && conversion.getConversionFactor().intValue() > 0
+                    && hasSameAttributes(conversion.getVariant(), variant))
                     .findFirst()
                     .orElse(null);
 
@@ -535,6 +536,12 @@ public class ProductVariantService {
                 });
 
         return response;
+    }
+
+    private boolean hasSameAttributes(ProductVariant left, ProductVariant right) {
+        Map<String, String> leftAttrs = left != null && left.getAttributes() != null ? left.getAttributes() : java.util.Collections.emptyMap();
+        Map<String, String> rightAttrs = right != null && right.getAttributes() != null ? right.getAttributes() : java.util.Collections.emptyMap();
+        return leftAttrs.equals(rightAttrs);
     }
 
     private UnitConversionResponse mapConversionToResponse(UnitConversion entity) {

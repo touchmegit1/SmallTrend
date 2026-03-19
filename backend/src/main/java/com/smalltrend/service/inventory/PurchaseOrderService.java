@@ -1451,7 +1451,7 @@ public class PurchaseOrderService {
                     continue;
                 }
                 ProductVariant candidate = conversion.getVariant();
-                if (candidate.getId().equals(variant.getId())) {
+                if (candidate.getId().equals(variant.getId()) || !hasSameAttributes(candidate, variant)) {
                     continue;
                 }
                 if (candidate.isBaseUnit()) {
@@ -1468,8 +1468,10 @@ public class PurchaseOrderService {
             ProductVariant declaredBaseVariant = productVariantRepository
                     .findByProductIdAndIsBaseUnitTrue(productId)
                     .orElse(null);
-            if (declaredBaseVariant != null && declaredBaseVariant.getId() != null
-                    && !declaredBaseVariant.getId().equals(variant.getId())) {
+            if (declaredBaseVariant != null
+                    && declaredBaseVariant.getId() != null
+                    && !declaredBaseVariant.getId().equals(variant.getId())
+                    && hasSameAttributes(declaredBaseVariant, variant)) {
                 return declaredBaseVariant;
             }
         }
@@ -1486,7 +1488,7 @@ public class PurchaseOrderService {
             if (variantId != null && candidate.getId().equals(variantId)) {
                 continue;
             }
-            if (unitId == null) {
+            if (unitId == null || !hasSameAttributes(candidate, variant)) {
                 continue;
             }
             if (unitConversionRepository.findByVariantIdAndToUnitId(candidate.getId(), unitId).isPresent()) {
@@ -1495,5 +1497,15 @@ public class PurchaseOrderService {
         }
 
         return variant;
+    }
+
+    private boolean hasSameAttributes(ProductVariant left, ProductVariant right) {
+        Map<String, String> leftAttrs = left != null && left.getAttributes() != null
+                ? left.getAttributes()
+                : java.util.Collections.emptyMap();
+        Map<String, String> rightAttrs = right != null && right.getAttributes() != null
+                ? right.getAttributes()
+                : java.util.Collections.emptyMap();
+        return leftAttrs.equals(rightAttrs);
     }
 }

@@ -53,6 +53,8 @@ public class GlobalExceptionHandler {
         } else if (ex.getCode() == InventoryCountException.Code.INVALID_STATUS_TRANSITION
                 || ex.getCode() == InventoryCountException.Code.COUNT_ALREADY_FINALIZED) {
             status = HttpStatus.CONFLICT;
+        } else if (ex.getCode() == InventoryCountException.Code.INVALID_DIFFERENCE_SIGN) {
+            status = HttpStatus.BAD_REQUEST;
         }
 
         return ResponseEntity.status(status)

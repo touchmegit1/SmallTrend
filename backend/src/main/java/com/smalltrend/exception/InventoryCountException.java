@@ -8,7 +8,8 @@ public class InventoryCountException extends RuntimeException {
         COUNT_ITEMS_REQUIRED,
         LOCATION_REQUIRED,
         VARIANT_ID_REQUIRED,
-        COUNT_ALREADY_FINALIZED
+        COUNT_ALREADY_FINALIZED,
+        INVALID_DIFFERENCE_SIGN
     }
 
     private final Code code;
@@ -49,6 +50,14 @@ public class InventoryCountException extends RuntimeException {
         return new InventoryCountException(
                 Code.COUNT_ALREADY_FINALIZED,
                 "Không thể " + action + " phiếu ở trạng thái " + currentStatus
+        );
+    }
+
+    public static InventoryCountException invalidDifferenceSign(Integer differenceQuantity, java.math.BigDecimal differenceValue) {
+        return new InventoryCountException(
+                Code.INVALID_DIFFERENCE_SIGN,
+                "Dữ liệu chênh lệch không hợp lệ: differenceQuantity=" + differenceQuantity
+                        + ", differenceValue=" + differenceValue
         );
     }
 }
