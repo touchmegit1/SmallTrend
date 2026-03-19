@@ -188,6 +188,46 @@ class UnitConversionServiceTest {
     }
 
     @Test
+    void addConversion_SellPriceNull_AllowsNull() {
+        request.setSellPrice(null);
+
+        when(productVariantRepository.findById(1)).thenReturn(Optional.of(baseVariant));
+        when(unitRepository.findById(2)).thenReturn(Optional.of(toUnit));
+        when(unitConversionRepository.existsByVariantIdAndToUnitId(1, 2)).thenReturn(false);
+
+        when(unitConversionRepository.save(any(UnitConversion.class))).thenReturn(testConversion);
+        when(productVariantService.generateSkuForConversion(eq(baseVariant), eq(toUnit), any(BigDecimal.class)))
+                .thenReturn("BEV-COCA-BOX24");
+        when(productVariantService.generateInternalBarcodeForPackaging(10, 500))
+                .thenReturn("2010100500123");
+
+        ProductVariant savedVariant = new ProductVariant();
+        savedVariant.setId(500);
+        when(productVariantRepository.saveAndFlush(any(ProductVariant.class))).thenReturn(savedVariant);
+        when(inventoryStockRepository.findByVariantId(1)).thenReturn(List.of());
+
+        UnitConversionResponse result = unitConversionService.addConversion(1, request);
+
+        assertNotNull(result);
+        verify(unitConversionRepository).save(argThat(conversion -> conversion.getSellPrice() == null));
+        verify(productVariantRepository).saveAndFlush(argThat(variant -> variant.getSellPrice() == null));
+    }
+
+    @Test
+    void updateConversion_SellPriceNull_AllowsNull() {
+        request.setSellPrice(null);
+
+        when(unitConversionRepository.findById(100)).thenReturn(Optional.of(testConversion));
+        when(unitRepository.findById(2)).thenReturn(Optional.of(toUnit));
+        when(unitConversionRepository.existsByVariantIdAndToUnitIdAndIdNot(1, 2, 100)).thenReturn(false);
+        when(unitConversionRepository.save(testConversion)).thenReturn(testConversion);
+
+        UnitConversionResponse res = unitConversionService.updateConversion(100, request);
+        assertNotNull(res);
+        assertNull(testConversion.getSellPrice());
+    }
+
+    @Test
     void updateConversion_NotFound() {
         when(unitConversionRepository.findById(99)).thenReturn(Optional.empty());
         assertThrows(RuntimeException.class, () -> unitConversionService.updateConversion(99, request));
