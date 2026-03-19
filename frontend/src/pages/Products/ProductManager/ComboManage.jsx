@@ -25,8 +25,11 @@ const ComboManage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCombo, setSelectedCombo] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Hàm xử lý việc sắp xếp các cột trong bảng (Tên, Giá, etc.)
   // Đảo chiều sắp xếp (asc/desc) khi bấm vào tiêu đề cột
@@ -73,19 +76,30 @@ const ComboManage = () => {
       return 0;
     });
 
+  const showToast = (message, type = "success") => {
+    setToastType(type);
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
+
   // Hàm xử lý xoá một Combo Sản phẩm từ danh sách
   // Cập nhật lại UI thông qua mutate để đồng bộ dữ liệu sau khi API gọi thành công
-  const handleDeleteCombo = async (comboId) => {
+  const handleDeleteCombo = (combo) => {
     if (!canEditProducts) return;
-    if (confirm("Bạn có chắc muốn xóa combo này?")) {
-      try {
-        await deleteCombo(comboId);
-        setToastMessage("Xóa combo thành công!");
-        setTimeout(() => setToastMessage(""), 3000);
-      } catch (err) {
-        setToastMessage("Lỗi khi xóa: " + err.message);
-        setTimeout(() => setToastMessage(""), 3000);
-      }
+    setDeleteTarget(combo);
+  };
+
+  const confirmDeleteCombo = async () => {
+    if (!deleteTarget?.id || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await deleteCombo(deleteTarget.id);
+      showToast("Xóa combo thành công!", "success");
+      setDeleteTarget(null);
+    } catch (err) {
+      showToast("Lỗi khi xóa: " + err.message, "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -93,11 +107,9 @@ const ComboManage = () => {
     if (!canEditProducts) return;
     try {
       await toggleComboStatus(comboId);
-      setToastMessage("Chuyển trạng thái thành công!");
-      setTimeout(() => setToastMessage(""), 3000);
+      showToast("Chuyển trạng thái thành công!", "success");
     } catch (err) {
-      setToastMessage("Lỗi: " + err.message);
-      setTimeout(() => setToastMessage(""), 3000);
+      showToast("Lỗi: " + err.message, "error");
     }
   };
 
@@ -114,19 +126,16 @@ const ComboManage = () => {
     if (!canEditProducts) return;
     try {
       await updateCombo(updatedCombo.id, updatedCombo);
-      setToastMessage("Cập nhật combo thành công!");
+      showToast("Cập nhật combo thành công!", "success");
       setIsEditModalOpen(false);
-      setTimeout(() => setToastMessage(""), 3000);
     } catch (err) {
-      setToastMessage("Lỗi khi cập nhật: " + err.message);
-      setTimeout(() => setToastMessage(""), 3000);
+      showToast("Lỗi khi cập nhật: " + err.message, "error");
     }
   };
 
   useEffect(() => {
     if (location.state?.message) {
-      setToastMessage(location.state.message);
-      setTimeout(() => setToastMessage(""), 3000);
+      showToast(location.state.message, "success");
     }
   }, [location.state]);
 
@@ -135,11 +144,11 @@ const ComboManage = () => {
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right duration-300">
-          <div className="flex items-center gap-3 bg-white border-l-4 border-green-500 rounded-xl px-6 py-4 shadow-xl">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="text-green-600 w-5 h-5" />
+          <div className={`flex items-center gap-3 bg-white border-l-4 rounded-xl px-6 py-4 shadow-xl ${toastType === "error" ? "border-red-500" : "border-green-500"}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${toastType === "error" ? "bg-red-100" : "bg-green-100"}`}>
+              <CheckCircle className={`w-5 h-5 ${toastType === "error" ? "text-red-600" : "text-green-600"}`} />
             </div>
-            <span className="text-sm font-medium text-gray-800">
+            <span className={`text-sm font-medium ${toastType === "error" ? "text-red-700" : "text-gray-800"}`}>
               {toastMessage}
             </span>
           </div>
@@ -345,7 +354,7 @@ const ComboManage = () => {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleDeleteCombo(combo.id)}
+                                onClick={() => handleDeleteCombo(combo)}
                                 className="hover:bg-red-100 hover:text-red-600 rounded-lg"
                                 title="Xóa"
                               >
@@ -363,6 +372,38 @@ const ComboManage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900">Xác nhận xoá combo</h3>
+            <p className="text-sm text-gray-600 mt-2">
+              Bạn có chắc muốn xoá combo <span className="font-semibold text-gray-900">{deleteTarget.comboName}</span>?
+            </p>
+            <p className="text-xs text-red-500 mt-2">Hành động này không thể hoàn tác.</p>
+
+            <div className="mt-5 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="rounded-lg"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+              >
+                Huỷ
+              </Button>
+              <Button
+                type="button"
+                className="bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                onClick={confirmDeleteCombo}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Đang xoá..." : "Xoá combo"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <EditComboModal
         combo={selectedCombo}
