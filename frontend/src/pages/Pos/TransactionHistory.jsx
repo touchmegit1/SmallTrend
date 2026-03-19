@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Invoice from "./Invoice";
 import api from "../../config/axiosConfig";
@@ -21,6 +21,46 @@ function TransactionHistory() {
   const [refundQtys, setRefundQtys] = useState({});
   const [editCustomerModal, setEditCustomerModal] = useState(null); // transaction đang sửa
   const [editCustomerData, setEditCustomerData] = useState({ name: '', phone: '' });
+  const [notificationModal, setNotificationModal] = useState(null);
+  const notificationTimerRef = useRef(null);
+
+  const closeNotificationModal = () => {
+    setNotificationModal(null);
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = null;
+    }
+  };
+
+  const showNotificationModal = (message, duration = 5000) => {
+    setNotificationModal(message);
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+    }
+    notificationTimerRef.current = setTimeout(() => {
+      closeNotificationModal();
+    }, duration);
+  };
+
+  useEffect(() => {
+    const handleEscClose = (e) => {
+      if (e.key === 'Escape' && notificationModal) {
+        closeNotificationModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscClose);
+    return () => window.removeEventListener('keydown', handleEscClose);
+  }, [notificationModal]);
+
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimerRef.current) {
+        clearTimeout(notificationTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const loadAndSaveTransactions = async () => {
@@ -219,7 +259,10 @@ function TransactionHistory() {
     if (!refundModal) return;
     const items = refundModal.cart || refundModal.items || [];
     const hasRefund = items.some((_, i) => (refundQtys[i] || 0) > 0);
-    if (!hasRefund) { alert('Vui lòng chọn ít nhất 1 sản phẩm để hoàn trả!'); return; }
+    if (!hasRefund) {
+      showNotificationModal('Vui lòng chọn ít nhất 1 sản phẩm để hoàn trả!');
+      return;
+    }
 
     const newItems = items.map((item, i) => {
       const returnQty = refundQtys[i] || 0;
@@ -250,6 +293,31 @@ function TransactionHistory() {
     localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
     setSelectedTransaction(prev => (prev?.id === updatedTransaction.id ? updatedTransaction : prev));
     setRefundModal(null);
+    showNotificationModal('Đã hoàn trả thành công!');
+  };
+
+  const saveCustomerInfo = () => {
+    if (!editCustomerModal) return;
+
+    const name = (editCustomerData.name || '').trim();
+    const phone = (editCustomerData.phone || '').trim();
+
+    if (!name || !phone) {
+      showNotificationModal('Vui lòng nhập đầy đủ tên khách hàng và số điện thoại!');
+      return;
+    }
+
+    const updatedTransactions = transactions.map(t =>
+      t.id === editCustomerModal.id
+        ? { ...t, customer: { ...(t.customer || {}), name, phone } }
+        : t
+    );
+
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    setEditCustomerData({ name: '', phone: '' });
+    setEditCustomerModal(null);
+    showNotificationModal('Đã lưu thông tin khách hàng thành công!');
   };
 
   const toggleSelect = (id) => {
@@ -1018,9 +1086,60 @@ function TransactionHistory() {
       {showInvoice && (
         <Invoice
           transaction={selectedTransaction}
+          shortcuts={{ printInvoice: 'F9', closePaymentModal: 'F4' }}
           onClose={() => setShowInvoice(false)}
         />
       )}
+
+      {notificationModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.45)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 3000
+        }}>
+          <div style={{
+            width: "420px",
+            maxWidth: "92%",
+            background: "#fff",
+            borderRadius: "12px",
+            padding: "20px 22px",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.2)",
+            textAlign: "center",
+            border: "1px solid #e9ecef"
+          }}>
+            <div style={{ fontSize: "18px", fontWeight: 700, color: "#0d6efd", marginBottom: "8px" }}>
+              Thông báo
+            </div>
+            <div style={{ fontSize: "15px", color: "#333", lineHeight: 1.45 }}>
+              {notificationModal}
+            </div>
+            <button
+              onClick={closeNotificationModal}
+              style={{
+                marginTop: "16px",
+                padding: "8px 20px",
+                border: "none",
+                borderRadius: "8px",
+                background: "#0d6efd",
+                color: "white",
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
+
+
 
       {/* Modal hoàn trả sản phẩm */}
       {refundModal && (
@@ -1179,15 +1298,7 @@ function TransactionHistory() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    // trigger save
-                    const updatedTransactions = transactions.map(t =>
-                      t.id === editCustomerModal.id
-                        ? { ...t, customer: { ...(t.customer || {}), name: editCustomerData.name, phone: editCustomerData.phone } }
-                        : t
-                    );
-                    setTransactions(updatedTransactions);
-                    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
-                    setEditCustomerModal(null);
+                    saveCustomerInfo();
                   }
                 }}
                 style={{
@@ -1213,16 +1324,7 @@ function TransactionHistory() {
                 Hủy
               </button>
               <button
-                onClick={() => {
-                  const updatedTransactions = transactions.map(t =>
-                    t.id === editCustomerModal.id
-                      ? { ...t, customer: { ...(t.customer || {}), name: editCustomerData.name, phone: editCustomerData.phone } }
-                      : t
-                  );
-                  setTransactions(updatedTransactions);
-                  localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
-                  setEditCustomerModal(null);
-                }}
+                onClick={saveCustomerInfo}
                 style={{
                   padding: "10px 22px", borderRadius: "8px",
                   border: "none", background: "#0d6efd",

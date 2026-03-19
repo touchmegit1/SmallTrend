@@ -14,6 +14,8 @@ import eventService from "../../services/eventService";
 
 export default function POS() {
   const searchInputRef = useRef(null);
+  const discontinuedModalOpenedAtRef = useRef(0);
+  const discontinuedConfirmButtonRef = useRef(null);
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [combos, setCombos] = useState([]);
@@ -114,6 +116,14 @@ export default function POS() {
 
   // Keyboard navigation handler
   const handleKeyDown = (e) => {
+    if (showDiscontinuedModal) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        discontinuedConfirmButtonRef.current?.click();
+      }
+      return;
+    }
+
     // Không xử lý phím tắt nếu đang focus vào ô input trong modal cài đặt
     if (showShortcuts) return;
 
@@ -234,6 +244,7 @@ export default function POS() {
         category: item.categoryName,
         brand: item.brandName,
         isActive: item.isActive,
+        productActive: item.productActive,
         active: item.active,
         status: item.status
       }));
@@ -355,18 +366,91 @@ export default function POS() {
     }, 0);
   };
 
-  const showDiscontinuedWarning = (itemName) => {
-    setDiscontinuedMessage(`${itemName || 'Sản phẩm này'} đã ngừng bán. Vui lòng chọn sản phẩm khác.`);
+  const showUnavailableWarning = (message) => {
+    discontinuedModalOpenedAtRef.current = Date.now();
+    setDiscontinuedMessage(message);
     setShowDiscontinuedModal(true);
+  };
+
+  const showDiscontinuedWarning = (itemName) => {
+    showUnavailableWarning(`${itemName || 'Sản phẩm này'} đã ngừng bán. Vui lòng chọn sản phẩm khác.`);
+  };
+
+  const getPositiveNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const getItemPrice = (item) => {
+    return getPositiveNumber(item?.sellPrice ?? item?.comboPrice ?? item?.price);
+  };
+
+  const getItemStock = (item) => {
+    return getPositiveNumber(item?.stockQuantity ?? item?.stock);
+  };
+
+  const validateSellableItem = (item, itemName = 'Sản phẩm này') => {
+    if (isInactiveItem(item)) {
+      return `${itemName} đã ngừng bán. Vui lòng chọn sản phẩm khác.`;
+    }
+
+    const price = getItemPrice(item);
+    if (price <= 0) {
+      return `${itemName} chưa thiết lập giá bán hoặc giá bằng 0đ, không thể bán.`;
+    }
+
+    const stock = getItemStock(item);
+    if (stock <= 0) {
+      return `${itemName} chưa nhập kho hoặc đã hết hàng, không thể bán.`;
+    }
+
+    return null;
+  };
+
+  const validateSellableCombo = (combo) => {
+    const comboName = combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này';
+
+    if (isInactiveItem(combo)) {
+      return `${comboName} đã ngừng bán. Vui lòng chọn sản phẩm khác.`;
+    }
+
+    const comboPrice = getPositiveNumber(combo?.comboPrice ?? combo?.price);
+    if (comboPrice <= 0) {
+      return `${comboName} chưa thiết lập giá bán hoặc giá bằng 0đ, không thể bán.`;
+    }
+
+    const comboItems = combo?.items || [];
+    for (const comboItem of comboItems) {
+      const productInfo = products.find(p => p.id === comboItem.productVariantId);
+      const requiredQty = getPositiveNumber(comboItem.quantity || 1);
+      const productName = productInfo?.name || 'Sản phẩm trong combo';
+
+      if (!productInfo) {
+        return `${comboName} có sản phẩm chưa nhập kho, không thể bán.`;
+      }
+
+      const itemError = validateSellableItem(productInfo, productName);
+      if (itemError) return `${comboName} không thể bán vì ${itemError.toLowerCase()}`;
+
+      if (getItemStock(productInfo) < requiredQty) {
+        return `${comboName} không đủ tồn kho để bán.`;
+      }
+    }
+
+    return null;
   };
 
   useEffect(() => {
     if (!showDiscontinuedModal) return;
 
+    discontinuedConfirmButtonRef.current?.focus();
+
     const handleDiscontinuedModalEnter = (e) => {
       if (e.key === 'Enter') {
+        const elapsed = Date.now() - discontinuedModalOpenedAtRef.current;
+        if (elapsed < 150) return;
         e.preventDefault();
-        closeDiscontinuedModal();
+        discontinuedConfirmButtonRef.current?.click();
       }
     };
 
@@ -388,16 +472,22 @@ export default function POS() {
   };
 
   const isInactiveItem = (item) => {
-    return item?.isActive === false || item?.active === false || isInactiveStatus(item?.status);
+    return item?.isActive === false || item?.productActive === false || item?.active === false || isInactiveStatus(item?.status);
   };
 
   const addToCart = (product) => {
-    if (isInactiveItem(product)) {
-      showDiscontinuedWarning(product.name);
+    const itemError = validateSellableItem(product, product?.name || 'Sản phẩm này');
+    if (itemError) {
+      showUnavailableWarning(itemError);
       return;
     }
 
     const existingItem = activeOrder.cart.find(item => item.id === product.id);
+
+    if (existingItem && getItemStock(product) > 0 && existingItem.qty >= getItemStock(product)) {
+      showUnavailableWarning(`${product?.name || 'Sản phẩm này'} không đủ tồn kho để thêm.`);
+      return;
+    }
     let updatedOrders;
     if (existingItem) {
       updatedOrders = orders.map(order =>
@@ -470,25 +560,39 @@ export default function POS() {
   };
 
   const addComboToCart = (combo) => {
-    if (isInactiveItem(combo)) {
-      showDiscontinuedWarning(combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này');
-      return;
-    }
-
-    const hasInactiveItem = (combo.items || []).some(comboItem => {
-      const productInfo = products.find(p => p.id === comboItem.productVariantId);
-      return isInactiveItem(comboItem) || isInactiveItem(productInfo);
-    });
-
-    if (hasInactiveItem) {
-      showDiscontinuedWarning(combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này');
+    const comboError = validateSellableCombo(combo);
+    if (comboError) {
+      showUnavailableWarning(comboError);
       return;
     }
 
     let currentCart = [...activeOrder.cart];
 
+    for (const comboItem of combo.items || []) {
+      const cartItem = currentCart.find(c => c.id === comboItem.productVariantId);
+      const remainingQty = (cartItem?.qty || 0) - getPositiveNumber(comboItem.quantity || 1);
+      if (remainingQty < 0) {
+        const productInfo = products.find(p => p.id === comboItem.productVariantId);
+        showUnavailableWarning(`${productInfo?.name || 'Sản phẩm trong combo'} trong giỏ hàng không đủ số lượng để gộp combo.`);
+        return;
+      }
+    }
+
+    const existingComboIdx = currentCart.findIndex(c => c.isCombo && c.id === `combo_${combo.id}`);
+    if (existingComboIdx >= 0) {
+      const nextQty = currentCart[existingComboIdx].qty + 1;
+      for (const comboItem of combo.items || []) {
+        const productInfo = products.find(p => p.id === comboItem.productVariantId);
+        const requiredQty = getPositiveNumber(comboItem.quantity || 1) * nextQty;
+        if (getItemStock(productInfo) < requiredQty) {
+          showUnavailableWarning(`Không đủ tồn kho để thêm ${combo?.comboName ? `Combo ${combo.comboName}` : 'combo này'}.`);
+          return;
+        }
+      }
+    }
+
     // Tạo hashmap để kiểm tra và trừ qty
-    combo.items.forEach(comboItem => {
+    (combo.items || []).forEach(comboItem => {
       const existingIdx = currentCart.findIndex(c => c.id === comboItem.productVariantId);
       if (existingIdx >= 0) {
         currentCart[existingIdx].qty -= comboItem.quantity;
@@ -498,9 +602,10 @@ export default function POS() {
       }
     });
 
-    const existingComboIdx = currentCart.findIndex(c => c.isCombo && c.id === `combo_${combo.id}`);
+    let nextComboQty = 1;
     if (existingComboIdx >= 0) {
-      currentCart[existingComboIdx].qty += 1;
+      nextComboQty = currentCart[existingComboIdx].qty + 1;
+      currentCart[existingComboIdx].qty = nextComboQty;
     } else {
       currentCart.push({
         id: `combo_${combo.id}`,
@@ -513,12 +618,55 @@ export default function POS() {
       });
     }
 
+    if (nextComboQty > 0) {
+      for (const comboItem of combo.items || []) {
+        const productInfo = products.find(p => p.id === comboItem.productVariantId);
+        const requiredQty = getPositiveNumber(comboItem.quantity || 1) * nextComboQty;
+        if (getItemStock(productInfo) < requiredQty) {
+          showUnavailableWarning(`Không đủ tồn kho để thêm ${combo?.comboName ? `Combo ${combo.comboName}` : 'combo này'}.`);
+          return;
+        }
+      }
+    }
+
     updateCart(currentCart);
   };
 
   const updateCart = (newCart) => {
+    const normalizedCart = [];
+
+    for (const item of newCart) {
+      if (!item?.isCombo) {
+        const productInfo = products.find(p => p.id === item.id) || item;
+        const itemError = validateSellableItem(productInfo, productInfo?.name || item?.name || 'Sản phẩm này');
+        if (itemError) {
+          showUnavailableWarning(itemError);
+          continue;
+        }
+
+        const maxStock = getItemStock(productInfo);
+        const safeQty = Math.min(getPositiveNumber(item.qty || 0), maxStock);
+        if (safeQty > 0) {
+          normalizedCart.push({ ...item, qty: safeQty, price: getItemPrice(productInfo) });
+        }
+        continue;
+      }
+
+      const comboInfo = combos.find(c => c.id === item.comboId) || item;
+      const comboError = validateSellableCombo(comboInfo);
+      if (comboError) {
+        showUnavailableWarning(comboError);
+        continue;
+      }
+
+      const comboQty = getPositiveNumber(item.qty || 0);
+      if (comboQty > 0) {
+        normalizedCart.push({ ...item, qty: comboQty, price: getPositiveNumber(comboInfo.comboPrice ?? comboInfo.price) });
+      }
+    }
+
     const updatedOrders = orders.map(order =>
-      order.id === activeOrderId ? { ...order, cart: newCart } : order
+      order.id === activeOrderId ? { ...order, cart: normalizedCart } : order
     );
     setOrders(updatedOrders);
 
@@ -569,14 +717,14 @@ export default function POS() {
     }, 100);
   };
 
-
-
   const updateCustomer = (customer) => {
     // Luôn giữ lại spentAmount nếu có khi update khách
     setOrders(orders.map(order =>
       order.id === activeOrderId ? { ...order, customer: { ...customer, spentAmount: customer?.spentAmount || 0 } } : order
     ));
   };
+
+
 
   const updateUsePoints = (usePoints) => {
     setOrders(orders.map(order =>
@@ -1140,6 +1288,8 @@ export default function POS() {
               {discontinuedMessage}
             </p>
             <button
+              ref={discontinuedConfirmButtonRef}
+              autoFocus
               onClick={closeDiscontinuedModal}
               style={{
                 marginTop: "18px",

@@ -296,6 +296,9 @@ public class WorkShiftAssignmentService {
     }
 
     private ShiftAssignmentResponse toResponse(WorkShiftAssignment assignment) {
+        WorkShift shift = assignment.getWorkShift();
+        User user = assignment.getUser();
+
         return ShiftAssignmentResponse.builder()
                 .id(assignment.getId())
                 .shiftDate(assignment.getShiftDate())
@@ -303,17 +306,17 @@ public class WorkShiftAssignmentService {
                 .notes(assignment.getNotes())
                 .createdAt(assignment.getCreatedAt())
                 .updatedAt(assignment.getUpdatedAt())
-                .shift(ShiftAssignmentResponse.ShiftSummary.builder()
-                        .id(assignment.getWorkShift().getId())
-                        .shiftCode(assignment.getWorkShift().getShiftCode())
-                        .shiftName(assignment.getWorkShift().getShiftName())
-                        .startTime(assignment.getWorkShift().getStartTime())
-                        .endTime(assignment.getWorkShift().getEndTime())
+                .shift(shift == null ? null : ShiftAssignmentResponse.ShiftSummary.builder()
+                        .id(shift.getId())
+                        .shiftCode(shift.getShiftCode())
+                        .shiftName(shift.getShiftName())
+                        .startTime(shift.getStartTime())
+                        .endTime(shift.getEndTime())
                         .build())
-                .user(ShiftAssignmentResponse.UserSummary.builder()
-                        .id(assignment.getUser().getId())
-                        .fullName(assignment.getUser().getFullName())
-                        .email(assignment.getUser().getEmail())
+                .user(user == null ? null : ShiftAssignmentResponse.UserSummary.builder()
+                        .id(user.getId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
                         .build())
                 .build();
     }

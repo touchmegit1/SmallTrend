@@ -37,7 +37,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
   }, [showRegister]);
 
   const isPhoneValid = phone.length >= 10 && phone.length <= 11;
-  const canRegister = searched && !foundCustomer && isPhoneValid;
+  const canRegister = isPhoneValid && !foundCustomer;
 
   const getCustomerTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
@@ -125,10 +125,6 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
   };
 
   const handleOpenRegister = () => {
-    if (!canRegister) {
-      alert("Chỉ được đăng ký khi đã tìm và không thấy khách trong hệ thống.");
-      return;
-    }
     setShowRegister(true);
   };
 
@@ -213,14 +209,14 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
 
         <button
           onClick={handleOpenRegister}
-          disabled={!canRegister || loading}
+          disabled={loading}
           style={{
             padding: "8px 16px",
-            background: canRegister ? "#17a2b8" : "#6c757d",
+            background: loading ? "#6c757d" : "#17a2b8",
             color: "white",
             border: "none",
             borderRadius: "6px",
-            cursor: canRegister ? "pointer" : "not-allowed",
+            cursor: loading ? "not-allowed" : "pointer",
             fontSize: "14px",
           }}
         >
@@ -229,7 +225,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
       </div>
 
 
-      {showRegister && canRegister && (
+      {showRegister && (
         <div
           style={{
             marginTop: "10px",
