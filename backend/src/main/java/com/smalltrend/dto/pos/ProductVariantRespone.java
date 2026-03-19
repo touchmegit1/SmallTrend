@@ -24,6 +24,7 @@ public class ProductVariantRespone {
     private String imageUrl;
     private Map<String, String> attributes;
     private Boolean isActive;
+    private Boolean productActive;
     private BigDecimal taxRate;
     private String taxName;
     private java.time.LocalDateTime createdAt;

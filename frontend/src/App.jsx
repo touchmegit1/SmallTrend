@@ -69,6 +69,8 @@ const CRM_CASHIER_ROLES = [...CRM_ROLES, ...CASHIER_ROLES];
 const HR_MANAGE_ROLES = [...MANAGER_ROLES];
 const ACCOUNT_ROLES = [...MANAGER_ROLES, ...CASHIER_ROLES, ...INVENTORY_ROLES];
 const REPORT_ROLES = [...MANAGER_ROLES];
+const POS_REPORT_VIEW_ROLES = [...MANAGER_ROLES, ...CASHIER_ROLES];
+const POS_COMPLAINT_VIEW_ROLES = [...MANAGER_ROLES, ...CASHIER_ROLES];
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -146,9 +148,9 @@ function App() {
 
         <Route path="pos" element={<ProtectedRoute allowedRoles={POS_ROLES}><POS /></ProtectedRoute>} />
         <Route path="pos/history" element={<ProtectedRoute allowedRoles={POS_ROLES}><TransactionHistory /></ProtectedRoute>} />
-        <Route path="pos/suspended" element={<ProtectedRoute allowedRoles={POS_ROLES}><ReportforCashier /></ProtectedRoute>} />
-        <Route path="pos/complain" element={<ProtectedRoute allowedRoles={POS_ROLES}><PosComplain /></ProtectedRoute>} />
-        <Route path="pos/complaints" element={<ProtectedRoute allowedRoles={POS_ROLES}><PosComplain /></ProtectedRoute>} />
+        <Route path="pos/suspended" element={<ProtectedRoute allowedRoles={POS_REPORT_VIEW_ROLES}><ReportforCashier /></ProtectedRoute>} />
+        <Route path="pos/complain" element={<ProtectedRoute allowedRoles={POS_COMPLAINT_VIEW_ROLES}><PosComplain /></ProtectedRoute>} />
+        <Route path="pos/complaints" element={<ProtectedRoute allowedRoles={POS_COMPLAINT_VIEW_ROLES}><PosComplain /></ProtectedRoute>} />
 
         <Route path="inventory" element={<ProtectedRoute allowedRoles={INVENTORY_OVERVIEW_ROLES}><InventoryDashboard /></ProtectedRoute>} />
         <Route path="inventory/alerts" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><InventoryCountList /></ProtectedRoute>} />

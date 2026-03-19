@@ -48,12 +48,17 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
     navigate("/login");
   };
 
-  const posChildren = [
-    { label: "Giao diện bán hàng", path: "/pos" },
-    { label: "Lịch sử đơn hàng", path: "/pos/history" },
-    { label: "Báo cáo doanh số", path: "/pos/suspended" },
-    { label: "Khiếu nại", path: "/pos/complain" },
-  ];
+  const posChildren = isManager && !isCashier
+    ? [
+      { label: "Báo cáo doanh số", path: "/pos/suspended" },
+      { label: "Khiếu nại", path: "/pos/complain" },
+    ]
+    : [
+      { label: "Giao diện bán hàng", path: "/pos" },
+      { label: "Lịch sử đơn hàng", path: "/pos/history" },
+      { label: "Báo cáo doanh số", path: "/pos/suspended" },
+      { label: "Khiếu nại", path: "/pos/complain" },
+    ];
 
   const inventoryChildren = isCashier
     ? [
@@ -98,11 +103,11 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
 
   const navItems = showBusinessMenu
     ? [
-      ...(isCashier
+      ...((isCashier || isManager)
         ? [{
           icon: ShoppingCart,
           label: "Bán hàng (POS)",
-          path: "/pos",
+          path: isManager && !isCashier ? "/pos/suspended" : "/pos",
           children: posChildren,
         }]
         : []),

@@ -182,8 +182,8 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
       return "Giá combo phải lớn hơn 0";
     }
 
-    if (roundedComboPrice <= totalCost) {
-      return "Giá combo sau làm tròn phải lớn hơn tổng giá nhập của các sản phẩm trong combo";
+    if (roundedComboPrice < totalCost) {
+      return "Giá combo sau làm tròn phải lớn hơn hoặc bằng tổng giá nhập của các sản phẩm trong combo";
     }
 
     if (selectedVariants.length === 0) {
@@ -265,7 +265,7 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
   const roundedComboPrice = comboPriceNumber > 0 ? Math.round(comboPriceNumber / 100) * 100 : 0;
   const discountAmount = totalPrice - roundedComboPrice;
   const discountPercent = totalPrice > 0 && roundedComboPrice > 0 ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
-  const isComboPriceNotAboveCost = roundedComboPrice > 0 && roundedComboPrice <= totalCost;
+  const isComboPriceNotAboveCost = roundedComboPrice > 0 && roundedComboPrice < totalCost;
 
   const filteredVariants = availableVariants.filter(
     (v) =>
@@ -348,7 +348,6 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
                 className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 type="number"
                 min="1"
-                step="100"
                 placeholder="0"
                 name="comboPrice"
                 value={formData.comboPrice}
@@ -363,7 +362,7 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
 
           {isComboPriceNotAboveCost && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">
-              Giá combo sau làm tròn phải lớn hơn tổng giá nhập của các sản phẩm trong combo.
+              Giá combo sau làm tròn phải lớn hơn hoặc bằng tổng giá nhập của các sản phẩm trong combo.
             </div>
           )}
 

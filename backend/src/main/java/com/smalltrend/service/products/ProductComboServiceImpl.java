@@ -8,9 +8,11 @@ import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.entity.ProductCombo;
 import com.smalltrend.entity.ProductComboItem;
 import com.smalltrend.entity.ProductVariant;
+import com.smalltrend.entity.enums.VariantPriceStatus;
 import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.ProductComboItemRepository;
 import com.smalltrend.repository.ProductComboRepository;
+import com.smalltrend.repository.VariantPriceRepository;
 import com.smalltrend.validation.product.ProductComboValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,6 +36,7 @@ public class ProductComboServiceImpl implements ProductComboService {
     private final ProductComboRepository productComboRepository;
     private final ProductComboItemRepository productComboItemRepository;
     private final ProductBatchRepository productBatchRepository;
+    private final VariantPriceRepository variantPriceRepository;
     private final ProductComboValidator productComboValidator;
 
     @Override
@@ -244,6 +247,15 @@ public class ProductComboServiceImpl implements ProductComboService {
     }
 
     private BigDecimal getVariantCostPrice(ProductVariant variant) {
+        BigDecimal activePurchasePrice = variantPriceRepository
+                .findFirstByVariantIdAndStatus(variant.getId(), VariantPriceStatus.ACTIVE)
+                .map(price -> price.getPurchasePrice() != null ? price.getPurchasePrice() : BigDecimal.ZERO)
+                .orElse(BigDecimal.ZERO);
+
+        if (activePurchasePrice.compareTo(BigDecimal.ZERO) > 0) {
+            return activePurchasePrice;
+        }
+
         ProductBatch latestBatch = productBatchRepository.findFirstByVariantIdOrderByIdDesc(variant.getId()).orElse(null);
         if (latestBatch == null || latestBatch.getCostPrice() == null) {
             return BigDecimal.ZERO;
@@ -252,10 +264,10 @@ public class ProductComboServiceImpl implements ProductComboService {
     }
 
     private void validateComboPriceAgainstCost(BigDecimal comboPrice, BigDecimal totalCost) {
-        if (comboPrice.compareTo(totalCost) <= 0) {
+        if (comboPrice.compareTo(totalCost) < 0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Giá combo sau làm tròn phải lớn hơn tổng giá nhập của các sản phẩm trong combo");
+                    "Giá combo sau làm tròn phải lớn hơn hoặc bằng tổng giá nhập của các sản phẩm trong combo");
         }
     }
 

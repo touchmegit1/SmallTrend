@@ -33,7 +33,7 @@ public class UnitConversion {
     @Column(name = "conversion_factor", nullable = false, precision = 12, scale = 4)
     private BigDecimal conversionFactor;
 
-    @Column(name = "sell_price", nullable = false, precision = 12, scale = 2)
+    @Column(name = "sell_price", precision = 12, scale = 2)
     private BigDecimal sellPrice;
 
     @Column(length = 200)
