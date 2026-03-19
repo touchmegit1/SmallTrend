@@ -418,7 +418,11 @@ INSERT IGNORE INTO product_batches (variant_id, batch_number, cost_price, mfg_da
 (23, 'NN2026001', 28000.00, '2026-02-15', '2027-02-15'),
 (24, 'OT2026001', 20000.00, '2026-02-15', '2027-02-15'),
 (25, 'TA2026001', 40000.00, '2026-02-15', '2027-02-15'),
-(26, 'OMO2026001', 32000.00, '2026-02-15', '2027-02-15');
+(26, 'OMO2026001', 32000.00, '2026-02-15', '2027-02-15'),
+-- Mẫu lô hàng đã hết hạn để tạo phiếu xử lý hàng hóa
+(1, 'VM-EXP-202510', 19500.00, '2025-08-01', '2025-10-15'),
+(4, 'CC-EXP-202511', 7800.00, '2025-09-05', '2025-11-30'),
+(15, 'THY-EXP-202512', 3900.00, '2025-10-01', '2025-12-20');
 
 -- 11.1 INVENTORY STOCK
 INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity) VALUES
@@ -447,7 +451,11 @@ INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity)
 (23, 3, 23, 100),
 (24, 4, 24, 150),
 (25, 5, 25, 200),
-(26, 1, 26, 80);
+(26, 1, 26, 80),
+-- Tồn kho cho các lô hết hạn mẫu (batch_id 27-29)
+(1, 1, 27, 24),
+(4, 4, 28, 36),
+(15, 5, 29, 18);
 
 -- Điều chỉnh số lượng tồn kho để phản ánh trạng thái sau khi đã xác nhận phiếu kiểm kho
 -- và các giao dịch bán hàng đã ghi nhận trong stock_movements

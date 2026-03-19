@@ -38,6 +38,7 @@ export default function ActionButtons({
   );
   const canCheckAndReceive = isAdmin || isInventoryStaff;
   const canStartChecking = isInventoryStaff;
+  const canCreatePurchaseRequest = isAdmin || isInventoryStaff;
 
   const isDraft = status === PO_STATUS.DRAFT || status === PO_STATUS.REJECTED;
   const isPending = status === PO_STATUS.PENDING;
@@ -56,6 +57,10 @@ export default function ActionButtons({
 
   const renderActionGroup = () => {
     if (isDraft) {
+      if (!canCreatePurchaseRequest) {
+        return null;
+      }
+
       return (
         <>
           <button
