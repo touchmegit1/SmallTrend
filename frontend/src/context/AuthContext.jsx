@@ -109,35 +109,38 @@ export const AuthProvider = ({ children }) => {
             });
 
             if (!Array.isArray(assignments) || assignments.length === 0) {
-                return null;
+                return { allowedClockInAt: null, hasAssignment: false };
             }
 
             const firstAssignment = assignments[0];
             const shiftId = firstAssignment?.shift?.id;
             if (!shiftId) {
-                return null;
+                return { allowedClockInAt: null, hasAssignment: true };
             }
 
             const shift = await shiftService.getShift(shiftId);
             const shiftStartHm = toHm(shift?.startTime);
             if (!shiftStartHm) {
-                return null;
+                return { allowedClockInAt: null, hasAssignment: true };
             }
 
             const startMinutes = hmToMinutes(shiftStartHm);
             if (startMinutes === null) {
-                return null;
+                return { allowedClockInAt: null, hasAssignment: true };
             }
 
             const allowEarlyClockIn = Boolean(shift?.allowEarlyClockIn);
             const earlyMinutes = Number(shift?.earlyClockInMinutes || 0);
             if (!allowEarlyClockIn) {
-                return shiftStartHm;
+                return { allowedClockInAt: shiftStartHm, hasAssignment: true };
             }
 
-            return minutesToHm(startMinutes - (Number.isNaN(earlyMinutes) ? 0 : earlyMinutes));
+            return {
+                allowedClockInAt: minutesToHm(startMinutes - (Number.isNaN(earlyMinutes) ? 0 : earlyMinutes)),
+                hasAssignment: true,
+            };
         } catch (error) {
-            return null;
+            return { allowedClockInAt: null, hasAssignment: false };
         }
     };
 
@@ -156,12 +159,13 @@ export const AuthProvider = ({ children }) => {
             existingTimeIn = null;
         }
 
-        const allowedClockInAt = await resolveAllowedClockInTime(userId, date);
+        const allowedClockInResult = await resolveAllowedClockInTime(userId, date);
         const nextState = {
             userId,
             date,
             timeIn: existingTimeIn || null,
-            allowedClockInAt,
+            allowedClockInAt: allowedClockInResult.allowedClockInAt,
+            hasAssignment: allowedClockInResult.hasAssignment,
         };
         attendanceStateRef.current = nextState;
         return nextState;
@@ -181,6 +185,10 @@ export const AuthProvider = ({ children }) => {
 
         const { date, hm } = getNowDateAndHm();
         const state = await ensureAttendanceState(userId, date);
+
+        if (!state.hasAssignment) {
+            return;
+        }
 
         const nowMinutes = hmToMinutes(hm);
         const allowedMinutes = hmToMinutes(state.allowedClockInAt);

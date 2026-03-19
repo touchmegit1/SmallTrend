@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -40,17 +41,19 @@ public class VariantPriceService {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new RuntimeException("Variant not found with id: " + variantId));
 
-        // Validate
-        if (request.getSellingPrice() == null) {
-            throw new RuntimeException("Giá bán là bắt buộc.");
-        }
-        if (request.getEffectiveDate() == null) {
-            throw new RuntimeException("Ngày hiệu lực là bắt buộc.");
-        }
+        BigDecimal purchasePrice = normalizePurchasePrice(request.getPurchasePrice());
+        BigDecimal taxPercent = normalizeTaxPercent(request.getTaxPercent());
+        BigDecimal baseSellingPrice = normalizeBaseSellingPrice(request, taxPercent);
+        LocalDate effectiveDate = requireEffectiveDate(request.getEffectiveDate());
+        LocalDate expiryDate = request.getExpiryDate();
+
+        validateDateRange(effectiveDate, expiryDate);
+        validateProfitRule(baseSellingPrice, purchasePrice);
+
+        BigDecimal finalSellingPrice = calculateFinalSellingPrice(baseSellingPrice, taxPercent);
 
         // Deactivate all current ACTIVE prices for this variant
-        List<VariantPrice> activePrices = variantPriceRepository.findByVariantIdAndStatus(
-                variantId, ACTIVE);
+        List<VariantPrice> activePrices = variantPriceRepository.findByVariantIdAndStatus(variantId, ACTIVE);
         for (VariantPrice activePrice : activePrices) {
             activePrice.setStatus(VariantPriceStatus.INACTIVE);
             variantPriceRepository.save(activePrice);
@@ -59,11 +62,12 @@ public class VariantPriceService {
         // Create new ACTIVE price
         VariantPrice newPrice = VariantPrice.builder()
                 .variant(variant)
-                .purchasePrice(request.getPurchasePrice())
-                .sellingPrice(request.getSellingPrice())
-                .taxPercent(request.getTaxPercent())
-                .effectiveDate(request.getEffectiveDate())
-                .expiryDate(request.getExpiryDate())
+                .purchasePrice(purchasePrice)
+                .baseSellingPrice(baseSellingPrice)
+                .sellingPrice(finalSellingPrice)
+                .taxPercent(taxPercent)
+                .effectiveDate(effectiveDate)
+                .expiryDate(expiryDate)
                 .status(VariantPriceStatus.ACTIVE)
                 .build();
 
@@ -101,15 +105,38 @@ public class VariantPriceService {
      */
     @Transactional
     public boolean syncActivePurchasePrice(Integer variantId, BigDecimal purchasePrice) {
-        if (purchasePrice == null) {
+        if (variantId == null || purchasePrice == null) {
+            return false;
+        }
+
+        ProductVariant variant = productVariantRepository.findById(variantId).orElse(null);
+        if (variant == null) {
             return false;
         }
 
         VariantPrice activePrice = variantPriceRepository
                 .findFirstByVariantIdAndStatus(variantId, ACTIVE)
                 .orElse(null);
+
         if (activePrice == null) {
-            return false;
+            BigDecimal sellingPrice = variant.getSellPrice() != null ? variant.getSellPrice() : BigDecimal.ZERO;
+            BigDecimal taxPercent =
+                    variant.getProduct() != null && variant.getProduct().getTaxRate() != null
+                            && variant.getProduct().getTaxRate().getRate() != null
+                                    ? variant.getProduct().getTaxRate().getRate()
+                                    : BigDecimal.ZERO;
+
+            VariantPrice newPrice = VariantPrice.builder()
+                    .variant(variant)
+                    .purchasePrice(purchasePrice)
+                    .sellingPrice(sellingPrice)
+                    .taxPercent(taxPercent)
+                    .effectiveDate(LocalDate.now())
+                    .expiryDate(null)
+                    .status(VariantPriceStatus.ACTIVE)
+                    .build();
+            variantPriceRepository.save(newPrice);
+            return true;
         }
 
         activePrice.setPurchasePrice(purchasePrice);
@@ -125,7 +152,10 @@ public class VariantPriceService {
         VariantPrice activePrice = variantPriceRepository.findFirstByVariantIdAndStatus(variantId, VariantPriceStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active price found for variant " + variantId));
 
-        activePrice.setEffectiveDate(newDate);
+        LocalDate effectiveDate = requireEffectiveDate(newDate);
+        validateDateRange(effectiveDate, activePrice.getExpiryDate());
+
+        activePrice.setEffectiveDate(effectiveDate);
         VariantPrice saved = variantPriceRepository.save(activePrice);
         return mapToResponse(saved);
     }
@@ -137,6 +167,8 @@ public class VariantPriceService {
     public VariantPriceResponse updateActivePriceExpiry(Integer variantId, java.time.LocalDate newDate) {
         VariantPrice activePrice = variantPriceRepository.findFirstByVariantIdAndStatus(variantId, VariantPriceStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active price found for variant " + variantId));
+
+        validateDateRange(activePrice.getEffectiveDate(), newDate);
 
         activePrice.setExpiryDate(newDate);
         VariantPrice saved = variantPriceRepository.save(activePrice);
@@ -211,14 +243,90 @@ public class VariantPriceService {
                 .collect(Collectors.toList());
     }
 
+    private BigDecimal normalizePurchasePrice(BigDecimal purchasePrice) {
+        if (purchasePrice == null) {
+            return BigDecimal.ZERO;
+        }
+        if (purchasePrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Giá nhập không được âm.");
+        }
+        return purchasePrice;
+    }
+
+    private BigDecimal normalizeTaxPercent(BigDecimal taxPercent) {
+        BigDecimal normalized = taxPercent == null ? BigDecimal.ZERO : taxPercent;
+        if (normalized.compareTo(BigDecimal.ZERO) < 0 || normalized.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new RuntimeException("Thuế suất phải nằm trong khoảng từ 0 đến 100.");
+        }
+        return normalized;
+    }
+
+    private BigDecimal normalizeBaseSellingPrice(VariantPriceRequest request, BigDecimal taxPercent) {
+        if (request.getBaseSellingPrice() != null) {
+            if (request.getBaseSellingPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Giá bán trước VAT phải lớn hơn 0.");
+            }
+            return request.getBaseSellingPrice();
+        }
+
+        if (request.getSellingPrice() == null || request.getSellingPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Giá bán trước VAT là bắt buộc.");
+        }
+
+        BigDecimal divisor = BigDecimal.ONE.add(taxPercent.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+        return request.getSellingPrice().divide(divisor, 0, RoundingMode.HALF_UP);
+    }
+
+    private LocalDate requireEffectiveDate(LocalDate effectiveDate) {
+        if (effectiveDate == null) {
+            throw new RuntimeException("Ngày hiệu lực là bắt buộc.");
+        }
+        return effectiveDate;
+    }
+
+    private void validateDateRange(LocalDate effectiveDate, LocalDate expiryDate) {
+        if (effectiveDate != null && expiryDate != null && expiryDate.isBefore(effectiveDate)) {
+            throw new RuntimeException("Ngày hết hiệu lực phải lớn hơn hoặc bằng ngày hiệu lực.");
+        }
+    }
+
+    private void validateProfitRule(BigDecimal baseSellingPrice, BigDecimal purchasePrice) {
+        if (baseSellingPrice.compareTo(purchasePrice) < 0) {
+            throw new RuntimeException("Giá bán trước VAT không được thấp hơn giá nhập.");
+        }
+    }
+
+    private BigDecimal calculateFinalSellingPrice(BigDecimal baseSellingPrice, BigDecimal taxPercent) {
+        BigDecimal vatAmount = baseSellingPrice.multiply(taxPercent)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal rawFinalPrice = baseSellingPrice.add(vatAmount);
+        return roundToNearestStep(rawFinalPrice, BigDecimal.valueOf(100));
+    }
+
+    private BigDecimal roundToNearestStep(BigDecimal value, BigDecimal step) {
+        if (step == null || step.compareTo(BigDecimal.ZERO) <= 0) {
+            return value;
+        }
+        return value.divide(step, 0, RoundingMode.HALF_UP).multiply(step);
+    }
+
+    private BigDecimal calculateVatAmount(BigDecimal baseSellingPrice, BigDecimal finalSellingPrice) {
+        if (baseSellingPrice == null || finalSellingPrice == null) {
+            return BigDecimal.ZERO;
+        }
+        return finalSellingPrice.subtract(baseSellingPrice);
+    }
+
     // ─── Mapper ──────────────────────────────────────────────────────────────
     private VariantPriceResponse mapToResponse(VariantPrice entity) {
         VariantPriceResponse response = new VariantPriceResponse();
         response.setId(entity.getId());
         response.setVariantId(entity.getVariant().getId());
         response.setPurchasePrice(entity.getPurchasePrice());
+        response.setBaseSellingPrice(entity.getBaseSellingPrice());
         response.setSellingPrice(entity.getSellingPrice());
         response.setTaxPercent(entity.getTaxPercent());
+        response.setVatAmount(calculateVatAmount(entity.getBaseSellingPrice(), entity.getSellingPrice()));
         response.setEffectiveDate(entity.getEffectiveDate());
         response.setExpiryDate(entity.getExpiryDate());
         response.setStatus(entity.getStatus().name());

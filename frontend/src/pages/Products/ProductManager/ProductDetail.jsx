@@ -16,6 +16,8 @@ import UnitConversionSection from "./UnitConversionSection";
 import UnitsManagerModal from "./UnitsManagerModal";
 import { useFetchVariants, useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
+import { useAuth } from "../../../context/AuthContext";
+import { canManageProducts } from "../../../utils/roleUtils";
 
 /**
  * Màn hình chi tiết sản phẩm (ProductDetail).
@@ -26,6 +28,8 @@ function ProductDetail() {
   const { id: productId } = useParams(); // Lấy mã ID sản phẩm trên path URL
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const canManageProduct = canManageProducts(user);
 
   // --- QUẢN LÝ STATE THÔNG TIN SẢN PHẨM CHA ---
   const [product, setProduct] = useState(location.state?.product || null);
@@ -57,6 +61,7 @@ function ProductDetail() {
    * Gọi popup hỏi bạn có muốn ngưng kinh doanh SKU variant này hay không
    */
   const handleToggleStatus = (variant) => {
+    if (!canManageProduct) return;
     setSelectedVariant(variant);
     setShowConfirm(true);
   };
@@ -65,6 +70,7 @@ function ProductDetail() {
    * Call API đóng băng hoặc un-ban 1 variant thay đổi trạng thái is_active
    */
   const confirmToggleStatus = async () => {
+    if (!canManageProduct) return;
     try {
       await api.put(`/products/variants/${selectedVariant.id}/toggle-status`);
       setToastMessage(`Đã ${selectedVariant.is_active ? 'ngừng' : 'kích hoạt'} bán loại sản phẩm!`);
@@ -83,6 +89,7 @@ function ProductDetail() {
    * Callback khi Edit Sản phẩm Cha bằng modal đã thành công -> Nạp ngược vào state để load màn hình tức thời
    */
   const handleSaveProduct = (updatedProduct) => {
+    if (!canManageProduct) return;
     setProduct(updatedProduct);
     setToastMessage("Cập nhật thông tin gốc thành công!");
     setIsEditModalOpen(false);
@@ -93,6 +100,7 @@ function ProductDetail() {
    * Bật mở form Modal để điền chỉnh sửa Variant
    */
   const handleEditVariant = (variant) => {
+    if (!canManageProduct) return;
     setSelectedVariant(variant);
     setIsEditVariantModalOpen(true);
   };
@@ -101,6 +109,7 @@ function ProductDetail() {
    * Cập nhật danh sách sau khi Sửa lại Record Của 1 Variant thành công
    */
   const handleSaveVariant = (updatedVariant) => {
+    if (!canManageProduct) return;
     setToastMessage("Lưu thiết lập loại sản phẩm thành công!");
     setIsEditVariantModalOpen(false);
     fetchVariants(); // Tải lại list
@@ -111,11 +120,13 @@ function ProductDetail() {
    * Xoá variant (chỉ trong 2 phút đầu)
    */
   const handleDeleteVariant = (variant) => {
+    if (!canManageProduct) return;
     setDeleteVariant(variant);
     setShowDeleteConfirm(true);
   };
 
   const confirmDeleteVariant = async () => {
+    if (!canManageProduct) return;
     try {
       await api.delete(`/products/variants/${deleteVariant.id}`);
       setToastMessage("Đã xoá loại sản phẩm thành công!");
@@ -439,13 +450,15 @@ function ProductDetail() {
         <Card className="border border-gray-200 rounded-2xl bg-white lg:col-span-2 shadow-sm flex flex-col">
           <div className="p-5 bg-gradient-to-r from-gray-50/50 to-slate-50/40 border-b border-gray-100 flex justify-between items-center rounded-t-2xl">
             <h2 className="text-lg font-bold text-gray-800">Thông tin niêm yết Cơ bản</h2>
-            <Button
-              variant="ghost"
-              onClick={() => setIsEditModalOpen(true)}
-              className="h-8 px-3 text-xs bg-white hover:bg-blue-50 text-blue-600 border border-gray-200 rounded-lg font-semibold shadow-sm transition-all"
-            >
-              <Edit className="w-3 h-3 mr-1.5" /> Chỉnh sửa
-            </Button>
+            {canManageProduct && (
+              <Button
+                variant="ghost"
+                onClick={() => setIsEditModalOpen(true)}
+                className="h-8 px-3 text-xs bg-white hover:bg-blue-50 text-blue-600 border border-gray-200 rounded-lg font-semibold shadow-sm transition-all"
+              >
+                <Edit className="w-3 h-3 mr-1.5" /> Chỉnh sửa
+              </Button>
+            )}
           </div>
 
           <div className="p-6 space-y-6 flex-1">
@@ -503,19 +516,21 @@ function ProductDetail() {
               <p className="text-xs text-gray-500 font-medium">Bảng kê mẫu mã thực thụ xuất nhập kho</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => setShowUnitsManager(true)}
-              variant="outline"
-              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl px-4 font-semibold shadow-sm flex items-center gap-2">
-              <Box className="w-4 h-4" /> Bảng đơn vị tính
-            </Button>
-            <Button
-              onClick={() => navigate("/products/addproduct_variant", { state: { product } })}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md border border-transparent font-semibold shadow-indigo-500/20 px-5">
-              + Thêm loại sản phẩm
-            </Button>
-          </div>
+          {canManageProduct && (
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setShowUnitsManager(true)}
+                variant="outline"
+                className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl px-4 font-semibold shadow-sm flex items-center gap-2">
+                <Box className="w-4 h-4" /> Bảng đơn vị tính
+              </Button>
+              <Button
+                onClick={() => navigate("/products/addproduct_variant", { state: { product } })}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md border border-transparent font-semibold shadow-indigo-500/20 px-5">
+                + Thêm loại sản phẩm
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Body Table */}
@@ -527,7 +542,9 @@ function ProductDetail() {
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-1">Mặt hàng này đang là form trống rỗng</h3>
               <p className="text-sm text-gray-500 mb-4 max-w-sm mx-auto">Vui lòng tạo tối thiểu 1 loại sản phẩm SKU (Màu/Size/Hương) để hệ thống có thể tạo Barcode tính tiền.</p>
-              <Button onClick={() => navigate("/products/addproduct_variant", { state: { product } })} variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl">Tạo ngay Variant</Button>
+              {canManageProduct && (
+                <Button onClick={() => navigate("/products/addproduct_variant", { state: { product } })} variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl">Tạo ngay Variant</Button>
+              )}
             </div>
           ) : (
             <Table>
@@ -575,13 +592,14 @@ function ProductDetail() {
                       <TableCell>
                         <span
                           onClick={() => {
+                            if (!canManageProduct) return;
                             if (variant.barcode || variant.sku) {
                               setSelectedBarcodeVariant(variant);
                               setShowBarcodeModal(true);
                             }
                           }}
-                          className={`font-mono text-xs ${(variant.barcode || variant.sku) ? 'text-indigo-600 hover:text-indigo-800 cursor-pointer underline decoration-dotted font-semibold' : 'text-gray-500'}`}
-                          title="Nhấp để xem mã vạch"
+                          className={`font-mono text-xs ${(variant.barcode || variant.sku) && canManageProduct ? 'text-indigo-600 hover:text-indigo-800 cursor-pointer underline decoration-dotted font-semibold' : 'text-gray-500'}`}
+                          title={canManageProduct ? "Nhấp để xem mã vạch" : ""}
                         >
                           {variant.barcode || "—"}
                         </span>
@@ -631,56 +649,60 @@ function ProductDetail() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            title={variant.is_active ? "Dừng xuất nhập" : (product?.is_active === false ? "Vui lòng mở khoá SP Gốc trước" : "Kích hoạt trở lại")}
-                            onClick={() => handleToggleStatus(variant)}
-                            disabled={!variant.is_active && product?.is_active === false}
-                            className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-amber-50 focus:ring-0 ${variant.is_active ? 'text-amber-600' : 'text-gray-400'}`}
-                          >
-                            <Power className="w-[18px] h-[18px]" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Sửa khung phân loại"
-                            onClick={() => handleEditVariant(variant)}
-                            className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-blue-50 text-blue-600 focus:ring-0"
-                          >
-                            <Edit className="w-[18px] h-[18px]" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Lệnh in Máy Barcode"
+                            title="Xem/In mã vạch"
                             onClick={() => handlePrintBarcode(variant)}
                             className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-slate-100 text-slate-700 focus:ring-0"
                           >
                             <Printer className="w-[18px] h-[18px]" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title={expandedVariantId === variant.id ? "Thu gọn quy đổi" : "Cấu hình quy đổi đơn vị"}
-                            onClick={() => setExpandedVariantId(expandedVariantId === variant.id ? null : variant.id)}
-                            className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all focus:ring-0 ${expandedVariantId === variant.id ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'hover:bg-indigo-50 text-indigo-600'}`}
-                          >
-                            <Box className="w-[18px] h-[18px]" />
-                          </Button>
-                          {isWithin2Minutes(variant.created_at) && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              title="Xoá loại sản phẩm (trong 2 phút)"
-                              onClick={() => handleDeleteVariant(variant)}
-                              className="h-10 w-10 p-0 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-all hover:bg-red-50 text-red-500 focus:ring-0"
-                            >
-                              <Trash2 className="w-[18px] h-[18px]" />
-                            </Button>
+                          {canManageProduct && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title={variant.is_active ? "Dừng xuất nhập" : (product?.is_active === false ? "Vui lòng mở khoá SP Gốc trước" : "Kích hoạt trở lại")}
+                                onClick={() => handleToggleStatus(variant)}
+                                disabled={!variant.is_active && product?.is_active === false}
+                                className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-amber-50 focus:ring-0 ${variant.is_active ? 'text-amber-600' : 'text-gray-400'}`}
+                              >
+                                <Power className="w-[18px] h-[18px]" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Sửa khung phân loại"
+                                onClick={() => handleEditVariant(variant)}
+                                className="h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:bg-blue-50 text-blue-600 focus:ring-0"
+                              >
+                                <Edit className="w-[18px] h-[18px]" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title={expandedVariantId === variant.id ? "Thu gọn quy đổi" : "Cấu hình quy đổi đơn vị"}
+                                onClick={() => setExpandedVariantId(expandedVariantId === variant.id ? null : variant.id)}
+                                className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all focus:ring-0 ${expandedVariantId === variant.id ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                              >
+                                <Box className="w-[18px] h-[18px]" />
+                              </Button>
+                              {isWithin2Minutes(variant.created_at) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  title="Xoá loại sản phẩm (trong 2 phút)"
+                                  onClick={() => handleDeleteVariant(variant)}
+                                  className="h-10 w-10 p-0 rounded-xl border border-red-200 shadow-sm hover:shadow-md transition-all hover:bg-red-50 text-red-500 focus:ring-0"
+                                >
+                                  <Trash2 className="w-[18px] h-[18px]" />
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </TableCell>
                     </TableRow>
                     {/* Dòng hiển thị quy đổi đơn vị khi expand */}
-                    {expandedVariantId === variant.id && (
+                    {canManageProduct && expandedVariantId === variant.id && (
                       <TableRow className="bg-gray-50/30">
                         <TableCell colSpan={10} className="p-0">
                           <div className="px-6 py-4 animate-in slide-in-from-top-2 duration-200 border-b border-gray-100">
@@ -703,24 +725,28 @@ function ProductDetail() {
 
       {/* --- CÁC DIALOG CHỨA FORM (MODALS) TRONG FILE KHÁC --- */}
       {/* 1. Modal sửa SP gốc */}
-      <EditProductModal
-        product={product}
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleSaveProduct}
-      />
+      {canManageProduct && (
+        <EditProductModal
+          product={product}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleSaveProduct}
+        />
+      )}
 
       {/* 2. Modal sửa Variant chi tiết */}
-      <EditVariantModal
-        variant={selectedVariant}
-        parentProduct={product}
-        isOpen={isEditVariantModalOpen}
-        onClose={() => setIsEditVariantModalOpen(false)}
-        onSave={handleSaveVariant}
-      />
+      {canManageProduct && (
+        <EditVariantModal
+          variant={selectedVariant}
+          parentProduct={product}
+          isOpen={isEditVariantModalOpen}
+          onClose={() => setIsEditVariantModalOpen(false)}
+          onSave={handleSaveVariant}
+        />
+      )}
 
       {/* Modal Quản lý Đơn vị tính */}
-      {showUnitsManager && (
+      {canManageProduct && showUnitsManager && (
         <UnitsManagerModal
           onClose={() => setShowUnitsManager(false)}
           onDataChange={() => {

@@ -76,6 +76,32 @@ const getMe = async () => {
     return response.data;
 };
 
+const requestPasswordOtp = async (email) => {
+    try {
+        const response = await api.post('/auth/forgot-password/otp', { email });
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.message
+            || error.response?.data?.error
+            || error.message
+            || 'Khong the gui OTP';
+        throw new Error(errorMessage);
+    }
+};
+
+const resetPasswordWithOtp = async (payload) => {
+    try {
+        const response = await api.post('/auth/forgot-password/reset', payload);
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.message
+            || error.response?.data?.error
+            || error.message
+            || 'Khong the dat lai mat khau';
+        throw new Error(errorMessage);
+    }
+};
+
 const updateStoredUser = (updates = {}) => {
     const currentUser = getCurrentUser() || {};
     const nextUser = { ...currentUser, ...updates };
@@ -92,7 +118,9 @@ const authService = {
     getToken,
     validateToken,
     getMe,
-    updateStoredUser
+    updateStoredUser,
+    requestPasswordOtp,
+    resetPasswordWithOtp
 };
 
 export default authService;

@@ -20,6 +20,7 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @GetMapping("/customers")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ROLE_ADMIN','MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
         List<CustomerResponse> customers = customerService.getAllCustomers();
         return ResponseEntity.ok(customers);

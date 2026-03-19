@@ -41,7 +41,8 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
           id: item.productVariantId || item.id,
           name: item.productVariantName || item.name,
           sku: item.sku,
-          sellPrice: item.sellPrice || 0,
+          sellPrice: Number(item.sellPrice) || 0,
+          costPrice: Number(item.costPrice) || 0,
           quantity: item.quantity,
           attributes: {}
         }));
@@ -181,6 +182,10 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
       return "Giá combo phải lớn hơn 0";
     }
 
+    if (roundedComboPrice <= totalCost) {
+      return "Giá combo sau làm tròn phải lớn hơn tổng giá nhập của các sản phẩm trong combo";
+    }
+
     if (selectedVariants.length === 0) {
       return "Vui lòng chọn ít nhất 1 sản phẩm";
     }
@@ -240,7 +245,7 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
         ...formData,
         comboName: formData.comboName.trim(),
         imageUrl: imageUrl || null,
-        comboPrice: Number(formData.comboPrice),
+        comboPrice: roundedComboPrice,
         originalPrice: totalPrice,
         items: itemsPayload
       });
@@ -254,9 +259,13 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
 
   if (!isOpen) return null;
 
-  const totalPrice = selectedVariants.reduce((sum, v) => sum + ((v.sellPrice || 0) * v.quantity), 0);
-  const discountAmount = totalPrice - (Number(formData.comboPrice) || 0);
-  const discountPercent = totalPrice > 0 && formData.comboPrice ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
+  const totalPrice = selectedVariants.reduce((sum, v) => sum + ((Number(v.sellPrice) || 0) * v.quantity), 0);
+  const totalCost = selectedVariants.reduce((sum, v) => sum + ((Number(v.costPrice) || 0) * v.quantity), 0);
+  const comboPriceNumber = Number(formData.comboPrice) || 0;
+  const roundedComboPrice = comboPriceNumber > 0 ? Math.round(comboPriceNumber / 100) * 100 : 0;
+  const discountAmount = totalPrice - roundedComboPrice;
+  const discountPercent = totalPrice > 0 && roundedComboPrice > 0 ? ((discountAmount / totalPrice) * 100).toFixed(0) : 0;
+  const isComboPriceNotAboveCost = roundedComboPrice > 0 && roundedComboPrice <= totalCost;
 
   const filteredVariants = availableVariants.filter(
     (v) =>
@@ -324,22 +333,39 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
               />
             </div>
             <div>
+              <Label className="text-sm font-semibold text-gray-700">Tổng giá nhập</Label>
+              <Input
+                className="mt-2 h-11 bg-gray-100 border-gray-200 rounded-xl"
+                value={totalCost.toLocaleString()}
+                disabled
+              />
+            </div>
+            <div className="col-span-2">
               <Label className="text-sm font-semibold text-gray-700">
                 Giá Combo <span className="text-red-500">*</span>
               </Label>
               <Input
                 className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 type="number"
-                min="0.01"
-                step="0.01"
+                min="1"
+                step="100"
                 placeholder="0"
                 name="comboPrice"
                 value={formData.comboPrice}
                 onChange={handleChange}
                 required
               />
+              <p className="mt-2 text-xs text-gray-500">
+                Giá combo sẽ được làm tròn theo bội số 100đ: <span className="font-semibold">{roundedComboPrice.toLocaleString()}đ</span>
+              </p>
             </div>
           </div>
+
+          {isComboPriceNotAboveCost && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">
+              Giá combo sau làm tròn phải lớn hơn tổng giá nhập của các sản phẩm trong combo.
+            </div>
+          )}
 
           {formData.comboPrice && (
             <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">

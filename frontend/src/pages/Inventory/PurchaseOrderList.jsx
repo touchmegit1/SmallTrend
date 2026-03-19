@@ -8,11 +8,15 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePurchaseOrderList } from "../../hooks/usePurchaseOrderList";
+import { useAuth } from "../../context/AuthContext";
+import { MANAGER_ROLES, hasAnyRole } from "../../utils/rolePermissions";
 import PurchaseOrderRecordsTable from "../../components/inventory/PurchaseOrderRecordsTable";
 import CustomSelect from "../../components/common/CustomSelect";
 
 function PurchaseOrderList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isManager = hasAnyRole(user, MANAGER_ROLES);
   const { suppliers, filteredOrders, loading, searchQuery, setSearchQuery } =
     usePurchaseOrderList();
 
@@ -72,13 +76,15 @@ function PurchaseOrderList() {
             </div>
           </div>
 
-          <button
-            onClick={() => navigate("/inventory/purchase-orders/create")}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2 transition shadow-sm"
-          >
-            <Plus size={16} />
-            Yêu cầu nhập hàng
-          </button>
+          {!isManager && (
+            <button
+              onClick={() => navigate("/inventory/purchase-orders/create")}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2 transition shadow-sm"
+            >
+              <Plus size={16} />
+              Yêu cầu nhập hàng
+            </button>
+          )}
         </div>
       </div>
 

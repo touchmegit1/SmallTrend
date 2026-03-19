@@ -8,6 +8,7 @@ import java.time.LocalDate;
 @Data
 public class VariantPriceRequest {
     private BigDecimal purchasePrice;
+    private BigDecimal baseSellingPrice;
     private BigDecimal sellingPrice;
     private BigDecimal taxPercent;
     private LocalDate effectiveDate;

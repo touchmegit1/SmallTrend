@@ -32,8 +32,10 @@ public class ProductVariantRespone {
 
     // Active variant price fields
     private BigDecimal activePurchasePrice;
+    private BigDecimal activeBaseSellingPrice;
     private BigDecimal activeSellingPrice;
     private BigDecimal activeTaxPercent;
+    private BigDecimal activeVatAmount;
     private java.time.LocalDate activeEffectiveDate;
     private java.time.LocalDate activeExpiryDate;
 }
