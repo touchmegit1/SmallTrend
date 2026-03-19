@@ -154,6 +154,47 @@ public class InventoryStockService {
     }
 
     /**
+     * Cộng tồn kho khi hoàn/trả hàng.
+     * Tự động quy đổi về base unit giống deductStock.
+     */
+    @Transactional
+    public void restockFromRefund(ProductVariant variant, int quantity, Long referenceId, String notes) {
+        if (quantity <= 0) {
+            throw new RuntimeException("Refund quantity must be greater than 0");
+        }
+
+        ProductVariant baseVariant = variant;
+        int restockQuantity = quantity;
+
+        if (!variant.isBaseUnit()) {
+            baseVariant = productVariantRepository.findByProductIdAndIsBaseUnitTrue(variant.getProduct().getId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Base unit variant not found for product: " + variant.getProduct().getId()));
+
+            UnitConversion uc = unitConversionRepository
+                    .findByVariantIdAndToUnitId(baseVariant.getId(), variant.getUnit().getId())
+                    .orElseThrow(() -> new RuntimeException("Unit conversion not found"));
+
+            int factor = uc.getConversionFactor().intValue();
+            restockQuantity = quantity * factor;
+        }
+
+        var stocks = inventoryStockRepository.findByVariantId(baseVariant.getId());
+        if (stocks == null || stocks.isEmpty()) {
+            throw new RuntimeException("No inventory stock record found for variant: " + baseVariant.getSku());
+        }
+
+        InventoryStock stock = stocks.get(0);
+        int oldQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+        stock.setQuantity(oldQty + restockQuantity);
+        InventoryStock savedStock = inventoryStockRepository.save(stock);
+        outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "REFUND");
+
+        recordMovement(baseVariant, stock.getBatch(), stock.getLocation(),
+                StockTransactionType.ADJUSTMENT, restockQuantity, "REFUND", referenceId, notes);
+    }
+
+    /**
      * Điều chỉnh tồn kho thủ công
      */
     @Transactional

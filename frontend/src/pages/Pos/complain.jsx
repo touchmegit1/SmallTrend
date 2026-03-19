@@ -30,6 +30,7 @@ import customerService from '../../services/customerService';
 import { useCustomerTiers } from '../../hooks/useCustomerTiers';
 import { useAuth } from '../../context/AuthContext';
 import { MANAGER_ROLES, hasAnyRole } from '../../utils/rolePermissions';
+import { useToast, ToastContainer } from '../../hooks/useToast';
 
 const PAGE_SIZE = 5;
 
@@ -94,6 +95,7 @@ export default function CustomerComplaintSystem() {
 
   const { tiers } = useCustomerTiers();
   const { user } = useAuth();
+  const { toasts, showToast, removeToast } = useToast();
   const isComplaintReadOnlyForManager = hasAnyRole(user, MANAGER_ROLES);
 
   const getTier = (spentAmount) => {
@@ -223,6 +225,9 @@ export default function CustomerComplaintSystem() {
       cleanDesc = cleanDesc.replace(match[0], '');
     }
 
+    const refundSkuMatch = (ticket.description || '').match(/\[REFUND_SKU=([^\]]+)\]/);
+    const refundQtyMatch = (ticket.description || '').match(/\[REFUND_QTY=(\d+)\]/);
+
     setForm({
       ticketType: ticket.ticketType || 'ORDER',
       title: ticket.title || '',
@@ -233,8 +238,8 @@ export default function CustomerComplaintSystem() {
       assignedToUserId: ticket.assignedToUserId || '',
       status: (ticket.status === 'OPEN' ? 'IN_PROGRESS' : ticket.status) || 'IN_PROGRESS',
       resolution: ticket.resolution || '',
-      sku: '',
-      refundQuantity: 1
+      sku: refundSkuMatch?.[1]?.trim() || '',
+      refundQuantity: refundQtyMatch?.[1] ? Number(refundQtyMatch[1]) : 1
     });
     setRoleIdInput('');
     setRoleUsers([]);
@@ -252,7 +257,7 @@ export default function CustomerComplaintSystem() {
     if (isComplaintReadOnlyForManager) return;
     try {
       if (customerPhone && !/^\d{10,11}$/.test(customerPhone.trim())) {
-        alert('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).');
+        showToast('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).', 'warning');
         return;
       }
       setSaving(true);
@@ -291,7 +296,9 @@ export default function CustomerComplaintSystem() {
           priority: form.priority,
           status: form.status,
           assignedToUserId: currentUserId,
-          resolution: form.resolution
+          resolution: form.resolution,
+          sku: form.sku || null,
+          refundQuantity: form.refundQuantity ? Number(form.refundQuantity) : null
         });
       } else {
         // Add customer details to description if provided
@@ -323,7 +330,7 @@ export default function CustomerComplaintSystem() {
     } catch (err) {
       console.error(err);
       const msg = err?.response?.data?.message || err?.response?.data || err?.message || 'Lỗi không xác định';
-      alert('Lỗi khi lưu ticket: ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)));
+      showToast('Lỗi khi lưu ticket: ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)), 'error');
     } finally {
       setSaving(false);
     }
@@ -337,7 +344,7 @@ export default function CustomerComplaintSystem() {
       await fetchTickets();
     } catch (err) {
       console.error(err);
-      alert('Lỗi khi xóa ticket');
+      showToast('Lỗi khi xóa ticket', 'error');
     }
   };
 
@@ -701,12 +708,12 @@ export default function CustomerComplaintSystem() {
                       if (!customerPhone.trim()) return;
                       const phone = customerPhone.trim();
                       if (!/^\d{10,11}$/.test(phone)) {
-                        alert('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).');
+                        showToast('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).', 'warning');
                         return;
                       }
                       if (customerNotFound) {
                         if (!customerName.trim()) {
-                          alert("Vui lòng nhập tên khách hàng mới");
+                          showToast('Vui lòng nhập tên khách hàng mới', 'warning');
                           return;
                         }
                         try {
@@ -714,10 +721,10 @@ export default function CustomerComplaintSystem() {
                           await customerService.createCustomer(customerName, phone);
                           setCustomerNotFound(false);
                           setCustomerTier(null);
-                          alert("Tạo khách hàng mới thành công!");
+                          showToast('Tạo khách hàng mới thành công!', 'success');
                         } catch (err) {
                           console.error(err);
-                          alert("Lỗi khi tạo khách hàng.");
+                          showToast('Lỗi khi tạo khách hàng.', 'error');
                         } finally {
                           setLoadingCustomer(false);
                         }
@@ -757,7 +764,7 @@ export default function CustomerComplaintSystem() {
                         }
 
                         if (err?.response?.status && err.response.status !== 404) {
-                          alert(err.response?.data?.message || 'Không thể tìm khách hàng, vui lòng thử lại.');
+                          showToast(err.response?.data?.message || 'Không thể tìm khách hàng, vui lòng thử lại.', 'error');
                           return;
                         }
                       } finally {
@@ -1008,6 +1015,31 @@ export default function CustomerComplaintSystem() {
                 </>
               )}
 
+              {editingTicket && form.ticketType === 'REFUND' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">SKU hoàn trả</label>
+                    <input
+                      value={form.sku}
+                      onChange={e => setForm({ ...form, sku: e.target.value })}
+                      placeholder="VD: SP001"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Số lượng hoàn</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.refundQuantity}
+                      onChange={e => setForm({ ...form, refundQuantity: e.target.value })}
+                      placeholder="VD: 1"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </>
+              )}
+
               {editingTicket && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Giải pháp</label>
@@ -1207,6 +1239,8 @@ export default function CustomerComplaintSystem() {
           </div>
         </div>
       )}
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

@@ -7,7 +7,6 @@ import java.util.Map;
 import com.smalltrend.dto.CRM.CreateTicketRequest;
 import com.smalltrend.dto.CRM.TicketResponse;
 import com.smalltrend.dto.CRM.UpdateTicketRequest;
-import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Ticket;
 import com.smalltrend.entity.User;
@@ -16,11 +15,11 @@ import com.smalltrend.entity.enums.TicketPriority;
 import com.smalltrend.entity.enums.TicketStatus;
 import com.smalltrend.entity.enums.TicketType;
 import com.smalltrend.repository.AttendanceRepository;
-import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.TicketRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
+import com.smalltrend.service.inventory.InventoryStockService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +35,10 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
-    private final InventoryStockRepository inventoryStockRepository;
     private final ProductVariantRepository productVariantRepository;
     private final WorkShiftAssignmentRepository workShiftAssignmentRepository;
     private final AttendanceRepository attendanceRepository;
+    private final InventoryStockService inventoryStockService;
 
     // Mapping TicketType -> code prefix
     private static final Map<TicketType, String> TYPE_CODE_PREFIX = Map.of(
@@ -342,7 +341,34 @@ public class TicketService {
             }
         }
 
+        if (request.getTicketType() != null && "REFUND".equalsIgnoreCase(request.getTicketType())) {
+            if (request.getSku() != null && !request.getSku().isBlank()) {
+                appendMetaLine(builder, "REFUND_SKU", request.getSku().trim());
+            }
+            if (request.getRefundQuantity() != null && request.getRefundQuantity() > 0) {
+                appendMetaLine(builder, "REFUND_QTY", request.getRefundQuantity());
+            }
+        }
+
         return builder.toString().trim();
+    }
+
+    private String parseMetaString(String description, String key) {
+        if (description == null || description.isBlank()) {
+            return null;
+        }
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\[" + key + "=([^\\]]+)\\]");
+        java.util.regex.Matcher matcher = pattern.matcher(description);
+        if (!matcher.find()) {
+            return null;
+        }
+        String value = matcher.group(1);
+        return value != null ? value.trim() : null;
+    }
+
+    private Integer parseMetaPositiveInt(String description, String key) {
+        Integer value = parseMetaInt(description, key);
+        return value != null && value > 0 ? value : null;
     }
 
     private void appendMetaLine(StringBuilder builder, String key, Object value) {
@@ -353,19 +379,6 @@ public class TicketService {
             builder.append('\n');
         }
         builder.append('[').append(key).append('=').append(value).append(']');
-    }
-
-    /**
-     * Add quantity back to inventory_stock for the given variant. Finds the
-     * first stock record for the variant and increases its quantity.
-     */
-    private void restockInventory(Integer variantId, Integer quantity) {
-        List<InventoryStock> stocks = inventoryStockRepository.findByVariantId(variantId);
-        if (stocks != null && !stocks.isEmpty()) {
-            InventoryStock stock = stocks.get(0);
-            stock.setQuantity((stock.getQuantity() != null ? stock.getQuantity() : 0) + quantity);
-            inventoryStockRepository.save(stock);
-        }
     }
 
     /**
@@ -397,6 +410,8 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
+        TicketStatus previousStatus = ticket.getStatus();
+
         if (request.getTitle() != null) {
             ticket.setTitle(request.getTitle());
         }
@@ -420,6 +435,37 @@ public class TicketService {
         }
         if (request.getResolution() != null) {
             ticket.setResolution(request.getResolution());
+        }
+
+        boolean firstTimeResolved = previousStatus != TicketStatus.RESOLVED && ticket.getStatus() == TicketStatus.RESOLVED;
+        if (firstTimeResolved && ticket.getTicketType() == TicketType.REFUND) {
+            String sku = request.getSku() != null ? request.getSku().trim() : "";
+            Integer refundQuantity = request.getRefundQuantity();
+
+            if (sku.isEmpty()) {
+                String skuFromMeta = parseMetaString(ticket.getDescription(), "REFUND_SKU");
+                sku = skuFromMeta != null ? skuFromMeta : "";
+            }
+            if (refundQuantity == null || refundQuantity <= 0) {
+                refundQuantity = parseMetaPositiveInt(ticket.getDescription(), "REFUND_QTY");
+            }
+
+            if (sku.isEmpty()) {
+                throw new RuntimeException("Thiếu SKU để cộng kho khi giải quyết ticket hoàn trả");
+            }
+            if (refundQuantity == null || refundQuantity <= 0) {
+                throw new RuntimeException("Số lượng hoàn phải lớn hơn 0 khi giải quyết ticket hoàn trả");
+            }
+
+            final String resolvedSku = sku;
+            ProductVariant variant = productVariantRepository.findBySku(resolvedSku)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với SKU: " + resolvedSku));
+
+            inventoryStockService.restockFromRefund(
+                    variant,
+                    refundQuantity,
+                    ticket.getId(),
+                    "Restock from resolved refund ticket " + ticket.getTicketCode());
         }
 
         Ticket updated = ticketRepository.save(ticket);

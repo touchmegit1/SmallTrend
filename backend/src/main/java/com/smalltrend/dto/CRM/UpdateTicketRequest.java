@@ -10,4 +10,8 @@ public class UpdateTicketRequest {
     private String status;
     private Integer assignedToUserId;
     private String resolution;
+
+    // Refund-specific fields (used when resolving refund tickets)
+    private String sku;
+    private Integer refundQuantity;
 }

@@ -255,12 +255,49 @@ function TransactionHistory() {
     setShowActionMenu(null);
   };
 
-  const confirmRefund = () => {
+  const confirmRefund = async () => {
     if (!refundModal) return;
     const items = refundModal.cart || refundModal.items || [];
     const hasRefund = items.some((_, i) => (refundQtys[i] || 0) > 0);
     if (!hasRefund) {
       showNotificationModal('Vui lòng chọn ít nhất 1 sản phẩm để hoàn trả!');
+      return;
+    }
+
+    const refundItems = items
+      .map((item, i) => {
+        const quantity = refundQtys[i] || 0;
+        if (quantity <= 0) return null;
+
+        const rawProductId = item.productId || item.id;
+        const productId = Number(rawProductId);
+        if (!Number.isInteger(productId) || productId <= 0) return null;
+
+        return {
+          productId,
+          productName: item.name || item.productName || '',
+          quantity,
+          price: item.price || 0,
+          subtotal: (item.price || 0) * quantity
+        };
+      })
+      .filter(Boolean);
+
+    if (refundItems.length === 0) {
+      showNotificationModal('Không xác định được sản phẩm hoàn trả hợp lệ để cộng kho.');
+      return;
+    }
+
+    try {
+      await api.post('/pos/purchase-history/refund', {
+        customerId: Number(refundModal.customer?.id) || 0,
+        customerName: refundModal.customer?.name || 'Khách lẻ',
+        paymentMethod: refundModal.payment || 'CASH',
+        items: refundItems
+      });
+    } catch (error) {
+      const msg = error?.response?.data?.message || error?.response?.data || error?.message || 'Lỗi không xác định';
+      showNotificationModal(`Hoàn trả thất bại: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
       return;
     }
 

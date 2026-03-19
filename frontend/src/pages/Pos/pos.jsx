@@ -389,6 +389,87 @@ export default function POS() {
     return getPositiveNumber(item?.stockQuantity ?? item?.stock);
   };
 
+  const getComboRetailTotal = (combo) => {
+    return (combo?.items || []).reduce((sum, comboItem) => {
+      const productInfo = products.find(p => p.id === comboItem.productVariantId);
+      const requiredQty = getPositiveNumber(comboItem.quantity || 1);
+      return sum + getItemPrice(productInfo || comboItem) * requiredQty;
+    }, 0);
+  };
+
+  const getComboSavings = (combo) => {
+    return getComboRetailTotal(combo) - getPositiveNumber(combo?.comboPrice ?? combo?.price);
+  };
+
+  const getMaxApplicableComboCount = (cart, combo) => {
+    const comboItems = combo?.items || [];
+    if (comboItems.length === 0) return 0;
+
+    let maxCount = Infinity;
+    for (const comboItem of comboItems) {
+      const requiredQty = getPositiveNumber(comboItem.quantity || 1);
+      if (requiredQty <= 0) return 0;
+      const cartItem = cart.find(c => !c.isCombo && c.id === comboItem.productVariantId);
+      const cartQty = getPositiveNumber(cartItem?.qty || 0);
+      maxCount = Math.min(maxCount, Math.floor(cartQty / requiredQty));
+      if (maxCount <= 0) return 0;
+    }
+
+    return Number.isFinite(maxCount) ? maxCount : 0;
+  };
+
+  const autoApplyBestCombos = (cart) => {
+    let workingCart = [...cart];
+
+    while (true) {
+      const applicableCombos = combos
+        .filter(combo => !isInactiveItem(combo))
+        .filter(combo => !validateSellableCombo(combo))
+        .map(combo => ({
+          combo,
+          applicableCount: getMaxApplicableComboCount(workingCart, combo),
+          savings: getComboSavings(combo)
+        }))
+        .filter(item => item.applicableCount > 0 && item.savings > 0)
+        .sort((a, b) => {
+          if (b.savings !== a.savings) return b.savings - a.savings;
+          return getPositiveNumber(a.combo.id) - getPositiveNumber(b.combo.id);
+        });
+
+      if (applicableCombos.length === 0) break;
+
+      const selectedCombo = applicableCombos[0].combo;
+
+      for (const comboItem of selectedCombo.items || []) {
+        const idx = workingCart.findIndex(c => !c.isCombo && c.id === comboItem.productVariantId);
+        if (idx >= 0) {
+          workingCart[idx].qty -= getPositiveNumber(comboItem.quantity || 1);
+          if (workingCart[idx].qty <= 0) {
+            workingCart.splice(idx, 1);
+          }
+        }
+      }
+
+      const comboCartId = `combo_${selectedCombo.id}`;
+      const existingComboIdx = workingCart.findIndex(c => c.isCombo && c.id === comboCartId);
+      if (existingComboIdx >= 0) {
+        workingCart[existingComboIdx].qty += 1;
+      } else {
+        workingCart.push({
+          id: comboCartId,
+          name: `Combo: ${selectedCombo.comboName}`,
+          price: getPositiveNumber(selectedCombo.comboPrice ?? selectedCombo.price),
+          qty: 1,
+          isCombo: true,
+          comboId: selectedCombo.id,
+          items: selectedCombo.items
+        });
+      }
+    }
+
+    return workingCart;
+  };
+
   const validateSellableItem = (item, itemName = 'Sản phẩm này') => {
     if (isInactiveItem(item)) {
       return `${itemName} đã ngừng bán. Vui lòng chọn sản phẩm khác.`;
@@ -488,27 +569,24 @@ export default function POS() {
       showUnavailableWarning(`${product?.name || 'Sản phẩm này'} không đủ tồn kho để thêm.`);
       return;
     }
-    let updatedOrders;
+    let nextCart;
     if (existingItem) {
-      updatedOrders = orders.map(order =>
-        order.id === activeOrderId
-          ? {
-            ...order,
-            cart: order.cart.map(item =>
-              item.id === product.id
-                ? { ...item, qty: item.qty + 1 }
-                : item
-            )
-          }
-          : order
+      nextCart = activeOrder.cart.map(item =>
+        item.id === product.id
+          ? { ...item, qty: item.qty + 1 }
+          : item
       );
     } else {
-      updatedOrders = orders.map(order =>
-        order.id === activeOrderId
-          ? { ...order, cart: [...order.cart, { ...product, qty: 1 }] }
-          : order
-      );
+      nextCart = [...activeOrder.cart, { ...product, qty: 1 }];
     }
+
+    const autoComboCart = autoApplyBestCombos(nextCart);
+
+    const updatedOrders = orders.map(order =>
+      order.id === activeOrderId
+        ? { ...order, cart: autoComboCart }
+        : order
+    );
     setOrders(updatedOrders);
 
     // Focus lại vào search input sau khi thêm sản phẩm
@@ -568,15 +646,10 @@ export default function POS() {
 
     let currentCart = [...activeOrder.cart];
 
-    for (const comboItem of combo.items || []) {
-      const cartItem = currentCart.find(c => c.id === comboItem.productVariantId);
-      const remainingQty = (cartItem?.qty || 0) - getPositiveNumber(comboItem.quantity || 1);
-      if (remainingQty < 0) {
-        const productInfo = products.find(p => p.id === comboItem.productVariantId);
-        showUnavailableWarning(`${productInfo?.name || 'Sản phẩm trong combo'} trong giỏ hàng không đủ số lượng để gộp combo.`);
-        return;
-      }
-    }
+    const canConsumeFromCart = (combo.items || []).every(comboItem => {
+      const cartItem = currentCart.find(c => !c.isCombo && c.id === comboItem.productVariantId);
+      return getPositiveNumber(cartItem?.qty || 0) >= getPositiveNumber(comboItem.quantity || 1);
+    });
 
     const existingComboIdx = currentCart.findIndex(c => c.isCombo && c.id === `combo_${combo.id}`);
     if (existingComboIdx >= 0) {
@@ -591,21 +664,25 @@ export default function POS() {
       }
     }
 
-    // Tạo hashmap để kiểm tra và trừ qty
-    (combo.items || []).forEach(comboItem => {
-      const existingIdx = currentCart.findIndex(c => c.id === comboItem.productVariantId);
-      if (existingIdx >= 0) {
-        currentCart[existingIdx].qty -= comboItem.quantity;
-        if (currentCart[existingIdx].qty <= 0) {
-          currentCart.splice(existingIdx, 1);
+    // Nếu giỏ đang có đủ thành phần combo thì trừ sản phẩm lẻ để gộp,
+    // nếu chưa đủ thì vẫn cho thêm combo như user yêu cầu.
+    if (canConsumeFromCart) {
+      (combo.items || []).forEach(comboItem => {
+        const existingIdx = currentCart.findIndex(c => !c.isCombo && c.id === comboItem.productVariantId);
+        if (existingIdx >= 0) {
+          currentCart[existingIdx].qty -= getPositiveNumber(comboItem.quantity || 1);
+          if (currentCart[existingIdx].qty <= 0) {
+            currentCart.splice(existingIdx, 1);
+          }
         }
-      }
-    });
+      });
+    }
 
     let nextComboQty = 1;
-    if (existingComboIdx >= 0) {
-      nextComboQty = currentCart[existingComboIdx].qty + 1;
-      currentCart[existingComboIdx].qty = nextComboQty;
+    const existingComboIdxAfterConsume = currentCart.findIndex(c => c.isCombo && c.id === `combo_${combo.id}`);
+    if (existingComboIdxAfterConsume >= 0) {
+      nextComboQty = currentCart[existingComboIdxAfterConsume].qty + 1;
+      currentCart[existingComboIdxAfterConsume].qty = nextComboQty;
     } else {
       currentCart.push({
         id: `combo_${combo.id}`,
@@ -633,9 +710,10 @@ export default function POS() {
   };
 
   const updateCart = (newCart) => {
+    const cartAfterAutoApply = autoApplyBestCombos(newCart);
     const normalizedCart = [];
 
-    for (const item of newCart) {
+    for (const item of cartAfterAutoApply) {
       if (!item?.isCombo) {
         const productInfo = products.find(p => p.id === item.id) || item;
         const itemError = validateSellableItem(productInfo, productInfo?.name || item?.name || 'Sản phẩm này');

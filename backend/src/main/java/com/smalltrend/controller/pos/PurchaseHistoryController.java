@@ -22,6 +22,12 @@ public class PurchaseHistoryController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/refund")
+    public ResponseEntity<Void> refundPurchaseItems(@RequestBody SavePurchaseHistoryRequest request) {
+        purchaseHistoryService.refundPurchaseItems(request);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/customer/{customerId}")
     public ResponseEntity<List<PurchaseHistory>> getCustomerHistory(@PathVariable Long customerId) {
         List<PurchaseHistory> history = purchaseHistoryService.getCustomerHistory(customerId);

@@ -61,6 +61,29 @@ public class PurchaseHistoryService {
         return purchaseHistoryRepository.findByCustomerId(customerId);
     }
 
+    @Transactional
+    public void refundPurchaseItems(SavePurchaseHistoryRequest request) {
+        if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("Refund items are required");
+        }
+
+        for (SavePurchaseHistoryRequest.PurchaseItem item : request.getItems()) {
+            if (item.getProductId() == null || item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new RuntimeException("Invalid refund item data");
+            }
+
+            Integer variantId = item.getProductId().intValue();
+            ProductVariant variant = productVariantRepository.findById(variantId)
+                    .orElseThrow(() -> new RuntimeException("Variant not found: " + variantId));
+
+            inventoryStockService.restockFromRefund(
+                    variant,
+                    item.getQuantity(),
+                    null,
+                    "POS refund from purchase history");
+        }
+    }
+
     private void deductStockQuietly(ProductVariant variant, PurchaseHistory history) {
         try {
             inventoryStockService.deductStock(variant, history.getQuantity(), history.getId(), "POS_SALE");
