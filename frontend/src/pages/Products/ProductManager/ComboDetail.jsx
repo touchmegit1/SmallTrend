@@ -8,17 +8,22 @@ import { Label } from "../ProductComponents/label";
 import { Badge } from "../ProductComponents/badge";
 import EditComboModal from "./EditComboModal";
 import { useProductCombos } from "../../../hooks/product_combos";
+import { useAuth } from "../../../context/AuthContext";
+import { isProductReadOnlyRole } from "../../../utils/rolePermissions";
 
 const ComboDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [combo, setCombo] = useState(location.state?.combo);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   const { updateCombo, deleteCombo } = useProductCombos();
+  const isReadOnlyRole = isProductReadOnlyRole(user);
 
   const handleSaveCombo = async (updatedCombo) => {
+    if (isReadOnlyRole) return;
     try {
       const savedCombo = await updateCombo(combo.id, updatedCombo);
       setCombo(savedCombo || updatedCombo);
@@ -31,6 +36,7 @@ const ComboDetail = () => {
   };
 
   const handleDeleteCombo = async () => {
+    if (isReadOnlyRole) return;
     if (confirm("Bạn có chắc muốn xóa combo này?")) {
       try {
         await deleteCombo(combo.id);
@@ -86,16 +92,18 @@ const ComboDetail = () => {
               <p className="text-sm text-gray-500 mt-1">Mã Combo: {combo.comboCode || `#${combo.id}`}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="danger"
-              onClick={handleDeleteCombo}
-              className="shadow-sm"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Xóa Combo
-            </Button>
-          </div>
+          {!isReadOnlyRole && (
+            <div className="flex gap-2">
+              <Button
+                variant="danger"
+                onClick={handleDeleteCombo}
+                className="shadow-sm"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Xóa Combo
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -185,15 +193,17 @@ const ComboDetail = () => {
                 <p className="text-sm text-gray-900 mt-1">{combo.description || "Không có mô tả"}</p>
               </div>
             </div>
-            <div className="p-5 border-t border-gray-200 bg-gray-50">
-              <Button
-                onClick={() => setIsEditModalOpen(true)}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center justify-center gap-2"
-              >
-                <Edit className="w-4 h-4" />
-                Chỉnh sửa Combo
-              </Button>
-            </div>
+            {!isReadOnlyRole && (
+              <div className="p-5 border-t border-gray-200 bg-gray-50">
+                <Button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center justify-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Chỉnh sửa Combo
+                </Button>
+              </div>
+            )}
           </Card>
         </div>
 
@@ -254,12 +264,14 @@ const ComboDetail = () => {
           </div>
         </Card>
 
-        <EditComboModal
-          combo={combo}
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onSave={handleSaveCombo}
-        />
+        {!isReadOnlyRole && (
+          <EditComboModal
+            combo={combo}
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            onSave={handleSaveCombo}
+          />
+        )}
       </div>
     </div>
   );
