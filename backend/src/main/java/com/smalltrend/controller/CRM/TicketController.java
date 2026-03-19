@@ -3,6 +3,7 @@ package com.smalltrend.controller.CRM;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
@@ -25,18 +26,21 @@ public class TicketController {
     private final UserRepository userRepository;
 
     @GetMapping("/tickets")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER')")
     public ResponseEntity<List<TicketResponse>> getAllTickets() {
         List<TicketResponse> tickets = ticketService.getAllTickets();
         return ResponseEntity.ok(tickets);
     }
 
     @GetMapping("/tickets/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER')")
     public ResponseEntity<TicketResponse> getTicketById(@PathVariable("id") Long id) {
         TicketResponse ticket = ticketService.getTicketById(id);
         return ResponseEntity.ok(ticket);
     }
 
     @PostMapping("/tickets")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public ResponseEntity<?> createTicket(@RequestBody CreateTicketRequest request) {
         try {
             TicketResponse ticket = ticketService.createTicket(request);
@@ -49,6 +53,7 @@ public class TicketController {
     }
 
     @PutMapping("/tickets/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public ResponseEntity<TicketResponse> updateTicket(
             @PathVariable("id") Long id,
             @RequestBody UpdateTicketRequest request) {
@@ -57,6 +62,7 @@ public class TicketController {
     }
 
     @DeleteMapping("/tickets/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public ResponseEntity<Void> deleteTicket(@PathVariable("id") Long id) {
         ticketService.deleteTicket(id);
         return ResponseEntity.noContent().build();
@@ -66,6 +72,7 @@ public class TicketController {
      * Lookup users by role ID — for assigning tickets
      */
     @GetMapping("/tickets/lookup/users-by-role/{roleId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public ResponseEntity<List<Map<String, Object>>> getUsersByRole(@PathVariable("roleId") Integer roleId) {
         List<User> users = userRepository.findByRoleId(roleId);
         List<Map<String, Object>> result = users.stream().map(u -> {
@@ -85,6 +92,7 @@ public class TicketController {
      * Delegates to service to keep transaction open for lazy-loaded collections.
      */
     @GetMapping("/tickets/lookup/variant-by-sku")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public ResponseEntity<List<Map<String, Object>>> getVariantBySku(@RequestParam("sku") String sku) {
         List<Map<String, Object>> result = ticketService.lookupVariantBySku(sku);
         return ResponseEntity.ok(result);

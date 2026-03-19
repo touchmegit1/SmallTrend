@@ -28,6 +28,8 @@ import {
 import ticketService from '../../services/ticketService';
 import customerService from '../../services/customerService';
 import { useCustomerTiers } from '../../hooks/useCustomerTiers';
+import { useAuth } from '../../context/AuthContext';
+import { MANAGER_ROLES, hasAnyRole } from '../../utils/rolePermissions';
 
 const PAGE_SIZE = 5;
 
@@ -91,6 +93,8 @@ export default function CustomerComplaintSystem() {
   const [customerNotFound, setCustomerNotFound] = useState(false);
 
   const { tiers } = useCustomerTiers();
+  const { user } = useAuth();
+  const isComplaintReadOnlyForManager = hasAnyRole(user, MANAGER_ROLES);
 
   const getTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
@@ -198,11 +202,13 @@ export default function CustomerComplaintSystem() {
   };
 
   const openCreate = () => {
+    if (isComplaintReadOnlyForManager) return;
     resetForm();
     setShowModal(true);
   };
 
   const openEdit = (ticket) => {
+    if (isComplaintReadOnlyForManager) return;
     setEditingTicket(ticket);
 
     // Extract customer info from description
@@ -243,6 +249,7 @@ export default function CustomerComplaintSystem() {
   };
 
   const handleSave = async () => {
+    if (isComplaintReadOnlyForManager) return;
     try {
       if (customerPhone && !/^\d{10,11}$/.test(customerPhone.trim())) {
         alert('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).');
@@ -323,6 +330,7 @@ export default function CustomerComplaintSystem() {
   };
 
   const handleDelete = async (id) => {
+    if (isComplaintReadOnlyForManager) return;
     try {
       await ticketService.deleteTicket(id);
       setShowDeleteConfirm(null);
@@ -380,13 +388,15 @@ export default function CustomerComplaintSystem() {
               Quản lý và xử lý các phản hồi từ khách hàng
             </p>
           </div>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <Plus size={16} />
-            Tạo phiếu khiếu nại
-          </button>
+          {!isComplaintReadOnlyForManager && (
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              <Plus size={16} />
+              Tạo phiếu khiếu nại
+            </button>
+          )}
         </div>
       </div>
 
@@ -574,20 +584,24 @@ export default function CustomerComplaintSystem() {
                             >
                               <Eye size={16} />
                             </button>
-                            <button
-                              onClick={() => openEdit(ticket)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                              title="Chỉnh sửa"
-                            >
-                              <Pencil size={16} />
-                            </button>
-                            <button
-                              onClick={() => setShowDeleteConfirm(ticket)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                              title="Xóa"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {!isComplaintReadOnlyForManager && (
+                              <>
+                                <button
+                                  onClick={() => openEdit(ticket)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                  title="Chỉnh sửa"
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                                <button
+                                  onClick={() => setShowDeleteConfirm(ticket)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                  title="Xóa"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1143,12 +1157,14 @@ export default function CustomerComplaintSystem() {
               </div>
 
               <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => { setDetailTicket(null); openEdit(detailTicket); }}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Pencil size={14} /> Chỉnh sửa
-                </button>
+                {!isComplaintReadOnlyForManager && (
+                  <button
+                    onClick={() => { setDetailTicket(null); openEdit(detailTicket); }}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Pencil size={14} /> Chỉnh sửa
+                  </button>
+                )}
                 <button
                   onClick={() => setDetailTicket(null)}
                   className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
