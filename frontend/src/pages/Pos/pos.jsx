@@ -386,7 +386,7 @@ export default function POS() {
   };
 
   const getItemStock = (item) => {
-    return getPositiveNumber(item?.stockQuantity ?? item?.stock);
+    return Math.max(0, getPositiveNumber(item?.stockQuantity ?? item?.stock));
   };
 
   const getComboRetailTotal = (combo) => {
