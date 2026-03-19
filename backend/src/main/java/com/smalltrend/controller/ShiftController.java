@@ -112,8 +112,8 @@ public class ShiftController {
     @GetMapping("/assignments")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> listAssignments(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(value = "userId", required = false) Integer userId,
             @RequestParam(value = "shiftId", required = false) Integer shiftId) {
         List<String> errors = validator.validateDateRange(startDate, endDate);
