@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X, Save, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Save, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import Button from '../ProductComponents/button';
 import { Input } from '../ProductComponents/input';
 import { Label } from '../ProductComponents/label';
@@ -23,6 +23,13 @@ export default function TaxRateManagerModal({ onClose, onDataChange }) {
 
     const [actionLoading, setActionLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const [toast, setToast] = useState("");
+    const [deleteTarget, setDeleteTarget] = useState(null);
+
+    const showToast = (message) => {
+        setToast(message);
+        setTimeout(() => setToast(""), 3000);
+    };
 
     const fetchTaxRates = async () => {
         setLoading(true);
@@ -63,18 +70,25 @@ export default function TaxRateManagerModal({ onClose, onDataChange }) {
         setErrorMsg("");
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Bạn có chắc chắn muốn xoá thuế suất này? Các sản phẩm phụ thuộc có thể bị ảnh hưởng.")) return;
+    const handleDelete = async () => {
+        if (!deleteTarget?.id) return;
 
         setActionLoading(true);
         try {
-            await api.delete(`/tax-rates/${id}`);
-            setTaxRates(prev => prev.filter(t => t.id !== id));
+            await api.delete(`/tax-rates/${deleteTarget.id}`);
+            setTaxRates(prev => prev.filter(t => t.id !== deleteTarget.id));
+            showToast("Xóa thuế suất thành công!");
             if (onDataChange) onDataChange();
         } catch (err) {
             console.error("Lỗi xóa thuế suất:", err);
-            alert(err.response?.data?.message || err.response?.data || "Lỗi xóa thuế suất");
+            const rawError = err.response?.data?.message || err.response?.data;
+            const normalizedError = typeof rawError === 'string' ? rawError : rawError?.message;
+            const deleteErrorMessage = normalizedError?.includes("danh mục hoặc thương hiệu")
+                ? "Lỗi: Không thể xóa thuế suất này vì đang có sản phẩm áp dụng!"
+                : (normalizedError || "Lỗi xóa thuế suất");
+            showToast(deleteErrorMessage);
         } finally {
+            setDeleteTarget(null);
             setActionLoading(false);
         }
     };
@@ -141,8 +155,28 @@ export default function TaxRateManagerModal({ onClose, onDataChange }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <>
+            {toast && (
+                <div className="fixed top-6 right-6 z-[70] animate-in slide-in-from-right duration-300">
+                    <div
+                        className={`flex items-center gap-3 rounded-xl px-5 py-3 shadow-xl border-l-4 bg-white ${
+                            toast.startsWith("Không thể") || toast.startsWith("Lỗi")
+                                ? "border-red-500"
+                                : "border-green-500"
+                        }`}
+                    >
+                        {toast.startsWith("Không thể") || toast.startsWith("Lỗi") ? (
+                            <XCircle className="w-5 h-5 text-red-600" />
+                        ) : (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                        )}
+                        <span className="text-sm font-medium text-gray-800">{toast}</span>
+                    </div>
+                </div>
+            )}
+
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
 
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
@@ -285,7 +319,7 @@ export default function TaxRateManagerModal({ onClose, onDataChange }) {
                                                     </Button>
                                                     <Button
                                                         variant="ghost" size="sm"
-                                                        onClick={() => handleDelete(tax.id)}
+                                                        onClick={() => setDeleteTarget(tax)}
                                                         className="h-8 w-8 p-0 text-red-500 hover:bg-red-50"
                                                         disabled={actionLoading}
                                                     >
@@ -301,7 +335,43 @@ export default function TaxRateManagerModal({ onClose, onDataChange }) {
                     </div>
 
                 </div>
+                </div>
             </div>
-        </div>
+
+            {deleteTarget && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
+                        <div className="p-6 bg-gradient-to-r from-red-50 to-orange-50 rounded-t-2xl">
+                            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Trash2 className="w-7 h-7 text-red-600" />
+                            </div>
+                            <h3 className="text-xl font-bold text-center text-gray-900 mb-2">Xác nhận xóa thuế suất</h3>
+                            <p className="text-center text-gray-600">
+                                Bạn có chắc muốn xóa <span className="font-bold text-gray-900">{deleteTarget?.name}</span>?
+                            </p>
+                        </div>
+
+                        <div className="p-6 bg-gray-50 rounded-b-2xl flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1 h-11 rounded-xl font-semibold"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={actionLoading}
+                            >
+                                Hủy
+                            </Button>
+                            <Button
+                                variant="danger"
+                                className="flex-1 h-11 rounded-xl font-semibold bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md"
+                                onClick={handleDelete}
+                                disabled={actionLoading}
+                            >
+                                {actionLoading ? 'Đang xóa...' : 'Xóa ngay'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
