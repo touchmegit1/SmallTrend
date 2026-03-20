@@ -181,16 +181,24 @@ const TicketProcessingPage = () => {
             }));
     }, [users]);
 
+    const defaultAssigneeId = useMemo(() => {
+        const currentManager = managerOptions.find((option) => Number(option.value) === currentUserId);
+        if (currentManager) {
+            return currentManager.value;
+        }
+        return managerOptions[0]?.value || '';
+    }, [managerOptions, currentUserId]);
+
     useEffect(() => {
-        if (!showCreateModal || createForm.ticketMode === 'SWAP' || createForm.assignedToUserId || managerOptions.length === 0) {
+        if (!showCreateModal || createForm.ticketMode === 'SWAP' || createForm.assignedToUserId || !defaultAssigneeId) {
             return;
         }
 
         setCreateForm((prev) => ({
             ...prev,
-            assignedToUserId: managerOptions[0].value,
+            assignedToUserId: defaultAssigneeId,
         }));
-    }, [showCreateModal, createForm.ticketMode, createForm.assignedToUserId, managerOptions]);
+    }, [showCreateModal, createForm.ticketMode, createForm.assignedToUserId, defaultAssigneeId]);
 
     const openCreateModal = async (prefill = {}) => {
         setCreateError('');
@@ -217,12 +225,11 @@ const TicketProcessingPage = () => {
                 resolvedAssignmentId = sameDateAssignment?.id ? String(sameDateAssignment.id) : '';
             }
 
-            const defaultAssignee = managerOptions[0]?.value || '';
             setCreateForm({
                 ...defaultCreateForm,
                 assignmentId: resolvedAssignmentId,
                 targetUserId: prefillTargetUserId ? String(prefillTargetUserId) : '',
-                assignedToUserId: defaultAssignee,
+                assignedToUserId: defaultAssigneeId,
             });
         } catch (err) {
             setMyAssignments([]);
@@ -645,7 +652,7 @@ const TicketProcessingPage = () => {
                                         ...prev,
                                         ticketMode: value,
                                         targetUserId: '',
-                                        assignedToUserId: value === 'SWAP' ? '' : (prev.assignedToUserId || managerOptions[0]?.value || ''),
+                                        assignedToUserId: value === 'SWAP' ? '' : (prev.assignedToUserId || defaultAssigneeId),
                                     }))}
                                     options={[
                                         { value: 'SWAP', label: 'Yêu cầu đổi ca' },
