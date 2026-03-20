@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -42,5 +43,9 @@ public class PayrollSummaryResponse {
         private BigDecimal grossPay;
         private BigDecimal deductions;
         private BigDecimal netPay;
+        private Boolean isPaid;
+        private LocalDateTime paidAt;
+        private Integer overdueDays;
+        private Boolean attendanceFlag;
     }
 }

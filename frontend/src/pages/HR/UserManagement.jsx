@@ -12,6 +12,30 @@ import {
 import CustomSelect from "../../components/common/CustomSelect";
 import { userService } from "../../services/userService";
 
+const STAFF_ROLE_ID = 5;
+const STAFF_ROLE_IDS = new Set([3, 4, 5]);
+const ALLOWED_ROLE_OPTIONS = [
+  { value: 1, label: "Admin" },
+  { value: 2, label: "Manager" },
+  { value: STAFF_ROLE_ID, label: "Staff" },
+];
+
+const normalizeRoleIdForUI = (roleId) => {
+  const numericRoleId = Number(roleId);
+  if (!Number.isInteger(numericRoleId)) {
+    return 2;
+  }
+  if (STAFF_ROLE_IDS.has(numericRoleId)) {
+    return STAFF_ROLE_ID;
+  }
+  return numericRoleId;
+};
+
+const getRoleLabel = (roleId) => {
+  const normalizedRoleId = normalizeRoleIdForUI(roleId);
+  return ALLOWED_ROLE_OPTIONS.find((option) => option.value === normalizedRoleId)?.label || "Manager";
+};
+
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -29,7 +53,7 @@ const UserManagement = () => {
     email: "",
     phone: "",
     address: "",
-    roleId: 2,
+    roleId: STAFF_ROLE_ID,
     status: "active",
     avatarUrl: null,
   });
@@ -184,7 +208,7 @@ const UserManagement = () => {
       email: user.email,
       phone: user.phone || "",
       address: user.address || "",
-      roleId: user.role?.id || 2,
+      roleId: normalizeRoleIdForUI(user.role?.id || 2),
       status: (user.status || "active").toLowerCase(),
       avatarUrl: user.avatarUrl || null,
     });
@@ -206,7 +230,7 @@ const UserManagement = () => {
       email: "",
       phone: "",
       address: "",
-      roleId: 2,
+      roleId: STAFF_ROLE_ID,
       status: "active",
       avatarUrl: null,
     });
@@ -510,18 +534,12 @@ const UserManagement = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <CustomSelect
-                      value={user.role?.id || 2}
+                      value={normalizeRoleIdForUI(user.role?.id || 2)}
                       onChange={(newRoleId) =>
                         handleRoleChange(user.id, newRoleId)
                       }
                       variant="role"
-                      options={[
-                        { value: 1, label: "Admin" },
-                        { value: 2, label: "Manager" },
-                        { value: 3, label: "Cashier" },
-                        { value: 4, label: "Inventory Staff" },
-                        { value: 5, label: "Sales Staff" },
-                      ]}
+                      options={ALLOWED_ROLE_OPTIONS}
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -677,7 +695,7 @@ const UserManagement = () => {
                           <div className="bg-white rounded-lg p-3 border border-slate-200">
                             <p className="text-xs text-slate-700 font-medium">Vai trò</p>
                             <p className="text-sm font-semibold text-indigo-600">
-                              {["", "Admin", "Manager", "Cashier", "Inventory Staff", "Sales Staff"][formData.roleId] || "Manager"}
+                              {getRoleLabel(formData.roleId)}
                             </p>
                           </div>
                           <div className="bg-white rounded-lg p-3 border border-slate-200">
@@ -862,13 +880,7 @@ const UserManagement = () => {
                             setFormData({ ...formData, roleId: parseInt(val) })
                           }
                           variant="role"
-                          options={[
-                            { value: 1, label: "Admin" },
-                            { value: 2, label: "Manager" },
-                            { value: 3, label: "Cashier" },
-                            { value: 4, label: "Inventory Staff" },
-                            { value: 5, label: "Sales Staff" },
-                          ]}
+                          options={ALLOWED_ROLE_OPTIONS}
                         />
                       </div>
                       <div>

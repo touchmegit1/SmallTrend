@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, Search, Eye, X } from 'lucide-react';
+import { Users, Search, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { userService } from '../../services/userService';
 import CustomSelect from '../../components/common/CustomSelect';
 
 const EmployeeList = () => {
+    const navigate = useNavigate();
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -11,7 +13,6 @@ const EmployeeList = () => {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     useEffect(() => {
         fetchUsers();
@@ -162,7 +163,7 @@ const EmployeeList = () => {
                                     </td>
                                     <td className="px-4 py-3">
                                         <button
-                                            onClick={() => setSelectedEmployee(user)}
+                                            onClick={() => navigate(`/hr/workforce/employee/${user.id}`)}
                                             className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
                                         >
                                             <Eye size={14} /> Xem
@@ -174,44 +175,9 @@ const EmployeeList = () => {
                     </table>
                 </div>
             )}
-
-            {selectedEmployee && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-                    <div className="w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-                            <h2 className="text-lg font-semibold text-slate-900">Chi tiết nhân viên</h2>
-                            <button
-                                onClick={() => setSelectedEmployee(null)}
-                                className="text-slate-400 hover:text-slate-600"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-                        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <Info label="Họ tên" value={selectedEmployee.fullName} />
-                            <Info label="Email" value={selectedEmployee.email} />
-                            <Info label="Số điện thoại" value={selectedEmployee.phone} />
-                            <Info label="Địa chỉ" value={selectedEmployee.address} />
-                            <Info label="Vai trò" value={selectedEmployee.role?.name} />
-                            <Info label="Trạng thái" value={normalizeStatus(selectedEmployee.status) === 'active' ? 'Hoạt động' : 'Vô hiệu'} />
-                            <Info label="Chế độ lương" value={formatSalaryMode(selectedEmployee.salaryType)} />
-                            <Info label="Lương cơ bản" value={formatCurrencyCompact(selectedEmployee.baseSalary)} />
-                            <Info label="Đơn giá theo giờ" value={selectedEmployee.hourlyRate != null ? `${formatCurrencyCompact(selectedEmployee.hourlyRate)}/giờ` : '-'} />
-                            <Info label="Ca tối thiểu/tháng" value={selectedEmployee.salaryType === 'MONTHLY_MIN_SHIFTS' ? (selectedEmployee.minRequiredShifts ?? 0) : '-'} />
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
-
-const Info = ({ label, value }) => (
-    <div>
-        <p className="text-xs font-medium text-slate-500">{label}</p>
-        <p className="mt-1 text-slate-900">{value || '-'}</p>
-    </div>
-);
 
 const normalizeUsers = (payload) => {
     if (Array.isArray(payload)) return payload;

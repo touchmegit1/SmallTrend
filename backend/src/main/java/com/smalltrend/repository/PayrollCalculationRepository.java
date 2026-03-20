@@ -24,4 +24,6 @@ public interface PayrollCalculationRepository extends JpaRepository<PayrollCalcu
             Integer userId,
             LocalDate payPeriodStart,
             LocalDate payPeriodEnd);
+
+    boolean existsByUserIdAndStatusNotIgnoreCase(Integer userId, String status);
 }

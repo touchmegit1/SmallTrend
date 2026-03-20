@@ -2,6 +2,7 @@ export const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 export const MANAGER_ROLES = ["MANAGER", "ROLE_MANAGER"];
 export const CASHIER_ROLES = ["CASHIER", "ROLE_CASHIER"];
 export const INVENTORY_ROLES = ["INVENTORY_STAFF", "ROLE_INVENTORY_STAFF"];
+export const STAFF_ROLES = ["SALES_STAFF", "ROLE_SALES_STAFF", "STAFF", "ROLE_STAFF"];
 
 export const PRODUCT_VIEW_ROLES = [
   ...MANAGER_ROLES,
@@ -22,6 +23,7 @@ export const HR_SCHEDULE_ATTENDANCE_ROLES = [
   ...MANAGER_ROLES,
   ...CASHIER_ROLES,
   ...INVENTORY_ROLES,
+  ...STAFF_ROLES,
 ];
 
 export const CRM_ROLES = [...MANAGER_ROLES];
@@ -29,6 +31,7 @@ export const NON_ADMIN_ROLES = [
   ...MANAGER_ROLES,
   ...CASHIER_ROLES,
   ...INVENTORY_ROLES,
+  ...STAFF_ROLES,
 ];
 
 export const normalizeRole = (input) => {

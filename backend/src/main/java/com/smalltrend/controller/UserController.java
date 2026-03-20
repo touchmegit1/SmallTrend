@@ -161,7 +161,7 @@ public class UserController {
      * Cập nhật thông tin user
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateUser(@PathVariable("id") Integer id, @Valid @RequestBody UserUpdateRequest request) {
         try {
             // Validate ID

@@ -132,6 +132,11 @@ const ShiftManagement = () => {
     const [assignmentFilters, setAssignmentFilters] = useState({ userId: '', shiftId: '' });
     const [processingTicket, setProcessingTicket] = useState(null);
 
+    const shiftDurationPreview = useMemo(
+        () => calculateShiftDurationPreview(shiftForm.startTime, shiftForm.endTime, shiftForm.breakStartTime, shiftForm.breakEndTime),
+        [shiftForm.startTime, shiftForm.endTime, shiftForm.breakStartTime, shiftForm.breakEndTime]
+    );
+
     const assignmentShiftOptions = useMemo(() => {
         const options = shifts.map((shift) => ({
             value: String(shift.id),
@@ -216,6 +221,24 @@ const ShiftManagement = () => {
         navigate(location.pathname, { replace: true, state: null });
     }, [location.state, location.pathname, navigate]);
 
+    useEffect(() => {
+        const context = location.state?.assignmentContext;
+        if (!context?.prefillDate) {
+            return;
+        }
+
+        setActiveTab('assignments');
+        setEditingAssignment(null);
+        setAssignmentForm({
+            ...defaultAssignmentForm,
+            shiftDate: String(context.prefillDate),
+        });
+        setAssignmentFormErrors({});
+        setIsAssignmentModalOpen(true);
+
+        navigate(location.pathname, { replace: true, state: null });
+    }, [location.state, location.pathname, navigate]);
+
     const loadShifts = async () => {
         try {
             const params = {};
@@ -226,7 +249,7 @@ const ShiftManagement = () => {
             setShifts(Array.isArray(data) ? data : []);
             setError('');
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể tải danh sách ca');
+            setError(extractErrorMessage(err, 'Không thể tải danh sách ca'));
         }
     };
 
@@ -249,7 +272,7 @@ const ShiftManagement = () => {
             setAssignments(Array.isArray(data) ? data : []);
             setError('');
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể tải danh sách phân công');
+            setError(extractErrorMessage(err, 'Không thể tải danh sách phân công'));
         }
     };
 
@@ -341,7 +364,7 @@ const ShiftManagement = () => {
             setIsShiftModalOpen(false);
             await loadShifts();
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể lưu ca làm');
+            setError(extractErrorMessage(err, 'Không thể lưu ca làm'));
         }
     };
 
@@ -399,7 +422,7 @@ const ShiftManagement = () => {
             setIsAssignmentModalOpen(false);
             await loadAssignments();
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể lưu phân công');
+            setError(extractErrorMessage(err, 'Không thể lưu phân công'));
         }
     };
 
@@ -409,7 +432,7 @@ const ShiftManagement = () => {
             await shiftService.deleteShift(shiftId);
             await loadShifts();
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể ngưng hiệu lực ca làm');
+            setError(extractErrorMessage(err, 'Không thể ngưng hiệu lực ca làm'));
         }
     };
 
@@ -419,7 +442,7 @@ const ShiftManagement = () => {
             await shiftService.deleteAssignment(assignmentId);
             await loadAssignments();
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể ngưng hiệu lực phân công');
+            setError(extractErrorMessage(err, 'Không thể ngưng hiệu lực phân công'));
         }
     };
 
@@ -436,7 +459,7 @@ const ShiftManagement = () => {
             setProcessingTicket(null);
             await loadAssignments();
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể hoàn tất ticket nghỉ ca.');
+            setError(extractErrorMessage(err, 'Không thể hoàn tất ticket nghỉ ca.'));
         }
     };
 
@@ -453,7 +476,7 @@ const ShiftManagement = () => {
             setProcessingTicket(null);
             await loadAssignments();
         } catch (err) {
-            setError(err.response?.data?.message || 'Không thể từ chối ticket nghỉ ca.');
+            setError(extractErrorMessage(err, 'Không thể từ chối ticket nghỉ ca.'));
         }
     };
 
@@ -770,6 +793,12 @@ const ShiftManagement = () => {
                                         required
                                     />
                                     {shiftFormErrors.endTime && <p className="text-xs text-rose-600">{shiftFormErrors.endTime}</p>}
+                                </div>
+                                <div className="space-y-1 md:col-span-2">
+                                    <label className="text-xs font-medium text-slate-600">Số giờ làm việc tự động</label>
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                        {shiftDurationPreview.label}
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-slate-600">Bắt đầu nghỉ giữa ca</label>
@@ -1177,8 +1206,20 @@ const validateShiftForm = (form) => {
         errors.endTime = 'Vui lòng chọn giờ kết thúc.';
     }
 
-    if (form.startTime && form.endTime && form.startTime >= form.endTime) {
-        errors.endTime = 'Giờ kết thúc phải sau giờ bắt đầu.';
+    if (form.startTime && form.endTime && form.startTime === form.endTime) {
+        errors.endTime = 'Giờ kết thúc không được trùng giờ bắt đầu.';
+    }
+
+    if ((form.breakStartTime && !form.breakEndTime) || (!form.breakStartTime && form.breakEndTime)) {
+        errors.breakEndTime = 'Vui lòng nhập đầy đủ giờ bắt đầu và kết thúc nghỉ giữa ca.';
+    }
+
+    if (form.breakStartTime && form.breakEndTime) {
+        if (form.breakStartTime === form.breakEndTime) {
+            errors.breakEndTime = 'Giờ nghỉ bắt đầu và kết thúc không được trùng nhau.';
+        } else if (form.startTime && form.endTime && !isTimeRangeInsideShift(form.startTime, form.endTime, form.breakStartTime, form.breakEndTime)) {
+            errors.breakEndTime = 'Khoảng nghỉ phải nằm trong khung giờ của ca.';
+        }
     }
 
     if (isTemporary) {
@@ -1241,6 +1282,101 @@ const validateAssignmentForm = (form, shiftOptions = [], userOptions = []) => {
     }
 
     return errors;
+};
+
+const extractErrorMessage = (error, fallback) => {
+    const data = error?.response?.data;
+
+    if (typeof data === 'string' && data.trim()) {
+        return data;
+    }
+
+    if (typeof data?.message === 'string' && data.message.trim()) {
+        return data.message;
+    }
+
+    if (typeof error?.message === 'string' && error.message.trim()) {
+        return error.message;
+    }
+
+    return fallback;
+};
+
+const isTimeRangeInsideShift = (shiftStart, shiftEnd, rangeStart, rangeEnd) => {
+    const shiftRanges = expandTimeRange(shiftStart, shiftEnd);
+    const candidateRanges = expandTimeRange(rangeStart, rangeEnd);
+
+    return candidateRanges.every((candidate) =>
+        shiftRanges.some((shiftRange) => candidate.start >= shiftRange.start && candidate.end <= shiftRange.end)
+    );
+};
+
+const expandTimeRange = (startHm, endHm) => {
+    const dayMinutes = 24 * 60;
+    const start = hmToMinutes(startHm);
+    const end = hmToMinutes(endHm);
+
+    if (start === null || end === null) {
+        return [];
+    }
+
+    if (end <= start) {
+        return [
+            { start, end: end + dayMinutes },
+            { start: start - dayMinutes, end },
+        ];
+    }
+
+    return [
+        { start, end },
+        { start: start + dayMinutes, end: end + dayMinutes },
+    ];
+};
+
+const hmToMinutes = (hm) => {
+    if (!hm || !/^\d{2}:\d{2}$/.test(String(hm))) {
+        return null;
+    }
+
+    const [hours, minutes] = String(hm).split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+        return null;
+    }
+
+    return (hours * 60) + minutes;
+};
+
+const calculateShiftDurationPreview = (startTime, endTime, breakStart, breakEnd) => {
+    const startMinutes = hmToMinutes(startTime);
+    const endMinutes = hmToMinutes(endTime);
+
+    if (startMinutes === null || endMinutes === null) {
+        return { minutes: 0, label: 'Nhập giờ bắt đầu và kết thúc để xem số giờ làm việc.' };
+    }
+
+    const dayMinutes = 24 * 60;
+    let plannedMinutes = endMinutes - startMinutes;
+    if (plannedMinutes <= 0) {
+        plannedMinutes += dayMinutes;
+    }
+
+    let breakMinutes = 0;
+    const breakStartMinutes = hmToMinutes(breakStart);
+    const breakEndMinutes = hmToMinutes(breakEnd);
+    if (breakStartMinutes !== null && breakEndMinutes !== null) {
+        breakMinutes = breakEndMinutes - breakStartMinutes;
+        if (breakMinutes <= 0) {
+            breakMinutes += dayMinutes;
+        }
+    }
+
+    const workingMinutes = Math.max(plannedMinutes - breakMinutes, 0);
+    const hours = (workingMinutes / 60).toFixed(2);
+
+    return {
+        minutes: workingMinutes,
+        label: `${hours} giờ (${workingMinutes} phút) - Tổng ca ${plannedMinutes} phút${breakMinutes > 0 ? `, nghỉ ${breakMinutes} phút` : ''}`,
+    };
 };
 
 const statusPillClass = (status) => {

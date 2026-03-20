@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const attendanceTimerRef = useRef(null);
-    const attendanceStateRef = useRef({ userId: null, date: null, timeIn: null, allowedClockInAt: null, disabled: false });
+    const attendanceStateRef = useRef({ userId: null, date: null, timeIn: null, allowedClockInAt: null, hasAssignment: null });
 
     const clearAttendanceTimer = () => {
         if (attendanceTimerRef.current) {
@@ -70,19 +70,8 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const disableAttendanceSync = () => {
-        attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null, disabled: true };
-    };
-
     const resetAttendanceSync = () => {
-        attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null, disabled: false };
-    };
-
-    const isAttendanceSyncEnabled = (userData) => {
-        if (attendanceStateRef.current.disabled) {
-            return false;
-        }
-        return shouldAutoSyncAttendance(userData);
+        attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null, hasAssignment: null };
     };
 
     const handleAttendanceSyncError = (error) => {
@@ -92,8 +81,13 @@ export const AuthProvider = ({ children }) => {
 
         const message = getAttendanceErrorMessage(error).toLowerCase();
         if (message.includes('not assigned') || message.includes('không được phân công') || message.includes('khong duoc phan cong')) {
-            disableAttendanceSync();
-            clearAttendanceTimer();
+            const current = attendanceStateRef.current;
+            attendanceStateRef.current = {
+                ...current,
+                hasAssignment: false,
+                timeIn: null,
+                allowedClockInAt: null,
+            };
             return true;
         }
 
@@ -146,7 +140,7 @@ export const AuthProvider = ({ children }) => {
 
     const ensureAttendanceState = async (userId, date) => {
         const current = attendanceStateRef.current;
-        if (current.userId === userId && current.date === date) {
+        if (current.userId === userId && current.date === date && current.hasAssignment !== false) {
             return current;
         }
 
@@ -172,7 +166,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const syncAttendanceSession = async (userData, mode) => {
-        if (!isAttendanceSyncEnabled(userData)) {
+        if (!shouldAutoSyncAttendance(userData)) {
             return;
         }
 
@@ -293,7 +287,7 @@ export const AuthProvider = ({ children }) => {
             await authService.logout();
         } finally {
             clearAttendanceTimer();
-            attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null, disabled: false };
+            attendanceStateRef.current = { userId: null, date: null, timeIn: null, allowedClockInAt: null, hasAssignment: null };
             setUser(null);
             setIsAuthenticated(false);
         }

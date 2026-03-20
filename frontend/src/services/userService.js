@@ -1,8 +1,25 @@
 import api from '../config/axiosConfig';
 
+const normalizePagination = (params = {}) => {
+  const next = { ...params };
+  if (next.size !== undefined && next.size !== null) {
+    const parsedSize = Number(next.size);
+    if (Number.isFinite(parsedSize)) {
+      next.size = Math.min(100, Math.max(1, parsedSize));
+    }
+  }
+  if (next.page !== undefined && next.page !== null) {
+    const parsedPage = Number(next.page);
+    if (Number.isFinite(parsedPage)) {
+      next.page = Math.max(0, parsedPage);
+    }
+  }
+  return next;
+};
+
 export const userService = {
   async getAll(params = {}) {
-    const res = await api.get('/users', { params });
+    const res = await api.get('/users', { params: normalizePagination(params) });
     return res.data;
   },
   async create(payload) {

@@ -4,13 +4,17 @@ import com.smalltrend.dto.products.CreateProductComboItemRequest;
 import com.smalltrend.dto.products.CreateProductComboRequest;
 import com.smalltrend.dto.products.ProductComboResponse;
 import com.smalltrend.entity.Product;
+import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.entity.ProductCombo;
 import com.smalltrend.entity.ProductComboItem;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.Unit;
+import com.smalltrend.entity.enums.VariantPriceStatus;
+import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.ProductComboItemRepository;
 import com.smalltrend.repository.ProductComboRepository;
 import com.smalltrend.repository.ProductVariantRepository;
+import com.smalltrend.repository.VariantPriceRepository;
 import com.smalltrend.validation.product.ProductComboValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +31,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +45,12 @@ class ProductComboServiceTest {
 
     @Mock
     private ProductVariantRepository productVariantRepository;
+
+    @Mock
+    private ProductBatchRepository productBatchRepository;
+
+    @Mock
+    private VariantPriceRepository variantPriceRepository;
 
     @Mock
     private ProductComboValidator productComboValidator;
@@ -73,12 +84,17 @@ class ProductComboServiceTest {
         testVariant.setProduct(testProduct);
         testVariant.setUnit(testUnit);
         testVariant.setAttributes(Map.of("Color", "Red"));
-        
+
         testComboItem = new ProductComboItem();
         testComboItem.setId(1);
         testComboItem.setCombo(testCombo);
         testComboItem.setProductVariant(testVariant);
         testComboItem.setQuantity(2);
+
+        lenient().when(variantPriceRepository.findFirstByVariantIdAndStatus(anyInt(), any(VariantPriceStatus.class)))
+                .thenReturn(Optional.empty());
+        lenient().when(productBatchRepository.findFirstByVariantIdOrderByIdDesc(anyInt()))
+                .thenReturn(Optional.empty());
     }
 
     @Test
@@ -102,7 +118,7 @@ class ProductComboServiceTest {
     void getComboById_shouldThrowException_whenNotFound() {
         // Arrange
         when(productComboValidator.requireExistingCombo(99))
-            .thenThrow(new RuntimeException("Không tìm thấy combo với id: 99"));
+                .thenThrow(new RuntimeException("Không tìm thấy combo với id: 99"));
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productComboService.getComboById(99));
@@ -142,7 +158,7 @@ class ProductComboServiceTest {
         req.setComboCode("DUP-123");
 
         doThrow(new RuntimeException("Mã combo đã tồn tại: DUP-123"))
-            .when(productComboValidator).validateComboCodeUniqueForCreate("DUP-123");
+                .when(productComboValidator).validateComboCodeUniqueForCreate("DUP-123");
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productComboService.createCombo(req));
@@ -154,7 +170,7 @@ class ProductComboServiceTest {
     void createCombo_shouldCalculatePriceAndSaveItems_fullyCoveringBranchLogic() {
         CreateProductComboRequest req = new CreateProductComboRequest();
         req.setComboCode("CB-100");
-        
+
         CreateProductComboItemRequest itemReq = new CreateProductComboItemRequest();
         itemReq.setProductVariantId(5);
         itemReq.setQuantity(null); // falls back to 1
@@ -163,15 +179,15 @@ class ProductComboServiceTest {
         itemReq.setIsOptional(null); // falls back to false
         itemReq.setCanSubstitute(null); // falls back to false
         itemReq.setDisplayOrder(null); // falls back to 0
-        
+
         req.setItems(List.of(itemReq));
 
         when(productComboValidator.requireExistingVariant(5)).thenReturn(testVariant);
-        
+
         ProductCombo savedCombo = new ProductCombo();
         savedCombo.setId(3);
         savedCombo.setComboCode("CB-100");
-        
+
         when(productComboRepository.save(any(ProductCombo.class))).thenReturn(savedCombo);
         when(productComboItemRepository.findByComboId(3)).thenReturn(List.of(testComboItem));
 
@@ -185,13 +201,13 @@ class ProductComboServiceTest {
     void createCombo_shouldThrowException_whenItemVariantNotFound() {
         CreateProductComboRequest req = new CreateProductComboRequest();
         req.setComboCode("CB-200");
-        
+
         CreateProductComboItemRequest itemReq = new CreateProductComboItemRequest();
-        itemReq.setProductVariantId(99); 
+        itemReq.setProductVariantId(99);
         req.setItems(List.of(itemReq));
 
         when(productComboValidator.requireExistingVariant(99))
-            .thenThrow(new RuntimeException("Không tìm thấy biến thể với id: 99"));
+                .thenThrow(new RuntimeException("Không tìm thấy biến thể với id: 99"));
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productComboService.createCombo(req));
 
@@ -222,7 +238,7 @@ class ProductComboServiceTest {
 
         when(productComboValidator.requireExistingCombo(1)).thenReturn(testCombo);
         doThrow(new RuntimeException("Mã combo đã tồn tại: NEW-CB"))
-            .when(productComboValidator).validateComboCodeUniqueForUpdate(testCombo, "NEW-CB");
+                .when(productComboValidator).validateComboCodeUniqueForUpdate(testCombo, "NEW-CB");
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> productComboService.updateCombo(1, req));
 

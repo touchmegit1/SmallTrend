@@ -5,8 +5,8 @@
 -- Hashed: $2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG
 -- =============================================================================
 
--- JPA/Hibernate là nguồn chân lý schema.
--- File này chỉ dùng để seed dữ liệu mẫu (idempotent).
+-- JPA/Hibernate lÃ  nguá»“n chÃ¢n lÃ½ schema.
+-- File nÃ y chá»‰ dÃ¹ng Ä‘á»ƒ seed dá»¯ liá»‡u máº«u (idempotent).
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -43,6 +43,7 @@ TRUNCATE TABLE inventory_stock;
 TRUNCATE TABLE product_batches;
 TRUNCATE TABLE locations;
 TRUNCATE TABLE variant_prices;
+TRUNCATE TABLE price_expiry_alert_logs;
 TRUNCATE TABLE variant_attributes;
 TRUNCATE TABLE product_variants;
 TRUNCATE TABLE gift_redemption_history;
@@ -67,815 +68,147 @@ TRUNCATE TABLE advertisements;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- 1. SUPPLIERS
-INSERT INTO suppliers
-(name, tax_code, address, email, phone, contact_person, contract_files, contract_signed_date, contract_expiry, active, notes)
-VALUES
-('Vinamilk Distribution', '0100170098', '10 Tan Trao, District 7, Ho Chi Minh City, Vietnam', 'sales@vinamilk.com.vn', '1800-1199', 'Nguyen Van A', NULL, '2023-01-15', '2025-01-15', TRUE, 'Main dairy supplier'),
-
-('Unilever Vietnam', '0300491828', '15 Le Duan Blvd, District 1, Ho Chi Minh City, Vietnam', 'contact@unilever.com.vn', '1800-5588', 'Tran Thi B', NULL, '2023-03-01', '2025-03-01', TRUE, 'Personal care and household products'),
-
-('Nestle Vietnam', '0302127854', 'The Vista Building, Hanoi Highway, Ho Chi Minh City, Vietnam', 'info@nestle.com.vn', '1900-6011', 'Le Van C', NULL, '2023-06-01', '2025-06-01', TRUE, 'Food and beverage supplier'),
-
-('Coca-Cola Vietnam', '0300693409', '124 Kim Ma Street, Ba Dinh, Hanoi, Vietnam', 'vietnam@cocacola.com', '1900-0180', 'Pham Thi D', NULL, '2023-07-01', '2025-07-01', TRUE, 'Soft drinks supplier'),
-
-('Masan Consumer', '0302017440', '39 Le Duan, District 1, Ho Chi Minh City, Vietnam', 'contact@masan.com.vn', '1800-9090', 'Le Van M', NULL, '2023-08-01', '2025-08-01', TRUE, 'Consumer goods supplier'),
-
-('Heineken Vietnam', '0300847056', '1 Bach Dang, Tan Binh District, Ho Chi Minh City, Vietnam', 'sales@heineken.com.vn', '1900-1111', 'Tran Van H', NULL, '2023-10-01', '2025-10-01', TRUE, 'Beer and beverages supplier'),
-
-('KIDO Group (Tuong An)', '0302266881', '138 Hai Ba Trung, District 1, Ho Chi Minh City, Vietnam', 'info@kido.vn', '1800-6688', 'Bui Van K', NULL, '2023-05-01', '2025-05-01', TRUE, 'Edible oils and foods'),
-
-('PepsiCo Vietnam', '0300811445', '182 Le Dai Hanh, District 11, Ho Chi Minh City, Vietnam', 'contact@pepsico.com.vn', '1900-1220', 'Nguyen Van P', NULL, '2023-04-01', '2025-04-01', TRUE, 'Soft drinks and snacks'),
-
-('TH Milk Distribution', '2900326335', 'Thai Hoa Town, Nghe An Province, Vietnam', 'sales@thmilk.vn', '1800-545440', 'Tran Thi T', NULL, '2023-02-01', '2025-02-01', TRUE, 'Dairy supplier'),
-
-('Acecook Vietnam', '0300808680', 'Tan Binh Industrial Park, Ho Chi Minh City, Vietnam', 'info@acecookvietnam.vn', '1900-0120', 'Le Van AC', NULL, '2023-05-01', '2025-05-01', TRUE, 'Instant noodle supplier'),
-
-('Vifon Vietnam', '0300391837', 'Tan Binh District, Ho Chi Minh City, Vietnam', 'info@vifon.com.vn', '028-3815-4364', 'Pham Van V', NULL, '2023-05-10', '2025-05-10', TRUE, 'Instant noodles and pho'),
-
-('Orion Food Vina', '3700381324', 'My Phuoc Industrial Park, Binh Duong, Vietnam', 'contact@orion.vn', '0274-355-0166', 'Kim Orion', NULL, '2023-04-01', '2025-04-01', TRUE, 'Snack supplier'),
-
-('Oishi Vietnam', '0302752277', 'VSIP Industrial Park, Binh Duong, Vietnam', 'sales@oishi.vn', '0274-378-4088', 'Nguyen Van O', NULL, '2023-04-15', '2025-04-15', TRUE, 'Snack foods'),
-
-('Cholimex Food', '0304475742', 'Vinh Loc Industrial Park, Binh Chanh, Ho Chi Minh City, Vietnam', 'info@cholimexfood.com.vn', '028-3765-2101', 'Tran Thi C', NULL, '2023-03-15', '2025-03-15', TRUE, 'Sauces and condiments'),
-
-('CP Vietnam Corporation', '3600235308', 'Bien Hoa Industrial Zone, Dong Nai, Vietnam', 'info@cp.com.vn', '0251-3836-501', 'Somchai CP', NULL, '2023-06-01', '2025-06-01', TRUE, 'Meat and food products'),
-
-('Perfetti Van Melle Vietnam Co., Ltd', '0300588569', 'VSIP Industrial Park, Binh Duong, Vietnam', 'info.vn@perfettivanmelle.com', '0274-376-8586', 'Marco Perfetti', NULL, '2023-06-10', '2025-06-10', TRUE, 'Confectionery supplier (Chupa Chups, Alpenliebe, Mentos)'),
-
-('Vifon Joint Stock Company', '0300391836', '913 Truong Chinh Street, Tan Phu District, Ho Chi Minh City, Vietnam', 'info@vifon.com.vn', '028-3815-4368', 'Nguyen Bich Lam', NULL, '2023-06-10', '2025-06-10', TRUE, 'Instant food supplier (Pho, noodles, vermicelli)')
-
-
-
-ON DUPLICATE KEY UPDATE
-name = VALUES(name),
-address = VALUES(address),
-email = VALUES(email),
-phone = VALUES(phone),
-contact_person = VALUES(contact_person),
-contract_files = VALUES(contract_files),
-contract_signed_date = VALUES(contract_signed_date),
-contract_expiry = VALUES(contract_expiry),
-active = VALUES(active),
-notes = VALUES(notes),
-updated_at = NOW();
+INSERT INTO `suppliers` VALUES (1,_binary '','10 Tan Trao, District 7, Ho Chi Minh City, Vietnam','Nguyen Van A','2025-01-15',NULL,'2023-01-15',NULL,'sales@vinamilk.com.vn','Vinamilk Distribution','Main dairy supplier','1800-1199','0100170098',NULL),(2,_binary '','15 Le Duan Blvd, District 1, Ho Chi Minh City, Vietnam','Tran Thi B','2025-03-01',NULL,'2023-03-01',NULL,'contact@unilever.com.vn','Unilever Vietnam','Personal care and household products','1800-5588','0300491828',NULL),(3,_binary '','The Vista Building, Hanoi Highway, Ho Chi Minh City, Vietnam','Le Van C','2025-06-01',NULL,'2023-06-01',NULL,'info@nestle.com.vn','Nestle Vietnam','Food and beverage supplier','1900-6011','0302127854',NULL),(4,_binary '','124 Kim Ma Street, Ba Dinh, Hanoi, Vietnam','Pham Thi D','2025-07-01',NULL,'2023-07-01',NULL,'vietnam@cocacola.com','Coca-Cola Vietnam','Soft drinks supplier','1900-0180','0300693409',NULL),(5,_binary '','39 Le Duan, District 1, Ho Chi Minh City, Vietnam','Le Van M','2025-08-01',NULL,'2023-08-01',NULL,'contact@masan.com.vn','Masan Consumer','Consumer goods supplier','1800-9090','0302017440',NULL),(6,_binary '','1 Bach Dang, Tan Binh District, Ho Chi Minh City, Vietnam','Tran Van H','2025-10-01',NULL,'2023-10-01',NULL,'sales@heineken.com.vn','Heineken Vietnam','Beer and beverages supplier','1900-1111','0300847056',NULL),(7,_binary '','138 Hai Ba Trung, District 1, Ho Chi Minh City, Vietnam','Bui Van K','2025-05-01',NULL,'2023-05-01',NULL,'info@kido.vn','KIDO Group (Tuong An)','Edible oils and foods','1800-6688','0302266881',NULL),(8,_binary '','182 Le Dai Hanh, District 11, Ho Chi Minh City, Vietnam','Nguyen Van P','2025-04-01',NULL,'2023-04-01',NULL,'contact@pepsico.com.vn','PepsiCo Vietnam','Soft drinks and snacks','1900-1220','0300811445',NULL),(9,_binary '','Thai Hoa Town, Nghe An Province, Vietnam','Tran Thi T','2025-02-01',NULL,'2023-02-01',NULL,'sales@thmilk.vn','TH Milk Distribution','Dairy supplier','1800-545440','2900326335',NULL),(10,_binary '','Tan Binh Industrial Park, Ho Chi Minh City, Vietnam','Le Van AC','2025-05-01',NULL,'2023-05-01',NULL,'info@acecookvietnam.vn','Acecook Vietnam','Instant noodle supplier','1900-0120','0300808680',NULL),(11,_binary '','Tan Binh District, Ho Chi Minh City, Vietnam','Pham Van V','2025-05-10',NULL,'2023-05-10',NULL,'info@vifon.com.vn','Vifon Vietnam','Instant noodles and pho','028-3815-4364','0300391837',NULL),(12,_binary '','My Phuoc Industrial Park, Binh Duong, Vietnam','Kim Orion','2025-04-01',NULL,'2023-04-01',NULL,'contact@orion.vn','Orion Food Vina','Snack supplier','0274-355-0166','3700381324',NULL),(13,_binary '','VSIP Industrial Park, Binh Duong, Vietnam','Nguyen Van O','2025-04-15',NULL,'2023-04-15',NULL,'sales@oishi.vn','Oishi Vietnam','Snack foods','0274-378-4088','0302752277',NULL),(14,_binary '','Vinh Loc Industrial Park, Binh Chanh, Ho Chi Minh City, Vietnam','Tran Thi C','2025-03-15',NULL,'2023-03-15',NULL,'info@cholimexfood.com.vn','Cholimex Food','Sauces and condiments','028-3765-2101','0304475742',NULL),(15,_binary '','Bien Hoa Industrial Zone, Dong Nai, Vietnam','Somchai CP','2025-06-01',NULL,'2023-06-01',NULL,'info@cp.com.vn','CP Vietnam Corporation','Meat and food products','0251-3836-501','3600235308',NULL),(16,_binary '','VSIP Industrial Park, Binh Duong, Vietnam','Marco Perfetti','2025-06-10',NULL,'2023-06-10',NULL,'info.vn@perfettivanmelle.com','Perfetti Van Melle Vietnam Co., Ltd','Confectionery supplier (Chupa Chups, Alpenliebe, Mentos)','0274-376-8586','0300588569',NULL),(17,_binary '','913 Truong Chinh Street, Tan Phu District, Ho Chi Minh City, Vietnam','Nguyen Bich Lam','2025-06-10',NULL,'2023-06-10',NULL,'info@vifon.com.vn','Vifon Joint Stock Company','Instant food supplier (Pho, noodles, vermicelli)','028-3815-4368','0300391836',NULL);
 
 -- 2. BRANDS & CATEGORIES
-INSERT IGNORE INTO categories 
-(name, code, description, created_at, updated_at) 
-VALUES
-('Đồ uống', 'BEVERAGE', 'Các loại nước uống, giải khát', NOW(6), NOW(6)),
-('Sữa & Sản phẩm từ sữa', 'DAIRY', 'Sữa, sữa chua, sữa đặc', NOW(6), NOW(6)),
-('Chăm sóc cá nhân', 'PERSONAL_CARE', 'Sản phẩm vệ sinh cá nhân', NOW(6), NOW(6)),
-('Đồ dùng gia đình', 'HOUSEHOLD', 'Sản phẩm dùng trong gia đình', NOW(6), NOW(6)),
-('Bánh kẹo ăn vặt', 'SNACK', 'Snack, bánh kẹo', NOW(6), NOW(6)),
-('Chăm sóc sức khỏe', 'HEALTHCARE', 'Sản phẩm chăm sóc sức khỏe', NOW(6), NOW(6)),
-('Đồ hộp', 'CANNED_FOOD', 'Thực phẩm đóng hộp', NOW(6), NOW(6)),
-('Bánh ngọt', 'BAKERY', 'Bánh ngọt, bánh mì', NOW(6), NOW(6)),
-('Thịt & Hải sản', 'MEAT_SEAFOOD', 'Thịt, cá, hải sản', NOW(6), NOW(6)),
-('Gia vị & Nước chấm', 'CONDIMENT', 'Gia vị, nước mắm, nước tương', NOW(6), NOW(6)),
-('Mì ăn liền', 'INSTANT_FOOD', 'Mì, phở, hủ tiếu ăn liền', NOW(6), NOW(6));
+INSERT INTO `categories` VALUES (1,'BEVERAGE','2026-03-18 01:40:08.835126','CÃ¡c loáº¡i nÆ°á»›c uá»‘ng, giáº£i khÃ¡t','Äá»“ uá»‘ng','2026-03-18 01:40:08.835126'),(2,'DAIRY','2026-03-18 01:40:08.835126','Sá»¯a, sá»¯a chua, sá»¯a Ä‘áº·c','Sá»¯a & Sáº£n pháº©m tá»« sá»¯a','2026-03-18 01:40:08.835126'),(3,'PERSONAL_CARE','2026-03-18 01:40:08.835126','Sáº£n pháº©m vá»‡ sinh cÃ¡ nhÃ¢n','ChÄƒm sÃ³c cÃ¡ nhÃ¢n','2026-03-18 01:40:08.835126'),(4,'HOUSEHOLD','2026-03-18 01:40:08.835126','Sáº£n pháº©m dÃ¹ng trong gia Ä‘Ã¬nh','Äá»“ dÃ¹ng gia Ä‘Ã¬nh','2026-03-18 01:40:08.835126'),(5,'SNACK','2026-03-18 01:40:08.835126','Snack, bÃ¡nh káº¹o','BÃ¡nh káº¹o Äƒn váº·t','2026-03-18 01:40:08.835126'),(6,'HEALTHCARE','2026-03-18 01:40:08.835126','Sáº£n pháº©m chÄƒm sÃ³c sá»©c khá»e','ChÄƒm sÃ³c sá»©c khá»e','2026-03-18 01:40:08.835126'),(7,'CANNED_FOOD','2026-03-18 01:40:08.835126','Thá»±c pháº©m Ä‘Ã³ng há»™p','Äá»“ há»™p','2026-03-18 01:40:08.835126'),(8,'BAKERY','2026-03-18 01:40:08.835126','BÃ¡nh ngá»t, bÃ¡nh mÃ¬','BÃ¡nh ngá»t','2026-03-18 01:40:08.835126'),(9,'MEAT_SEAFOOD','2026-03-18 01:40:08.835126','Thá»‹t, cÃ¡, háº£i sáº£n','Thá»‹t & Háº£i sáº£n','2026-03-18 01:40:08.835126'),(10,'CONDIMENT','2026-03-18 01:40:08.835126','Gia vá»‹, nÆ°á»›c máº¯m, nÆ°á»›c tÆ°Æ¡ng','Gia vá»‹ & NÆ°á»›c cháº¥m','2026-03-18 01:40:08.835126'),(11,'INSTANT_FOOD','2026-03-18 01:40:08.835126','MÃ¬, phá»Ÿ, há»§ tiáº¿u Äƒn liá»n','MÃ¬ Äƒn liá»n','2026-03-18 01:40:08.835126');
 
 
-INSERT IGNORE INTO brands 
-(name, country, supplier_id, description, category_id, created_at, updated_at) 
-VALUES
-('Vinamilk', 'Việt Nam', 1, 'Sản phẩm sữa', 2, NOW(6), NOW(6)),
-('Nestle', 'Thuỵ Sĩ', 3, 'Thực phẩm và đồ uống', NULL, NOW(6), NOW(6)),
-('Coca-Cola', 'Hoa Kỳ', 4, 'Nước giải khát', 1, NOW(6), NOW(6)),
-('P&G', 'Hoa Kỳ', 2, 'Hàng tiêu dùng', NULL, NOW(6), NOW(6)),
-('Kinh Do', 'Việt Nam', 7, 'Bánh kẹo', 5, NOW(6), NOW(6)),
-('Oishi', 'Philippines', 13, 'Snack ăn vặt', 5, NOW(6), NOW(6)),
-
-('Cholimex', 'Việt Nam', 14, 'Gia vị và nước chấm', 10, NOW(6), NOW(6)),
-('CP', 'Thái Lan', 15, 'Thực phẩm thịt', 9, NOW(6), NOW(6)),
-('Vissan', 'Việt Nam', 15, 'Thịt chế biến', 9, NOW(6), NOW(6)),
-('Orion', 'Hàn Quốc', 12, 'Bánh kẹo', 5, NOW(6), NOW(6)),
-('Chupa Chups', 'Tây Ban Nha', 16, 'Kẹo', 5, NOW(6), NOW(6)),
-('Vifon', 'Việt Nam', 11, 'Mì/phở ăn liền', 11, NOW(6), NOW(6)),
-('Acecook', 'Nhật Bản', 10, 'Mì ăn liền', 11, NOW(6), NOW(6)),
-
-('Masan', 'Việt Nam', 5, 'Hàng tiêu dùng', 10, NOW(6), NOW(6)),
-('TH True Milk', 'Việt Nam', 9, 'Sữa', 2, NOW(6), NOW(6)),
-('Pepsico', 'Hoa Kỳ', 8, 'Nước uống & snack', 1, NOW(6), NOW(6)),
-('Maggi', 'Thụy Sĩ', 3, 'Gia vị', 10, NOW(6), NOW(6)),
-
-('Dove', 'Vương Quốc Anh', 2, 'Chăm sóc cá nhân', 3, NOW(6), NOW(6)),
-('Knorr', 'Đức', 2, 'Gia vị', 10, NOW(6), NOW(6)),
-('Lifebuoy', 'Vương Quốc Anh', 2, 'Chăm sóc cá nhân', 3, NOW(6), NOW(6)),
-('OMO', 'Vương Quốc Anh', 2, 'Giặt tẩy', 4, NOW(6), NOW(6)),
-('Sunsilk', 'Vương Quốc Anh', 2, 'Chăm sóc tóc', 3, NOW(6), NOW(6)),
-
-('Heineken', 'Hà Lan', 6, 'Bia', 1, NOW(6), NOW(6)),
-('Tiger', 'Singapore', 6, 'Bia', 1, NOW(6), NOW(6)),
-('Tường An', 'Việt Nam', 7, 'Dầu ăn', 10, NOW(6), NOW(6));
+INSERT INTO `brands` VALUES (1,'Viá»‡t Nam','2026-03-18 01:40:08.841821','Sáº£n pháº©m sá»¯a','Vinamilk','2026-03-18 01:40:08.841821',2,1),(2,'Thuá»µ SÄ©','2026-03-18 01:40:08.841821','Thá»±c pháº©m vÃ  Ä‘á»“ uá»‘ng','Nestle','2026-03-18 01:40:08.841821',NULL,3),(3,'Hoa Ká»³','2026-03-18 01:40:08.841821','NÆ°á»›c giáº£i khÃ¡t','Coca-Cola','2026-03-18 01:40:08.841821',1,4),(4,'Hoa Ká»³','2026-03-18 01:40:08.841821','HÃ ng tiÃªu dÃ¹ng','P&G','2026-03-18 01:40:08.841821',NULL,2),(5,'Viá»‡t Nam','2026-03-18 01:40:08.841821','BÃ¡nh káº¹o','Kinh Do','2026-03-18 01:40:08.841821',5,7),(6,'Philippines','2026-03-18 01:40:08.841821','Snack Äƒn váº·t','Oishi','2026-03-18 01:40:08.841821',5,13),(7,'Viá»‡t Nam','2026-03-18 01:40:08.841821','Gia vá»‹ vÃ  nÆ°á»›c cháº¥m','Cholimex','2026-03-18 01:40:08.841821',10,14),(8,'ThÃ¡i Lan','2026-03-18 01:40:08.841821','Thá»±c pháº©m thá»‹t','CP','2026-03-18 01:40:08.841821',9,15),(9,'Viá»‡t Nam','2026-03-18 01:40:08.841821','Thá»‹t cháº¿ biáº¿n','Vissan','2026-03-18 01:40:08.841821',9,15),(10,'HÃ n Quá»‘c','2026-03-18 01:40:08.841821','BÃ¡nh káº¹o','Orion','2026-03-18 01:40:08.841821',5,12),(11,'TÃ¢y Ban Nha','2026-03-18 01:40:08.841821','Káº¹o','Chupa Chups','2026-03-18 01:40:08.841821',5,16),(12,'Viá»‡t Nam','2026-03-18 01:40:08.841821','MÃ¬/phá»Ÿ Äƒn liá»n','Vifon','2026-03-18 01:40:08.841821',11,11),(13,'Nháº­t Báº£n','2026-03-18 01:40:08.841821','MÃ¬ Äƒn liá»n','Acecook','2026-03-18 01:40:08.841821',11,10),(14,'Viá»‡t Nam','2026-03-18 01:40:08.841821','HÃ ng tiÃªu dÃ¹ng','Masan','2026-03-18 01:40:08.841821',10,5),(15,'Viá»‡t Nam','2026-03-18 01:40:08.841821','Sá»¯a','TH True Milk','2026-03-18 01:40:08.841821',2,9),(16,'Hoa Ká»³','2026-03-18 01:40:08.841821','NÆ°á»›c uá»‘ng & snack','Pepsico','2026-03-18 01:40:08.841821',1,8),(17,'Thá»¥y SÄ©','2026-03-18 01:40:08.841821','Gia vá»‹','Maggi','2026-03-18 01:40:08.841821',10,3),(18,'VÆ°Æ¡ng Quá»‘c Anh','2026-03-18 01:40:08.841821','ChÄƒm sÃ³c cÃ¡ nhÃ¢n','Dove','2026-03-18 01:40:08.841821',3,2),(19,'Äá»©c','2026-03-18 01:40:08.841821','Gia vá»‹','Knorr','2026-03-18 01:40:08.841821',10,2),(20,'VÆ°Æ¡ng Quá»‘c Anh','2026-03-18 01:40:08.841821','ChÄƒm sÃ³c cÃ¡ nhÃ¢n','Lifebuoy','2026-03-18 01:40:08.841821',3,2),(21,'VÆ°Æ¡ng Quá»‘c Anh','2026-03-18 01:40:08.841821','Giáº·t táº©y','OMO','2026-03-18 01:40:08.841821',4,2),(22,'VÆ°Æ¡ng Quá»‘c Anh','2026-03-18 01:40:08.841821','ChÄƒm sÃ³c tÃ³c','Sunsilk','2026-03-18 01:40:08.841821',3,2),(23,'HÃ  Lan','2026-03-18 01:40:08.841821','Bia','Heineken','2026-03-18 01:40:08.841821',1,6),(24,'Singapore','2026-03-18 01:40:08.841821','Bia','Tiger','2026-03-18 01:40:08.841821',1,6),(25,'Viá»‡t Nam','2026-03-18 01:40:08.841821','Dáº§u Äƒn','TÆ°á»ng An','2026-03-18 01:40:08.841821',10,7);
 
 -- 2.1 SUPPLIER CONTRACTS
-INSERT IGNORE INTO supplier_contracts (
-    supplier_id, contract_number, title, description, status,
-    start_date, end_date, total_value, currency, payment_terms,
-    delivery_terms, signed_by_supplier, signed_by_company, signed_date,
-    notes, created_at, updated_at
-) VALUES
-(1, 'SC-VM-2026-001', 'Hợp đồng phân phối sữa Vinamilk 2026', 'Hợp đồng cung ứng sữa và chế phẩm sữa cho toàn hệ thống cửa hàng', 'ACTIVE', '2026-01-01', '2026-12-31', 1200000000.00, 'VND', 'Thanh toán 30 ngày kể từ ngày nhận hóa đơn', 'Giao hàng theo lịch tuần', 'Nguyen Van A', 'Tran Thi Manager', '2025-12-20', 'Ưu tiên giao hàng dịp cao điểm lễ tết', NOW(), NOW()),
-(2, 'SC-UL-2026-001', 'Hợp đồng đồ gia dụng Unilever 2026', 'Hợp đồng cung ứng nhóm sản phẩm chăm sóc cá nhân và gia dụng', 'ACTIVE', '2026-01-15', '2026-12-31', 800000000.00, 'VND', 'Thanh toán theo từng lô, tối đa 21 ngày', 'Giao hàng trong 48h sau PO', 'Tran Thi B', 'Tran Thi Manager', '2026-01-10', 'Cam kết đổi trả lô lỗi trong 7 ngày', NOW(), NOW());
+INSERT INTO `supplier_contracts` VALUES (1,'SC-VM-2026-001','2026-03-18 01:40:08.000000','VND','Giao hÃ ng theo lá»‹ch tuáº§n','Há»£p Ä‘á»“ng cung á»©ng sá»¯a vÃ  cháº¿ pháº©m sá»¯a cho toÃ n há»‡ thá»‘ng cá»­a hÃ ng','2026-12-31','Æ¯u tiÃªn giao hÃ ng dá»‹p cao Ä‘iá»ƒm lá»… táº¿t','Thanh toÃ¡n 30 ngÃ y ká»ƒ tá»« ngÃ y nháº­n hÃ³a Ä‘Æ¡n','Tran Thi Manager','Nguyen Van A','2025-12-20','2026-01-01','ACTIVE','Há»£p Ä‘á»“ng phÃ¢n phá»‘i sá»¯a Vinamilk 2026',1200000000.00,'2026-03-18 01:40:08.000000',1),(2,'SC-UL-2026-001','2026-03-18 01:40:08.000000','VND','Giao hÃ ng trong 48h sau PO','Há»£p Ä‘á»“ng cung á»©ng nhÃ³m sáº£n pháº©m chÄƒm sÃ³c cÃ¡ nhÃ¢n vÃ  gia dá»¥ng','2026-12-31','Cam káº¿t Ä‘á»•i tráº£ lÃ´ lá»—i trong 7 ngÃ y','Thanh toÃ¡n theo tá»«ng lÃ´, tá»‘i Ä‘a 21 ngÃ y','Tran Thi Manager','Tran Thi B','2026-01-10','2026-01-15','ACTIVE','Há»£p Ä‘á»“ng Ä‘á»“ gia dá»¥ng Unilever 2026',800000000.00,'2026-03-18 01:40:08.000000',2);
 
 -- 3. TAX RATES
-INSERT IGNORE INTO tax_rates (name, rate, is_active) VALUES
-('VAT Standard', 10.00, 1),
-('VAT Reduced', 5.00, 1),
-('No Tax', 0.00, 1);
+INSERT INTO `tax_rates` VALUES (1,_binary '','VAT Standard',10.00),(2,_binary '','VAT Reduced',5.00),(3,_binary '','No Tax',0.00);
 
 -- 4. ROLES & PERMISSIONS
-INSERT IGNORE INTO roles (name, description) VALUES
-('ADMIN', 'System Administrator'),
-('MANAGER', 'Store Manager'),
-('CASHIER', 'Cashier Staff'),
-('INVENTORY_STAFF', 'Inventory Staff'),
-('SALES_STAFF', 'Sales Staff');
+INSERT INTO `roles` VALUES (1,'System Administrator','ADMIN'),(2,'Store Manager','MANAGER'),(3,'Cashier Staff','CASHIER'),(4,'Inventory Staff','INVENTORY_STAFF'),(5,'Sales Staff','SALES_STAFF');
 
-INSERT IGNORE INTO permissions (name, description) VALUES
-('USER_MANAGEMENT', 'User Management'),
-('PRODUCT_MANAGEMENT', 'Product Management'),
-('INVENTORY_MANAGEMENT', 'Inventory Management'),
-('SALES_PROCESSING', 'Sales Processing'),
-('REPORT_VIEWING', 'Report Viewing'),
-('ADMIN_ACCESS', 'Admin Access');
+INSERT INTO `permissions` VALUES (1,'User Management','USER_MANAGEMENT'),(2,'Product Management','PRODUCT_MANAGEMENT'),(3,'Inventory Management','INVENTORY_MANAGEMENT'),(4,'Sales Processing','SALES_PROCESSING'),(5,'Report Viewing','REPORT_VIEWING'),(6,'Admin Access','ADMIN_ACCESS');
 
-INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
-(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),
-(2,1),(2,2),(2,3),(2,4),(2,5),
-(3,4),(4,2),(4,3),(5,2),(5,4);
+INSERT INTO `role_permissions` VALUES (1,1,1),(2,2,1),(3,3,1),(4,4,1),(5,5,1),(6,6,1),(7,1,2),(8,2,2),(9,3,2),(10,4,2),(11,5,2),(12,4,3),(13,2,4),(14,3,4),(15,2,5),(16,4,5);
 
 -- 5. USERS (Employee list with diverse roles and work patterns)
-INSERT INTO users (
-    username, password, active, full_name, email, phone, address, status, role_id,
-    avatar_url,
-    salary_type, base_salary, hourly_rate, min_required_shifts, count_late_as_present, working_hours_per_month,
-    created_at, updated_at
-) VALUES
-('admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Admin', 'admin@smalltrend.com', '0901234567', '123 Nguyen Hue, HCMC', 'ACTIVE', 1, 'https://i.pravatar.cc/150?img=12', 'MONTHLY', 30000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
-('manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Tran Thi Manager', 'manager@smalltrend.com', '0912345678', '456 Le Loi, HCMC', 'ACTIVE', 2, 'https://i.pravatar.cc/150?img=32', 'MONTHLY', 18000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
-('cashier1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Le Van Cashier', 'cashier1@smalltrend.com', '0923456789', '789 Dien Bien Phu, HCMC', 'ACTIVE', 3, 'https://i.pravatar.cc/150?img=15', 'HOURLY', 13500000.00, 75000.00, NULL, TRUE, 208.00, NOW(), NOW()),
-('cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Vo Thi Cashier 2', 'cashier2@smalltrend.com', '0968765432', '321 Ba Trieu, HCMC', 'ACTIVE', 3, 'https://i.pravatar.cc/150?img=47', 'HOURLY', 13200000.00, 72000.00, NULL, TRUE, 208.00, NOW(), NOW()),
-('inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Pham Van Inventory', 'inventory@smalltrend.com', '0934567890', '12 Nguyen Trai, HCMC', 'ACTIVE', 4, 'https://i.pravatar.cc/150?img=25', 'MONTHLY', 13000000.00, NULL, NULL, TRUE, 208.00, NOW(), NOW()),
-('sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Hoang Thi Sales', 'sales@smalltrend.com', '0945678901', '90 Pasteur, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=41', 'HOURLY', 12600000.00, 70000.00, NULL, TRUE, 208.00, NOW(), NOW()),
-('sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', TRUE, 'Nguyen Van Sales 2', 'sales2@smalltrend.com', '0987654012', '45 Hai Ba Trung, HCMC', 'ACTIVE', 5, 'https://i.pravatar.cc/150?img=6', 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 20, TRUE, 208.00, NOW(), NOW())
-ON DUPLICATE KEY UPDATE
-password = VALUES(password),
-active = VALUES(active),
-full_name = VALUES(full_name),
-email = VALUES(email),
-phone = VALUES(phone),
-address = VALUES(address),
-status = VALUES(status),
-role_id = VALUES(role_id),
-avatar_url = VALUES(avatar_url),
-salary_type = VALUES(salary_type),
-base_salary = VALUES(base_salary),
-hourly_rate = VALUES(hourly_rate),
-min_required_shifts = VALUES(min_required_shifts),
-count_late_as_present = VALUES(count_late_as_present),
-working_hours_per_month = VALUES(working_hours_per_month),
-updated_at = NOW();
+INSERT INTO `users` VALUES (1,_binary '','123 Nguyen Hue, HCMC','2026-03-18 01:40:08.000000','admin@smalltrend.com','Nguyen Van Admin','$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','0901234567','ACTIVE','2026-03-18 01:40:08.000000','admin',1,'https://i.pravatar.cc/150?img=12',30000000.00,_binary '',NULL,NULL,'MONTHLY',208.00),(2,_binary '','456 Le Loi, HCMC','2026-03-18 01:40:08.000000','manager@smalltrend.com','Tran Thi Manager','$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','0912345678','ACTIVE','2026-03-19 17:52:22.933689','manager',2,'https://res.cloudinary.com/didvvefmu/image/upload/v1773942746/smalltrend/avatars/pqsiai7remow3cpxfx3d.jpg',18000000.00,_binary '',NULL,NULL,'MONTHLY',208.00),(3,_binary '','789 Dien Bien Phu, HCMC','2026-03-18 01:40:08.000000','cashier1@smalltrend.com','Le Van Cashier','$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','0923456789','ACTIVE','2026-03-18 01:40:08.000000','cashier1',3,'https://i.pravatar.cc/150?img=15',13500000.00,_binary '',75000.00,NULL,'HOURLY',208.00),(4,_binary '','321 Ba Trieu, HCMC','2026-03-18 01:40:08.000000','cashier2@smalltrend.com','Vo Thi Cashier 2','$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','0968765432','ACTIVE','2026-03-18 01:40:08.000000','cashier2',3,'https://i.pravatar.cc/150?img=47',13200000.00,_binary '',72000.00,NULL,'HOURLY',208.00),(5,_binary '','12 Nguyen Trai, HCMC','2026-03-18 01:40:08.000000','inventory@smalltrend.com','Pham Van Inventory','$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','0934567890','ACTIVE','2026-03-18 01:40:08.000000','inventory1',4,'https://i.pravatar.cc/150?img=25',13000000.00,_binary '',NULL,NULL,'MONTHLY',208.00),(6,_binary '','90 Pasteur, HCMC','2026-03-18 01:40:08.000000','sales@smalltrend.com','Hoang Thi Sales','$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','0945678901','ACTIVE','2026-03-18 01:40:08.000000','sales1',5,'https://i.pravatar.cc/150?img=41',12600000.00,_binary '',70000.00,NULL,'HOURLY',208.00),(7,_binary '','45 Hai Ba Trung, HCMC','2026-03-18 01:40:08.000000','sales2@smalltrend.com','Nguyen Van Sales 2','$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','0987654012','ACTIVE','2026-03-18 01:40:08.000000','sales2',5,'https://i.pravatar.cc/150?img=6',12500000.00,_binary '',NULL,20,'MONTHLY_MIN_SHIFTS',208.00),(8,_binary '','120 YÃªn LÃ£ng, Äá»‘ng Äa, HÃ  Ná»™i','2026-03-19 14:24:14.936732','kiennguyen21005@gmail.com','Nguyá»…n XuÃ¢n KiÃªn','$2a$10$4eO2jrzTRQmOTW/iSlECv.99/YUjwzsVWIeIViQdjQw0YwEp7ZKNi','0842561752','ACTIVE','2026-03-19 14:24:14.936732','kien',2,NULL,NULL,_binary '',NULL,NULL,'MONTHLY',208.00),(9,_binary '','LÃ o Cai','2026-03-19 14:25:32.081856','hung@gmail.com','Nguyá»…n Quá»‘c HÆ°ng','$2a$10$KT2Gw8KbGyljHUIo18ebeebchc8PjJyjfnJNRf2PnDXtV3rqFXjv2','0977869300','ACTIVE','2026-03-19 14:25:32.081856','hung',2,NULL,NULL,_binary '',NULL,NULL,'MONTHLY',208.00);
 
 -- 6. CUSTOMER TIERS
-INSERT IGNORE INTO customer_tiers (tier_code, tier_name, min_spending, points_multiplier, color, is_active, priority) VALUES
-('BRONZE', 'Đồng', 0.00, 1.0, '#CD7F32', TRUE, 1),
-('SILVER', 'Bạc', 5000000.00, 1.5, '#C0C0C0', TRUE, 2),
-('GOLD', 'Vàng', 15000000.00, 2.0, '#FFD700', TRUE, 3),
-('PLATINUM', 'Bạch Kim', 50000000.00, 3.0, '#E5E4E2', TRUE, 4);
+INSERT INTO `customer_tiers` VALUES (1,NULL,NULL,NULL,NULL,'#CD7F32',NULL,NULL,NULL,NULL,NULL,NULL,NULL,_binary '',NULL,0,0.00,1.00,1,NULL,'BRONZE','Äá»“ng',NULL),(2,NULL,NULL,NULL,NULL,'#C0C0C0',NULL,NULL,NULL,NULL,NULL,NULL,NULL,_binary '',NULL,0,5000000.00,1.50,2,NULL,'SILVER','Báº¡c','2026-03-19 15:33:09.341890'),(3,NULL,NULL,NULL,NULL,'#FFD700',NULL,NULL,NULL,NULL,NULL,NULL,NULL,_binary '',NULL,0,15000000.00,2.00,3,NULL,'GOLD','VÃ ng',NULL),(4,NULL,NULL,NULL,NULL,'#E5E4E2',NULL,NULL,NULL,NULL,NULL,NULL,NULL,_binary '',NULL,0,50000000.00,3.00,4,NULL,'PLATINUM','Báº¡ch Kim',NULL);
 
 -- 7. CUSTOMERS
-INSERT IGNORE INTO customers (name, phone, loyalty_points, spent_amount) VALUES
-('Nguyen Van A', '0987654321', 150, 1200000),
-('Tran Thi B', '0976543210', 800, 6200000),
-('Le Van C', '0965432109', 2000, 18000000),
-('Pham Thi D', '0954321098', 6500, 56000000);
+INSERT INTO `customers` VALUES (1,150,'Nguyen Van A','0987654321',1200000,NULL),(2,800,'Tran Thi B','0976543210',6200000,NULL),(3,2000,'Le Van C','0965432109',18000000,NULL),(4,3382,'Pham Thi D','0954321098',56340200,NULL),(7,4,'Huy','0961390486',48000,NULL),(9,0,'s','09999999999',0,NULL),(10,0,'Ko','0961390487',0,NULL),(11,0,'Huy','0961390488',0,NULL),(12,0,'Huy','0123456789',0,NULL),(13,0,'TÃº','09612345688',0,NULL);
 
 -- 8. PRODUCTS
-INSERT IGNORE INTO products (name, description, brand_id, category_id, tax_rate_id, is_active, created_at, updated_at) VALUES
-('Sữa dinh dưỡng Vinamilk', 'Vinamilk Fresh Milk', 1, 2, 2, TRUE, NOW(6), NOW(6)),
-('Xà Phòng Dove', 'Dove Beauty Bar', 4, 3, 1, TRUE, NOW(6), NOW(6)),
-('Cà phê Nescafe 3in1', 'Instant Coffee 20g x 10', 2, 1, 1, TRUE, NOW(6), NOW(6)),
-('Nước ngọt Coca Cola', 'Coca Cola Classic', 3, 1, 1, TRUE, NOW(6), NOW(6)),
-('Bánh snack Oishi', 'Potato Chips ', 7, 5, 1, TRUE, NOW(6), NOW(6)),
-('Tương ớt Cholimex', 'Tương ớt chua cay ', 8, 10, 1, TRUE, NOW(6), NOW(6)),
-('Xúc xích CP', 'Xúc xích Vườn Hồng ', 9, 9, 1, TRUE, NOW(6), NOW(6)),
-('Đồ hộp Vissan', 'Thịt heo hầm ', 10, 7, 1, TRUE, NOW(6), NOW(6)),
-('Bánh Chocopie', 'Bánh chocopie Orion hộp 12 cái', 11, 8, 1, TRUE, NOW(6), NOW(6)),
-('Kẹo mút Chupa Chups', 'Kẹo mút hương trái cây', 12, 5, 1, TRUE, NOW(6), NOW(6)),
-('Phở gói Vifon', 'Phở các loại ', 14, 11, 1, TRUE, NOW(6), NOW(6)),
-('Mì Hảo Hảo', 'Mì tôm chua cay ', 13, 11, 1, TRUE, NOW(6), NOW(6)),
-('Mì Omachi', 'Mì khoai tây sườn hầm ', 14, 11, 1, TRUE, NOW(6), NOW(6)),
-('Nước tương Chin-su', 'Nước tương tỏi ớt ', 14, 10, 1, TRUE, NOW(6), NOW(6)),
-('Sữa chua TH True Milk', 'Sữa chua nha đam ', 16, 2, 2, TRUE, NOW(6), NOW(6)),
-('Sữa tươi TH True Milk', 'Sữa tươi ít đường ', 16, 2, 2, TRUE, NOW(6), NOW(6)),
-('Snack Lays', 'Snack khoai tây tự nhiên ', 17, 5, 1, TRUE, NOW(6), NOW(6)),
-('Trà Ô Long TEA+ Plus', 'Trà Ô Long giảm béo ', 17, 1, 1, TRUE, NOW(6), NOW(6)),
-('Hạt nêm Knorr', 'Hạt nêm thịt thăn xương ống ', 18, 10, 1, TRUE, NOW(6), NOW(6)),
-('Dầu hào Maggi', 'Dầu hào tự nhiên nấm hương ', 19, 10, 1, TRUE, NOW(6), NOW(6)),
-('Bia Heineken Silver', 'Bia Heineken Silver lon ', 23, 1, 1, TRUE, NOW(6), NOW(6)),
-('Bia Tiger Bạc', 'Bia Tiger Crystal lon ', 24, 1, 1, TRUE, NOW(6), NOW(6)),
-('Nước mắm Nam Ngư', 'Nước mắm Nam Ngư chai ', 14, 10, 1, TRUE, NOW(6), NOW(6)),
-('Sữa đặc Ông Thọ', 'Sữa đặc có đường Ông Thọ đỏ lon ', 1, 2, 2, TRUE, NOW(6), NOW(6)),
-('Dầu ăn Tường An', 'Dầu ăn thực vật Tường An chai', 25, 10, 1, TRUE, NOW(6), NOW(6)),
-('Bột giặt OMO', 'Bột giặt OMO hệ bọt thông minh ', 21, 4, 1, TRUE, NOW(6), NOW(6));
+INSERT INTO `products` VALUES (1,'2026-03-18 01:40:08.905784','Vinamilk Fresh Milk','https://res.cloudinary.com/didvvefmu/image/upload/v1773772847/smalltrend/user-avatars/kk2k6wrcth9zjgpywmqa.png',1,'Sá»¯a dinh dÆ°á»¡ng Vinamilk','2026-03-19 16:12:45.102749',1,2,2),(2,'2026-03-18 01:40:08.905784','Dove Beauty Bar','https://res.cloudinary.com/didvvefmu/image/upload/v1773772999/smalltrend/user-avatars/tftx9cld5vsqwbnz6fjc.jpg',1,'XÃ  PhÃ²ng Dove','2026-03-17 18:43:17.100845',4,3,1),(3,'2026-03-18 01:40:08.905784','Instant Coffee 20g x 10','https://res.cloudinary.com/didvvefmu/image/upload/v1773773536/smalltrend/user-avatars/wfg6djw0jvx1yyfep3jy.webp',1,'CÃ  phÃª Nescafe 3in1','2026-03-17 18:52:14.891507',2,1,1),(4,'2026-03-18 01:40:08.905784','Coca Cola Classic','https://res.cloudinary.com/didvvefmu/image/upload/v1773778429/smalltrend/user-avatars/c0bmdhxmorkjytxyaupj.jpg',1,'NÆ°á»›c ngá»t Coca Cola','2026-03-17 20:13:47.164098',3,1,1),(5,'2026-03-18 01:40:08.905784','Potato Chips ','https://res.cloudinary.com/didvvefmu/image/upload/v1773776096/smalltrend/user-avatars/zodjdb1zjfyv5adn5sku.webp',1,'BÃ¡nh snack Oishi','2026-03-17 19:34:59.859986',6,5,1),(6,'2026-03-18 01:40:08.905784','TÆ°Æ¡ng á»›t chua cay ','https://res.cloudinary.com/didvvefmu/image/upload/v1773776784/smalltrend/user-avatars/e23icn5gbhnp8m0jmfur.jpg',1,'TÆ°Æ¡ng á»›t Cholimex','2026-03-17 19:46:22.345976',7,10,1),(7,'2026-03-18 01:40:08.905784','XÃºc xÃ­ch VÆ°á»n Há»“ng ','https://res.cloudinary.com/didvvefmu/image/upload/v1773777092/smalltrend/user-avatars/g7hw4axoeegxq8hp0plp.jpg',1,'XÃºc xÃ­ch CP','2026-03-17 19:52:43.982585',8,9,1),(8,'2026-03-18 01:40:08.905784','Thá»‹t heo háº§m ','https://res.cloudinary.com/didvvefmu/image/upload/v1773777262/smalltrend/user-avatars/h2jmpqvfiwqjvxtmnx1k.webp',1,'Äá»“ há»™p Vissan','2026-03-17 19:54:20.346698',9,7,1),(9,'2026-03-18 01:40:08.905784','BÃ¡nh chocopie Orion há»™p 12 cÃ¡i','https://res.cloudinary.com/didvvefmu/image/upload/v1773777545/smalltrend/user-avatars/wcgojffzprveex1dx0tn.png',1,'BÃ¡nh Chocopie','2026-03-17 19:59:03.273214',10,8,1),(10,'2026-03-18 01:40:08.905784','Káº¹o mÃºt hÆ°Æ¡ng trÃ¡i cÃ¢y','https://res.cloudinary.com/didvvefmu/image/upload/v1773909949/smalltrend/user-avatars/nfuimxb1hzqxjgabqswt.webp',1,'Káº¹o mÃºt Chupa Chups','2026-03-19 08:45:46.881999',11,5,1),(11,'2026-03-18 01:40:08.905784','Phá»Ÿ cÃ¡c loáº¡i ','https://res.cloudinary.com/didvvefmu/image/upload/v1773910263/smalltrend/user-avatars/inttsrqtpwgdo4pxdsdf.webp',1,'Phá»Ÿ gÃ³i Vifon','2026-03-19 08:50:59.612510',14,11,1),(12,'2026-03-18 01:40:08.905784','MÃ¬ tÃ´m chua cay ','https://res.cloudinary.com/didvvefmu/image/upload/v1773910371/smalltrend/user-avatars/gzfznjse9r1ew2vozgrm.jpg',1,'MÃ¬ Háº£o Háº£o','2026-03-19 08:52:48.747456',13,11,1),(13,'2026-03-18 01:40:08.905784','MÃ¬ khoai tÃ¢y sÆ°á»n háº§m ','https://res.cloudinary.com/didvvefmu/image/upload/v1773911223/smalltrend/user-avatars/aya3hodi8cjxt0hj0bhd.webp',1,'MÃ¬ Omachi','2026-03-19 09:07:00.486156',14,11,1),(14,'2026-03-18 01:40:08.905784','NÆ°á»›c tÆ°Æ¡ng tá»i á»›t ','https://res.cloudinary.com/didvvefmu/image/upload/v1773911355/smalltrend/user-avatars/fdqcfjy84csx9eazmvmn.webp',1,'NÆ°á»›c tÆ°Æ¡ng Chin-su','2026-03-19 09:09:12.272199',14,10,1),(15,'2026-03-18 01:40:08.905784','Sá»¯a chua nha Ä‘am ','https://res.cloudinary.com/didvvefmu/image/upload/v1773911512/smalltrend/user-avatars/hsaspcpfl2lfzcvkvnat.webp',1,'Sá»¯a chua TH True Milk','2026-03-19 09:11:48.821013',15,2,2),(16,'2026-03-18 01:40:08.905784','Sá»¯a tÆ°Æ¡i Ã­t Ä‘Æ°á»ng ','https://res.cloudinary.com/didvvefmu/image/upload/v1773911825/smalltrend/user-avatars/hrtum3zrjb6rifilyqz4.png',1,'Sá»¯a tÆ°Æ¡i TH True Milk','2026-03-19 09:17:02.904303',15,2,2),(17,'2026-03-18 01:40:08.905784','Snack khoai tÃ¢y tá»± nhiÃªn ','https://res.cloudinary.com/didvvefmu/image/upload/v1773911989/smalltrend/user-avatars/yhfdrccc0brzy9zxske0.png',1,'Snack Lays','2026-03-19 09:19:45.977722',17,5,1),(18,'2026-03-18 01:40:08.905784','TrÃ  Ã” Long giáº£m bÃ©o ','https://res.cloudinary.com/didvvefmu/image/upload/v1773912183/smalltrend/user-avatars/cxskvciux7syhbch9o4j.jpg',1,'TrÃ  Ã” Long TEA+ Plus','2026-03-19 09:23:00.694221',17,1,1),(19,'2026-03-18 01:40:08.905784','Háº¡t nÃªm thá»‹t thÄƒn xÆ°Æ¡ng á»‘ng ','https://res.cloudinary.com/didvvefmu/image/upload/v1773912417/smalltrend/user-avatars/qlnrrvcapjfn068ujuxu.png',1,'Háº¡t nÃªm Knorr','2026-03-19 09:26:53.805754',19,10,1),(20,'2026-03-18 01:40:08.905784','Dáº§u hÃ o tá»± nhiÃªn náº¥m hÆ°Æ¡ng ','https://res.cloudinary.com/didvvefmu/image/upload/v1773912775/smalltrend/user-avatars/z4rxm2iecy2e4ol6qy2j.webp',1,'Dáº§u hÃ o Maggi','2026-03-19 09:32:51.526885',19,10,1),(21,'2026-03-18 01:40:08.905784','Bia Heineken Silver lon ','https://res.cloudinary.com/didvvefmu/image/upload/v1773912972/smalltrend/user-avatars/ryqebth5xfpn7vvyjt5c.webp',1,'Bia Heineken Silver','2026-03-19 09:36:09.165091',23,1,1),(22,'2026-03-18 01:40:08.905784','Bia Tiger Crystal lon ','https://res.cloudinary.com/didvvefmu/image/upload/v1773913094/smalltrend/user-avatars/csy3ylvsmjvyxiguwre4.jpg',1,'Bia Tiger Báº¡c','2026-03-19 09:38:11.944943',24,1,1),(23,'2026-03-18 01:40:08.905784','NÆ°á»›c máº¯m Nam NgÆ° chai ','https://res.cloudinary.com/didvvefmu/image/upload/v1773913155/smalltrend/user-avatars/xheglrtrqj4ckymxilex.png',1,'NÆ°á»›c máº¯m Nam NgÆ°','2026-03-19 09:39:11.885935',14,10,1),(24,'2026-03-18 01:40:08.905784','Sá»¯a Ä‘áº·c cÃ³ Ä‘Æ°á»ng Ã”ng Thá» Ä‘á» lon ','https://res.cloudinary.com/didvvefmu/image/upload/v1773913190/smalltrend/user-avatars/ouu72al6cipvjlrdnxfv.png',1,'Sá»¯a Ä‘áº·c Ã”ng Thá»','2026-03-19 09:39:46.628476',1,2,2),(25,'2026-03-18 01:40:08.905784','Dáº§u Äƒn thá»±c váº­t TÆ°á»ng An chai','https://res.cloudinary.com/didvvefmu/image/upload/v1773913261/smalltrend/user-avatars/k09c80gyjlchnftkcr26.png',1,'Dáº§u Äƒn TÆ°á»ng An','2026-03-19 09:40:57.807293',25,10,1),(26,'2026-03-18 01:40:08.905784','Bá»™t giáº·t OMO há»‡ bá»t thÃ´ng minh ','https://res.cloudinary.com/didvvefmu/image/upload/v1773913287/smalltrend/user-avatars/eo6hjpnfxm6ayqe5xmx2.jpg',1,'Bá»™t giáº·t OMO','2026-03-19 09:41:24.379170',21,4,1);
 
 -- 8.1 UNITS
-INSERT IGNORE INTO units (code, name, material_type, symbol) VALUES
-('HOP', 'Hộp', 'SOLID', 'hộp'),
-('LOC', 'Lốc', 'SOLID', 'lốc'),
-('THUNG', 'Thùng', 'SOLID', 'thùng'),
-('GOI', 'Gói', 'SOLID', 'gói'),
-('CAI', 'Cái', 'SOLID', 'cái'),
-('LON', 'Lon', 'SOLID', 'lon'),
-('CHAI', 'Chai', 'SOLID', 'chai'),
-('BICH', 'Bịch', 'SOLID', 'bich');
+INSERT INTO `units` VALUES (1,'HOP',NULL,NULL,'SOLID','Há»™p','há»™p'),(2,'LOC',NULL,NULL,'SOLID','Lá»‘c','lá»‘c'),(3,'THUNG',NULL,NULL,'SOLID','ThÃ¹ng','thÃ¹ng'),(4,'GOI',NULL,NULL,'SOLID','GÃ³i','gÃ³i'),(5,'CAI',NULL,NULL,'SOLID','CÃ¡i','cÃ¡i'),(6,'LON',NULL,NULL,'SOLID','Lon','lon'),(7,'CHAI',NULL,NULL,'SOLID','Chai','chai'),(8,'BICH',NULL,NULL,'SOLID','Bá»‹ch','bich');
 
 
 -- 8.2 UNIT CONVERSIONS (Conversion between units for variants)
 -- Example: 1 carton (THUNG) = 12 boxes (HOP), 1 pack (LOC) = 4 boxes
-INSERT IGNORE INTO unit_conversions (variant_id, to_unit_id, conversion_factor, sell_price, description, is_active) VALUES
--- Fresh Milk 1L (variant 1, base unit: HOP=1): 1 LOC = 4 HOP, 1 THUNG = 12 HOP
-(1, (SELECT id FROM units WHERE code = 'LOC'), 4.0000, 100000.00, '1 lốc = 4 hộp sữa tươi 1L', TRUE),
-(1, (SELECT id FROM units WHERE code = 'THUNG'), 12.0000, 300000.00, '1 thùng = 12 hộp sữa tươi 1L', TRUE),
-
--- Dove Soap (variant 2, base unit: GOI=3): 1 THUNG = 48 GOI
-(2, (SELECT id FROM units WHERE code = 'HOP'), 48.0000, 720000.00, '1 thùng = 48 hộp xà phòng Dove 90g', TRUE),
-
--- Nescafe 3in1 (variant 3, base unit: GOI=3): 1 THUNG = 30 GOI
-(3, (SELECT id FROM units WHERE code = 'HOP'), 30.0000, 1350000.00, '1 hộp = 30 gói Nescafe 3in1', TRUE),
-
--- Coca Cola 330ml (variant 4, base unit: LOC=2): 1 THUNG = 24 LOC
-(4, (SELECT id FROM units WHERE code = 'THUNG'), 24.0000, 288000.00, '1 thùng = 24 lon Coca Cola 330ml', TRUE),
-
--- Oishi Snack (variant 5, base unit: GOI=3): 1 THUNG = 30 GOI
-(5, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 240000.00, '1 thùng = 30 gói Oishi Snack 50g', TRUE),
-
--- Mì Hảo Hảo (variant 12, base unit: GOI=4): 1 THUNG = 30 GOI
-(12, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 135000.00, '1 thùng = 30 gói mì Hảo Hảo 75g', TRUE),
-
--- Mì Omachi (variant 13, base unit: GOI=4): 1 THUNG = 30 GOI
-(13, (SELECT id FROM units WHERE code = 'THUNG'), 30.0000, 300000.00, '1 thùng = 30 gói mì Omachi 80g', TRUE),
-
-(21, (SELECT id FROM units WHERE code = 'THUNG'), 24.0000, 470000.00, '1 thùng = 24 lon Bia Heineken', TRUE),
-(22, (SELECT id FROM units WHERE code = 'THUNG'), 24.0000, 420000.00, '1 thùng = 24 lon Bia Tiger', TRUE),
-(23, (SELECT id FROM units WHERE code = 'THUNG'), 15.0000, 510000.00, '1 thùng = 15 chai Nước mắm Nam Ngư', TRUE),
-(24, (SELECT id FROM units WHERE code = 'THUNG'), 48.0000, 1180000.00, '1 thùng = 48 lon Sữa đặc Ông Thọ', TRUE),
-(25, (SELECT id FROM units WHERE code = 'THUNG'), 12.0000, 590000.00, '1 thùng = 12 chai Dầu ăn Tường An', TRUE),
-(26, (SELECT id FROM units WHERE code = 'THUNG'), 20.0000, 780000.00, '1 thùng = 20 gói Bột giặt OMO', TRUE);
+INSERT INTO `unit_conversions` VALUES (15,48.0000,'',1,0.00,3,27),(16,30.0000,'',1,360000.00,3,4);
 
 -- 9. PRODUCT VARIANTS
-INSERT IGNORE INTO product_variants (product_id, sku, barcode, unit_id, sell_price, is_active, is_base_unit, created_at, updated_at) VALUES
-(1, 'VMILK-220ml-BICH', '8901234567890', 8, 23000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(2, 'DOVE-90G', '8901234567891', 1, 15000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(3, 'NESCAFE-200G', '8901234567892', 1, 45000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(4, 'COCA-330ML', '8901234567893', 7, 12000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(5, 'OISHI-50G', '8901234567894', 4, 8000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(6, 'CHOLI-250G', '8901234567895', 7, 13000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(7, 'CP-XX-500G', '8901234567896', 4, 55000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(8, 'VISSAN-HH-150G', '8901234567897', 1, 22000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(9, 'ORION-CHOCO-12', '8901234567898', 1, 40000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(10, 'CHUPA-FRUIT', '8901234567899', 5, 2000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(11, 'VIFON-PHO-80G', '8901234567900', 4, 8000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(12, 'HAOHAO-CC-75G', '8901234567901', 4, 4500.00, TRUE, TRUE, NOW(6), NOW(6)),
-(13, 'OMACHI-S-80G', '8901234567902', 4, 10000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(14, 'CHINSU-T-250ML', '8901234567903', 7, 15000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(15, 'TH-N-100G', '8901234567904', 1, 6000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(16, 'TH-I-1L', '8901234567905', 1, 35000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(17, 'LAYS-K-50G', '8901234567906', 4, 12000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(18, 'TEA-PLUS-455ML', '8901234567907', 7, 10000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(19, 'KNORR-T-400G', '8901234567908', 4, 30000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(20, 'MAGGI-H-350G', '8901234567909', 7, 25000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(21, 'HEI-SIL-330ML', '8901234567910', 6, 20000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(22, 'TIG-CRY-330ML', '8901234567911', 6, 18000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(23, 'NN-500ML', '8901234567912', 7, 35000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(24, 'ONGTHO-D-380G', '8901234567913', 6, 25000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(25, 'TA-1L', '8901234567914', 7, 50000.00, TRUE, TRUE, NOW(6), NOW(6)),
-(26, 'OMO-800G', '8901234567915', 4, 40000.00, TRUE, TRUE, NOW(6), NOW(6));
+INSERT INTO `product_variants` VALUES (1,'8930000193995','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773772910/smalltrend/user-avatars/o33bylqob6pxjc8tukfu.png',1,1,NULL,23000.00,'DAIRY-VINA-SUADIN-BICH22OML-ITDUONG','2026-03-19 16:12:45.104746',NULL,1,8,NULL),(2,'8930000122551','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773773072/smalltrend/user-avatars/dhudvv2ujf5e5co6ootg.jpg',1,1,NULL,15000.00,'PERSONAL_CARE-PG-XAPHON-HOP90G-NGUYEN','2026-03-17 18:44:30.721805',NULL,2,1,NULL),(3,'8930000161246','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773774242/smalltrend/user-avatars/nxldrdvkm1o2fljoq0dn.webp',1,1,NULL,45000.00,'BEVERAGE-NEST-CAPHEN-HOP255G-NGUYEN','2026-03-17 19:04:00.806758',NULL,3,1,NULL),(4,'8901234567893','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773778489/smalltrend/user-avatars/hpowweus5mmsnz0ccx8l.jpg',1,1,NULL,15400.00,'BEVERAGE-COCA-NUOCNG-LON330ML-NGUYEN','2026-03-19 09:03:42.000358',NULL,4,6,NULL),(5,'8930000149572','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773776664/smalltrend/user-avatars/icro6udsd93qzizzvd2j.webp',1,1,NULL,8000.00,'SNACK-OISH-BANHSN-GOI40G-PHOMAT','2026-03-17 19:44:22.804058',NULL,5,4,NULL),(6,'8930000171863','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773776870/smalltrend/user-avatars/vrand1uqxez5tq73dktk.jpg',1,1,NULL,13000.00,'CONDIMENT-CHOL-TUONGO-CHAI130G','2026-03-17 19:47:48.174277',NULL,6,7,NULL),(7,'8930000196125','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773777228/smalltrend/user-avatars/m1jlc0zltitolbl94ja4.jpg',1,1,NULL,55000.00,'MEAT_SEAFOOD-CP-XUCXIC-GOI500G','2026-03-17 19:53:46.365399',NULL,7,4,NULL),(8,'8930000169044','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773777363/smalltrend/user-avatars/bd2hgni4twjpr2zwzsan.webp',1,1,NULL,22000.00,'CANNED_FOOD-VISS-DOHOPV-HOP170G-BOKHO','2026-03-17 19:56:01.293126',NULL,8,1,NULL),(9,'8930000144416','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773777788/smalltrend/user-avatars/yqhleiczkcxfbgokhm7b.png',1,1,NULL,38500.00,'BAKERY-ORIO-BANHCH-HOP396G-NGUYEN','2026-03-19 12:45:01.209140',NULL,9,1,NULL),(10,'8930000113740','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773910052/smalltrend/user-avatars/rxu9ondhpdln92zll0t7.webp',1,1,NULL,50000.00,'SNACK-CHUP-KEOMUT-GOI30C','2026-03-19 08:47:29.365008',NULL,10,4,NULL),(11,'8930000125231','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773910333/smalltrend/user-avatars/uv9otcj50xs26gs4qts2.webp',1,1,NULL,8000.00,'INSTANT_FOOD-MASA-PHOGOI-GOI65G-GA','2026-03-19 08:52:09.825864',NULL,11,4,NULL),(12,'8930000127303','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773910438/smalltrend/user-avatars/ik1z1wq7tcxxig6bxggq.jpg',1,1,NULL,4500.00,'INSTANT_FOOD-ACEC-MIHAOH-GOI75G-CHUACAY','2026-03-19 08:53:55.700128',NULL,12,4,NULL),(13,'8930000171634','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773911290/smalltrend/user-avatars/d70b96npjlercdnhqc6u.webp',1,1,NULL,10000.00,'INSTANT_FOOD-MASA-MIOMAC-GOI80G-BOHAM','2026-03-19 09:08:08.160152',NULL,13,4,NULL),(14,'8930000176011','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773911418/smalltrend/user-avatars/nzpiahhjvtoysx5vfoxi.webp',1,1,NULL,15000.00,'CONDIMENT-MASA-NUOCTU-CHAI330ML-TOIOT','2026-03-19 09:10:15.226258',NULL,14,7,NULL),(15,'8901234567904','2026-03-18 01:40:08.933285',NULL,1,1,NULL,6000.00,'TH-N-100G','2026-03-18 01:40:08.933285',NULL,15,1,NULL),(16,'8930000171153','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773911928/smalltrend/user-avatars/l5ezwmbvpbjsmewe8hmo.png',1,1,NULL,35000.00,'DAIRY-THTR-SUATUO-HOP220ML-NGUYEN','2026-03-19 09:18:45.165700',NULL,16,1,NULL),(17,'8930000146663','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773912150/smalltrend/user-avatars/wgvlu99hoyhumcsffge3.png',1,1,NULL,12000.00,'SNACK-MAGG-SNACKL-GOI30G-BO','2026-03-19 09:22:26.744542',NULL,17,4,NULL),(18,'8930000109279','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773912264/smalltrend/user-avatars/g3quurw8erpu5rpsw5yj.jpg',1,1,NULL,10000.00,'BEVERAGE-MAGG-TRAOLO-CHAI450ML-NGUYEN','2026-03-19 09:24:44.981697',NULL,18,7,NULL),(19,'8930000186157','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773912473/smalltrend/user-avatars/xktud0bg65rjytvw9foq.png',1,1,NULL,30000.00,'CONDIMENT-KNOR-HATNEM-GOI380G-NAMHUONG','2026-03-19 09:27:50.079383',NULL,19,4,NULL),(20,'8930000109811','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773912911/smalltrend/user-avatars/lpyqea1uyrfxmacomnz5.webp',1,1,NULL,25000.00,'CONDIMENT-KNOR-DAUHAO-CHAI350G-HAISAN','2026-03-19 09:35:08.042089',NULL,20,7,NULL),(21,'8930000139672','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773913028/smalltrend/user-avatars/d9ehbqq301llj6fdbyxs.webp',1,1,NULL,23100.00,'BEVERAGE-HEIN-BIAHEI-LON330ML','2026-03-19 09:37:04.680494',NULL,21,6,NULL),(22,'8930000123411','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773913126/smalltrend/user-avatars/psat5m6feqy4dk4bpjdm.webp',1,1,NULL,18000.00,'BEVERAGE-TIGE-BIATIG-LON330ML','2026-03-19 09:38:42.625590',NULL,22,6,NULL),(23,'8901234567912','2026-03-18 01:40:08.933285',NULL,1,1,NULL,35000.00,'NN-500ML','2026-03-18 01:40:08.933285',NULL,23,7,NULL),(24,'8930000154279','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773913244/smalltrend/user-avatars/vuxvb3qmojdaxvh1ikut.png',1,1,NULL,25000.00,'DAIRY-VINA-SUADAC-LON380G','2026-03-19 09:40:41.594268',NULL,24,6,NULL),(25,'8901234567914','2026-03-18 01:40:08.933285',NULL,1,1,NULL,50000.00,'TA-1L','2026-03-18 01:40:08.933285',NULL,25,7,NULL),(26,'8930000199911','2026-03-18 01:40:08.933285','https://res.cloudinary.com/didvvefmu/image/upload/v1773913343/smalltrend/user-avatars/x2rsucpqflqznbnerxzb.jpg',1,1,NULL,40000.00,'HOUSEHOLD-OMO-BOTGIA-GOI350G','2026-03-19 09:42:21.876911',NULL,26,4,NULL),(27,'8930000133342','2026-03-17 18:42:46.031234','https://res.cloudinary.com/didvvefmu/image/upload/v1773772967/smalltrend/user-avatars/vdu8czpwiu3qet5zsasw.png',1,0,NULL,0.00,'DAIRY-VINA-SUADIN-BICH220ML-DAU','2026-03-19 17:06:51.075335',NULL,1,8,NULL),(28,'8930000161734','2026-03-17 18:51:17.975528','https://res.cloudinary.com/didvvefmu/image/upload/v1773773479/smalltrend/user-avatars/bpy5d10ssqg5dnmwvguv.png',1,0,NULL,15400.00,'PERSONAL_CARE-PG-XAPHON-HOP90G-TUOI','2026-03-19 09:04:18.390337',NULL,2,1,NULL),(29,'8930000167736','2026-03-17 19:33:48.792449','https://res.cloudinary.com/didvvefmu/image/upload/v1773776030/smalltrend/user-avatars/eins9fd6p4qvhvslj5do.jpg',1,0,NULL,0.00,'BEVERAGE-NEST-CAPHEN-HOP255G-RANG','2026-03-17 19:33:48.792449',NULL,3,1,NULL),(30,'8930000149121','2026-03-17 19:45:23.941447','https://res.cloudinary.com/didvvefmu/image/upload/v1773776725/smalltrend/user-avatars/d6dlcsprxbocypnf6cgm.webp',1,0,NULL,12100.00,'SNACK-OISH-BANHSN-GOI40G-TOMCAY','2026-03-19 09:03:09.686273',NULL,5,4,NULL),(31,'8930000119278','2026-03-17 19:48:27.446008','https://res.cloudinary.com/didvvefmu/image/upload/v1773776909/smalltrend/user-avatars/j4dj9pjuuhhclkutaxg6.jpg',1,0,NULL,0.00,'CONDIMENT-CHOL-TUONGO-CHAI830G','2026-03-17 19:48:27.446008',NULL,6,7,NULL),(32,'8930000121158','2026-03-17 19:58:25.077167','https://res.cloudinary.com/didvvefmu/image/upload/v1773777507/smalltrend/user-avatars/ztpgadh6wdjhqyacr22j.webp',1,0,NULL,0.00,'CANNED_FOOD-VISS-DOHOPV-HOP170G-SUONNAUDAU','2026-03-17 19:58:25.077167',NULL,8,1,NULL),(33,'8930000112736','2026-03-17 20:05:18.866189','https://res.cloudinary.com/didvvefmu/image/upload/v1773777920/smalltrend/user-avatars/cup3o2geklrs4pkyco0c.png',1,0,NULL,0.00,'BAKERY-ORIO-BANHCH-HOP360G-MATCHA','2026-03-19 06:06:10.664386',NULL,9,1,NULL),(34,'2000010034096','2026-03-17 20:08:13.486592','https://res.cloudinary.com/didvvefmu/image/upload/v1773778115/smalltrend/user-avatars/jmtlotmdvagxrl3gijbl.webp',1,0,NULL,0.00,'DAIRY-VINA-SUADIN-BICH220ML-THUNG48','2026-03-19 17:06:51.075335',NULL,1,3,NULL),(35,'2000040035087','2026-03-17 20:15:03.949593','https://res.cloudinary.com/didvvefmu/image/upload/v1773778489/smalltrend/user-avatars/hpowweus5mmsnz0ccx8l.jpg',1,0,NULL,360000.00,'BEVERAGE-COCA-NUOCNG-LON330ML-THUNG30','2026-03-17 20:15:03.966126',NULL,4,3,NULL),(36,'8930000112934','2026-03-19 08:32:45.066186','https://res.cloudinary.com/didvvefmu/image/upload/v1773909168/smalltrend/user-avatars/hdothjp2wuqv4u3yobyt.jpg',1,0,NULL,0.00,'BEVERAGE-MAGG-TRAOLO-CHAI450ML-CHANH','2026-03-19 08:32:45.066186',NULL,18,7,NULL);
+
+-- 9.0 VARIANT ATTRIBUTES
+INSERT INTO `variant_attributes` VALUES (1,'Ãt Ä‘Æ°á»ng','HÆ°Æ¡ng vá»‹'),(1,'220ml','Thá»ƒ tÃ­ch'),(2,'NguyÃªn báº£n','HÆ°Æ¡ng'),(2,'90G','Trá»ng lÆ°á»£ng'),(3,'NguyÃªn báº£n','HÆ°Æ¡ng vá»‹'),(3,'255G','Trá»ng lÆ°á»£ng'),(4,'NguyÃªn báº£n','HÆ°Æ¡ng vá»‹'),(4,'330ml','Thá»ƒ tÃ­ch'),(5,'PhÃ´ mai','HÆ°Æ¡ng vá»‹'),(5,'40G','Trá»ng lÆ°á»£ng'),(6,'130G','Trá»ng lÆ°á»£ng'),(7,'500G','Trá»ng lÆ°á»£ng'),(8,'BÃ² kho','HÆ°Æ¡ng vá»‹'),(8,'170G','Khá»‘i lÆ°á»£ng'),(9,'NguyÃªn báº£n','HÆ°Æ¡ng vá»‹'),(9,'396G','Khá»‘i lÆ°Æ¡ng'),(10,'30 cÃ¡i','Sá»‘ lÆ°á»£ng'),(11,'GÃ ','HÆ°Æ¡ng vá»‹'),(11,'65g','Trá»ng lÆ°á»£ng'),(12,'Chua cay','HÆ°Æ¡ng vá»‹'),(12,'75g','Khá»‘i lÆ°á»£ng'),(13,'BÃ² háº§m','HÆ°Æ¡ng vá»‹'),(13,'80g','Khá»‘i lÆ°á»£ng'),(14,'Tá»i á»›t','HÆ°Æ¡ng'),(14,'330ml','Thá»ƒ tÃ­ch'),(16,'NguyÃªn báº£n','HÆ°Æ¡ng vá»‹'),(16,'220ml','Thá»ƒ tÃ­ch'),(17,'BÃ² NÆ°á»›ng Texas','HÆ°Æ¡ng vá»‹'),(17,'30g','Trá»ng lÆ°á»£ng'),(18,'NguyÃªn báº£n','HÆ°Æ¡ng vá»‹'),(18,'450ml','Thá»ƒ tÃ­ch'),(19,'Náº¥m hÆ°Æ¡ng','Loáº¡i'),(19,'380g','Trá»ng lÆ°á»£ng'),(20,'Háº£i sáº£n','Loáº¡i'),(20,'350g','Thá»ƒ tÃ­ch'),(21,'330ml','Thá»ƒ tÃ­ch'),(22,'330ml','Thá»ƒ tÃ­ch'),(24,'380g','Khá»‘i lÆ°á»£ng'),(26,'350g','Trá»ng lÆ°á»£ng'),(27,'DÃ¢u tÃ¢y','HÆ°Æ¡ng vá»‹'),(27,'220ml','Thá»ƒ tÃ­ch'),(28,'TÆ°Æ¡i mÃ¡t','HÆ°Æ¡ng'),(28,'90G','Trá»ng lÆ°á»£ng'),(29,'CÃ  phÃª rang','HÆ°Æ¡ng vá»‹'),(29,'255G','Trá»ng lÆ°á»£ng'),(30,'TÃ´m cay','HÆ°Æ¡ng vá»‹'),(30,'40G','Trá»ng lÆ°á»£ng'),(31,'830G','Trá»ng lÆ°á»£ng'),(32,'SÆ°á»n náº¥u Ä‘áº­u','HÆ°Æ¡ng vá»‹'),(32,'170G','Khá»‘i lÆ°á»£ng'),(33,'Matcha Ä‘áº­u Ä‘á»','HÆ°Æ¡ng vá»‹'),(33,'360G','Khá»‘i lÆ°Æ¡ng'),(34,'DÃ¢u tÃ¢y','HÆ°Æ¡ng vá»‹'),(34,'220ml','Thá»ƒ tÃ­ch'),(35,'NguyÃªn báº£n','HÆ°Æ¡ng vá»‹'),(35,'330ml','Thá»ƒ tÃ­ch'),(36,'Chanh','HÆ°Æ¡ng vá»‹'),(36,'450ml','Thá»ƒ tÃ­ch');
 
 -- 9.1 VARIANT PRICES (Initial active prices for all variants)
-INSERT IGNORE INTO variant_prices (variant_id, purchase_price, selling_price, tax_percent, effective_date, status, created_at) VALUES
-(1,  20000.00, 23000.00, 10.00, '2026-01-15', 'ACTIVE', NOW(6)),
-(2,  12000.00, 15000.00, 10.00, '2026-02-01', 'ACTIVE', NOW(6)),
-(3,  35000.00, 45000.00, 10.00, '2026-01-20', 'ACTIVE', NOW(6)),
-(4,  8000.00,  12000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
-(5,  6000.00,  8000.00,  10.00, '2026-02-01', 'ACTIVE', NOW(6)),
-(6,  10000.00, 13000.00, 10.00, '2026-01-15', 'ACTIVE', NOW(6)),
-(7,  45000.00, 55000.00, 10.00, '2026-02-01', 'ACTIVE', NOW(6)),
-(8,  18000.00, 22000.00, 10.00, '2026-01-20', 'ACTIVE', NOW(6)),
-(9,  32000.00, 40000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
-(10, 1000.00,  2000.00,  5.00,  '2026-02-01', 'ACTIVE', NOW(6)),
-(11, 6000.00,  8000.00,  10.00, '2026-01-15', 'ACTIVE', NOW(6)),
-(12, 3000.00,  4500.00,  10.00, '2026-02-01', 'ACTIVE', NOW(6)),
-(13, 7000.00,  10000.00, 10.00, '2026-01-20', 'ACTIVE', NOW(6)),
-(14, 11000.00, 15000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
-(15, 4000.00,  6000.00,  5.00,  '2026-03-01', 'ACTIVE', NOW(6)),
-(16, 25000.00, 35000.00, 10.00, '2026-03-01', 'ACTIVE', NOW(6)),
-(17, 8000.00,  12000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
-(18, 7000.00,  10000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
-(19, 24000.00, 30000.00, 10.00, '2026-01-20', 'ACTIVE', NOW(6)),
-(20, 20000.00, 25000.00, 10.00, '2026-02-10', 'ACTIVE', NOW(6)),
-(21, 16000.00, 20000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
-(22, 14000.00, 18000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
-(23, 28000.00, 35000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
-(24, 20000.00, 25000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
-(25, 40000.00, 50000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6)),
-(26, 32000.00, 40000.00, 10.00, '2026-02-15', 'ACTIVE', NOW(6));
+INSERT INTO `variant_prices` VALUES (1,'2026-03-18 01:40:08.947535','2026-01-15',20000.00,23000.00,'ACTIVE',10.00,1,NULL,NULL,NULL),(2,'2026-03-18 01:40:08.947535','2026-02-01',12000.00,15000.00,'ACTIVE',10.00,2,NULL,NULL,NULL),(3,'2026-03-18 01:40:08.947535','2026-01-20',35000.00,45000.00,'ACTIVE',10.00,3,NULL,NULL,NULL),(4,'2026-03-18 01:40:08.947535','2026-02-10',12000.00,12000.00,'INACTIVE',10.00,4,NULL,NULL,NULL),(5,'2026-03-18 01:40:08.947535','2026-02-01',6000.00,8000.00,'ACTIVE',10.00,5,NULL,NULL,NULL),(6,'2026-03-18 01:40:08.947535','2026-01-15',10000.00,13000.00,'ACTIVE',10.00,6,NULL,NULL,NULL),(7,'2026-03-18 01:40:08.947535','2026-02-01',45000.00,55000.00,'ACTIVE',10.00,7,NULL,NULL,NULL),(8,'2026-03-18 01:40:08.947535','2026-01-20',18000.00,22000.00,'ACTIVE',10.00,8,NULL,NULL,NULL),(9,'2026-03-18 01:40:08.947535','2026-02-10',32000.00,40000.00,'INACTIVE',10.00,9,NULL,NULL,NULL),(10,'2026-03-18 01:40:08.947535','2026-02-01',1000.00,2000.00,'ACTIVE',5.00,10,NULL,NULL,NULL),(11,'2026-03-18 01:40:08.947535','2026-01-15',6000.00,8000.00,'ACTIVE',10.00,11,NULL,NULL,NULL),(12,'2026-03-18 01:40:08.947535','2026-02-01',3000.00,4500.00,'ACTIVE',10.00,12,NULL,NULL,NULL),(13,'2026-03-18 01:40:08.947535','2026-01-20',7000.00,10000.00,'ACTIVE',10.00,13,NULL,NULL,NULL),(14,'2026-03-18 01:40:08.947535','2026-02-10',11000.00,15000.00,'ACTIVE',10.00,14,NULL,NULL,NULL),(15,'2026-03-18 01:40:08.947535','2026-03-01',4000.00,6000.00,'ACTIVE',5.00,15,NULL,NULL,NULL),(16,'2026-03-18 01:40:08.947535','2026-03-01',25000.00,35000.00,'ACTIVE',10.00,16,NULL,NULL,NULL),(17,'2026-03-18 01:40:08.947535','2026-02-10',8000.00,12000.00,'ACTIVE',10.00,17,NULL,NULL,NULL),(18,'2026-03-18 01:40:08.947535','2026-02-15',7000.00,10000.00,'ACTIVE',10.00,18,NULL,NULL,NULL),(19,'2026-03-18 01:40:08.947535','2026-01-20',24000.00,30000.00,'ACTIVE',10.00,19,NULL,NULL,NULL),(20,'2026-03-18 01:40:08.947535','2026-02-10',20000.00,25000.00,'ACTIVE',10.00,20,NULL,NULL,NULL),(21,'2026-03-18 01:40:08.947535','2026-02-15',16000.00,20000.00,'INACTIVE',10.00,21,NULL,NULL,NULL),(22,'2026-03-18 01:40:08.947535','2026-02-15',14000.00,18000.00,'ACTIVE',10.00,22,NULL,NULL,NULL),(23,'2026-03-18 01:40:08.947535','2026-02-15',28000.00,35000.00,'ACTIVE',10.00,23,NULL,NULL,NULL),(24,'2026-03-18 01:40:08.947535','2026-02-15',20000.00,25000.00,'ACTIVE',10.00,24,NULL,NULL,NULL),(25,'2026-03-18 01:40:08.947535','2026-02-15',40000.00,50000.00,'ACTIVE',10.00,25,NULL,NULL,NULL),(26,'2026-03-18 01:40:08.947535','2026-02-15',32000.00,40000.00,'ACTIVE',10.00,26,NULL,NULL,NULL),(27,'2026-03-17 21:53:50.224337','2026-03-17',32000.00,30000.00,'INACTIVE',10.00,9,NULL,NULL,NULL),(28,'2026-03-17 21:54:07.038309','2026-03-17',32000.00,35000.00,'INACTIVE',10.00,9,NULL,NULL,NULL),(29,'2026-03-18 08:56:14.613425','2026-03-18',0.00,10000.00,'INACTIVE',10.00,33,NULL,'2026-03-19',NULL),(30,'2026-03-18 10:12:59.693522','2026-03-18',32000.00,38500.00,'INACTIVE',10.00,9,NULL,'2026-03-19',35000.00),(31,'2026-03-18 16:35:35.389328','2026-03-18',16000.00,23100.00,'ACTIVE',10.00,21,NULL,NULL,21000.00),(32,'2026-03-19 06:54:18.323113','2026-03-19',500000.00,0.00,'INACTIVE',5.00,34,NULL,NULL,NULL),(33,'2026-03-19 06:54:18.331646','2026-03-19',10416.67,0.00,'INACTIVE',5.00,27,NULL,NULL,NULL),(34,'2026-03-19 06:55:04.014556','2026-03-19',12083.33,15800.00,'INACTIVE',5.00,27,NULL,'2026-03-20',15000.00),(35,'2026-03-19 06:55:19.571183','2026-03-19',580000.00,577500.00,'INACTIVE',5.00,34,NULL,'2026-03-20',550000.00),(36,'2026-03-19 09:02:42.165644','2026-03-19',32000.00,38500.00,'ACTIVE',10.00,9,NULL,'2026-08-31',35000.00),(37,'2026-03-19 09:03:09.683238','2026-03-19',10000.00,12100.00,'ACTIVE',10.00,30,NULL,'2026-08-31',11000.00),(38,'2026-03-19 09:03:41.998133','2026-03-19',12000.00,15400.00,'ACTIVE',10.00,4,NULL,'2026-08-31',14000.00),(39,'2026-03-19 09:04:18.388334','2026-03-19',10000.00,15400.00,'ACTIVE',10.00,28,NULL,'2026-08-31',14000.00);
+
+-- 9.2 PRICE EXPIRY ALERT LOGS
+INSERT INTO `price_expiry_alert_logs` VALUES (1,'2026-03-15','admin.smalltrend.swp@gmail.com','2026-03-15 02:53:16.595705',27),(2,'2026-03-15','admin.smalltrend.swp@gmail.com','2026-03-15 02:53:16.640614',28),(3,'2026-03-15','admin.smalltrend.swp@gmail.com','2026-03-15 02:53:16.651063',29),(4,'2026-03-15','dambautv2005@gmail.com','2026-03-15 02:58:20.296450',27),(5,'2026-03-15','dambautv2005@gmail.com','2026-03-15 02:58:20.318989',28),(6,'2026-03-15','dambautv2005@gmail.com','2026-03-15 02:58:20.324900',29),(7,'2026-03-15','dambautv2005@gmail.com','2026-03-15 03:04:04.016778',30),(8,'2026-03-15','admin.smalltrend.swp@gmail.com','2026-03-15 03:05:36.397402',30),(9,'2026-03-15','dambautvsss2005@gmail.com','2026-03-15 03:23:02.758387',27),(10,'2026-03-15','dambautvsss2005@gmail.com','2026-03-15 03:23:02.793075',28),(11,'2026-03-15','dambautvsss2005@gmail.com','2026-03-15 03:23:02.801224',29),(12,'2026-03-15','dambautvsss2005@gmail.com','2026-03-15 03:23:02.811466',30),(14,'2026-03-17','dambautv2005@gmail.com','2026-03-17 09:03:00.184541',27),(15,'2026-03-17','admin.smalltrend.swp@gmail.com','2026-03-17 09:03:03.636309',27),(16,'2026-03-17','dambautvsss2005@gmail.com','2026-03-17 09:03:07.171150',27),(17,'2026-03-17','ngohuyzzz1@gmail.com','2026-03-17 09:03:16.491780',27);
 -- 10. LOCATIONS
-INSERT IGNORE INTO locations (id, name, type, zone, grid_row, grid_col, grid_level, location_code, address, capacity, status, created_at) VALUES
-(1, 'Kho lưu trữ A1', 'STORAGE', 'A', 1, 1, 1, 'WH-A1', 'Kho chính, Dãy A, Hàng 1', 5000, 'ACTIVE', NOW()),
-(2, 'Kệ hàng C3', 'DISPLAY', 'C', 1, 3, 1, 'DF-C3', 'Kệ hàng, Dãy C, Vị trí 3', 2000, 'ACTIVE', NOW()),
-(3, 'Kho lạnh B1', 'COLD_STORAGE', 'B', 1, 1, 1, 'CS-B1', 'Kho lạnh, Dãy B, Tầng 1', 2000, 'ACTIVE', NOW()),
-(4, 'Kệ hàng C1', 'DISPLAY', 'C', 1, 1, 1, 'DF-C1', 'Kệ hàng, Dãy C, Vị trí 1', 2000, 'ACTIVE', NOW()),
-(5, 'Kệ hàng C2', 'DISPLAY', 'C', 1, 2, 1, 'DF-C2', 'Kệ hàng, Dãy C, Vị trí 2', 2000, 'ACTIVE', NOW());
+INSERT INTO `locations` VALUES (1,'Kho chÃ­nh, DÃ£y A, HÃ ng 1',5000,'2026-03-18 01:40:08.000000',NULL,1,1,1,'WH-A1','Kho lÆ°u trá»¯ A1','ACTIVE','STORAGE','A'),(2,'Ká»‡ hÃ ng, DÃ£y C, Vá»‹ trÃ­ 3',2000,'2026-03-18 01:40:08.000000',NULL,3,1,1,'DF-C3','Ká»‡ hÃ ng C3','ACTIVE','DISPLAY','C'),(3,'Kho láº¡nh, DÃ£y B, Táº§ng 1',2000,'2026-03-18 01:40:08.000000',NULL,1,1,1,'CS-B1','Kho láº¡nh B1','ACTIVE','COLD_STORAGE','B'),(4,'Ká»‡ hÃ ng, DÃ£y C, Vá»‹ trÃ­ 1',2000,'2026-03-18 01:40:08.000000',NULL,1,1,1,'DF-C1','Ká»‡ hÃ ng C1','ACTIVE','DISPLAY','C'),(5,'Ká»‡ hÃ ng, DÃ£y C, Vá»‹ trÃ­ 2',2000,'2026-03-18 01:40:08.000000',NULL,2,1,1,'DF-C2','Ká»‡ hÃ ng C2','ACTIVE','DISPLAY','C');
 
 
 -- 11. PRODUCT BATCHES
-INSERT IGNORE INTO product_batches (variant_id, batch_number, cost_price, mfg_date, expiry_date) VALUES
-(1, 'VM2026001', 20000.00, '2026-01-15', '2026-04-15'),
-(2, 'DV2026001', 12000.00, '2026-02-01', '2027-02-01'),
-(3, 'NC2026001', 35000.00, '2026-01-20', '2027-01-20'),
-(4, 'CC2026001', 8000.00, '2026-02-10', '2026-08-10'),
-(5, 'OI2026001', 6000.00, '2026-02-01', '2026-06-01'),
-(6, 'CH2026001', 10000.00, '2026-01-15', '2026-10-15'),
-(7, 'CP2026001', 45000.00, '2026-02-01', '2026-04-01'),
-(8, 'VS2026001', 18000.00, '2026-01-20', '2027-01-20'),
-(9, 'OR2026001', 32000.00, '2026-02-10', '2026-12-10'),
-(10, 'CU2026001', 1000.00, '2026-02-01', '2027-06-01'),
-(11, 'VF2026001', 6000.00, '2026-01-15', '2026-07-15'),
-(12, 'HH2026001', 3000.00, '2026-02-01', '2026-08-01'),
-(13, 'OM2026001', 7000.00, '2026-01-20', '2026-07-20'),
-(14, 'CS2026001', 11000.00, '2026-02-10', '2027-02-10'),
-(15, 'THY2026001', 4000.00, '2026-03-01', '2026-04-01'),
-(16, 'THM2026001', 25000.00, '2026-03-01', '2026-09-01'),
-(17, 'LA2026001', 8000.00, '2026-02-10', '2026-11-10'),
-(18, 'TP2026001', 7000.00, '2026-02-15', '2026-10-15'),
-(19, 'KN2026001', 24000.00, '2026-01-20', '2027-01-20'),
-(20, 'MG2026001', 20000.00, '2026-02-10', '2027-02-10'),
-(21, 'HEI2026001', 16000.00, '2026-02-15', '2027-02-15'),
-(22, 'TIG2026001', 14000.00, '2026-02-15', '2027-02-15'),
-(23, 'NN2026001', 28000.00, '2026-02-15', '2027-02-15'),
-(24, 'OT2026001', 20000.00, '2026-02-15', '2027-02-15'),
-(25, 'TA2026001', 40000.00, '2026-02-15', '2027-02-15'),
-(26, 'OMO2026001', 32000.00, '2026-02-15', '2027-02-15'),
--- Mẫu lô hàng đã hết hạn để tạo phiếu xử lý hàng hóa
-(1, 'VM-EXP-202510', 19500.00, '2025-08-01', '2025-10-15'),
-(4, 'CC-EXP-202511', 7800.00, '2025-09-05', '2025-11-30'),
-(15, 'THY-EXP-202512', 3900.00, '2025-10-01', '2025-12-20');
+INSERT INTO `product_batches` VALUES (1,'VM2026001',20000.00,'2026-04-15','2026-01-15',1),(2,'DV2026001',12000.00,'2027-02-01','2026-02-01',2),(3,'NC2026001',35000.00,'2027-01-20','2026-01-20',3),(4,'CC2026001',8000.00,'2026-08-10','2026-02-10',4),(5,'OI2026001',6000.00,'2026-06-01','2026-02-01',5),(6,'CH2026001',10000.00,'2026-10-15','2026-01-15',6),(7,'CP2026001',45000.00,'2026-04-01','2026-02-01',7),(8,'VS2026001',18000.00,'2027-01-20','2026-01-20',8),(9,'OR2026001',32000.00,'2026-12-10','2026-02-10',9),(10,'CU2026001',1000.00,'2027-06-01','2026-02-01',10),(11,'VF2026001',6000.00,'2026-07-15','2026-01-15',11),(12,'HH2026001',3000.00,'2026-08-01','2026-02-01',12),(13,'OM2026001',7000.00,'2026-07-20','2026-01-20',13),(14,'CS2026001',11000.00,'2027-02-10','2026-02-10',14),(15,'THY2026001',4000.00,'2026-04-01','2026-03-01',15),(16,'THM2026001',25000.00,'2026-09-01','2026-03-01',16),(17,'LA2026001',8000.00,'2026-11-10','2026-02-10',17),(18,'TP2026001',7000.00,'2026-10-15','2026-02-15',18),(19,'KN2026001',24000.00,'2027-01-20','2026-01-20',19),(20,'MG2026001',20000.00,'2027-02-10','2026-02-10',20),(21,'HEI2026001',16000.00,'2027-02-15','2026-02-15',21),(22,'TIG2026001',14000.00,'2027-02-15','2026-02-15',22),(23,'NN2026001',28000.00,'2027-02-15','2026-02-15',23),(24,'OT2026001',20000.00,'2027-02-15','2026-02-15',24),(25,'TA2026001',40000.00,'2027-02-15','2026-02-15',25),(26,'OMO2026001',32000.00,'2027-02-15','2026-02-15',26),(27,'DA2026027',20000.00,'2026-10-31','2026-03-18',34),(28,'CC2026001',8000.00,'2026-08-10','2026-02-10',35),(29,'BE2026029',12000.00,'2026-11-30','2026-03-18',35),(30,'DA2026030',25000.00,'2026-11-30','2026-03-18',27),(31,'DA2026031',23000.00,'2027-03-18','2026-03-18',27),(32,'PE2026032',10000.00,'2027-12-31','2026-03-18',28),(33,'SN2026033',10000.00,'2027-03-13','2026-03-18',30),(34,'DAIRYV-000034',500000.00,'2027-03-19','2026-03-19',27),(38,'DAIRYV-000035',520000.00,'2026-12-30','2026-03-19',27),(39,'DAIRYV-000036',580000.00,'2026-12-30','2026-03-19',27);
 
 -- 11.1 INVENTORY STOCK
-INSERT IGNORE INTO inventory_stock (variant_id, location_id, batch_id, quantity) VALUES
-(1, 1, 1, 420),
-(2, 2, 2, 180),
-(3, 3, 3, 260),
-(4, 4, 4, 510),
-(5, 5, 5, 390),
-(6, 1, 6, 120),
-(7, 2, 7, 85),
-(8, 3, 8, 150),
-(9, 4, 9, 200),
-(10, 5, 10, 1000),
-(11, 1, 11, 300),
-(12, 2, 12, 500),
-(13, 3, 13, 400),
-(14, 4, 14, 250),
-(15, 5, 15, 180),
-(16, 1, 16, 210),
-(17, 2, 17, 320),
-(18, 3, 18, 280),
-(19, 4, 19, 140),
-(20, 5, 20, 190),
-(21, 1, 21, 300),
-(22, 2, 22, 250),
-(23, 3, 23, 100),
-(24, 4, 24, 150),
-(25, 5, 25, 200),
-(26, 1, 26, 80),
--- Tồn kho cho các lô hết hạn mẫu (batch_id 27-29)
-(1, 1, 27, 24),
-(4, 4, 28, 36),
-(15, 5, 29, 18);
+INSERT INTO `inventory_stock` VALUES (1,214,1,1,1),(2,178,2,2,2),(3,260,3,3,3),(4,502,4,4,4),(5,383,5,5,5),(6,120,6,1,6),(7,85,7,2,7),(8,150,8,3,8),(9,200,9,4,9),(10,973,10,5,10),(11,300,11,1,11),(12,500,12,2,12),(13,400,13,3,13),(14,250,14,4,14),(15,180,15,5,15),(16,210,16,1,16),(17,318,17,2,17),(18,280,18,3,18),(19,140,19,4,19),(20,190,20,5,20),(21,300,21,1,21),(22,250,22,2,22),(23,100,23,3,23),(24,148,24,4,24),(25,200,25,5,25),(26,80,26,1,26),(27,480,27,1,34),(28,16,28,4,35),(29,300,29,1,35),(30,480,30,1,27),(31,480,31,2,27),(32,1,32,1,28),(33,10,33,3,30),(34,96,34,1,27),(38,384,38,1,27),(39,240,39,1,27);
 
--- Điều chỉnh số lượng tồn kho để phản ánh trạng thái sau khi đã xác nhận phiếu kiểm kho
--- và các giao dịch bán hàng đã ghi nhận trong stock_movements
--- variant 1 (Fresh Milk 1L, loc 1): 250 khởi đầu - 5 (IC-2026-0001) - 4 (bán) - 150 (transfer out) → ~91, giữ 245 như mức đã được audit
+-- Äiá»u chá»‰nh sá»‘ lÆ°á»£ng tá»“n kho Ä‘á»ƒ pháº£n Ã¡nh tráº¡ng thÃ¡i sau khi Ä‘Ã£ xÃ¡c nháº­n phiáº¿u kiá»ƒm kho
+-- vÃ  cÃ¡c giao dá»‹ch bÃ¡n hÃ ng Ä‘Ã£ ghi nháº­n trong stock_movements
+-- variant 1 (Fresh Milk 1L, loc 1): 250 khá»Ÿi Ä‘áº§u - 5 (IC-2026-0001) - 4 (bÃ¡n) - 150 (transfer out) â†’ ~91, giá»¯ 245 nhÆ° má»©c Ä‘Ã£ Ä‘Æ°á»£c audit
 UPDATE inventory_stock SET quantity = 245 WHERE variant_id = 1 AND location_id = 1 AND batch_id = 1;
--- variant 2 (Dove Soap, loc 2): OK theo kiểm kho, giảm 2 do bán
+-- variant 2 (Dove Soap, loc 2): OK theo kiá»ƒm kho, giáº£m 2 do bÃ¡n
 UPDATE inventory_stock SET quantity = 178 WHERE variant_id = 2 AND location_id = 2 AND batch_id = 2;
--- variant 3 (Nescafe, loc 3): 260 + 1 (IC-2026-0002) - 1 (bán) = 260
+-- variant 3 (Nescafe, loc 3): 260 + 1 (IC-2026-0002) - 1 (bÃ¡n) = 260
 UPDATE inventory_stock SET quantity = 260 WHERE variant_id = 3 AND location_id = 3 AND batch_id = 3;
--- variant 4 (Coca Cola, loc 4): 510 - 4 (sale 1) - 4 (lẻ) = ~502, để ở mức trước kiểm
+-- variant 4 (Coca Cola, loc 4): 510 - 4 (sale 1) - 4 (láº») = ~502, Ä‘á»ƒ á»Ÿ má»©c trÆ°á»›c kiá»ƒm
 UPDATE inventory_stock SET quantity = 502 WHERE variant_id = 4 AND location_id = 4 AND batch_id = 4;
 -- variant 5 (Oishi, loc 5): 390 - 3 (sale 1) = 387
 UPDATE inventory_stock SET quantity = 387 WHERE variant_id = 5 AND location_id = 5 AND batch_id = 5;
 
 -- 12. WORK SHIFTS (Matching JPA Schema)
 -- 12. WORK SHIFTS (Matching JPA Schema)
-INSERT IGNORE INTO work_shifts (
-   shift_code, shift_name, start_time, end_time, break_start_time, break_end_time,
-   shift_type, overtime_multiplier, night_shift_bonus, weekend_bonus, holiday_bonus,
-   minimum_staff_required, maximum_staff_allowed, allow_early_clock_in, allow_late_clock_out,
-    early_clock_in_minutes, late_clock_out_minutes, grace_peroid_minutes, status, effective_from, effective_to,
-   requires_approval, description
-) VALUES
-('SHIFT-MORNING', 'Ca Sáng', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 2, 5, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca sáng từ 8h đến 17h, nghỉ trưa 1 tiếng'),
-('SHIFT-AFTERNOON', 'Ca Chiều', '13:00:00', '22:00:00', '18:00:00', '18:30:00', 'REGULAR', 1.50, 10.00, 0.00, 0.00, 2, 4, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca chiều từ 13h đến 22h, nghỉ 30 phút'),
-('SHIFT-EVENING', 'Ca Tối', '18:00:00', '23:00:00', NULL, NULL, 'NIGHT', 1.50, 15.00, 0.00, 0.00, 2, 3, TRUE, TRUE, 10, 20, 5, 'ACTIVE', NULL, NULL, FALSE, 'Ca tối từ 18h đến 23h, phụ cấp ca đêm 15%'),
-('SHIFT-WEEKEND', 'Ca Cuối Tuần', '09:00:00', '18:00:00', '12:30:00', '13:30:00', 'WEEKEND', 2.00, 0.00, 20.00, 0.00, 3, 6, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, TRUE, 'Ca cuối tuần từ 9h đến 18h, phụ cấp 20%'),
-('SHIFT-FULLTIME', 'Ca Full-time', '08:00:00', '17:00:00', '12:00:00', '13:00:00', 'REGULAR', 1.50, 0.00, 0.00, 0.00, 1, 3, TRUE, TRUE, 15, 30, 10, 'ACTIVE', NULL, NULL, FALSE, 'Ca full-time chuẩn 8 tiếng');
+INSERT INTO `work_shifts` VALUES (1,_binary '',_binary '','13:00:00.000000',NULL,'12:00:00.000000',NULL,'Ca sÃ¡ng tá»« 8h Ä‘áº¿n 17h, nghá»‰ trÆ°a 1 tiáº¿ng',15,'17:00:00.000000',10,0.00,30,5,2,0.00,1.50,NULL,_binary '\0','SHIFT-MORNING','Ca SÃ¡ng','REGULAR','08:00:00.000000','ACTIVE',NULL,0.00,NULL,NULL,NULL,NULL),(2,_binary '',_binary '','18:30:00.000000',NULL,'18:00:00.000000',NULL,'Ca chiá»u tá»« 13h Ä‘áº¿n 22h, nghá»‰ 30 phÃºt',15,'22:00:00.000000',10,0.00,30,4,2,10.00,1.50,NULL,_binary '\0','SHIFT-AFTERNOON','Ca Chiá»u','REGULAR','13:00:00.000000','ACTIVE',NULL,0.00,NULL,NULL,NULL,NULL),(3,_binary '',_binary '',NULL,NULL,NULL,NULL,'Ca tá»‘i tá»« 18h Ä‘áº¿n 23h, phá»¥ cáº¥p ca Ä‘Ãªm 15%',10,'23:00:00.000000',5,0.00,20,3,2,15.00,1.50,NULL,_binary '\0','SHIFT-EVENING','Ca Tá»‘i','NIGHT','18:00:00.000000','ACTIVE',NULL,0.00,NULL,NULL,NULL,NULL),(4,_binary '',_binary '','13:30:00.000000',NULL,'12:30:00.000000',NULL,'Ca cuá»‘i tuáº§n tá»« 9h Ä‘áº¿n 18h, phá»¥ cáº¥p 20%',15,'18:00:00.000000',10,0.00,30,6,3,0.00,2.00,NULL,_binary '','SHIFT-WEEKEND','Ca Cuá»‘i Tuáº§n','WEEKEND','09:00:00.000000','ACTIVE',NULL,20.00,NULL,NULL,NULL,NULL),(5,_binary '',_binary '','13:00:00.000000',NULL,'12:00:00.000000',NULL,'Ca full-time chuáº©n 8 tiáº¿ng',15,'17:00:00.000000',10,0.00,30,3,1,0.00,1.50,NULL,_binary '\0','SHIFT-FULLTIME','Ca Full-time','REGULAR','08:00:00.000000','ACTIVE',NULL,0.00,NULL,NULL,NULL,NULL);
 
 -- 13. WORK SHIFT ASSIGNMENTS (with expanded employee coverage)
-INSERT IGNORE INTO work_shift_assignments (work_shift_id, user_id, shift_date, status, notes, created_at, updated_at) VALUES
-(1, 1, '2026-02-24', 'ASSIGNED', 'Giám sát hoạt động cửa hàng', NOW(), NOW()),
-(1, 1, '2026-02-25', 'ASSIGNED', NULL, NOW(), NOW()),
-(1, 1, '2026-02-26', 'ASSIGNED', NULL, NOW(), NOW()),
-(1, 1, '2026-02-27', 'ASSIGNED', NULL, NOW(), NOW()),
-(1, 3, '2026-02-24', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
-(1, 3, '2026-02-25', 'ASSIGNED', NULL, NOW(), NOW()),
-(1, 3, '2026-02-26', 'ASSIGNED', NULL, NOW(), NOW()),
-(1, 3, '2026-02-27', 'ASSIGNED', 'Yeu cau nghi ca dang cho xu ly ticket', NOW(), NOW()),
-(1, 5, '2026-02-24', 'ASSIGNED', 'Quản lý kho ca sáng', NOW(), NOW()),
-(1, 5, '2026-02-25', 'ASSIGNED', NULL, NOW(), NOW()),
-(1, 5, '2026-02-26', 'ASSIGNED', NULL, NOW(), NOW()),
-(2, 2, '2026-02-24', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
-(2, 2, '2026-02-25', 'ASSIGNED', NULL, NOW(), NOW()),
-(2, 2, '2026-02-26', 'ASSIGNED', NULL, NOW(), NOW()),
-(2, 2, '2026-02-27', 'ASSIGNED', NULL, NOW(), NOW()),
-(2, 4, '2026-02-24', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
-(2, 4, '2026-02-25', 'ASSIGNED', NULL, NOW(), NOW()),
-(2, 4, '2026-02-26', 'ASSIGNED', NULL, NOW(), NOW()),
-(2, 4, '2026-02-27', 'ASSIGNED', NULL, NOW(), NOW()),
-(3, 3, '2026-02-24', 'ASSIGNED', 'Thu ngân ca tối', NOW(), NOW()),
-(3, 3, '2026-02-25', 'ASSIGNED', NULL, NOW(), NOW()),
-(3, 6, '2026-02-26', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
-(3, 6, '2026-02-27', 'ASSIGNED', NULL, NOW(), NOW()),
-(4, 1, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Quản lý', NOW(), NOW()),
-(4, 2, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Phó quản lý', NOW(), NOW()),
-(4, 3, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Thu ngân', NOW(), NOW()),
-(4, 4, '2026-02-23', 'ASSIGNED', 'Ca cuối tuần - Thu ngân', NOW(), NOW()),
-(4, 6, '2026-02-23', 'ASSIGNED', 'Ca cuối tuần - Bán hàng', NOW(), NOW()),
-(4, 7, '2026-02-22', 'ASSIGNED', 'Ca cuối tuần - Bán hàng', NOW(), NOW()),
+INSERT INTO `work_shift_assignments` VALUES (1,'2026-03-18 01:40:09.000000','GiÃ¡m sÃ¡t hoáº¡t Ä‘á»™ng cá»­a hÃ ng','2026-02-24','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(2,'2026-03-18 01:40:09.000000',NULL,'2026-02-25','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(3,'2026-03-18 01:40:09.000000',NULL,'2026-02-26','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(4,'2026-03-18 01:40:09.000000',NULL,'2026-02-27','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(5,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca sÃ¡ng','2026-02-24','ASSIGNED','2026-03-18 01:40:09.000000',3,1,0),(6,'2026-03-18 01:40:09.000000',NULL,'2026-02-25','ASSIGNED','2026-03-18 01:40:09.000000',3,1,0),(7,'2026-03-18 01:40:09.000000',NULL,'2026-02-26','ASSIGNED','2026-03-18 01:40:09.000000',3,1,0),(8,'2026-03-18 01:40:09.000000','Xin nghá»‰ khÃ´ng lÆ°Æ¡ng','2026-02-27','ABSENT','2026-03-18 01:40:09.000000',3,1,0),(9,'2026-03-18 01:40:09.000000','Quáº£n lÃ½ kho ca sÃ¡ng','2026-02-24','ASSIGNED','2026-03-18 01:40:09.000000',5,1,0),(10,'2026-03-18 01:40:09.000000',NULL,'2026-02-25','ASSIGNED','2026-03-18 01:40:09.000000',5,1,0),(11,'2026-03-18 01:40:09.000000',NULL,'2026-02-26','ASSIGNED','2026-03-18 01:40:09.000000',5,1,0),(12,'2026-03-18 01:40:09.000000','Quáº£n lÃ½ ca chiá»u','2026-02-24','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(13,'2026-03-18 01:40:09.000000',NULL,'2026-02-25','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(14,'2026-03-18 01:40:09.000000',NULL,'2026-02-26','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(15,'2026-03-18 01:40:09.000000',NULL,'2026-02-27','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(16,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca chiá»u','2026-02-24','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(17,'2026-03-18 01:40:09.000000',NULL,'2026-02-25','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(18,'2026-03-18 01:40:09.000000',NULL,'2026-02-26','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(19,'2026-03-18 01:40:09.000000',NULL,'2026-02-27','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(20,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca tá»‘i','2026-02-24','ASSIGNED','2026-03-18 01:40:09.000000',3,3,0),(21,'2026-03-18 01:40:09.000000',NULL,'2026-02-25','ASSIGNED','2026-03-18 01:40:09.000000',3,3,0),(22,'2026-03-18 01:40:09.000000','BÃ¡n hÃ ng ca tá»‘i','2026-02-26','ASSIGNED','2026-03-18 01:40:09.000000',6,3,0),(23,'2026-03-18 01:40:09.000000',NULL,'2026-02-27','ASSIGNED','2026-03-18 01:40:09.000000',6,3,0),(24,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n - Quáº£n lÃ½','2026-02-22','ASSIGNED','2026-03-18 01:40:09.000000',1,4,0),(25,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n - PhÃ³ quáº£n lÃ½','2026-02-22','ASSIGNED','2026-03-18 01:40:09.000000',2,4,0),(26,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n - Thu ngÃ¢n','2026-02-22','ASSIGNED','2026-03-18 01:40:09.000000',3,4,0),(27,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n - Thu ngÃ¢n','2026-02-23','ASSIGNED','2026-03-18 01:40:09.000000',4,4,0),(28,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n - BÃ¡n hÃ ng','2026-02-23','ASSIGNED','2026-03-18 01:40:09.000000',6,4,0),(29,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n - BÃ¡n hÃ ng','2026-02-22','ASSIGNED','2026-03-18 01:40:09.000000',7,4,1),(30,'2026-03-18 01:40:09.000000','GiÃ¡m sÃ¡t Ä‘áº§u tuáº§n','2026-03-02','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(31,'2026-03-18 01:40:09.000000','Quáº£n lÃ½ ca chiá»u Ä‘áº§u tuáº§n','2026-03-02','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(32,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca sÃ¡ng','2026-03-02','ASSIGNED','2026-03-18 01:40:09.000000',3,1,0),(33,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca chiá»u','2026-03-02','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(34,'2026-03-18 01:40:09.000000','Kiá»ƒm kho ca sÃ¡ng','2026-03-02','ASSIGNED','2026-03-18 01:40:09.000000',5,1,0),(35,'2026-03-18 01:40:09.000000','BÃ¡n hÃ ng ca tá»‘i','2026-03-02','ASSIGNED','2026-03-18 01:40:09.000000',6,3,0),(36,'2026-03-18 01:40:09.000000','Há»— trá»£ bÃ¡n hÃ ng ca sÃ¡ng','2026-03-02','ASSIGNED','2026-03-18 01:40:09.000000',7,1,0),(37,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n quáº£n lÃ½','2026-03-01','ASSIGNED','2026-03-18 01:40:09.000000',1,4,0),(38,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n thu ngÃ¢n','2026-03-01','ASSIGNED','2026-03-18 01:40:09.000000',3,4,0),(39,'2026-03-18 01:40:09.000000','Ca cuá»‘i tuáº§n bÃ¡n hÃ ng','2026-03-01','ASSIGNED','2026-03-18 01:40:09.000000',6,4,0),(40,'2026-03-18 01:40:09.000000','GiÃ¡m sÃ¡t ca sÃ¡ng','2026-03-03','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(41,'2026-03-18 01:40:09.000000','Quáº£n lÃ½ ca chiá»u','2026-03-03','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(42,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca sÃ¡ng','2026-03-03','ASSIGNED','2026-03-18 01:40:09.000000',3,1,0),(43,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca chiá»u','2026-03-03','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(44,'2026-03-18 01:40:09.000000','Kiá»ƒm kho ca sÃ¡ng','2026-03-03','ASSIGNED','2026-03-18 01:40:09.000000',5,1,0),(45,'2026-03-18 01:40:09.000000','BÃ¡n hÃ ng ca tá»‘i','2026-03-03','ASSIGNED','2026-03-18 01:40:09.000000',6,3,0),(46,'2026-03-18 01:40:09.000000','Há»— trá»£ bÃ¡n hÃ ng ca sÃ¡ng','2026-03-03','ASSIGNED','2026-03-18 01:40:09.000000',7,1,0),(47,'2026-03-18 01:40:09.000000','GiÃ¡m sÃ¡t ca sÃ¡ng','2026-03-04','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(48,'2026-03-18 01:40:09.000000','Quáº£n lÃ½ ca chiá»u','2026-03-04','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(49,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca sÃ¡ng','2026-03-04','ASSIGNED','2026-03-18 01:40:09.000000',3,1,0),(50,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca chiá»u','2026-03-04','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(51,'2026-03-18 01:40:09.000000','Kiá»ƒm kho ca sÃ¡ng','2026-03-04','ASSIGNED','2026-03-18 01:40:09.000000',5,1,0),(52,'2026-03-18 01:40:09.000000','BÃ¡n hÃ ng ca tá»‘i','2026-03-04','ASSIGNED','2026-03-18 01:40:09.000000',6,3,0),(53,'2026-03-18 01:40:09.000000','Há»— trá»£ bÃ¡n hÃ ng ca sÃ¡ng','2026-03-04','ASSIGNED','2026-03-18 01:40:09.000000',7,1,0),(54,'2026-03-18 01:40:09.000000','GiÃ¡m sÃ¡t ca sÃ¡ng','2026-03-05','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(55,'2026-03-18 01:40:09.000000','Quáº£n lÃ½ ca chiá»u','2026-03-05','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(56,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca sÃ¡ng','2026-03-05','ASSIGNED','2026-03-18 01:40:09.000000',3,1,0),(57,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca chiá»u','2026-03-05','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(58,'2026-03-18 01:40:09.000000','Kiá»ƒm kho ca sÃ¡ng','2026-03-05','ASSIGNED','2026-03-18 01:40:09.000000',5,1,0),(59,'2026-03-18 01:40:09.000000','BÃ¡n hÃ ng ca tá»‘i','2026-03-05','ASSIGNED','2026-03-18 01:40:09.000000',6,3,0),(60,'2026-03-18 01:40:09.000000','Há»— trá»£ bÃ¡n hÃ ng ca sÃ¡ng','2026-03-05','ASSIGNED','2026-03-18 01:40:09.000000',7,1,0),(61,'2026-03-18 01:40:09.000000','GiÃ¡m sÃ¡t ca sÃ¡ng','2026-03-06','ASSIGNED','2026-03-18 01:40:09.000000',1,1,0),(62,'2026-03-18 01:40:09.000000','Quáº£n lÃ½ ca chiá»u','2026-03-06','ASSIGNED','2026-03-18 01:40:09.000000',2,2,0),(63,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca sÃ¡ng','2026-03-06','ASSIGNED','2026-03-18 01:40:09.000000',3,1,0),(64,'2026-03-18 01:40:09.000000','Thu ngÃ¢n ca chiá»u','2026-03-06','ASSIGNED','2026-03-18 01:40:09.000000',4,2,0),(65,'2026-03-18 01:40:09.000000','Kiá»ƒm kho ca sÃ¡ng','2026-03-06','ASSIGNED','2026-03-18 01:40:09.000000',5,1,0),(66,'2026-03-18 01:40:09.000000','BÃ¡n hÃ ng ca tá»‘i','2026-03-06','ASSIGNED','2026-03-18 01:40:09.000000',6,3,0),(67,'2026-03-18 01:40:09.000000','Há»— trá»£ bÃ¡n hÃ ng ca sÃ¡ng','2026-03-06','ASSIGNED','2026-03-18 01:40:09.000000',7,1,0),(68,'2026-03-19 14:48:18.788761',NULL,'2026-03-20','ASSIGNED','2026-03-19 14:48:18.788761',2,2,0);
 
--- Current month assignments để màn hình HR (attendance/payroll) có dữ liệu mặc định
-(1, 1, '2026-03-02', 'ASSIGNED', 'Giám sát đầu tuần', NOW(), NOW()),
-(2, 2, '2026-03-02', 'ASSIGNED', 'Quản lý ca chiều đầu tuần', NOW(), NOW()),
-(1, 3, '2026-03-02', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
-(2, 4, '2026-03-02', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
-(1, 5, '2026-03-02', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
-(3, 6, '2026-03-02', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
-(1, 7, '2026-03-02', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
-(4, 1, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần quản lý', NOW(), NOW()),
-(4, 3, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần thu ngân', NOW(), NOW()),
-(4, 6, '2026-03-01', 'ASSIGNED', 'Ca cuối tuần bán hàng', NOW(), NOW()),
 
--- Bổ sung đủ dữ liệu tháng 3 cho toàn bộ nhân sự để test payroll cá nhân
-(1, 1, '2026-03-03', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
-(2, 2, '2026-03-03', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
-(1, 3, '2026-03-03', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
-(2, 4, '2026-03-03', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
-(1, 5, '2026-03-03', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
-(3, 6, '2026-03-03', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
-(1, 7, '2026-03-03', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
+-- Máº«u phÃ¢n ca bá»• sung cho cÃ¡c ca má»›i (shift_id 6-10)
 
-(1, 1, '2026-03-04', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
-(2, 2, '2026-03-04', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
-(1, 3, '2026-03-04', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
-(2, 4, '2026-03-04', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
-(1, 5, '2026-03-04', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
-(3, 6, '2026-03-04', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
-(1, 7, '2026-03-04', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
-
-(1, 1, '2026-03-05', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
-(2, 2, '2026-03-05', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
-(1, 3, '2026-03-05', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
-(2, 4, '2026-03-05', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
-(1, 5, '2026-03-05', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
-(3, 6, '2026-03-05', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
-(1, 7, '2026-03-05', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW()),
-
-(1, 1, '2026-03-06', 'ASSIGNED', 'Giám sát ca sáng', NOW(), NOW()),
-(2, 2, '2026-03-06', 'ASSIGNED', 'Quản lý ca chiều', NOW(), NOW()),
-(1, 3, '2026-03-06', 'ASSIGNED', 'Thu ngân ca sáng', NOW(), NOW()),
-(2, 4, '2026-03-06', 'ASSIGNED', 'Thu ngân ca chiều', NOW(), NOW()),
-(1, 5, '2026-03-06', 'ASSIGNED', 'Kiểm kho ca sáng', NOW(), NOW()),
-(3, 6, '2026-03-06', 'ASSIGNED', 'Bán hàng ca tối', NOW(), NOW()),
-(1, 7, '2026-03-06', 'ASSIGNED', 'Hỗ trợ bán hàng ca sáng', NOW(), NOW());
 
 -- 14. CAMPAIGNS
-INSERT IGNORE INTO campaigns (campaign_code, campaign_name, campaign_type, description, start_date, end_date, status, budget, target_revenue, is_public, created_by, created_at, updated_at) VALUES
-('CAMP-202602-001', 'Tết Sale 2026', 'SEASONAL', 'Khuyến mãi Tết Nguyên Đán', '2026-02-10', '2026-02-20', 'ACTIVE', 50000000.00, 200000000.00, TRUE, 2, NOW(), NOW()),
-('CAMP-202602-002', 'Flash Sale Cuối Tuần', 'FLASH_SALE', 'Giảm giá sốc cuối tuần', '2026-02-14', '2026-02-15', 'ACTIVE', 10000000.00, 30000000.00, TRUE, 2, NOW(), NOW()),
-('CAMP-PROMO-2024-001', 'Tet Sale 2024', 'SEASONAL', 'Migrated from legacy promotions', '2024-02-01', '2024-02-29', 'COMPLETED', NULL, NULL, TRUE, 2, NOW(), NOW()),
-('CAMP-PROMO-2024-002', 'Back to School', 'SEASONAL', 'Migrated from legacy promotions', '2024-08-01', '2024-08-31', 'COMPLETED', NULL, NULL, TRUE, 2, NOW(), NOW()),
-('CAMP-PROMO-2024-003', 'Black Friday', 'FLASH_SALE', 'Migrated from legacy promotions', '2024-11-24', '2024-11-30', 'COMPLETED', NULL, NULL, TRUE, 2, NOW(), NOW()),
-('CAMP-PROMO-2024-004', 'Christmas Sale', 'SEASONAL', 'Migrated from legacy promotions', '2024-12-20', '2024-12-31', 'COMPLETED', NULL, NULL, TRUE, 2, NOW(), NOW()),
-('CAMP-PROMO-2025-001', 'New Year Deal', 'SEASONAL', 'Migrated from legacy promotions', '2025-01-01', '2025-01-15', 'COMPLETED', NULL, NULL, TRUE, 2, NOW(), NOW());
+INSERT INTO `campaigns` VALUES (1,NULL,NULL,NULL,NULL,50000000.00,'CAMP-202602-001','Táº¿t Sale 2026','SEASONAL','2026-03-18 01:40:09.000000','Khuyáº¿n mÃ£i Táº¿t NguyÃªn ÄÃ¡n','2026-02-20',NULL,NULL,_binary '',NULL,'2026-02-10',NULL,'ACTIVE',NULL,200000000.00,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,2,0),(2,NULL,NULL,NULL,NULL,10000000.00,'CAMP-202602-002','Flash Sale Cuá»‘i Tuáº§n','FLASH_SALE','2026-03-18 01:40:09.000000','Giáº£m giÃ¡ sá»‘c cuá»‘i tuáº§n','2026-02-15',NULL,NULL,_binary '',NULL,'2026-02-14',NULL,'ACTIVE',NULL,30000000.00,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,2,0),(3,NULL,NULL,NULL,NULL,NULL,'CAMP-PROMO-2024-001','Tet Sale 2024','SEASONAL','2026-03-18 01:40:09.000000','Migrated from legacy promotions','2024-02-29',NULL,NULL,_binary '',NULL,'2024-02-01',NULL,'COMPLETED',NULL,NULL,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,2,0),(4,NULL,NULL,NULL,NULL,NULL,'CAMP-PROMO-2024-002','Back to School','SEASONAL','2026-03-18 01:40:09.000000','Migrated from legacy promotions','2024-08-31',NULL,NULL,_binary '',NULL,'2024-08-01',NULL,'COMPLETED',NULL,NULL,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,2,0),(5,NULL,NULL,NULL,NULL,NULL,'CAMP-PROMO-2024-003','Black Friday','FLASH_SALE','2026-03-18 01:40:09.000000','Migrated from legacy promotions','2024-11-30',NULL,NULL,_binary '',NULL,'2024-11-24',NULL,'COMPLETED',NULL,NULL,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,2,0),(6,NULL,NULL,NULL,NULL,NULL,'CAMP-PROMO-2024-004','Christmas Sale','SEASONAL','2026-03-18 01:40:09.000000','Migrated from legacy promotions','2024-12-31',NULL,NULL,_binary '',NULL,'2024-12-20',NULL,'COMPLETED',NULL,NULL,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,2,0),(7,NULL,NULL,NULL,NULL,NULL,'CAMP-PROMO-2025-001','New Year Deal','SEASONAL','2026-03-18 01:40:09.000000','Migrated from legacy promotions','2025-01-15',NULL,NULL,_binary '',NULL,'2025-01-01',NULL,'COMPLETED',NULL,NULL,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,2,0),(8,NULL,NULL,NULL,'https://res.cloudinary.com/didvvefmu/image/upload/v1773928928/smalltrend/crm/campaigns/qefbmzf1nvfpoojagx1x.jpg',NULL,'CAMP-2026-03','Khai TrÆ°Æ¡ng','PROMOTION','2026-03-19 14:02:08.264366','','2026-04-05',NULL,NULL,_binary '',NULL,'2026-03-19',NULL,'ACTIVE',NULL,NULL,NULL,0,'2026-03-19 15:36:09.943682',NULL,NULL,1);
 
 -- 15. COUPONS
-INSERT IGNORE INTO coupons (coupon_code, coupon_name, description, coupon_type, campaign_id, discount_percent, discount_amount, max_discount_amount, min_purchase_amount, start_date, end_date, total_usage_limit, usage_per_customer, status, created_by, created_at, updated_at) VALUES
-('WELCOME10', 'Giảm 10% Đơn Đầu', 'Mã giảm 10% cho đơn hàng đầu tiên', 'PERCENTAGE', 1, 10.00, NULL, 50000.00, 100000.00, '2026-02-01', '2026-03-31', 1000, 1, 'ACTIVE', 2, NOW(), NOW()),
-('FLASH50K', 'Giảm 50K Flash Sale', 'Giảm ngay 50k cho đơn từ 300k', 'FIXED_AMOUNT', 2, NULL, 50000.00, NULL, 300000.00, '2026-02-14', '2026-02-15', 500, 2, 'ACTIVE', 2, NOW(), NOW());
+INSERT INTO `coupons` VALUES (1,NULL,NULL,'WELCOME10','Giáº£m 10% ÄÆ¡n Äáº§u','PERCENTAGE','2026-03-18 01:40:09.000000',1,'MÃ£ giáº£m 10% cho Ä‘Æ¡n hÃ ng Ä‘áº§u tiÃªn',NULL,10.00,'2026-03-31',NULL,NULL,NULL,50000.00,100000.00,NULL,'2026-02-01',NULL,'ACTIVE',1000,'2026-03-19 13:16:19.205862',1,1,2),(2,NULL,NULL,'FLASH50K','Giáº£m 50K Flash Sale','FIXED_AMOUNT','2026-03-18 01:40:09.000000',NULL,'Giáº£m ngay 50k cho Ä‘Æ¡n tá»« 300k',50000.00,NULL,'2026-02-15',NULL,NULL,NULL,NULL,300000.00,NULL,'2026-02-14',NULL,'ACTIVE',500,'2026-03-18 01:40:09.000000',2,2,2),(3,NULL,NULL,'SUMMER2026','SUMMER26','PERCENTAGE','2026-03-19 14:08:12.613974',0,'',NULL,10.00,'2026-03-28',NULL,NULL,NULL,200000.00,NULL,NULL,'2026-03-19',NULL,'ACTIVE',NULL,'2026-03-19 15:36:44.695509',NULL,8,NULL);
 
 -- 16. PRODUCT COMBOS
-INSERT IGNORE INTO product_combos (
-  combo_code, combo_name, description, image_url,
-  original_price, combo_price, saved_amount, discount_percent,
-  valid_from, valid_to, is_active,
-  max_quantity_per_order, total_sold, stock_limit,
-  combo_type, is_featured, display_order, tags,
-  status, created_by, created_at, updated_at
-) VALUES 
-
-('CB-SNACK-1','Combo Siêu Ăn Vặt','Gói snack tổng hợp cho cuối tuần',NULL,31000,25000,6000,19.35,'2026-02-01','2026-12-31',TRUE,5,0,100,'DISCOUNT',TRUE,1,'snack,combo,hot','ACTIVE',1,NOW(),NOW()),
-
-('CB-DRINK-1','Combo Nước Giải Khát','2 lon Coca và 1 bịch Oishi',NULL,32000,28000,4000,12.50,'2026-02-01','2026-12-31',TRUE,10,0,200,'BUNDLE',FALSE,2,'drink,summer','ACTIVE',1,NOW(),NOW()),
-
-('COMBO-BREAKFAST','Combo Sáng Năng Động','Sữa + Bánh mì + Nước ngọt',NULL,60000,50000,10000,16.67,'2026-02-01','2026-03-31',TRUE,10,0,100,'BUNDLE',FALSE,3,'breakfast','ACTIVE',2,NOW(),NOW()),
-
-('COMBO-SNACK','Combo Snack Vui Vẻ','Snack + Nước ngọt',NULL,20000,18000,2000,10.00,'2026-02-14','2026-02-28',TRUE,10,0,100,'DISCOUNT',FALSE,4,'snack','ACTIVE',2,NOW(),NOW()),
-
-('CB-MILK-1','Combo Sữa Gia Đình','Sữa Vinamilk + TH Milk',NULL,60000,52000,8000,13.33,'2026-02-01','2026-12-31',TRUE,10,0,100,'BUNDLE',FALSE,5,'milk,family','ACTIVE',1,NOW(),NOW()),
-
-('CB-NOODLE-1','Combo Mì Tiết Kiệm','Mì Acecook + Mì Vifon',NULL,45000,39000,6000,13.33,'2026-02-01','2026-12-31',TRUE,10,0,150,'DISCOUNT',FALSE,6,'noodle,combo','ACTIVE',1,NOW(),NOW()),
-
-('CB-PARTY-1','Combo Party Nhỏ','Snack + Nước + Kẹo',NULL,70000,59000,11000,15.71,'2026-02-01','2026-12-31',TRUE,5,0,80,'BUNDLE',TRUE,7,'party,snack','ACTIVE',1,NOW(),NOW()),
-
-('CB-COFFEE-1','Combo Cà Phê Sáng','Cà phê + Snack',NULL,30000,26000,4000,13.33,'2026-02-01','2026-12-31',TRUE,10,0,120,'DISCOUNT',FALSE,8,'coffee,morning','ACTIVE',1,NOW(),NOW()),
-
-('CB-SUMMER-1','Combo Mùa Hè','Pepsi + Coca + Snack',NULL,50000,43000,7000,14.00,'2026-04-01','2026-08-31',TRUE,10,0,200,'SUMMER',TRUE,9,'summer,drink','ACTIVE',1,NOW(),NOW()),
-
-('CB-KIDS-1','Combo Trẻ Em','Kẹo + Snack + Sữa',NULL,35000,30000,5000,14.28,'2026-02-01','2026-12-31',TRUE,10,0,120,'BUNDLE',TRUE,10,'kids,candy','ACTIVE',1,NOW(),NOW());
+INSERT INTO `product_combos` VALUES (1,'CB-SNACK-1','Combo SiÃªu Ä‚n Váº·t',200000.00,'DISCOUNT','2026-03-18 01:40:09.000000','GÃ³i snack tá»•ng há»£p cho cuá»‘i tuáº§n',12.28,1,'https://res.cloudinary.com/didvvefmu/image/upload/v1773919231/smalltrend/user-avatars/sbj0qhwxse75lpp3z4r6.jpg',_binary '',_binary '',5,228000.00,28000.00,'ACTIVE',100,'snack,combo,hot',0,'2026-03-19 11:51:12.370454','2026-02-01','2026-12-31',1),(2,'CB-DRINK-1','Combo NÆ°á»›c Giáº£i KhÃ¡t',30000.00,'BUNDLE','2026-03-18 01:40:09.000000','2 lon Coca vÃ  1 bá»‹ch Oishi',22.68,2,'https://res.cloudinary.com/didvvefmu/image/upload/v1773923203/smalltrend/user-avatars/fsfoh612tomv6pii99xz.jpg',_binary '',_binary '\0',10,38800.00,8800.00,'ACTIVE',200,'drink,summer',0,'2026-03-19 12:26:40.038268','2026-02-01','2026-12-31',1),(3,'COMBO-BREAKFAST','Combo SÃ¡ng NÄƒng Äá»™ng',30000.00,'BUNDLE','2026-03-18 01:40:09.000000','Sá»¯a +MÃ¬ gÃ³i',9.09,3,'https://res.cloudinary.com/didvvefmu/image/upload/v1773923539/smalltrend/user-avatars/asdtvrwzaqjzfvtha0gn.jpg',_binary '',_binary '\0',10,33000.00,3000.00,'ACTIVE',100,'breakfast',0,'2026-03-19 12:32:16.273987','2026-02-01','2026-03-31',2),(4,'COMBO-SNACK','Combo Snack Vui Váº»',40000.00,'DISCOUNT','2026-03-18 01:40:09.000000','Snack + NÆ°á»›c ngá»t',14.53,4,'https://res.cloudinary.com/didvvefmu/image/upload/v1773940913/smalltrend/user-avatars/rcobnefh5bxxnhitbgdm.jpg',_binary '',_binary '\0',10,46800.00,6800.00,'ACTIVE',100,'snack',0,'2026-03-19 17:21:50.415131','2026-02-14','2026-02-28',2),(5,'CB-MILK-1','Combo NÆ°á»›c TÆ°Æ¡ng',84000.00,'BUNDLE','2026-03-18 01:40:09.000000','',4.55,5,'https://res.cloudinary.com/didvvefmu/image/upload/v1773941306/smalltrend/user-avatars/bmbsduhekrndip7f73uu.jpg',_binary '',_binary '\0',10,88000.00,4000.00,'ACTIVE',100,'milk,family',0,'2026-03-19 17:28:22.847343','2026-02-01','2026-12-31',1),(6,'CB-NOODLE-1','Combo MÃ¬ Tiáº¿t Kiá»‡m',39000.00,'DISCOUNT','2026-03-18 01:40:09.000000','MÃ¬ Acecook + MÃ¬ Omachi\n',10.34,6,'https://res.cloudinary.com/didvvefmu/image/upload/v1773941731/smalltrend/user-avatars/sjwafuigae05bs83vsyg.jpg',_binary '',_binary '\0',10,43500.00,4500.00,'ACTIVE',150,'noodle,combo',0,'2026-03-19 17:53:31.362532','2026-02-01','2026-12-31',1),(9,'CB-SUMMER-1','Combo MÃ¹a HÃ¨',60000.00,'SUMMER','2026-03-18 01:40:09.000000','Pepsi + Coca + Snack',10.18,9,'https://res.cloudinary.com/didvvefmu/image/upload/v1773942104/smalltrend/user-avatars/xr8eanwle2ctfrites4q.jpg',_binary '',_binary '',10,66800.00,6800.00,'ACTIVE',200,'summer,drink',0,'2026-03-19 17:41:41.199506','2026-04-01','2026-08-31',1);
 
 
 -- PRODUCT COMBO ITEMS
-INSERT IGNORE INTO product_combo_items (
-combo_id, product_variant_id, quantity, display_order, is_optional
-) VALUES
-
--- Combo 1
-(1,5,2,1,FALSE),
-(1,17,1,2,FALSE),
-(1,10,4,3,FALSE),
-
--- Combo 2
-(2,4,2,1,FALSE),
-(2,5,1,2,FALSE),
-
--- Combo 3
-(3,1,1,1,FALSE),
-(3,3,1,2,FALSE),
-(3,4,1,3,FALSE),
-
--- Combo 4
-(4,5,2,1,FALSE),
-(4,4,2,2,FALSE),
-
--- Combo 5
-(5,1,2,1,FALSE),
-(5,2,2,2,FALSE),
-
--- Combo 6
-(6,12,3,1,FALSE),
-(6,13,3,2,FALSE),
-
--- Combo 7
-(7,5,2,1,FALSE),
-(7,4,2,2,FALSE),
-(7,10,3,3,FALSE),
-
--- Combo 8
-(8,14,1,1,FALSE),
-(8,5,1,2,FALSE),
-
--- Combo 9
-(9,4,2,1,FALSE),
-(9,18,2,2,FALSE),
-(9,5,1,3,FALSE),
-
--- Combo 10
-(10,10,3,1,FALSE),
-(10,5,1,2,FALSE),
-(10,1,1,3,FALSE);
+INSERT INTO `product_combo_items` VALUES (37,_binary '\0',0,_binary '\0',2,1,NULL,2,2,4),(38,_binary '\0',0,_binary '\0',1,1,NULL,1,2,5),(41,_binary '\0',0,_binary '\0',1,1,NULL,1,3,1),(42,_binary '\0',0,_binary '\0',1,1,NULL,1,3,13),(43,_binary '\0',0,_binary '\0',2,1,NULL,2,1,5),(44,_binary '\0',0,_binary '\0',1,1,NULL,1,1,17),(45,_binary '\0',0,_binary '\0',4,1,NULL,4,1,10),(46,_binary '\0',0,_binary '\0',2,1,NULL,2,4,5),(47,_binary '\0',0,_binary '\0',2,1,NULL,2,4,4),(48,_binary '\0',0,_binary '\0',1,1,NULL,1,5,6),(49,_binary '\0',0,_binary '\0',1,1,NULL,1,5,14),(50,_binary '\0',0,_binary '\0',1,1,NULL,1,5,20),(51,_binary '\0',0,_binary '\0',1,1,NULL,1,5,23),(54,_binary '\0',0,_binary '\0',2,1,NULL,2,9,4),(55,_binary '\0',0,_binary '\0',2,1,NULL,2,9,18),(56,_binary '\0',0,_binary '\0',2,1,NULL,2,9,5),(57,_binary '\0',0,_binary '\0',3,1,NULL,3,6,12),(58,_binary '\0',0,_binary '\0',3,1,NULL,3,6,13);
 
 -- 17. CASH REGISTERS
-INSERT IGNORE INTO cash_registers (register_code, register_name, store_name, location, register_type, status, device_id, current_cash, opening_balance, current_operator_id, session_start_time, total_transactions_today, created_at, updated_at) VALUES
-('POS-001', 'Quầy 1', 'SmallTrend Store', 'Front Counter', 'MAIN', 'ACTIVE', 'DEV-POS-001', 5000000.00, 2000000.00, 3, NOW(), 0, NOW(), NOW()),
-('POS-002', 'Quầy 2', 'SmallTrend Store', 'Express Counter', 'EXPRESS', 'ACTIVE', 'DEV-POS-002', 3000000.00, 1000000.00, NULL, NULL, 0, NOW(), NOW());
+INSERT INTO `cash_registers` VALUES (1,'2026-03-18 01:40:09.000000',5000000.00,'DEV-POS-001',NULL,NULL,'Front Counter',NULL,NULL,2000000.00,'POS-001','Quáº§y 1','MAIN','2026-03-18 01:40:09.000000','ACTIVE','SmallTrend Store',NULL,NULL,NULL,0,'2026-03-18 01:40:09.000000',NULL,3),(2,'2026-03-18 01:40:09.000000',3000000.00,'DEV-POS-002',NULL,NULL,'Express Counter',NULL,NULL,1000000.00,'POS-002','Quáº§y 2','EXPRESS',NULL,'ACTIVE','SmallTrend Store',NULL,NULL,NULL,0,'2026-03-18 01:40:09.000000',NULL,NULL);
 
 -- 18. SALE ORDERS (2026)
-INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES
-('SO-20260224-001', 2, 3, 1, '2026-02-24 09:30:00', 49000.00, 4900.00, 0.00, 53900.00, 'CASH', 'COMPLETED', 'Đơn mua nhanh buổi sáng', '2026-02-24 09:30:00', '2026-02-24 09:31:00'),
-('SO-20260224-002', 1, 3, 1, '2026-02-24 19:20:00', 93000.00, 9300.00, 5000.00, 97300.00, 'CARD', 'COMPLETED', 'Khách thành viên đổi điểm', '2026-02-24 19:20:00', '2026-02-24 19:23:00'),
-('SO-20260225-001', 3, 3, 2, '2026-02-25 20:10:00', 32000.00, 3200.00, 0.00, 35200.00, 'MOMO', 'REFUNDED', 'Hoàn tiền 1 phần do sản phẩm lỗi', '2026-02-25 20:10:00', '2026-02-25 21:00:00');
+INSERT INTO `sale_orders` VALUES (1,'2026-02-24 09:30:00.000000',0.00,'ÄÆ¡n mua nhanh buá»•i sÃ¡ng','SO-20260224-001','2026-02-24 09:30:00.000000','CASH','COMPLETED',49000.00,4900.00,53900.00,'2026-02-24 09:31:00.000000',1,3,2),(2,'2026-02-24 19:20:00.000000',5000.00,'KhÃ¡ch thÃ nh viÃªn Ä‘á»•i Ä‘iá»ƒm','SO-20260224-002','2026-02-24 19:20:00.000000','CARD','COMPLETED',93000.00,9300.00,97300.00,'2026-02-24 19:23:00.000000',1,3,1),(3,'2026-02-25 20:10:00.000000',0.00,'HoÃ n tiá»n 1 pháº§n do sáº£n pháº©m lá»—i','SO-20260225-001','2026-02-25 20:10:00.000000','MOMO','REFUNDED',32000.00,3200.00,35200.00,'2026-02-25 21:00:00.000000',2,3,3),(4,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy sales_orders','SO-LEG-20240220-001','2024-02-20 10:30:00.000000','CASH','COMPLETED',175000.00,0.00,175000.00,'2026-03-18 01:40:09.000000',1,3,1),(5,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy sales_orders','SO-LEG-20240221-002','2024-02-21 14:15:00.000000','CREDIT_CARD','COMPLETED',95000.00,0.00,95000.00,'2026-03-18 01:40:09.000000',1,3,2),(6,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy sales_orders','SO-LEG-20240222-003','2024-02-22 09:45:00.000000','BANK_TRANSFER','COMPLETED',58000.00,0.00,58000.00,'2026-03-18 01:40:09.000000',1,5,3),(7,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy sales_orders','SO-LEG-20240223-004','2024-02-23 16:20:00.000000','CASH','COMPLETED',120000.00,0.00,120000.00,'2026-03-18 01:40:09.000000',2,3,4),(8,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy sales_orders','SO-LEG-20240224-005','2024-02-24 11:10:00.000000','QR_CODE','COMPLETED',67000.00,0.00,67000.00,'2026-03-18 01:40:09.000000',2,5,4),(9,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-001','2026-02-24 09:30:00.000000','CASH','COMPLETED',48000.00,0.00,48000.00,'2026-03-18 01:40:09.000000',1,3,1),(10,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-002','2026-02-24 19:20:00.000000','CARD','COMPLETED',95000.00,0.00,95000.00,'2026-03-18 01:40:09.000000',1,3,2),(11,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-003','2026-02-25 20:10:00.000000','MOMO','COMPLETED',30000.00,0.00,30000.00,'2026-03-18 01:40:09.000000',2,3,3),(12,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-004','2026-02-26 10:15:00.000000','CASH','COMPLETED',25000.00,0.00,25000.00,'2026-03-18 01:40:09.000000',1,3,1),(13,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-005','2026-02-26 14:30:00.000000','CASH','COMPLETED',92000.00,0.00,92000.00,'2026-03-18 01:40:09.000000',2,3,4),(14,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-006','2026-02-27 08:45:00.000000','MOMO','COMPLETED',51000.00,0.00,51000.00,'2026-03-18 01:40:09.000000',1,3,2),(15,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-007','2026-02-27 15:20:00.000000','CARD','COMPLETED',165000.00,0.00,165000.00,'2026-03-18 01:40:09.000000',2,3,3),(16,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-008','2026-02-27 20:00:00.000000','CASH','COMPLETED',40000.00,0.00,40000.00,'2026-03-18 01:40:09.000000',1,3,1),(17,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-009','2026-02-28 09:10:00.000000','CARD','COMPLETED',95000.00,0.00,95000.00,'2026-03-18 01:40:09.000000',2,3,4),(18,'2026-03-18 01:40:09.000000',0.00,'Migrated from legacy purchase_history','SO-PH-010','2026-02-28 16:30:00.000000','CASH','COMPLETED',72000.00,0.00,72000.00,'2026-03-18 01:40:09.000000',2,3,3),(19,'2026-03-01 09:15:00.000000',0.00,'ÄÆ¡n sÃ¡ng Ä‘áº§u thÃ¡ng 3','SO-20260301-001','2026-03-01 09:15:00.000000','CASH','COMPLETED',62000.00,6200.00,68200.00,'2026-03-01 09:16:00.000000',1,3,1),(20,'2026-03-01 14:50:00.000000',0.00,'KhÃ¡ch mua sá»‘ lÆ°á»£ng lá»›n','SO-20260301-002','2026-03-01 14:50:00.000000','CARD','COMPLETED',105000.00,10500.00,115500.00,'2026-03-01 14:52:00.000000',2,4,4),(21,'2026-03-02 10:30:00.000000',0.00,'ÄÆ¡n thanh toÃ¡n vÃ­ Ä‘iá»‡n tá»­','SO-20260302-001','2026-03-02 10:30:00.000000','MOMO','COMPLETED',45000.00,4500.00,49500.00,'2026-03-02 10:31:00.000000',1,3,2),(22,'2026-03-02 18:20:00.000000',0.00,'ÄÆ¡n chiá»u tá»‘i','SO-20260302-002','2026-03-02 18:20:00.000000','CASH','COMPLETED',88000.00,8800.00,96800.00,'2026-03-02 18:22:00.000000',2,4,3),(23,'2026-03-03 08:45:00.000000',0.00,'ÄÆ¡n sÃ¡ng sá»›m','SO-20260303-001','2026-03-03 08:45:00.000000','CASH','COMPLETED',53000.00,5300.00,58300.00,'2026-03-03 08:46:00.000000',1,3,1),(24,'2026-03-18 01:40:09.000000',0.00,'ÄÆ¡n hÃ´m nay - sÃ¡ng sá»›m','SO-20260304-001','2026-03-18 01:40:09.000000','CASH','COMPLETED',37000.00,3700.00,40700.00,'2026-03-18 01:40:09.000000',1,3,2),(25,'2026-03-18 01:40:09.000000',5000.00,'ÄÆ¡n hÃ´m nay - khÃ¡ch thÃ nh viÃªn','SO-20260304-002','2026-03-18 01:40:09.000000','CARD','COMPLETED',93000.00,9300.00,97300.00,'2026-03-18 01:40:09.000000',2,4,1),(26,'2026-03-18 01:40:09.000000',0.00,'ÄÆ¡n hÃ´m nay - mua nhiá»u máº·t hÃ ng','SO-20260304-003','2026-03-18 01:40:09.000000','MOMO','COMPLETED',126000.00,12600.00,138600.00,'2026-03-18 01:40:09.000000',1,3,4),(27,'2026-03-18 01:40:09.000000',0.00,'ÄÆ¡n hÃ´m nay - buá»•i chiá»u','SO-20260304-004','2026-03-18 01:40:09.000000','CASH','COMPLETED',48000.00,4800.00,52800.00,'2026-03-18 01:40:09.000000',2,4,3);
+
+
+
 
 -- Legacy sales_orders migrated to sale_orders
-INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES
-('SO-LEG-20240220-001', 1, 3, 1, '2024-02-20 10:30:00', 175000.00, 0.00, 0.00, 175000.00, 'CASH', 'COMPLETED', 'Migrated from legacy sales_orders', NOW(), NOW()),
-('SO-LEG-20240221-002', 2, 3, 1, '2024-02-21 14:15:00', 95000.00, 0.00, 0.00, 95000.00, 'CREDIT_CARD', 'COMPLETED', 'Migrated from legacy sales_orders', NOW(), NOW()),
-('SO-LEG-20240222-003', 3, 5, 1, '2024-02-22 09:45:00', 58000.00, 0.00, 0.00, 58000.00, 'BANK_TRANSFER', 'COMPLETED', 'Migrated from legacy sales_orders', NOW(), NOW()),
-('SO-LEG-20240223-004', 4, 3, 2, '2024-02-23 16:20:00', 120000.00, 0.00, 0.00, 120000.00, 'CASH', 'COMPLETED', 'Migrated from legacy sales_orders', NOW(), NOW()),
-('SO-LEG-20240224-005', 4, 5, 2, '2024-02-24 11:10:00', 67000.00, 0.00, 0.00, 67000.00, 'QR_CODE', 'COMPLETED', 'Migrated from legacy sales_orders', NOW(), NOW());
+
 
 -- Purchase history migrated to additional sale_orders
-INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES
-('SO-PH-001', 1, 3, 1, '2026-02-24 09:30:00', 48000.00, 0.00, 0.00, 48000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-002', 2, 3, 1, '2026-02-24 19:20:00', 95000.00, 0.00, 0.00, 95000.00, 'CARD', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-003', 3, 3, 2, '2026-02-25 20:10:00', 30000.00, 0.00, 0.00, 30000.00, 'MOMO', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-004', 1, 3, 1, '2026-02-26 10:15:00', 25000.00, 0.00, 0.00, 25000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-005', 4, 3, 2, '2026-02-26 14:30:00', 92000.00, 0.00, 0.00, 92000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-006', 2, 3, 1, '2026-02-27 08:45:00', 51000.00, 0.00, 0.00, 51000.00, 'MOMO', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-007', 3, 3, 2, '2026-02-27 15:20:00', 165000.00, 0.00, 0.00, 165000.00, 'CARD', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-008', 1, 3, 1, '2026-02-27 20:00:00', 40000.00, 0.00, 0.00, 40000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-009', 4, 3, 2, '2026-02-28 09:10:00', 95000.00, 0.00, 0.00, 95000.00, 'CARD', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW()),
-('SO-PH-010', 3, 3, 2, '2026-02-28 16:30:00', 72000.00, 0.00, 0.00, 72000.00, 'CASH', 'COMPLETED', 'Migrated from legacy purchase_history', NOW(), NOW());
+
 
 -- March 2026 orders (past days + today)
-INSERT IGNORE INTO sale_orders (order_code, customer_id, cashier_id, cash_register_id, order_date, subtotal, tax_amount, discount_amount, total_amount, payment_method, status, notes, created_at, updated_at) VALUES
--- 2026-03-01
-('SO-20260301-001', 1, 3, 1, '2026-03-01 09:15:00', 62000.00, 6200.00, 0.00, 68200.00, 'CASH', 'COMPLETED', 'Đơn sáng đầu tháng 3', '2026-03-01 09:15:00', '2026-03-01 09:16:00'),
-('SO-20260301-002', 4, 4, 2, '2026-03-01 14:50:00', 105000.00, 10500.00, 0.00, 115500.00, 'CARD', 'COMPLETED', 'Khách mua số lượng lớn', '2026-03-01 14:50:00', '2026-03-01 14:52:00'),
--- 2026-03-02
-('SO-20260302-001', 2, 3, 1, '2026-03-02 10:30:00', 45000.00, 4500.00, 0.00, 49500.00, 'MOMO', 'COMPLETED', 'Đơn thanh toán ví điện tử', '2026-03-02 10:30:00', '2026-03-02 10:31:00'),
-('SO-20260302-002', 3, 4, 2, '2026-03-02 18:20:00', 88000.00, 8800.00, 0.00, 96800.00, 'CASH', 'COMPLETED', 'Đơn chiều tối', '2026-03-02 18:20:00', '2026-03-02 18:22:00'),
--- 2026-03-03
-('SO-20260303-001', 1, 3, 1, '2026-03-03 08:45:00', 53000.00, 5300.00, 0.00, 58300.00, 'CASH', 'COMPLETED', 'Đơn sáng sớm', '2026-03-03 08:45:00', '2026-03-03 08:46:00'),
--- 2026-03-04 today (NOW)
-('SO-20260304-001', 2, 3, 1, NOW(), 37000.00, 3700.00, 0.00, 40700.00, 'CASH', 'COMPLETED', 'Đơn hôm nay - sáng sớm', NOW(), NOW()),
-('SO-20260304-002', 1, 4, 2, NOW(), 93000.00, 9300.00, 5000.00, 97300.00, 'CARD', 'COMPLETED', 'Đơn hôm nay - khách thành viên', NOW(), NOW()),
-('SO-20260304-003', 4, 3, 1, NOW(), 126000.00, 12600.00, 0.00, 138600.00, 'MOMO', 'COMPLETED', 'Đơn hôm nay - mua nhiều mặt hàng', NOW(), NOW()),
-('SO-20260304-004', 3, 4, 2, NOW(), 48000.00, 4800.00, 0.00, 52800.00, 'CASH', 'COMPLETED', 'Đơn hôm nay - buổi chiều', NOW(), NOW());
+
 
 -- 19. SALE ORDER ITEMS
-INSERT IGNORE INTO sale_order_items (sale_order_id, product_variant_id, product_name, sku, quantity, unit_price, line_discount_amount, line_tax_amount, line_total_amount, notes) VALUES
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 4, 'Coca Cola 330ml', 'COCA-330ML', 2, 12000.00, 0.00, 2400.00, 26400.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 5, 'Oishi Snack', 'OISHI-50G', 3, 8000.00, 0.00, 2400.00, 26400.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 1, 'Fresh Milk 1L', 'VMILK-1L', 2, 25000.00, 2000.00, 4800.00, 52800.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 3, 'Nescafe 3in1', 'NESCAFE-200G', 1, 45000.00, 3000.00, 4500.00, 46500.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 2, 'Dove Soap 90g', 'DOVE-90G', 2, 15000.00, 0.00, 3000.00, 33000.00, '1 sản phẩm bị lỗi vỏ hộp'),
-
-((SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240220-001'), 1, 'Fresh Milk 1L', 'VMILK-1L', 7, 25000.00, 0.00, 0.00, 175000.00, 'Migrated from legacy sales_order_items'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240221-002'), 2, 'Dove Soap 90g', 'DOVE-90G', 4, 23750.00, 0.00, 0.00, 95000.00, 'Migrated from legacy sales_order_items'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240222-003'), 3, 'Nescafe 3in1', 'NESCAFE-200G', 12, 4833.33, 0.00, 0.00, 57999.96, 'Migrated from legacy sales_order_items'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240223-004'), 4, 'Coca Cola 330ml', 'COCA-330ML', 10, 12000.00, 0.00, 0.00, 120000.00, 'Migrated from legacy sales_order_items'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240224-005'), 5, 'Oishi Snack', 'OISHI-50G', 5, 13400.00, 0.00, 0.00, 67000.00, 'Migrated from legacy sales_order_items'),
-
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-001'), 4, 'Coca Cola 330ml', 'COCA-330ML', 2, 12000.00, 0.00, 0.00, 24000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-001'), 5, 'Oishi Snack', 'OISHI-50G', 3, 8000.00, 0.00, 0.00, 24000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-002'), 1, 'Fresh Milk 1L', 'VMILK-1L', 2, 25000.00, 0.00, 0.00, 50000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-002'), 3, 'Nescafe 3in1', 'NESCAFE-200G', 1, 45000.00, 0.00, 0.00, 45000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-003'), 2, 'Dove Soap 90g', 'DOVE-90G', 2, 15000.00, 0.00, 0.00, 30000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-004'), 1, 'Fresh Milk 1L', 'VMILK-1L', 1, 25000.00, 0.00, 0.00, 25000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-005'), 4, 'Coca Cola 330ml', 'COCA-330ML', 5, 12000.00, 0.00, 0.00, 60000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-005'), 5, 'Oishi Snack', 'OISHI-50G', 4, 8000.00, 0.00, 0.00, 32000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-006'), 4, 'Coca Cola 330ml', 'COCA-330ML', 3, 12000.00, 0.00, 0.00, 36000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-006'), 2, 'Dove Soap 90g', 'DOVE-90G', 1, 15000.00, 0.00, 0.00, 15000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-007'), 1, 'Fresh Milk 1L', 'VMILK-1L', 3, 25000.00, 0.00, 0.00, 75000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-007'), 3, 'Nescafe 3in1', 'NESCAFE-200G', 2, 45000.00, 0.00, 0.00, 90000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-008'), 5, 'Oishi Snack', 'OISHI-50G', 5, 8000.00, 0.00, 0.00, 40000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-009'), 1, 'Fresh Milk 1L', 'VMILK-1L', 2, 25000.00, 0.00, 0.00, 50000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-009'), 2, 'Dove Soap 90g', 'DOVE-90G', 3, 15000.00, 0.00, 0.00, 45000.00, NULL),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-PH-010'), 4, 'Coca Cola 330ml', 'COCA-330ML', 6, 12000.00, 0.00, 0.00, 72000.00, NULL);
+INSERT INTO `sale_order_items` VALUES (1,0.00,2400.00,26400.00,NULL,'Coca Cola 330ml',2,'COCA-330ML',12000.00,1,4),(2,0.00,2400.00,26400.00,NULL,'Oishi Snack',3,'OISHI-50G',8000.00,1,5),(3,2000.00,4800.00,52800.00,NULL,'Fresh Milk 1L',2,'VMILK-1L',25000.00,2,1),(4,3000.00,4500.00,46500.00,NULL,'Nescafe 3in1',1,'NESCAFE-200G',45000.00,2,3),(5,0.00,3000.00,33000.00,'1 sáº£n pháº©m bá»‹ lá»—i vá» há»™p','Dove Soap 90g',2,'DOVE-90G',15000.00,3,2),(6,0.00,0.00,175000.00,'Migrated from legacy sales_order_items','Fresh Milk 1L',7,'VMILK-1L',25000.00,4,1),(7,0.00,0.00,95000.00,'Migrated from legacy sales_order_items','Dove Soap 90g',4,'DOVE-90G',23750.00,5,2),(8,0.00,0.00,57999.96,'Migrated from legacy sales_order_items','Nescafe 3in1',12,'NESCAFE-200G',4833.33,6,3),(9,0.00,0.00,120000.00,'Migrated from legacy sales_order_items','Coca Cola 330ml',10,'COCA-330ML',12000.00,7,4),(10,0.00,0.00,67000.00,'Migrated from legacy sales_order_items','Oishi Snack',5,'OISHI-50G',13400.00,8,5),(11,0.00,0.00,24000.00,NULL,'Coca Cola 330ml',2,'COCA-330ML',12000.00,9,4),(12,0.00,0.00,24000.00,NULL,'Oishi Snack',3,'OISHI-50G',8000.00,9,5),(13,0.00,0.00,50000.00,NULL,'Fresh Milk 1L',2,'VMILK-1L',25000.00,10,1),(14,0.00,0.00,45000.00,NULL,'Nescafe 3in1',1,'NESCAFE-200G',45000.00,10,3),(15,0.00,0.00,30000.00,NULL,'Dove Soap 90g',2,'DOVE-90G',15000.00,11,2),(16,0.00,0.00,25000.00,NULL,'Fresh Milk 1L',1,'VMILK-1L',25000.00,12,1),(17,0.00,0.00,60000.00,NULL,'Coca Cola 330ml',5,'COCA-330ML',12000.00,13,4),(18,0.00,0.00,32000.00,NULL,'Oishi Snack',4,'OISHI-50G',8000.00,13,5),(19,0.00,0.00,36000.00,NULL,'Coca Cola 330ml',3,'COCA-330ML',12000.00,14,4),(20,0.00,0.00,15000.00,NULL,'Dove Soap 90g',1,'DOVE-90G',15000.00,14,2),(21,0.00,0.00,75000.00,NULL,'Fresh Milk 1L',3,'VMILK-1L',25000.00,15,1),(22,0.00,0.00,90000.00,NULL,'Nescafe 3in1',2,'NESCAFE-200G',45000.00,15,3),(23,0.00,0.00,40000.00,NULL,'Oishi Snack',5,'OISHI-50G',8000.00,16,5),(24,0.00,0.00,50000.00,NULL,'Fresh Milk 1L',2,'VMILK-1L',25000.00,17,1),(25,0.00,0.00,45000.00,NULL,'Dove Soap 90g',3,'DOVE-90G',15000.00,17,2),(26,0.00,0.00,72000.00,NULL,'Coca Cola 330ml',6,'COCA-330ML',12000.00,18,4);
 
 -- 20. SALE ORDER HISTORIES
-INSERT IGNORE INTO sale_order_histories (sale_order_id, from_status, to_status, action_type, changed_by_user_id, change_notes, changed_at) VALUES
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-001', '2026-02-24 09:30:00'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán tiền mặt thành công', '2026-02-24 09:31:00'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-001', '2026-02-24 19:20:00'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán thẻ thành công', '2026-02-24 19:23:00'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), NULL, 'PENDING', 'CREATED', 3, 'Khởi tạo đơn tại POS-002', '2026-02-25 20:10:00'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'PENDING', 'COMPLETED', 'PAYMENT_SUCCESS', 3, 'Thanh toán ví điện tử thành công', '2026-02-25 20:15:00'),
-((SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'COMPLETED', 'REFUNDED', 'REFUND_PARTIAL', 2, 'Khách trả lại sản phẩm lỗi', '2026-02-25 21:00:00');
+INSERT INTO `sale_order_histories` VALUES (1,'CREATED','Khá»Ÿi táº¡o Ä‘Æ¡n táº¡i POS-001','2026-02-24 09:30:00.000000',NULL,'PENDING',3,1),(2,'PAYMENT_SUCCESS','Thanh toÃ¡n tiá»n máº·t thÃ nh cÃ´ng','2026-02-24 09:31:00.000000','PENDING','COMPLETED',3,1),(3,'CREATED','Khá»Ÿi táº¡o Ä‘Æ¡n táº¡i POS-001','2026-02-24 19:20:00.000000',NULL,'PENDING',3,2),(4,'PAYMENT_SUCCESS','Thanh toÃ¡n tháº» thÃ nh cÃ´ng','2026-02-24 19:23:00.000000','PENDING','COMPLETED',3,2),(5,'CREATED','Khá»Ÿi táº¡o Ä‘Æ¡n táº¡i POS-002','2026-02-25 20:10:00.000000',NULL,'PENDING',3,3),(6,'PAYMENT_SUCCESS','Thanh toÃ¡n vÃ­ Ä‘iá»‡n tá»­ thÃ nh cÃ´ng','2026-02-25 20:15:00.000000','PENDING','COMPLETED',3,3),(7,'REFUND_PARTIAL','KhÃ¡ch tráº£ láº¡i sáº£n pháº©m lá»—i','2026-02-25 21:00:00.000000','COMPLETED','REFUNDED',2,3);
 
 -- 20.1 CASH TRANSACTIONS
-INSERT IGNORE INTO cash_transactions (
-    transaction_code, register_id, transaction_type, amount, balance_before, balance_after,
-    reason, description, order_id, performed_by, approved_by, approved_at,
-    status, receipt_image_url, notes, transaction_time, created_at, updated_at
-) VALUES
-('CT-20260224-001', 1, 'CASH_IN', 53900.00, 5000000.00, 5053900.00, 'SALE', 'Thu tiền mặt từ đơn SO-20260224-001', (SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 3, 2, '2026-02-24 09:35:00', 'COMPLETED', NULL, 'Đã đối soát cuối ca', '2026-02-24 09:31:00', NOW(), NOW()),
-('CT-20260225-001', 2, 'CASH_OUT', 15000.00, 3000000.00, 2985000.00, 'REFUND', 'Hoàn tiền mặt 1 phần cho đơn SO-20260225-001', (SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 3, 2, '2026-02-25 21:05:00', 'COMPLETED', NULL, 'Refund do sản phẩm lỗi', '2026-02-25 21:00:00', NOW(), NOW());
+INSERT INTO `cash_transactions` VALUES (1,53900.00,'2026-02-24 09:35:00.000000',5053900.00,5000000.00,'2026-03-18 01:40:09.000000','Thu tiá»n máº·t tá»« Ä‘Æ¡n SO-20260224-001','ÄÃ£ Ä‘á»‘i soÃ¡t cuá»‘i ca','SALE',NULL,'COMPLETED','CT-20260224-001','2026-02-24 09:31:00.000000','CASH_IN','2026-03-18 01:40:09.000000',2,1,3,1),(2,15000.00,'2026-02-25 21:05:00.000000',2985000.00,3000000.00,'2026-03-18 01:40:09.000000','HoÃ n tiá»n máº·t 1 pháº§n cho Ä‘Æ¡n SO-20260225-001','Refund do sáº£n pháº©m lá»—i','REFUND',NULL,'COMPLETED','CT-20260225-001','2026-02-25 21:00:00.000000','CASH_OUT','2026-03-18 01:40:09.000000',2,2,3,3);
 
 -- 20.2 COUPON USAGE
-INSERT IGNORE INTO coupon_usage (
-    coupon_id, customer_id, order_id, usage_code, order_amount, discount_amount,
-    status, applied_at, redeemed_at, cancel_reason, created_at, updated_at
-) VALUES
-((SELECT id FROM coupons WHERE coupon_code = 'WELCOME10'), 1, (SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 'USAGE-20260224-001', 102300.00, 5000.00, 'REDEEMED', '2026-02-24 19:20:00', '2026-02-24 19:23:00', NULL, NOW(), NOW()),
-((SELECT id FROM coupons WHERE coupon_code = 'FLASH50K'), 3, (SELECT id FROM sale_orders WHERE order_code = 'SO-20260225-001'), 'USAGE-20260225-001', 35200.00, 0.00, 'CANCELLED', '2026-02-25 20:10:00', NULL, 'Đơn bị hoàn một phần, coupon không ghi nhận', NOW(), NOW());
+INSERT INTO `coupon_usage` VALUES (1,'2026-02-24 19:20:00.000000',NULL,'2026-03-18 01:40:09.000000',5000.00,102300.00,'2026-02-24 19:23:00.000000','REDEEMED','2026-03-18 01:40:09.000000','USAGE-20260224-001',1,1,2),(2,'2026-02-25 20:10:00.000000','ÄÆ¡n bá»‹ hoÃ n má»™t pháº§n, coupon khÃ´ng ghi nháº­n','2026-03-18 01:40:09.000000',0.00,35200.00,NULL,'CANCELLED','2026-03-18 01:40:09.000000','USAGE-20260225-001',2,3,3);
 
 -- 20.3 LOYALTY TRANSACTIONS
-INSERT IGNORE INTO loyalty_transactions (
-    transaction_code, customer_id, transaction_type, points, balance_before, balance_after,
-    order_id, order_amount, points_multiplier, reason, description,
-    expiry_date, performed_by, status, transaction_time, created_at, updated_at
-) VALUES
-('LT-20260224-001', 2, 'EARN', 54, 746, 800, (SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-001'), 53900.00, 1.00, 'PURCHASE', 'Tích điểm từ đơn SO-20260224-001', '2027-02-24 23:59:59', 3, 'COMPLETED', '2026-02-24 09:32:00', NOW(), NOW()),
-('LT-20260224-002', 1, 'EARN', 97, 53, 150, (SELECT id FROM sale_orders WHERE order_code = 'SO-20260224-002'), 97300.00, 1.00, 'PURCHASE', 'Tích điểm từ đơn SO-20260224-002', '2027-02-24 23:59:59', 3, 'COMPLETED', '2026-02-24 19:24:00', NOW(), NOW()),
-('LT-LEG-001', 1, 'EARN', 18, 0, 18, (SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240220-001'), 175000.00, 1.00, 'PURCHASE', 'Migrated from legacy loyalty_history', '2025-02-20 23:59:59', 3, 'COMPLETED', '2024-02-20 10:31:00', NOW(), NOW()),
-('LT-LEG-002', 2, 'EARN', 10, 0, 10, (SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240221-002'), 95000.00, 1.00, 'PURCHASE', 'Migrated from legacy loyalty_history', '2025-02-21 23:59:59', 3, 'COMPLETED', '2024-02-21 14:16:00', NOW(), NOW()),
-('LT-LEG-003', 3, 'EARN', 6, 0, 6, (SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240222-003'), 58000.00, 1.00, 'PURCHASE', 'Migrated from legacy loyalty_history', '2025-02-22 23:59:59', 5, 'COMPLETED', '2024-02-22 09:46:00', NOW(), NOW()),
-('LT-LEG-004', 4, 'EARN', 12, 0, 12, (SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240223-004'), 120000.00, 1.00, 'PURCHASE', 'Migrated from legacy loyalty_history', '2025-02-23 23:59:59', 3, 'COMPLETED', '2024-02-23 16:21:00', NOW(), NOW()),
-('LT-LEG-005', 4, 'EARN', 7, 0, 7, (SELECT id FROM sale_orders WHERE order_code = 'SO-LEG-20240224-005'), 67000.00, 1.00, 'PURCHASE', 'Migrated from legacy loyalty_history', '2025-02-24 23:59:59', 5, 'COMPLETED', '2024-02-24 11:11:00', NOW(), NOW());
+INSERT INTO `loyalty_transactions` VALUES (1,800,746,'2026-03-18 01:40:09.000000','TÃ­ch Ä‘iá»ƒm tá»« Ä‘Æ¡n SO-20260224-001','2027-02-24 23:59:59.000000',53900.00,54,1.00,'PURCHASE','COMPLETED','LT-20260224-001','2026-02-24 09:32:00.000000','EARN','2026-03-18 01:40:09.000000',2,3,1),(2,150,53,'2026-03-18 01:40:09.000000','TÃ­ch Ä‘iá»ƒm tá»« Ä‘Æ¡n SO-20260224-002','2027-02-24 23:59:59.000000',97300.00,97,1.00,'PURCHASE','COMPLETED','LT-20260224-002','2026-02-24 19:24:00.000000','EARN','2026-03-18 01:40:09.000000',1,3,2),(3,18,0,'2026-03-18 01:40:09.000000','Migrated from legacy loyalty_history','2025-02-20 23:59:59.000000',175000.00,18,1.00,'PURCHASE','COMPLETED','LT-LEG-001','2024-02-20 10:31:00.000000','EARN','2026-03-18 01:40:09.000000',1,3,4),(4,10,0,'2026-03-18 01:40:09.000000','Migrated from legacy loyalty_history','2025-02-21 23:59:59.000000',95000.00,10,1.00,'PURCHASE','COMPLETED','LT-LEG-002','2024-02-21 14:16:00.000000','EARN','2026-03-18 01:40:09.000000',2,3,5),(5,6,0,'2026-03-18 01:40:09.000000','Migrated from legacy loyalty_history','2025-02-22 23:59:59.000000',58000.00,6,1.00,'PURCHASE','COMPLETED','LT-LEG-003','2024-02-22 09:46:00.000000','EARN','2026-03-18 01:40:09.000000',3,5,6),(6,12,0,'2026-03-18 01:40:09.000000','Migrated from legacy loyalty_history','2025-02-23 23:59:59.000000',120000.00,12,1.00,'PURCHASE','COMPLETED','LT-LEG-004','2024-02-23 16:21:00.000000','EARN','2026-03-18 01:40:09.000000',4,3,7),(7,7,0,'2026-03-18 01:40:09.000000','Migrated from legacy loyalty_history','2025-02-24 23:59:59.000000',67000.00,7,1.00,'PURCHASE','COMPLETED','LT-LEG-005','2024-02-24 11:11:00.000000','EARN','2026-03-18 01:40:09.000000',4,5,8);
 
 -- 21. TICKETS
-INSERT IGNORE INTO tickets (
-   ticket_code, ticket_type, title, description, status, priority,
-   created_by_user_id, assigned_to_user_id, resolved_by_user_id,
-   related_entity_type, related_entity_id, resolution, resolved_at
-) VALUES
-('TCK-SHF-001', 'SHIFT_CHANGE', 'Yêu cầu đổi ca: 2026-03-10', 'Nhờ đổi ca ngày 10/03 do bận việc gia đình.\n[SWAP_MODE=TAKE_OVER]\n[SWAP_REQUESTER_ASSIGNMENT_ID=1]\n[SWAP_REQUESTER_USER_ID=3]\n[SWAP_TARGET_USER_ID=4]', 'OPEN', 'HIGH', 3, 4, NULL, 'SHIFT_SWAP', 1, NULL, NULL),
-('TCK-SHF-002', 'SHIFT_CHANGE', 'Yêu cầu nghỉ ca: 2026-03-12', 'Xin nghỉ ca ngày 12/03 vì có lịch khám bệnh. Manager vui lòng điều chỉnh phân ca thay thế.', 'OPEN', 'HIGH', 7, NULL, NULL, 'SHIFT_ASSIGNMENT', 2, NULL, NULL),
-('TCK-SHF-003', 'SHIFT_CHANGE', 'Yêu cầu nghỉ ca: 2026-03-06', 'Xin nghỉ ca ngày 06/03 vì lý do cá nhân.', 'RESOLVED', 'NORMAL', 6, 2, 2, 'SHIFT_ASSIGNMENT', 3, 'Manager đã điều chỉnh phân ca và hoàn tất ticket.', '2026-03-05 15:20:00'),
-('TCK-REF-001', 'REFUND', 'Hoàn tiền đơn hàng ORD-2026-001', 'Khách hàng mua nhầm sản phẩm, yêu cầu hoàn tiền. Sản phẩm còn nguyên seal, trong thời hạn đổi trả', 'IN_PROGRESS', 'URGENT', 2, 1, NULL, 'Order', 1, NULL, NULL),
-('TCK-ISS-001', 'ISSUE', 'Khiếu nại về chất lượng sản phẩm', 'Khách hàng phàn nàn sữa hết hạn sử dụng. Cần kiểm tra lại quy trình kiểm kê', 'OPEN', 'HIGH', 3, 1, NULL, 'Product', 1, NULL, NULL);
+INSERT INTO `tickets` VALUES (1,NULL,'NhÃ¢n viÃªn A muá»‘n Ä‘á»•i ca sÃ¡ng sang ca chiá»u vá»›i nhÃ¢n viÃªn B do cÃ³ lá»‹ch cÃ¡ nhÃ¢n','NORMAL',1,'WorkShift',NULL,NULL,'OPEN','TCK-SWAP-001','SWAP_SHIFT','Swap shift ngÃ y 15/02 - Ca sÃ¡ng <-> Ca chiá»u',NULL,3,2,NULL),(2,NULL,'BÃ n giao ca tá»‘i: Quáº§y 1 cÃ³ 2,500,000 VND trong kÃ©t, 15 giao dá»‹ch hoÃ n táº¥t, cáº§n kiá»ƒm kÃª láº¡i ká»‡ Ä‘á»“ uá»‘ng','HIGH',1,'CashRegister','ÄÃ£ bÃ n giao thÃ nh cÃ´ng. NhÃ¢n viÃªn ca tá»‘i xÃ¡c nháº­n Ä‘Ã£ nháº­n Ä‘áº§y Ä‘á»§ tiá»n máº·t vÃ  ghi chÃº','2026-02-21 22:00:00.000000','RESOLVED','TCK-HAND-001','HANDOVER','BÃ n giao ca tá»‘i 14/02/2026',NULL,3,2,2),(3,NULL,'KhÃ¡ch hÃ ng mua nháº§m sáº£n pháº©m, yÃªu cáº§u hoÃ n tiá»n. Sáº£n pháº©m cÃ²n nguyÃªn seal, trong thá»i háº¡n Ä‘á»•i tráº£','URGENT',1,'Order',NULL,NULL,'IN_PROGRESS','TCK-REF-001','REFUND','HoÃ n tiá»n Ä‘Æ¡n hÃ ng ORD-2026-001',NULL,1,2,NULL),(4,NULL,'KhÃ¡ch hÃ ng phÃ n nÃ n sá»¯a háº¿t háº¡n sá»­ dá»¥ng. Cáº§n kiá»ƒm tra láº¡i quy trÃ¬nh kiá»ƒm kÃª','HIGH',1,'Product',NULL,NULL,'OPEN','TCK-COMP-001','COMPLAINT','Khiáº¿u náº¡i vá» cháº¥t lÆ°á»£ng sáº£n pháº©m',NULL,1,3,NULL),(5,'2026-03-19 13:39:45.436969','[KhÃ¡ch hÃ ng: Huy - SÄT: 0961390488]\nBá»‹ rá»‰ nÆ°á»›c','HIGH',1,'Order',NULL,NULL,'IN_PROGRESS','TCK-REF-002','REFUND','Coca bá»‹ lá»—i','2026-03-19 13:39:45.436969',3,3,NULL),(6,'2026-03-19 13:40:58.065490','[KhÃ¡ch hÃ ng: Huy - SÄT: 09613690486]\ns','HIGH',1,'Order','','2026-03-19 13:48:02.457219','RESOLVED','TCK-REF-003','REFUND','CoCa','2026-03-19 13:48:02.460728',3,3,NULL),(7,'2026-03-19 14:16:12.031860','[KhÃ¡ch hÃ ng: Huy - SÄT: 0961390486]\nKeo het han\n[REFUND_SKU=SNACK-CHUP-KEOMUT-GOI30C]\n[REFUND_QTY=10]','NORMAL',1,'Product',NULL,NULL,'IN_PROGRESS','TCK-REF-004','REFUND','San pham loi','2026-03-19 14:16:12.031860',3,3,NULL),(8,'2026-03-19 14:17:09.302517','[KhÃ¡ch hÃ ng: Huy - SÄT: 0961390486]\nddd\n[REFUND_SKU=SNACK-CHUP-KEOMUT-GOI30C]\n[REFUND_QTY=10]','HIGH',1,'Product','','2026-03-19 14:17:18.444081','RESOLVED','TCK-REF-005','REFUND','Sanr pham loi','2026-03-19 14:17:18.461675',3,3,NULL);
 
 -- 22. USER CREDENTIALS
-INSERT IGNORE INTO user_credentials (user_id, username, password_hash) VALUES
-(1, 'admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(2, 'manager', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(3, 'cashier1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(4, 'cashier2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(5, 'inventory1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(6, 'sales1', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
-(7, 'sales2', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
+INSERT INTO `user_credentials` VALUES (1,'$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','admin',1),(2,'$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','manager',2),(3,'$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','cashier1',3),(4,'$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','cashier2',4),(5,'$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','inventory1',5),(6,'$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','sales1',6),(7,'$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG','sales2',7),(8,'$2a$10$ZqwnXGrEww3EG9iVpCg/E.m55OspUop27kPD2fnl.lFrQ39eE93xa','kien',8),(9,'$2a$10$8EMiqVj9/7I/EdZrI1qw3uRi6tSGs1N2pXtwOqa9YhnwHFvJ2ZmL.','hung',9);
 
 -- 23. ATTENDANCE (Auto-tracked based on employee login/logout)
 -- 23. ATTENDANCE (Auto-tracked based on employee login/logout)
-INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
--- Daily attendance for employees working various shifts
--- Daily attendance for employees working various shifts
-(1, '2026-02-24', '08:01:00', '17:03:00', 'PRESENT'),
-(1, '2026-02-25', '08:12:00', '17:00:00', 'LATE'),
-(1, '2026-02-26', '08:00:00', '17:02:00', 'PRESENT'),
-(1, '2026-02-27', '08:05:00', NULL, 'PRESENT'),
-(1, '2026-02-26', '08:00:00', '17:02:00', 'PRESENT'),
-(1, '2026-02-27', '08:05:00', NULL, 'PRESENT'),
-(2, '2026-02-24', '13:00:00', '22:05:00', 'PRESENT'),
-(2, '2026-02-25', '13:25:00', '22:00:00', 'LATE'),
-(2, '2026-02-26', '13:00:00', '22:03:00', 'PRESENT'),
-(2, '2026-02-27', '13:00:00', NULL, 'PRESENT'),
-(3, '2026-02-24', '08:00:00', '17:01:00', 'PRESENT'),
-(3, '2026-02-25', '08:20:00', '17:00:00', 'LATE'),
-(3, '2026-02-26', '08:00:00', '17:00:00', 'PRESENT'),
-(3, '2026-02-27', NULL, NULL, 'ABSENT'),
-(4, '2026-02-24', '13:00:00', '22:02:00', 'PRESENT'),
-(4, '2026-02-25', '13:30:00', '22:00:00', 'LATE'),
-(4, '2026-02-26', '13:00:00', '22:01:00', 'PRESENT'),
-(4, '2026-02-27', '13:00:00', NULL, 'PRESENT'),
-(5, '2026-02-24', '08:00:00', '17:02:00', 'PRESENT'),
-(5, '2026-02-25', '08:00:00', '17:00:00', 'PRESENT'),
-(5, '2026-02-26', '08:15:00', '17:00:00', 'LATE'),
-(6, '2026-02-24', '09:00:00', '18:01:00', 'PRESENT'),
-(6, '2026-02-25', '09:00:00', '18:00:00', 'PRESENT'),
-(6, '2026-02-26', '09:05:00', '18:02:00', 'PRESENT'),
-(7, '2026-02-24', '09:00:00', '18:00:00', 'PRESENT'),
-(7, '2026-02-25', '09:15:00', '18:01:00', 'LATE'),
-(7, '2026-02-26', '09:00:00', '18:00:00', 'PRESENT'),
-
--- Current month attendance để trang chấm công mặc định ngày hiện tại có dữ liệu
-(1, '2026-03-01', '09:00:00', '18:02:00', 'PRESENT'),
-(3, '2026-03-01', '09:02:00', '17:58:00', 'PRESENT'),
-(6, '2026-03-01', '09:10:00', '18:00:00', 'LATE'),
-(1, '2026-03-02', '08:01:00', '17:05:00', 'PRESENT'),
-(2, '2026-03-02', '13:03:00', '22:01:00', 'PRESENT'),
-(3, '2026-03-02', '08:11:00', '17:00:00', 'LATE'),
-(4, '2026-03-02', '13:00:00', '22:03:00', 'PRESENT'),
-(5, '2026-03-02', '08:05:00', '17:02:00', 'PRESENT'),
-(6, '2026-03-02', '18:02:00', '23:00:00', 'PRESENT'),
-(7, '2026-03-02', NULL, NULL, 'ABSENT'),
-
-(1, '2026-03-03', '08:00:00', '17:04:00', 'PRESENT'),
-(2, '2026-03-03', '13:05:00', '22:00:00', 'PRESENT'),
-(3, '2026-03-03', '08:06:00', '17:00:00', 'PRESENT'),
-(4, '2026-03-03', '13:16:00', '22:00:00', 'LATE'),
-(5, '2026-03-03', '08:00:00', '17:00:00', 'PRESENT'),
-(6, '2026-03-03', '18:00:00', '23:08:00', 'PRESENT'),
-(7, '2026-03-03', '08:10:00', '17:00:00', 'LATE'),
-
-(1, '2026-03-04', '08:03:00', '17:01:00', 'PRESENT'),
-(2, '2026-03-04', '13:22:00', '22:00:00', 'LATE'),
-(3, '2026-03-04', '08:00:00', '17:12:00', 'PRESENT'),
-(4, '2026-03-04', NULL, NULL, 'ABSENT'),
-(5, '2026-03-04', '08:08:00', '17:00:00', 'PRESENT'),
-(6, '2026-03-04', '18:01:00', '23:00:00', 'PRESENT'),
-(7, '2026-03-04', '08:00:00', '17:03:00', 'PRESENT'),
-
-(1, '2026-03-05', '08:02:00', '17:00:00', 'PRESENT'),
-(2, '2026-03-05', '13:00:00', '22:06:00', 'PRESENT'),
-(3, '2026-03-05', '08:12:00', '17:00:00', 'LATE'),
-(4, '2026-03-05', '13:00:00', '22:01:00', 'PRESENT'),
-(5, '2026-03-05', '08:00:00', '17:05:00', 'PRESENT'),
-(6, '2026-03-05', NULL, NULL, 'ABSENT'),
-(7, '2026-03-05', '08:04:00', '17:00:00', 'PRESENT'),
-
-(1, '2026-03-06', '08:01:00', '17:02:00', 'PRESENT'),
-(2, '2026-03-06', '13:09:00', '22:00:00', 'LATE'),
-(3, '2026-03-06', '08:00:00', '17:01:00', 'PRESENT'),
-(4, '2026-03-06', '13:00:00', '22:00:00', 'PRESENT'),
-(5, '2026-03-06', '08:06:00', '17:00:00', 'PRESENT'),
-(6, '2026-03-06', NULL, NULL, 'ABSENT'),
-(7, '2026-03-06', '08:03:00', '17:00:00', 'PRESENT');
+INSERT INTO `attendance` VALUES (1,'2026-02-24','PRESENT','08:01:00.000000','17:03:00.000000',1,1,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(2,'2026-02-25','LATE','08:12:00.000000','17:00:00.000000',1,2,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(3,'2026-02-26','PRESENT','08:00:00.000000','17:02:00.000000',1,3,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(4,'2026-02-27','PRESENT','08:05:00.000000',NULL,1,4,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(5,'2026-02-26','PRESENT','08:00:00.000000','17:02:00.000000',1,3,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(6,'2026-02-27','PRESENT','08:05:00.000000',NULL,1,4,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(7,'2026-02-24','PRESENT','13:00:00.000000','22:05:00.000000',2,12,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(8,'2026-02-25','LATE','13:25:00.000000','22:00:00.000000',2,13,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(9,'2026-02-26','PRESENT','13:00:00.000000','22:03:00.000000',2,14,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(10,'2026-02-27','PRESENT','13:00:00.000000',NULL,2,15,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(11,'2026-02-24','PRESENT','08:00:00.000000','17:01:00.000000',3,5,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(12,'2026-02-25','LATE','08:20:00.000000','17:00:00.000000',3,6,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(13,'2026-02-26','PRESENT','08:00:00.000000','17:00:00.000000',3,7,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(14,'2026-02-27','ABSENT',NULL,NULL,3,8,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(15,'2026-02-24','PRESENT','13:00:00.000000','22:02:00.000000',4,16,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(16,'2026-02-25','LATE','13:30:00.000000','22:00:00.000000',4,17,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(17,'2026-02-26','PRESENT','13:00:00.000000','22:01:00.000000',4,18,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(18,'2026-02-27','PRESENT','13:00:00.000000',NULL,4,19,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(19,'2026-02-24','PRESENT','08:00:00.000000','17:02:00.000000',5,9,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(20,'2026-02-25','PRESENT','08:00:00.000000','17:00:00.000000',5,10,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(21,'2026-02-26','LATE','08:15:00.000000','17:00:00.000000',5,11,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(22,'2026-02-24','PRESENT','09:00:00.000000','18:01:00.000000',6,NULL,NULL,NULL,NULL,NULL,NULL),(23,'2026-02-25','PRESENT','09:00:00.000000','18:00:00.000000',6,NULL,NULL,NULL,NULL,NULL,NULL),(24,'2026-02-26','PRESENT','09:05:00.000000','18:02:00.000000',6,22,'23:00:00.000000',3,'Ca Tá»‘i','18:00:00.000000',NULL),(25,'2026-02-24','PRESENT','09:00:00.000000','18:00:00.000000',7,NULL,NULL,NULL,NULL,NULL,NULL),(26,'2026-02-25','LATE','09:15:00.000000','18:01:00.000000',7,NULL,NULL,NULL,NULL,NULL,NULL),(27,'2026-02-26','PRESENT','09:00:00.000000','18:00:00.000000',7,NULL,NULL,NULL,NULL,NULL,NULL),(28,'2026-03-01','PRESENT','09:00:00.000000','18:02:00.000000',1,37,'18:00:00.000000',4,'Ca Cuá»‘i Tuáº§n','09:00:00.000000',NULL),(29,'2026-03-01','PRESENT','13:51:00.000000',NULL,3,38,'18:00:00.000000',4,'Ca Cuá»‘i Tuáº§n','09:00:00.000000',NULL),(30,'2026-03-01','LATE','09:10:00.000000','18:00:00.000000',6,39,'18:00:00.000000',4,'Ca Cuá»‘i Tuáº§n','09:00:00.000000',NULL),(31,'2026-03-02','PRESENT','08:01:00.000000','17:05:00.000000',1,30,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(32,'2026-03-02','PRESENT','13:03:00.000000','22:01:00.000000',2,31,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(33,'2026-03-02','LATE','08:11:00.000000','17:00:00.000000',3,32,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(34,'2026-03-02','PRESENT','13:00:00.000000','22:03:00.000000',4,33,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(35,'2026-03-02','PRESENT','08:05:00.000000','17:02:00.000000',5,34,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(36,'2026-03-02','PRESENT','18:02:00.000000','23:00:00.000000',6,35,'23:00:00.000000',3,'Ca Tá»‘i','18:00:00.000000',NULL),(37,'2026-03-02','ABSENT',NULL,NULL,7,36,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(38,'2026-03-03','PRESENT','08:00:00.000000','17:04:00.000000',1,40,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(39,'2026-03-03','PRESENT','13:05:00.000000','22:00:00.000000',2,41,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(40,'2026-03-03','PRESENT','08:06:00.000000','17:00:00.000000',3,42,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(41,'2026-03-03','LATE','13:16:00.000000','22:00:00.000000',4,43,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(42,'2026-03-03','PRESENT','08:00:00.000000','17:00:00.000000',5,44,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(43,'2026-03-03','PRESENT','18:00:00.000000','23:08:00.000000',6,45,'23:00:00.000000',3,'Ca Tá»‘i','18:00:00.000000',NULL),(44,'2026-03-03','LATE','08:10:00.000000','17:00:00.000000',7,46,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(45,'2026-03-04','PRESENT','08:03:00.000000','17:01:00.000000',1,47,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(46,'2026-03-04','LATE','13:22:00.000000','22:00:00.000000',2,48,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(47,'2026-03-04','PRESENT','08:00:00.000000','17:12:00.000000',3,49,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(48,'2026-03-04','ABSENT',NULL,NULL,4,50,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(49,'2026-03-04','PRESENT','08:08:00.000000','17:00:00.000000',5,51,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(50,'2026-03-04','PRESENT','18:01:00.000000','23:00:00.000000',6,52,'23:00:00.000000',3,'Ca Tá»‘i','18:00:00.000000',NULL),(51,'2026-03-04','PRESENT','08:00:00.000000','17:03:00.000000',7,53,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(52,'2026-03-05','PRESENT','08:02:00.000000','17:00:00.000000',1,54,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(53,'2026-03-05','PRESENT','13:00:00.000000','22:06:00.000000',2,55,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(54,'2026-03-05','LATE','08:12:00.000000','17:00:00.000000',3,56,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(55,'2026-03-05','PRESENT','13:00:00.000000','22:01:00.000000',4,57,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(56,'2026-03-05','PRESENT','08:00:00.000000','17:05:00.000000',5,58,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(57,'2026-03-05','ABSENT',NULL,NULL,6,59,'23:00:00.000000',3,'Ca Tá»‘i','18:00:00.000000',NULL),(58,'2026-03-05','PRESENT','08:04:00.000000','17:00:00.000000',7,60,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(59,'2026-03-06','PRESENT','08:01:00.000000','17:02:00.000000',1,61,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(60,'2026-03-06','LATE','13:09:00.000000','22:00:00.000000',2,62,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(61,'2026-03-06','PRESENT','08:00:00.000000','17:01:00.000000',3,63,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(62,'2026-03-06','PRESENT','13:00:00.000000','22:00:00.000000',4,64,'22:00:00.000000',2,'Ca Chiá»u','13:00:00.000000',NULL),(63,'2026-03-06','PRESENT','08:06:00.000000','17:00:00.000000',5,65,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(64,'2026-03-06','ABSENT',NULL,NULL,6,66,'23:00:00.000000',3,'Ca Tá»‘i','18:00:00.000000',NULL),(65,'2026-03-06','PRESENT','08:03:00.000000','17:00:00.000000',7,67,'17:00:00.000000',1,'Ca SÃ¡ng','08:00:00.000000',NULL),(66,'2026-03-18','PRESENT','04:58:00.000000',NULL,3,NULL,NULL,NULL,NULL,NULL,NULL),(67,'2026-03-18','PRESENT','04:58:00.000000',NULL,3,NULL,NULL,NULL,NULL,NULL,NULL),(68,'2026-03-18','PRESENT','05:13:00.000000',NULL,5,NULL,NULL,NULL,NULL,NULL,NULL),(69,'2026-03-18','PRESENT','05:13:00.000000',NULL,5,NULL,NULL,NULL,NULL,NULL,NULL),(70,'2026-03-19','PRESENT','21:35:00.000000',NULL,3,NULL,NULL,NULL,NULL,NULL,NULL),(71,'2026-03-19','PRESENT','21:35:00.000000',NULL,3,NULL,NULL,NULL,NULL,NULL,NULL);
 
 -- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
 -- Each employee has individual salary setup - Manager can modify base salary for each person
@@ -883,39 +216,7 @@ INSERT IGNORE INTO attendance (user_id, date, time_in, time_out, status) VALUES
 -- 24. SALARY CONFIGS (Per-employee base salary configuration with flexible types)
 -- Each employee has individual salary setup - Manager can modify base salary for each person
 -- Supports both HOURLY and MONTHLY salary types
-INSERT IGNORE INTO salary_configs (
-    user_id, salary_type, base_salary, hourly_rate, overtime_rate_multiplier,
-        allowances, bonus_percentage, min_required_shifts, count_late_as_present, working_hours_per_month,
-        is_active, effective_from, effective_until,
-    notes, created_at, updated_at
-) VALUES
--- Admin: Monthly salary with fixed base
-(1, 'MONTHLY', 30000000.00, NULL, 1.50, 1500000.00, 5.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL, 
- 'Quản lý toàn hệ thống - Lương cố định hàng tháng', NOW(), NOW()),
-
--- Manager: Monthly salary with fixed base
-(2, 'MONTHLY', 18000000.00, NULL, 1.50, 1000000.00, 3.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL, 
- 'Quản lý cửa hàng - Lương cố định hàng tháng', NOW(), NOW()),
-
--- Cashier 1: Hourly rate with monthly backup
-(3, 'HOURLY', 13500000.00, 75000.00, 1.50, 500000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
- 'Thu ngân ca sáng - Lương theo giờ (Giờ thường: 75k/h, OT: 112.5k/h)', NOW(), NOW()),
-
--- Cashier 2: Hourly rate (different from cashier 1 for flexible configuration)
-(4, 'HOURLY', 13200000.00, 72000.00, 1.50, 500000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
- 'Thu ngân ca chiều - Lương theo giờ (Giờ thường: 72k/h, OT: 108k/h)', NOW(), NOW()),
-
--- Inventory: Monthly salary
-(5, 'MONTHLY', 13000000.00, NULL, 1.50, 400000.00, 1.00, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
- 'Quản lý kho hàng - Lương cố định hàng tháng', NOW(), NOW()),
-
--- Sales 1: Hourly rate for flexible hours
-(6, 'HOURLY', 12600000.00, 70000.00, 1.50, 450000.00, 1.50, NULL, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
- 'Nhân viên bán hàng - Lương theo giờ (Giờ thường: 70k/h, OT: 105k/h)', NOW(), NOW()),
-
--- Sales 2: Monthly salary with minimum required shifts
-(7, 'MONTHLY_MIN_SHIFTS', 12500000.00, NULL, 1.50, 400000.00, 1.50, 20, TRUE, 208.00, TRUE, '2026-01-01 00:00:00', NULL,
- 'Nhân viên bán hàng - Lương tháng, cần tối thiểu 20 ca công/tháng', NOW(), NOW());
+INSERT INTO `salary_configs` VALUES (1,1500000.00,30000000.00,5.00,'2026-03-18 01:40:09.000000','2026-01-01 00:00:00.000000',NULL,NULL,_binary '','Quáº£n lÃ½ toÃ n há»‡ thá»‘ng - LÆ°Æ¡ng cá»‘ Ä‘á»‹nh hÃ ng thÃ¡ng',1.50,'MONTHLY','2026-03-18 01:40:09.000000',1,_binary '',NULL,208.00),(2,1000000.00,18000000.00,3.00,'2026-03-18 01:40:09.000000','2026-01-01 00:00:00.000000',NULL,NULL,_binary '','Quáº£n lÃ½ cá»­a hÃ ng - LÆ°Æ¡ng cá»‘ Ä‘á»‹nh hÃ ng thÃ¡ng',1.50,'MONTHLY','2026-03-18 01:40:09.000000',2,_binary '',NULL,208.00),(3,500000.00,13500000.00,1.00,'2026-03-18 01:40:09.000000','2026-01-01 00:00:00.000000',NULL,75000.00,_binary '','Thu ngÃ¢n ca sÃ¡ng - LÆ°Æ¡ng theo giá» (Giá» thÆ°á»ng: 75k/h, OT: 112.5k/h)',1.50,'HOURLY','2026-03-18 01:40:09.000000',3,_binary '',NULL,208.00),(4,500000.00,13200000.00,1.00,'2026-03-18 01:40:09.000000','2026-01-01 00:00:00.000000',NULL,72000.00,_binary '','Thu ngÃ¢n ca chiá»u - LÆ°Æ¡ng theo giá» (Giá» thÆ°á»ng: 72k/h, OT: 108k/h)',1.50,'HOURLY','2026-03-18 01:40:09.000000',4,_binary '',NULL,208.00),(5,400000.00,13000000.00,1.00,'2026-03-18 01:40:09.000000','2026-01-01 00:00:00.000000',NULL,NULL,_binary '','Quáº£n lÃ½ kho hÃ ng - LÆ°Æ¡ng cá»‘ Ä‘á»‹nh hÃ ng thÃ¡ng',1.50,'MONTHLY','2026-03-18 01:40:09.000000',5,_binary '',NULL,208.00),(6,450000.00,12600000.00,1.50,'2026-03-18 01:40:09.000000','2026-01-01 00:00:00.000000',NULL,70000.00,_binary '','NhÃ¢n viÃªn bÃ¡n hÃ ng - LÆ°Æ¡ng theo giá» (Giá» thÆ°á»ng: 70k/h, OT: 105k/h)',1.50,'HOURLY','2026-03-18 01:40:09.000000',6,_binary '',NULL,208.00),(7,400000.00,12500000.00,1.50,'2026-03-18 01:40:09.000000','2026-01-01 00:00:00.000000',NULL,NULL,_binary '','NhÃ¢n viÃªn bÃ¡n hÃ ng - LÆ°Æ¡ng thÃ¡ng, cáº§n tá»‘i thiá»ƒu 20 ca cÃ´ng/thÃ¡ng',1.50,'','2026-03-18 01:40:09.000000',7,_binary '',20,208.00);
 
 -- Mark one historical assignment as soft-deleted sample
 UPDATE work_shift_assignments
@@ -954,301 +255,222 @@ MODIFY COLUMN status ENUM(
     'CANCELLED'
 ) NOT NULL DEFAULT 'DRAFT';
 
-INSERT IGNORE INTO purchase_orders (
-   po_number, supplier_id, created_by, order_date, status, subtotal, 
-   tax_amount, discount_amount, total_amount, notes, created_at, updated_at
-) VALUES
-('PO-2024-001', 1, 2, '2024-01-10', 'RECEIVED', 5000000.00, 0.00, 0.00, 5000000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-2024-002', 2, 2, '2024-01-15', 'RECEIVED', 3500000.00, 0.00, 0.00, 3500000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-2024-004', 4, 4, '2024-02-05', 'RECEIVED', 1800000.00, 0.00, 0.00, 1800000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-2024-005', 3, 4, '2024-02-10', 'CONFIRMED', 2200000.00, 0.00, 0.00, 2200000.00, 'Migrated from legacy purchase_orders', NOW(), NOW()),
-('PO-2026-001', 1, 2, '2026-02-10', 'RECEIVED', 47000000.00, 4700000.00, 500000.00, 51200000.00, 'Đơn nhập sữa Vinamilk tháng 2', NOW(), NOW()),
-('PO-2026-002', 2, 2, '2026-02-12', 'CONFIRMED', 18000000.00, 1800000.00, 0.00, 19800000.00, 'Đơn nhập đồ gia dụng Unilever', NOW(), NOW());
+INSERT INTO `purchase_orders` VALUES (1,NULL,'2026-03-18 01:40:09.000000',0.00,NULL,NULL,'Migrated from legacy purchase_orders','2024-01-10','PO-2024-001',NULL,NULL,NULL,'RECEIVED',5000000.00,0.00,NULL,5000000.00,'2026-03-18 01:40:09.000000',NULL,2,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(2,NULL,'2026-03-18 01:40:09.000000',0.00,NULL,NULL,'Migrated from legacy purchase_orders','2024-01-15','PO-2024-002',NULL,NULL,NULL,'RECEIVED',3500000.00,0.00,NULL,3500000.00,'2026-03-18 01:40:09.000000',NULL,2,2,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(3,NULL,'2026-03-18 01:40:09.000000',0.00,NULL,NULL,'Migrated from legacy purchase_orders','2024-02-05','PO-2024-004',NULL,NULL,NULL,'RECEIVED',1800000.00,0.00,NULL,1800000.00,'2026-03-18 01:40:09.000000',NULL,4,4,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(4,NULL,'2026-03-18 01:40:09.000000',0.00,NULL,NULL,'Migrated from legacy purchase_orders','2024-02-10','PO-2024-005',NULL,NULL,NULL,'CONFIRMED',2200000.00,0.00,NULL,2200000.00,'2026-03-18 01:40:09.000000',NULL,4,3,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(5,NULL,'2026-03-18 01:40:09.000000',500000.00,NULL,NULL,'ÄÆ¡n nháº­p sá»¯a Vinamilk thÃ¡ng 2','2026-02-10','PO-2026-001',NULL,NULL,NULL,'RECEIVED',47000000.00,4700000.00,NULL,51200000.00,'2026-03-18 01:40:09.000000',NULL,2,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(6,NULL,'2026-03-18 01:40:09.000000',0.00,NULL,NULL,'ÄÆ¡n nháº­p Ä‘á»“ gia dá»¥ng Unilever','2026-02-12','PO-2026-002',NULL,NULL,NULL,'CONFIRMED',18000000.00,1800000.00,NULL,19800000.00,'2026-03-18 01:40:09.000000',NULL,2,2,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(7,'2026-03-18','2026-03-17 20:09:23.200903',0.00,NULL,1,'','2026-03-18','PO-2026-003',0.00,NULL,0.00,'RECEIVED',9600000.00,0.00,0.00,9600000.00,'2026-03-17 20:10:11.864228',NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(8,'2026-03-18','2026-03-17 20:15:53.075633',0.00,NULL,1,'','2026-03-18','PO-2026-004',0.00,NULL,0.00,'RECEIVED',3600000.00,0.00,0.00,3600000.00,'2026-03-17 20:16:54.397422',NULL,NULL,4,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(9,'2026-03-18','2026-03-17 20:58:16.495149',0.00,NULL,1,'','2026-03-18','PO-2026-005',0.00,NULL,0.00,'RECEIVED',12000000.00,0.00,0.00,12000000.00,'2026-03-17 20:59:00.566714',NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(10,'2026-03-18','2026-03-17 21:00:20.775031',0.00,NULL,2,'','2026-03-18','PO-2026-006',0.00,NULL,0.00,'RECEIVED',11040000.00,0.00,0.00,11040000.00,'2026-03-17 21:03:37.948102',NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(11,NULL,'2026-03-17 21:04:06.399199',0.00,NULL,NULL,'','2026-03-18','PO-2026-007',0.00,NULL,0.00,'CHECKING',0.00,0.00,0.00,0.00,'2026-03-18 07:57:41.708769',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(12,NULL,'2026-03-18 07:35:21.349491',0.00,NULL,NULL,'','2026-03-18','PO-2026-008',0.00,NULL,0.00,'CHECKING',0.00,0.00,0.00,0.00,'2026-03-18 07:36:02.684663',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(13,'2026-03-18','2026-03-18 07:49:07.100376',0.00,NULL,1,'','2026-03-18','PO-2026-009',0.00,NULL,1000.00,'RECEIVED',10000.00,100.00,1.00,11100.00,'2026-03-18 08:00:40.487019',NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(14,'2026-03-18','2026-03-18 08:09:02.120031',0.00,NULL,3,'','2026-03-18','PO-2026-010',0.00,NULL,1000.00,'RECEIVED',100000.00,1000.00,1.00,102000.00,'2026-03-18 08:10:33.189713',NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(15,'2026-03-19','2026-03-19 06:52:38.117005',0.00,NULL,1,'','2026-03-19','PO-2026-011',0.00,NULL,100000.00,'RECEIVED',1000000.00,100000.00,10.00,1200000.00,'2026-03-19 06:54:18.353439',NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(16,'2026-03-19','2026-03-19 11:37:47.963521',0.00,NULL,1,'','2026-03-19','PO-2026-012',0.00,NULL,100000.00,'RECEIVED',4160000.00,416000.00,10.00,4676000.00,'2026-03-19 11:39:07.458262',NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(17,'2026-03-19','2026-03-19 11:43:22.501573',0.00,NULL,1,'','2026-03-19','PO-2026-013',0.00,NULL,100000.00,'RECEIVED',2900000.00,290000.00,10.00,3290000.00,'2026-03-19 11:44:28.297791',NULL,NULL,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 
 -- 26. PURCHASE ORDER ITEMS (Matching JPA PurchaseOrderItem schema)
-INSERT IGNORE INTO purchase_order_items (purchase_order_id, variant_id, quantity, unit_price, received_quantity, notes) VALUES
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-001'), 1, 250, 20000.00, 250, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-002'), 2, 160, 22000.00, 160, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-004'), 4, 200, 9500.00, 200, 'Migrated from legacy purchase_order_items'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2024-005'), 5, 180, 12000.00, 0, 'Migrated from legacy purchase_order_items'),
-
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 1, 2000, 20000.00, 2000, 'Đã nhận đủ 2000 hộp'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-001'), 3, 200, 35000.00, 200, 'Đã nhận đủ 200 gói'),
-((SELECT id FROM purchase_orders WHERE po_number = 'PO-2026-002'), 2, 1500, 12000.00, 0, 'Chưa nhận hàng');
+INSERT INTO `purchase_order_items` VALUES (1,NULL,'Migrated from legacy purchase_order_items',250,250,NULL,20000.00,1,1),(2,NULL,'Migrated from legacy purchase_order_items',160,160,NULL,22000.00,2,2),(3,NULL,'Migrated from legacy purchase_order_items',200,200,NULL,9500.00,3,4),(4,NULL,'Migrated from legacy purchase_order_items',180,0,NULL,12000.00,4,5),(5,NULL,'ÄÃ£ nháº­n Ä‘á»§ 2000 há»™p',2000,2000,NULL,20000.00,5,1),(6,NULL,'ÄÃ£ nháº­n Ä‘á»§ 200 gÃ³i',200,200,NULL,35000.00,5,3),(7,NULL,'ChÆ°a nháº­n hÃ ng',1500,0,NULL,12000.00,6,2),(8,'2026-10-31','',10,480,9600000.00,20000.00,7,34),(9,'2026-11-30','',10,300,3600000.00,12000.00,8,35),(10,'2026-11-30','',480,480,12000000.00,25000.00,9,27),(11,NULL,'',480,480,11040000.00,23000.00,10,27),(12,NULL,'',48,0,0.00,0.00,11,27),(13,NULL,'',1,0,0.00,0.00,12,28),(14,'2027-12-31','',1,1,10000.00,10000.00,13,28),(15,'2027-03-13','',10,10,100000.00,10000.00,14,30),(16,'2027-03-19','',2,96,1000000.00,500000.00,15,34),(17,'2026-12-30','',8,384,4160000.00,520000.00,16,34),(18,'2026-12-30','',5,240,2900000.00,580000.00,17,34);
 
 -- 27. SHIFT HANDOVERS
-INSERT INTO shift_handovers (
-    handover_code, shift_id, from_user_id, to_user_id, cash_register_id,
-    handover_time, cash_amount, expected_cash, actual_cash, variance,
-    cash_breakdown, total_transactions, total_sales, total_refunds, total_customers,
-    equipment_status, inventory_notes, low_stock_items, issues_reported,
-    important_notes, confirmed, confirmed_at, status, dispute_reason,
-    attachment_url, created_at, updated_at
-) VALUES
-('HANDOVER-001', 3, 3, 2, 1, '2026-02-24 23:10:00', 2500000.00, 2500000.00, 2500000.00, 0.00, '{"500k":2,"200k":5,"100k":5}', 15, 8200000.00, 120000.00, 96, '{"printer":"OK","scanner":"OK"}', '{"note":"Bổ sung nước ngọt tầng 2"}', '[4,5]', 'Không có sự cố lớn', 'Đã bàn giao đầy đủ', TRUE, '2026-02-24 23:15:00', 'CONFIRMED', NULL, NULL, NOW(), NOW())
-AS new_handover
-ON DUPLICATE KEY UPDATE
-shift_id = new_handover.shift_id,
-from_user_id = new_handover.from_user_id,
-to_user_id = new_handover.to_user_id,
-cash_register_id = new_handover.cash_register_id,
-handover_time = new_handover.handover_time,
-cash_amount = new_handover.cash_amount,
-expected_cash = new_handover.expected_cash,
-actual_cash = new_handover.actual_cash,
-variance = new_handover.variance,
-cash_breakdown = new_handover.cash_breakdown,
-total_transactions = new_handover.total_transactions,
-total_sales = new_handover.total_sales,
-total_refunds = new_handover.total_refunds,
-total_customers = new_handover.total_customers,
-equipment_status = new_handover.equipment_status,
-inventory_notes = new_handover.inventory_notes,
-low_stock_items = new_handover.low_stock_items,
-issues_reported = new_handover.issues_reported,
-important_notes = new_handover.important_notes,
-confirmed = new_handover.confirmed,
-confirmed_at = new_handover.confirmed_at,
-status = new_handover.status,
-dispute_reason = new_handover.dispute_reason,
-attachment_url = new_handover.attachment_url,
-updated_at = new_handover.updated_at;
+INSERT INTO `shift_handovers` VALUES (1,2500000.00,NULL,2500000.00,'{\"500k\":2,\"200k\":5,\"100k\":5}',_binary '','2026-02-24 23:15:00.000000','2026-03-18 01:40:09.000000',NULL,'{\"printer\":\"OK\",\"scanner\":\"OK\"}',2500000.00,'HANDOVER-001','2026-02-24 23:10:00.000000','ÄÃ£ bÃ n giao Ä‘áº§y Ä‘á»§','{\"note\":\"Bá»• sung nÆ°á»›c ngá»t táº§ng 2\"}','KhÃ´ng cÃ³ sá»± cá»‘ lá»›n','[4,5]','CONFIRMED',96,120000.00,8200000.00,15,'2026-03-18 01:40:09.000000',0.00,1,3,3,2);
 
 -- 28. PAYROLL CALCULATIONS
-INSERT IGNORE INTO payroll_calculations (
-    user_id, pay_period_start, pay_period_end, payment_cycle,
-    total_worked_days, regular_minutes, overtime_minutes,
-    base_pay, overtime_pay, allowances, bonus_amount,
-    total_deductions, gross_pay, net_pay,
-    status, calculated_by, approved_by, calculated_at, approved_at,
-    notes, created_at, updated_at
-) VALUES
-(1, '2026-02-01', '2026-02-28', 'MONTHLY', 20, 9600, 0, 30000000.00, 0.00, 1500000.00, 500000.00, 3000000.00, 32000000.00, 29000000.00, 'APPROVED', 2, 2, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Lương admin tháng 2', NOW(), NOW()),
-(2, '2026-02-01', '2026-02-28', 'MONTHLY', 20, 9600, 0, 18000000.00, 0.00, 1000000.00, 300000.00, 1800000.00, 19300000.00, 17500000.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Lương manager tháng 2', NOW(), NOW()),
-(3, '2026-02-01', '2026-02-28', 'MONTHLY', 19, 9300, 480, 11625000.00, 900000.00, 500000.00, 135000.00, 1500000.00, 13160000.00, 11660000.00, 'APPROVED', 2, 2, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Thu ngân ca sáng - Giờ công + OT', NOW(), NOW()),
-(4, '2026-02-01', '2026-02-28', 'MONTHLY', 19, 9120, 300, 10944000.00, 540000.00, 500000.00, 76800.00, 1400000.00, 12060800.00, 10660800.00, 'APPROVED', 2, 2, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Thu ngân ca chiều - Giờ công + OT', NOW(), NOW()),
-(5, '2026-02-01', '2026-02-28', 'MONTHLY', 19, 9120, 0, 13000000.00, 0.00, 400000.00, 130000.00, 1400000.00, 13530000.00, 12130000.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Quản lý kho tháng 2', NOW(), NOW()),
-(6, '2026-02-01', '2026-02-28', 'MONTHLY', 18, 8400, 360, 9800000.00, 630000.00, 450000.00, 147000.00, 1200000.00, 11027000.00, 9827000.00, 'APPROVED', 2, 2, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Nhân viên bán hàng - Giờ công + OT', NOW(), NOW()),
-(7, '2026-02-01', '2026-02-28', 'MONTHLY', 20, 9600, 0, 12500000.00, 0.00, 400000.00, 187500.00, 1300000.00, 13087500.00, 11787500.00, 'APPROVED', 2, 1, '2026-02-28 17:00:00', '2026-02-28 18:00:00', 'Nhân viên bán hàng tháng 2', NOW(), NOW()),
-
--- Current month payroll snapshots
-(1, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 960, 0, 3000000.00, 0.00, 150000.00, 50000.00, 300000.00, 3200000.00, 2900000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
-(2, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 540, 0, 900000.00, 0.00, 50000.00, 15000.00, 90000.00, 965000.00, 875000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
-(3, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 1045, 0, 1306250.00, 0.00, 50000.00, 13500.00, 150000.00, 1369750.00, 1219750.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
-(4, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 543, 0, 651600.00, 0.00, 25000.00, 7000.00, 70000.00, 683600.00, 613600.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
-(5, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 537, 0, 730000.00, 0.00, 25000.00, 8000.00, 75000.00, 763000.00, 688000.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
-(6, '2026-03-01', '2026-03-31', 'MONTHLY', 2, 829, 0, 966833.00, 0.00, 30000.00, 12000.00, 90000.00, 1008833.00, 918833.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Bảng lương tạm tính tháng 3', NOW(), NOW()),
-(7, '2026-03-01', '2026-03-31', 'MONTHLY', 1, 0, 0, 0.00, 0.00, 0.00, 0.00, 120000.00, 0.00, 0.00, 'CALCULATED', 2, NULL, '2026-03-02 18:00:00', NULL, 'Nghỉ không lương ngày 02/03', NOW(), NOW());
+INSERT INTO `payroll_calculations` VALUES (1,NULL,NULL,1500000.00,'2026-02-28 18:00:00.000000',30000000.00,500000.00,'2026-02-28 17:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',32000000.00,NULL,NULL,NULL,NULL,NULL,NULL,29000000.00,NULL,NULL,'LÆ°Æ¡ng admin thÃ¡ng 2',NULL,0,0.00,NULL,'2026-02-28','2026-02-01','MONTHLY',NULL,9600,NULL,'APPROVED',3000000.00,20,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,2,2,1),(2,NULL,NULL,1000000.00,'2026-02-28 18:00:00.000000',18000000.00,300000.00,'2026-02-28 17:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',19300000.00,NULL,NULL,NULL,NULL,NULL,NULL,17500000.00,NULL,NULL,'LÆ°Æ¡ng manager thÃ¡ng 2',NULL,0,0.00,NULL,'2026-02-28','2026-02-01','MONTHLY',NULL,9600,NULL,'APPROVED',1800000.00,20,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,1,2,2),(3,NULL,NULL,500000.00,'2026-02-28 18:00:00.000000',11625000.00,135000.00,'2026-02-28 17:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',13160000.00,NULL,NULL,NULL,NULL,NULL,NULL,11660000.00,NULL,NULL,'Thu ngÃ¢n ca sÃ¡ng - Giá» cÃ´ng + OT',NULL,480,900000.00,NULL,'2026-02-28','2026-02-01','MONTHLY',NULL,9300,NULL,'APPROVED',1500000.00,19,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,2,2,3),(4,NULL,NULL,500000.00,'2026-02-28 18:00:00.000000',10944000.00,76800.00,'2026-02-28 17:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',12060800.00,NULL,NULL,NULL,NULL,NULL,NULL,10660800.00,NULL,NULL,'Thu ngÃ¢n ca chiá»u - Giá» cÃ´ng + OT',NULL,300,540000.00,NULL,'2026-02-28','2026-02-01','MONTHLY',NULL,9120,NULL,'APPROVED',1400000.00,19,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,2,2,4),(5,NULL,NULL,400000.00,'2026-02-28 18:00:00.000000',13000000.00,130000.00,'2026-02-28 17:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',13530000.00,NULL,NULL,NULL,NULL,NULL,NULL,12130000.00,NULL,NULL,'Quáº£n lÃ½ kho thÃ¡ng 2',NULL,0,0.00,NULL,'2026-02-28','2026-02-01','MONTHLY',NULL,9120,NULL,'APPROVED',1400000.00,19,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,1,2,5),(6,NULL,NULL,450000.00,'2026-02-28 18:00:00.000000',9800000.00,147000.00,'2026-02-28 17:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',11027000.00,NULL,NULL,NULL,NULL,NULL,NULL,9827000.00,NULL,NULL,'NhÃ¢n viÃªn bÃ¡n hÃ ng - Giá» cÃ´ng + OT',NULL,360,630000.00,NULL,'2026-02-28','2026-02-01','MONTHLY',NULL,8400,NULL,'APPROVED',1200000.00,18,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,2,2,6),(7,NULL,NULL,400000.00,'2026-02-28 18:00:00.000000',12500000.00,187500.00,'2026-02-28 17:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',13087500.00,NULL,NULL,NULL,NULL,NULL,NULL,11787500.00,NULL,NULL,'NhÃ¢n viÃªn bÃ¡n hÃ ng thÃ¡ng 2',NULL,0,0.00,NULL,'2026-02-28','2026-02-01','MONTHLY',NULL,9600,NULL,'APPROVED',1300000.00,20,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,1,2,7),(8,NULL,NULL,150000.00,NULL,3000000.00,50000.00,'2026-03-02 18:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',3200000.00,NULL,NULL,NULL,NULL,NULL,NULL,2900000.00,NULL,NULL,'Báº£ng lÆ°Æ¡ng táº¡m tÃ­nh thÃ¡ng 3',NULL,0,0.00,NULL,'2026-03-31','2026-03-01','MONTHLY',NULL,960,NULL,'CALCULATED',300000.00,2,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,NULL,2,1),(9,NULL,NULL,50000.00,NULL,900000.00,15000.00,'2026-03-02 18:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',965000.00,NULL,NULL,NULL,NULL,NULL,NULL,875000.00,NULL,NULL,'Báº£ng lÆ°Æ¡ng táº¡m tÃ­nh thÃ¡ng 3',NULL,0,0.00,NULL,'2026-03-31','2026-03-01','MONTHLY',NULL,540,NULL,'CALCULATED',90000.00,1,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,NULL,2,2),(10,NULL,NULL,50000.00,NULL,1306250.00,13500.00,'2026-03-02 18:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',1369750.00,NULL,NULL,NULL,NULL,NULL,NULL,1219750.00,NULL,NULL,'Báº£ng lÆ°Æ¡ng táº¡m tÃ­nh thÃ¡ng 3',NULL,0,0.00,NULL,'2026-03-31','2026-03-01','MONTHLY',NULL,1045,NULL,'CALCULATED',150000.00,2,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,NULL,2,3),(11,NULL,NULL,25000.00,NULL,651600.00,7000.00,'2026-03-02 18:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',683600.00,NULL,NULL,NULL,NULL,NULL,NULL,613600.00,NULL,NULL,'Báº£ng lÆ°Æ¡ng táº¡m tÃ­nh thÃ¡ng 3',NULL,0,0.00,NULL,'2026-03-31','2026-03-01','MONTHLY',NULL,543,NULL,'CALCULATED',70000.00,1,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,NULL,2,4),(12,NULL,NULL,25000.00,NULL,730000.00,8000.00,'2026-03-02 18:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',763000.00,NULL,NULL,NULL,NULL,NULL,NULL,688000.00,NULL,NULL,'Báº£ng lÆ°Æ¡ng táº¡m tÃ­nh thÃ¡ng 3',NULL,0,0.00,NULL,'2026-03-31','2026-03-01','MONTHLY',NULL,537,NULL,'CALCULATED',75000.00,1,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,NULL,2,5),(13,NULL,NULL,30000.00,NULL,966833.00,12000.00,'2026-03-02 18:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',1008833.00,NULL,NULL,NULL,NULL,NULL,NULL,918833.00,NULL,NULL,'Báº£ng lÆ°Æ¡ng táº¡m tÃ­nh thÃ¡ng 3',NULL,0,0.00,NULL,'2026-03-31','2026-03-01','MONTHLY',NULL,829,NULL,'CALCULATED',90000.00,2,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,NULL,2,6),(14,NULL,NULL,0.00,NULL,0.00,0.00,'2026-03-02 18:00:00.000000',NULL,NULL,'2026-03-18 01:40:09.000000',0.00,NULL,NULL,NULL,NULL,NULL,NULL,0.00,NULL,NULL,'Nghá»‰ khÃ´ng lÆ°Æ¡ng ngÃ y 02/03',NULL,0,0.00,NULL,'2026-03-31','2026-03-01','MONTHLY',NULL,0,NULL,'CALCULATED',120000.00,1,NULL,NULL,'2026-03-18 01:40:09.000000',NULL,NULL,NULL,2,7);
 
 -- 29. SHIFT SWAP REQUESTS
-INSERT IGNORE INTO shift_swap_requests (
-    request_code, requester_id, original_shift_id, original_shift_date,
-    target_user_id, target_shift_id, target_shift_date, swap_type,
-    reason, status, approved_by, approved_at,
-    rejection_reason, expiry_time, notes, created_at, updated_at
-) VALUES
-('SWAP-REQ-001', 3, 1, '2026-03-10', 4, 2, '2026-03-10', 'DIRECT_SWAP', 'Có việc gia đình buổi trưa, xin đổi ca sáng sang ca chiều', 'PENDING', NULL, NULL, NULL, '2026-03-10 23:59:59', 'Đang chờ người nhận ca bấm chấp thuận/từ chối', NOW(), NOW()),
-('SWAP-REQ-002', 4, 2, '2026-03-08', 3, 1, '2026-03-08', 'DIRECT_SWAP', 'Xin đổi ca để hỗ trợ ca sáng tuần sau', 'ACCEPTED', 2, '2026-03-07 10:15:00', NULL, '2026-03-08 23:59:59', 'Đã duyệt và hệ thống tự động đổi ca', NOW(), NOW()),
-('SWAP-REQ-003', 6, 4, '2026-03-09', 7, 1, '2026-03-09', 'DIRECT_SWAP', 'Muốn đổi từ ca cuối tuần sang ca sáng', 'REJECTED', 2, '2026-03-08 15:00:00', 'Không đủ nhân sự ca sáng', '2026-03-09 23:59:59', 'Từ chối bởi quản lý', NOW(), NOW()),
-('SWAP-REQ-004', 5, 1, '2026-03-06', 6, 4, '2026-03-06', 'DIRECT_SWAP', 'Trao đổi ca làm việc', 'CANCELLED', NULL, NULL, NULL, '2026-03-06 23:59:59', 'Tự huỷ do đã giải quyết việc cá nhân', NOW(), NOW());
+INSERT INTO `shift_swap_requests` VALUES (1,NULL,'2026-02-21 10:15:00.000000','2026-03-18 01:40:09.000000','2026-02-26 23:59:59.000000','ÄÆ°á»£c phÃ©p - hai nhÃ¢n viÃªn Ä‘Ã£ thoáº£ thuáº­n','2026-02-26','CÃ³ viá»‡c gia Ä‘Ã¬nh buá»•i trÆ°a, xin Ä‘á»•i ca sÃ¡ng sang ca chiá»u',NULL,'SWAP-REQ-001','ACCEPTED','DIRECT_SWAP','2026-02-26','2026-03-18 01:40:09.000000',NULL,2,1,3,2,4),(2,NULL,NULL,'2026-03-18 01:40:09.000000','2026-02-28 23:59:59.000000','Nhá» Ä‘á»“ng nghiá»‡p Ä‘á»•i ca chiá»u thá»© 6','2026-02-28','Xin Ä‘á»•i ca Ä‘á»ƒ há»— trá»£ ca sÃ¡ng tuáº§n sau',NULL,'SWAP-REQ-002','PENDING','DIRECT_SWAP','2026-02-28','2026-03-18 01:40:09.000000',NULL,NULL,2,4,1,3),(3,NULL,'2026-02-19 15:00:00.000000','2026-03-18 01:40:09.000000','2026-02-26 23:59:59.000000','Tá»« chá»‘i bá»Ÿi quáº£n lÃ½','2026-02-22','Muá»‘n Ä‘á»•i tá»« ca cuá»‘i tuáº§n sang ca sÃ¡ng','KhÃ´ng Ä‘á»§ nhÃ¢n sá»± ca sÃ¡ng','SWAP-REQ-003','REJECTED','DIRECT_SWAP','2026-02-22','2026-03-18 01:40:09.000000',NULL,2,4,6,1,7),(4,NULL,NULL,'2026-03-18 01:40:09.000000','2026-02-25 23:59:59.000000','Tá»± huá»· do Ä‘Ã£ giáº£i quyáº¿t viá»‡c cÃ¡ nhÃ¢n','2026-02-25','Trao Ä‘á»•i ca lÃ m viá»‡c',NULL,'SWAP-REQ-004','CANCELLED','DIRECT_SWAP','2026-02-25','2026-03-18 01:40:09.000000',NULL,NULL,1,5,4,6);
 
--- 30. STOCK MOVEMENTS (Ghi chép chuyển động tồn kho)
-INSERT IGNORE INTO stock_movements (
-    variant_id, location_id, type, quantity, reference_type,
-    reference_id, notes, batch_id, created_at
-) VALUES
--- Nhập hàng từ PO
-(1, 1, 'IN', 2000, 'PURCHASE_ORDER', 1, 'Nhập sữa Vinamilk từ nhà cung cấp', 1, '2026-02-10 08:00:00'),
-(3, 3, 'IN', 200, 'PURCHASE_ORDER', 1, 'Nhập cà phê Nescafe từ nhà cung cấp', 3, '2026-02-10 08:30:00'),
+-- 30. STOCK MOVEMENTS (Ghi chÃ©p chuyá»ƒn Ä‘á»™ng tá»“n kho)
+INSERT INTO `stock_movements` VALUES (1,'2026-02-10 08:00:00.000000','Nháº­p sá»¯a Vinamilk tá»« nhÃ  cung cáº¥p',2000,1,'PURCHASE_ORDER','IN',1,1,1),(2,'2026-02-10 08:30:00.000000','Nháº­p cÃ  phÃª Nescafe tá»« nhÃ  cung cáº¥p',200,1,'PURCHASE_ORDER','IN',3,3,3),(3,'2026-02-15 10:00:00.000000','Bá»• sung sá»¯a lÃªn ká»‡ sale',150,1,'TRANSFER','IN',NULL,5,1),(4,'2026-02-15 10:00:00.000000','Xuáº¥t tá»« kho chÃ­nh sang display zone',150,1,'TRANSFER','OUT',1,1,1),(5,'2026-02-24 09:31:00.000000','BÃ¡n Coca Cola qua POS-001',4,1,'SALE','OUT',4,4,4),(6,'2026-02-24 09:31:00.000000','BÃ¡n Oishi snack qua POS-001',3,1,'SALE','OUT',5,5,5),(7,'2026-02-24 19:23:00.000000','BÃ¡n sá»¯a qua POS-001',4,2,'SALE','OUT',1,1,1),(8,'2026-02-24 19:23:00.000000','BÃ¡n cÃ  phÃª qua POS-001',1,2,'SALE','OUT',3,3,3),(9,'2026-02-25 20:10:00.000000','BÃ¡n Dove soap qua POS-002',2,3,'SALE','OUT',2,2,2),(10,'2026-02-20 15:00:00.000000','IC-2026-0001: kiá»ƒm kho thiáº¿u 5 há»™p sá»¯a Fresh Milk 1L',-5,1,'INVENTORY_COUNT','ADJUST',1,1,1),(11,'2026-02-20 16:00:00.000000','IC-2026-0002: kiá»ƒm kho tháº·ng 1 gÃ³i Nescafe 3in1',1,2,'INVENTORY_COUNT','ADJUST',3,3,3),(12,'2026-03-17 20:10:11.812530','Nháº­p hÃ ng tá»« PO PO-2026-003 (da nhan so luong quy doi)',480,7,'purchase_order','IN',27,1,34),(13,'2026-03-17 20:16:54.329528','Nháº­p hÃ ng tá»« PO PO-2026-004 (da nhan so luong quy doi)',300,8,'purchase_order','IN',29,1,35),(14,'2026-03-17 20:59:00.518460','Nháº­p hÃ ng tá»« PO PO-2026-005 (da nhan so luong quy doi)',480,9,'purchase_order','IN',30,1,27),(15,'2026-03-17 21:03:37.903715','Nháº­p hÃ ng tá»« PO PO-2026-006 (da nhan so luong quy doi)',480,10,'purchase_order','IN',31,2,27),(16,'2026-03-18 08:00:40.465498','Nháº­p hÃ ng tá»« PO PO-2026-009 (da nhan so luong quy doi)',1,13,'purchase_order','IN',32,1,28),(17,'2026-03-18 08:10:33.176734','Nháº­p hÃ ng tá»« PO PO-2026-010 (da nhan so luong quy doi)',10,14,'purchase_order','IN',33,3,30),(18,'2026-03-19 06:54:18.306032','Nháº­p hÃ ng tá»« PO PO-2026-011 (luu ton kho theo don vi goc)',96,15,'purchase_order','IN',34,1,27),(19,'2026-03-19 11:39:07.402276','Nháº­p hÃ ng tá»« PO PO-2026-012 (luu ton kho theo don vi goc)',384,16,'purchase_order','IN',38,1,27),(20,'2026-03-19 11:44:28.263050','Nháº­p hÃ ng tá»« PO PO-2026-013 (luu ton kho theo don vi goc)',240,17,'purchase_order','IN',39,1,27),(21,'2026-03-19 13:03:41.945531','POS_SALE',-14,17,'SALE_ORDER','OUT',1,1,1),(22,'2026-03-19 13:03:50.703936','POS_SALE',-14,18,'SALE_ORDER','OUT',1,1,1),(23,'2026-03-19 13:03:50.707199','POS_SALE',-14,19,'SALE_ORDER','OUT',1,1,1),(24,'2026-03-19 13:16:19.163027','POS_SALE',-2,20,'SALE_ORDER','OUT',5,5,5),(25,'2026-03-19 13:16:19.174907','POS_SALE',-1,21,'SALE_ORDER','OUT',17,2,17),(26,'2026-03-19 13:16:19.185327','POS_SALE',-7,22,'SALE_ORDER','OUT',10,5,10),(27,'2026-03-19 13:18:03.079801','POS_SALE',-1,23,'SALE_ORDER','OUT',24,4,24),(28,'2026-03-19 13:18:43.769767','POS_SALE',-1,25,'SALE_ORDER','OUT',24,4,24),(29,'2026-03-19 13:18:43.771033','POS_SALE',-1,24,'SALE_ORDER','OUT',24,4,24),(30,'2026-03-19 13:18:43.803295','POS_SALE',-2,26,'SALE_ORDER','OUT',5,5,5),(31,'2026-03-19 13:18:43.804814','POS_SALE',-2,29,'SALE_ORDER','OUT',5,5,5),(32,'2026-03-19 13:18:43.814672','POS_SALE',-1,27,'SALE_ORDER','OUT',17,2,17),(33,'2026-03-19 13:18:43.824105','POS_SALE',-7,28,'SALE_ORDER','OUT',10,5,10),(34,'2026-03-19 13:18:43.833640','POS_SALE',-1,30,'SALE_ORDER','OUT',17,2,17),(35,'2026-03-19 13:18:43.843636','POS_SALE',-7,31,'SALE_ORDER','OUT',10,5,10),(36,'2026-03-19 13:42:21.433728','POS_SALE',-1,32,'SALE_ORDER','OUT',10,5,10),(37,'2026-03-19 13:42:37.813547','POS_SALE',-1,33,'SALE_ORDER','OUT',10,5,10),(38,'2026-03-19 13:43:21.702339','POS_SALE',-1,34,'SALE_ORDER','OUT',10,5,10),(39,'2026-03-19 13:43:21.703843','POS_SALE',-1,35,'SALE_ORDER','OUT',10,5,10),(40,'2026-03-19 13:43:21.727834','POS_SALE',-1,36,'SALE_ORDER','OUT',10,5,10),(41,'2026-03-19 13:43:21.730826','POS_SALE',-1,37,'SALE_ORDER','OUT',10,5,10),(42,'2026-03-19 13:43:46.432698','POS_SALE',-1,38,'SALE_ORDER','OUT',10,5,10),(43,'2026-03-19 13:43:51.842681','POS_SALE',-1,40,'SALE_ORDER','OUT',10,5,10),(44,'2026-03-19 13:43:51.843682','POS_SALE',-1,39,'SALE_ORDER','OUT',10,5,10),(45,'2026-03-19 14:14:49.946095','POS_SALE',-10,41,'SALE_ORDER','OUT',10,5,10),(46,'2026-03-19 14:15:03.149703','POS_SALE',-10,42,'SALE_ORDER','OUT',10,5,10),(47,'2026-03-19 14:15:03.149703','POS_SALE',-10,43,'SALE_ORDER','OUT',10,5,10),(48,'2026-03-19 14:15:09.616302','POS refund from purchase history',2,NULL,'REFUND','IN',10,5,10),(49,'2026-03-19 14:15:22.755880','POS refund from purchase history',1,NULL,'REFUND','IN',10,5,10),(50,'2026-03-19 14:17:18.459125','Restock from resolved refund ticket TCK-REF-005',10,8,'REFUND','IN',10,5,10),(51,'2026-03-19 15:05:40.210523','POS_SALE',-1,44,'SALE_ORDER','OUT',1,1,1),(52,'2026-03-19 15:07:34.318511','POS_SALE',-1,45,'SALE_ORDER','OUT',1,1,1),(53,'2026-03-19 15:08:36.869550','POS_SALE',-1,46,'SALE_ORDER','OUT',1,1,1);
 
--- Chuyển kho từ vị trí này sang vị trí khác
-(1, 5, 'IN', 150, 'TRANSFER', 1, 'Bổ sung sữa lên kệ sale', NULL, '2026-02-15 10:00:00'),
-(1, 1, 'OUT', 150, 'TRANSFER', 1, 'Xuất từ kho chính sang display zone', 1, '2026-02-15 10:00:00'),
+-- 31. INVENTORY COUNTS (Phiáº¿u kiá»ƒm kho â€” Ä‘á»§ vÃ²ng Ä‘á»i: CONFIRMED, PENDING, COUNTING, DRAFT, REJECTED)
+-- Code format: IC-{year}-{seq4} â€” khá»›p vá»›i generateCode() trong InventoryCountService
+INSERT INTO `inventory_counts` VALUES (1,'IC-2026-0001','2026-02-20 15:00:00.000000',2,'2026-02-20 14:00:00.000000',5,'Kiá»ƒm kho Ä‘á»‹nh ká»³ thÃ¡ng 2 táº¡i kho chÃ­nh A1',NULL,'CONFIRMED',-100000.00,0.00,100000.00,1),(2,'IC-2026-0002','2026-02-20 16:00:00.000000',2,'2026-02-20 14:30:00.000000',5,'Kiá»ƒm kho Ä‘á»‹nh ká»³ thÃ¡ng 2 táº¡i kho láº¡nh B1',NULL,'CONFIRMED',35000.00,35000.00,0.00,3),(3,'IC-2026-0003',NULL,NULL,'2026-02-22 09:00:00.000000',5,'Kiá»ƒm kho khu vá»±c kho B â€” chá» quáº£n lÃ½ duyá»‡t',NULL,'PENDING',-45000.00,0.00,45000.00,2),(4,'IC-2026-0004',NULL,NULL,'2026-02-25 10:00:00.000000',5,'Kiá»ƒm kho khu vá»±c ká»‡ trÆ°ng bÃ y C1 â€” Ä‘ang Ä‘áº¿m',NULL,'COUNTING',NULL,NULL,NULL,4),(5,'IC-2026-0006',NULL,NULL,'2026-02-23 11:00:00.000000',5,'Kiá»ƒm kho khu vá»±c POS â€” bá»‹ tá»« chá»‘i do lá»—i nháº­p liá»‡u','Dá»¯ liá»‡u kiá»ƒm kÃª khÃ´ng khá»›p vá»›i biÃªn lai nháº­p hÃ ng. Cáº§n kiá»ƒm tra láº¡i lÃ´ hÃ ng trÆ°á»›c khi xÃ¡c nháº­n.','REJECTED',0.00,0.00,0.00,5),(6,'IC-2026-0007',NULL,NULL,'2026-03-18 08:11:04.252375',1,'',NULL,'PENDING',0.00,0.00,0.00,1);
 
--- Bán hàng
-(4, 4, 'OUT', 4, 'SALE', 1, 'Bán Coca Cola qua POS-001', 4, '2026-02-24 09:31:00'),
-(5, 5, 'OUT', 3, 'SALE', 1, 'Bán Oishi snack qua POS-001', 5, '2026-02-24 09:31:00'),
-(1, 1, 'OUT', 4, 'SALE', 2, 'Bán sữa qua POS-001', 1, '2026-02-24 19:23:00'),
-(3, 3, 'OUT', 1, 'SALE', 2, 'Bán cà phê qua POS-001', 3, '2026-02-24 19:23:00'),
-(2, 2, 'OUT', 2, 'SALE', 3, 'Bán Dove soap qua POS-002', 2, '2026-02-25 20:10:00'),
-
--- Điều chỉnh kho (inventory count — chỉ các phiếu CONFIRMED mới tạo stock movement)
-(1, 1, 'ADJUST', -5, 'INVENTORY_COUNT', 1, 'IC-2026-0001: kiểm kho thiếu 5 hộp sữa Fresh Milk 1L', 1, '2026-02-20 15:00:00'),
-(3, 3, 'ADJUST', 1, 'INVENTORY_COUNT', 2, 'IC-2026-0002: kiểm kho thặng 1 gói Nescafe 3in1', 3, '2026-02-20 16:00:00');
-
--- 31. INVENTORY COUNTS (Phiếu kiểm kho — đủ vòng đời: CONFIRMED, PENDING, COUNTING, DRAFT, REJECTED)
--- Code format: IC-{year}-{seq4} — khớp với generateCode() trong InventoryCountService
-INSERT IGNORE INTO inventory_counts (
-    code, status, location_id, notes,
-    total_shortage_value, total_overage_value, total_difference_value,
-    created_by, confirmed_by, created_at, confirmed_at
-) VALUES
--- Đã xác nhận: kiểm kho tháng 2 tại kho chính A1
-('IC-2026-0001', 'CONFIRMED', 1, 'Kiểm kho định kỳ tháng 2 tại kho chính A1', 100000.00, 0.00, -100000.00, 5, 2, '2026-02-20 14:00:00', '2026-02-20 15:00:00'),
--- Đã xác nhận: kiểm kho tháng 2 tại kho lạnh B1
-('IC-2026-0002', 'CONFIRMED', 3, 'Kiểm kho định kỳ tháng 2 tại kho lạnh B1', 0.00, 35000.00, 35000.00, 5, 2, '2026-02-20 14:30:00', '2026-02-20 16:00:00'),
--- Chờ duyệt: phiếu đã hoàn tất đếm, đang chờ quản lý phê duyệt
-('IC-2026-0003', 'PENDING', 2, 'Kiểm kho khu vực kho B — chờ quản lý duyệt', 45000.00, 0.00, -45000.00, 5, NULL, '2026-02-22 09:00:00', NULL),
--- Đang kiểm: chưa hoàn thành đếm
-('IC-2026-0004', 'COUNTING', 4, 'Kiểm kho khu vực kệ trưng bày C1 — đang đếm', NULL, NULL, NULL, 5, NULL, '2026-02-25 10:00:00', NULL),
--- Đã từ chối: quản lý phát hiện lỗi dữ liệu
-('IC-2026-0006', 'REJECTED', 5, 'Kiểm kho khu vực POS — bị từ chối do lỗi nhập liệu', 0.00, 0.00, 0.00, 5, NULL, '2026-02-23 11:00:00', NULL);
-
--- Cập nhật rejection_reason cho phiếu bị từ chối
-UPDATE inventory_counts SET rejection_reason = 'Dữ liệu kiểm kê không khớp với biên lai nhập hàng. Cần kiểm tra lại lô hàng trước khi xác nhận.' WHERE code = 'IC-2026-0006';
+-- Cáº­p nháº­t rejection_reason cho phiáº¿u bá»‹ tá»« chá»‘i
+UPDATE inventory_counts SET rejection_reason = 'Dá»¯ liá»‡u kiá»ƒm kÃª khÃ´ng khá»›p vá»›i biÃªn lai nháº­p hÃ ng. Cáº§n kiá»ƒm tra láº¡i lÃ´ hÃ ng trÆ°á»›c khi xÃ¡c nháº­n.' WHERE code = 'IC-2026-0006';
 
 -- 32. INVENTORY COUNT ITEMS
--- difference_value tính theo cost_price của batch tương ứng
-INSERT IGNORE INTO inventory_count_items (
-    inventory_count_id, product_id, system_quantity,
-    actual_quantity, difference_quantity, difference_value, reason
-) VALUES
--- IC-2026-0001 (CONFIRMED, location 1 — Kho A1): sữa thiếu 5, Dove OK
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0001'), 1, 250, 245, -5, -100000.00, 'SHRINKAGE'),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0001'), 2, 180, 180, 0, 0.00, NULL),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0001'), 6, 120, 120, 0, 0.00, NULL),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0001'), 11, 300, 300, 0, 0.00, NULL),
--- IC-2026-0002 (CONFIRMED, location 3 — Kho lạnh B1): cà phê thặng 1
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0002'), 3, 260, 261, 1, 35000.00, 'COUNTING_ERROR'),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0002'), 8, 150, 150, 0, 0.00, NULL),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0002'), 13, 400, 400, 0, 0.00, NULL),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0002'), 18, 280, 280, 0, 0.00, NULL),
--- IC-2026-0003 (PENDING, location 2 — Kho A2): xúc xích thiếu 1
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0003'), 7, 85, 84, -1, -45000.00, 'DAMAGE'),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0003'), 12, 500, 500, 0, 0.00, NULL),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0003'), 17, 320, 320, 0, 0.00, NULL),
--- IC-2026-0004 (COUNTING, location 4 — Kệ C1): chưa đếm hết
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0004'), 4, 510, 510, 0, 0.00, NULL),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0004'), 9, 200, NULL, NULL, NULL, NULL),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0004'), 14, 250, NULL, NULL, NULL, NULL),
--- IC-2026-0006 (REJECTED, location 5 — POS C2): đã điền nhưng bị từ chối
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0006'), 5, 390, 390, 0, 0.00, NULL),
-((SELECT id FROM inventory_counts WHERE code = 'IC-2026-0006'), 10, 1000, 995, -5, -5000.00, 'OTHER');
+-- difference_value tÃ­nh theo cost_price cá»§a batch tÆ°Æ¡ng á»©ng
+INSERT INTO `inventory_count_items` VALUES (1,245,-5,-100000.00,1,'SHRINKAGE',250,1,NULL),(2,180,0,0.00,2,NULL,180,1,NULL),(3,120,0,0.00,6,NULL,120,1,NULL),(4,300,0,0.00,11,NULL,300,1,NULL),(5,261,1,35000.00,3,'COUNTING_ERROR',260,2,NULL),(6,150,0,0.00,8,NULL,150,2,NULL),(7,400,0,0.00,13,NULL,400,2,NULL),(8,280,0,0.00,18,NULL,280,2,NULL),(9,84,-1,-45000.00,7,'DAMAGE',85,3,NULL),(10,500,0,0.00,12,NULL,500,3,NULL),(11,320,0,0.00,17,NULL,320,3,NULL),(12,510,0,0.00,4,NULL,510,4,NULL),(13,NULL,NULL,NULL,9,NULL,200,4,NULL),(14,NULL,NULL,NULL,14,NULL,250,4,NULL),(15,390,0,0.00,5,NULL,390,5,NULL),(16,995,-5,-5000.00,10,'OTHER',1000,5,NULL),(17,245,0,0.00,1,'',245,6,1),(18,120,0,0.00,6,'',120,6,6),(19,300,0,0.00,11,'',300,6,11),(20,210,0,0.00,16,'',210,6,16),(21,300,0,0.00,21,'',300,6,21),(22,80,0,0.00,26,'',80,6,26),(23,480,0,0.00,1,'',480,6,27),(24,1,0,0.00,2,'',1,6,28),(25,480,0,0.00,1,'',480,6,34),(26,300,0,0.00,4,'',300,6,35);
 
--- 33. DISPOSAL VOUCHERS (Phiếu thanh lý hàng hỏng/lỗi)
-INSERT IGNORE INTO disposal_vouchers (
-    code, location_id, status, reason_type,
-    notes, total_items, total_quantity, total_value,
-    created_by, created_at, confirmed_by, confirmed_at
-) VALUES
-('DV-202602-001', 1, 'CONFIRMED', 'DAMAGED', 'Sản phẩm lỗi - vỏ hộp, không lỗi chất lượng nội dung', 1, 12, 180000.00, 5, '2026-02-18 13:30:00', 2, '2026-02-18 14:00:00'),
-('DV-202602-002', 3, 'CONFIRMED', 'EXPIRED', 'Sản phẩm hết hạn sử dụng - tìm thấy khi kiểm kho', 1, 8, 96000.00, 5, '2026-02-22 10:00:00', 2, '2026-02-22 10:30:00');
+-- 33. DISPOSAL VOUCHERS (Phiáº¿u thanh lÃ½ hÃ ng há»ng/lá»—i)
+INSERT INTO `disposal_vouchers` VALUES (1,'DV-202602-001','2026-02-18 14:00:00.000000','2026-02-18 13:30:00.000000','Sáº£n pháº©m lá»—i - vá» há»™p, khÃ´ng lá»—i cháº¥t lÆ°á»£ng ná»™i dung','DAMAGED',NULL,'CONFIRMED',1,12,180000.00,NULL,2,5,1),(2,'DV-202602-002','2026-02-22 10:30:00.000000','2026-02-22 10:00:00.000000','Sáº£n pháº©m háº¿t háº¡n sá»­ dá»¥ng - tÃ¬m tháº¥y khi kiá»ƒm kho','EXPIRED',NULL,'CONFIRMED',1,8,96000.00,NULL,2,5,3);
 
 -- 34. DISPOSAL VOUCHER ITEMS
-INSERT IGNORE INTO disposal_voucher_items (
-    disposal_voucher_id, batch_id, product_id, batch_code,
-    quantity, unit_cost, total_cost, expiry_date
-) VALUES
-((SELECT id FROM disposal_vouchers WHERE code = 'DV-202602-001'), 2, 2, 'DV2026001', 12, 15000.00, 180000.00, '2027-02-01'),
-((SELECT id FROM disposal_vouchers WHERE code = 'DV-202602-002'), 3, 3, 'NC2026001', 8, 12000.00, 96000.00, '2026-02-01');
+INSERT INTO `disposal_voucher_items` VALUES (1,'DV2026001','2027-02-01',12,180000.00,15000.00,2,1,2),(2,'NC2026001','2026-02-01',8,96000.00,12000.00,3,2,3);
 
--- 35. LOYALTY GIFTS (Quà tặng gift/rewards từ loyalty program)
-INSERT IGNORE INTO loyalty_gifts (
-    variant_id, name, required_points, stock, is_active, created_at
-) VALUES
-(4, 'Nước uống đặc biệt 500ml', 50, 150, TRUE, NOW()),
-(3, 'Bộ cà phê hòa tan 3in1', 150, 80, TRUE, NOW()),
-(2, 'Xà phòng Dove 90g', 75, 200, TRUE, NOW()),
-(1, 'Sữa tươi Vinamilk 1L', 200, 50, TRUE, NOW()),
-(5, 'Combo Snack Oishi', 100, 100, TRUE, NOW());
+-- 35. LOYALTY GIFTS (QuÃ  táº·ng gift/rewards tá»« loyalty program)
+INSERT INTO `loyalty_gifts` VALUES (1,'2026-03-18 01:40:09.000000',_binary '','NÆ°á»›c uá»‘ng Ä‘áº·c biá»‡t 500ml',50,150,4),(2,'2026-03-18 01:40:09.000000',_binary '','Bá»™ cÃ  phÃª hÃ²a tan 3in1',150,80,3),(3,'2026-03-18 01:40:09.000000',_binary '','XÃ  phÃ²ng Dove 90g',75,200,2),(4,'2026-03-18 01:40:09.000000',_binary '','Sá»¯a tÆ°Æ¡i Vinamilk 1L',200,50,1),(5,'2026-03-18 01:40:09.000000',_binary '','Combo Snack Oishi',100,100,5),(6,'2026-03-19 15:38:12.253398',_binary '','NÆ°á»›c ngá»t Coca Cola (Äá»•i Ä‘iá»ƒm)',5,10,4);
 
--- 36. GIFT REDEMPTION HISTORY (Lịch sử sử dụng quà tặng)
-INSERT IGNORE INTO gift_redemption_history (
-    customer_id, gift_id, points_used, redeemed_at
-) VALUES
-(1, (SELECT id FROM loyalty_gifts WHERE name = 'Nước uống đặc biệt 500ml' LIMIT 1), 50, '2026-02-15 10:30:00'),
-(2, (SELECT id FROM loyalty_gifts WHERE name = 'Bộ cà phê hòa tan 3in1' LIMIT 1), 150, '2026-02-16 14:15:00'),
-(3, (SELECT id FROM loyalty_gifts WHERE name = 'Xà phòng Dove 90g' LIMIT 1), 75, '2026-02-18 09:20:00'),
-(4, (SELECT id FROM loyalty_gifts WHERE name = 'Sữa tươi Vinamilk 1L' LIMIT 1), 200, '2026-02-20 16:00:00'),
-(1, (SELECT id FROM loyalty_gifts WHERE name = 'Combo Snack Oishi' LIMIT 1), 100, '2026-02-22 12:30:00');
+-- 36. GIFT REDEMPTION HISTORY (Lá»‹ch sá»­ sá»­ dá»¥ng quÃ  táº·ng)
+INSERT INTO `gift_redemption_history` VALUES (1,50,'2026-02-15 10:30:00.000000',1,1),(2,150,'2026-02-16 14:15:00.000000',2,2),(3,75,'2026-02-18 09:20:00.000000',3,3),(4,200,'2026-02-20 16:00:00.000000',4,4),(5,100,'2026-02-22 12:30:00.000000',1,5);
 
--- 37. PURCHASE HISTORY (Phù hợp với legacy purchase history)
-INSERT IGNORE INTO purchase_history (
-    customer_id, customer_name, product_id, product_name,
-    quantity, price, subtotal, payment_method, created_at
-) VALUES
-(1, 'Nguyen Van A', 4, 'Coca Cola 330ml', 2, 12000.00, 24000.00, 'CASH', '2026-02-24 09:30:00'),
-(1, 'Nguyen Van A', 5, 'Oishi Snack', 3, 8000.00, 24000.00, 'CASH', '2026-02-24 09:30:00'),
-(2, 'Tran Thi B', 1, 'Fresh Milk 1L', 2, 25000.00, 50000.00, 'CARD', '2026-02-24 19:20:00'),
-(2, 'Tran Thi B', 3, 'Nescafe 3in1', 1, 45000.00, 45000.00, 'CARD', '2026-02-24 19:20:00'),
-(3, 'Le Van C', 2, 'Dove Soap 90g', 2, 15000.00, 30000.00, 'MOMO', '2026-02-25 20:10:00'),
-(1, 'Nguyen Van A', 1, 'Fresh Milk 1L', 1, 25000.00, 25000.00, 'CASH', '2026-02-26 10:15:00'),
-(4, 'Pham Thi D', 4, 'Coca Cola 330ml', 5, 12000.00, 60000.00, 'CASH', '2026-02-26 14:30:00'),
-(4, 'Pham Thi D', 5, 'Oishi Snack', 4, 8000.00, 32000.00, 'CASH', '2026-02-26 14:30:00'),
-(2, 'Tran Thi B', 4, 'Coca Cola 330ml', 3, 12000.00, 36000.00, 'MOMO', '2026-02-27 08:45:00'),
-(2, 'Tran Thi B', 2, 'Dove Soap 90g', 1, 15000.00, 15000.00, 'MOMO', '2026-02-27 08:45:00');
+-- 37. PURCHASE HISTORY (PhÃ¹ há»£p vá»›i legacy purchase history)
+INSERT INTO `purchase_history` VALUES (1,'2026-02-24 09:30:00.000000',1,'Nguyen Van A','CASH',12000.00,4,'Coca Cola 330ml',2,24000.00),(2,'2026-02-24 09:30:00.000000',1,'Nguyen Van A','CASH',8000.00,5,'Oishi Snack',3,24000.00),(3,'2026-02-24 19:20:00.000000',2,'Tran Thi B','CARD',25000.00,1,'Fresh Milk 1L',2,50000.00),(4,'2026-02-24 19:20:00.000000',2,'Tran Thi B','CARD',45000.00,3,'Nescafe 3in1',1,45000.00),(5,'2026-02-25 20:10:00.000000',3,'Le Van C','MOMO',15000.00,2,'Dove Soap 90g',2,30000.00),(6,'2026-02-26 10:15:00.000000',1,'Nguyen Van A','CASH',25000.00,1,'Fresh Milk 1L',1,25000.00),(7,'2026-02-26 14:30:00.000000',4,'Pham Thi D','CASH',12000.00,4,'Coca Cola 330ml',5,60000.00),(8,'2026-02-26 14:30:00.000000',4,'Pham Thi D','CASH',8000.00,5,'Oishi Snack',4,32000.00),(9,'2026-02-27 08:45:00.000000',2,'Tran Thi B','MOMO',12000.00,4,'Coca Cola 330ml',3,36000.00),(10,'2026-02-27 08:45:00.000000',2,'Tran Thi B','MOMO',15000.00,2,'Dove Soap 90g',1,15000.00),(17,'2026-03-19 13:03:41.894956',4,'Pham Thi D','Tiá»n máº·t',23000.00,1,'Sá»¯a dinh dÆ°á»¡ng Vinamilk Bá»‹ch - Ãt Ä‘Æ°á»ng - 220ml',14,322000.00),(18,'2026-03-19 13:03:50.691817',4,'Pham Thi D','Tiá»n máº·t',23000.00,1,'Sá»¯a dinh dÆ°á»¡ng Vinamilk Bá»‹ch - Ãt Ä‘Æ°á»ng - 220ml',14,322000.00),(19,'2026-03-19 13:03:50.692822',4,'Pham Thi D','Tiá»n máº·t',23000.00,1,'Sá»¯a dinh dÆ°á»¡ng Vinamilk Bá»‹ch - Ãt Ä‘Æ°á»ng - 220ml',14,322000.00),(20,'2026-03-19 13:16:19.149215',4,'Pham Thi D','Tiá»n máº·t',8000.00,5,'BÃ¡nh snack Oishi GÃ³i - PhÃ´ mai - 40G',2,16000.00),(21,'2026-03-19 13:16:19.150222',4,'Pham Thi D','Tiá»n máº·t',12000.00,17,'Snack Lays GÃ³i - BÃ² NÆ°á»›ng Texas - 30g',1,12000.00),(22,'2026-03-19 13:16:19.152825',4,'Pham Thi D','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',7,350000.00),(23,'2026-03-19 13:18:03.070233',7,'Huy','Chuyá»ƒn khoáº£n',25000.00,24,'Sá»¯a Ä‘áº·c Ã”ng Thá» Lon - 380g',1,25000.00),(24,'2026-03-19 13:18:43.758182',7,'Huy','Chuyá»ƒn khoáº£n',25000.00,24,'Sá»¯a Ä‘áº·c Ã”ng Thá» Lon - 380g',1,25000.00),(25,'2026-03-19 13:18:43.758182',7,'Huy','Chuyá»ƒn khoáº£n',25000.00,24,'Sá»¯a Ä‘áº·c Ã”ng Thá» Lon - 380g',1,25000.00),(26,'2026-03-19 13:18:43.790292',4,'Pham Thi D','Tiá»n máº·t',8000.00,5,'BÃ¡nh snack Oishi GÃ³i - PhÃ´ mai - 40G',2,16000.00),(27,'2026-03-19 13:18:43.791306',4,'Pham Thi D','Tiá»n máº·t',12000.00,17,'Snack Lays GÃ³i - BÃ² NÆ°á»›ng Texas - 30g',1,12000.00),(28,'2026-03-19 13:18:43.792666',4,'Pham Thi D','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',7,350000.00),(29,'2026-03-19 13:18:43.793744',4,'Pham Thi D','Tiá»n máº·t',8000.00,5,'BÃ¡nh snack Oishi GÃ³i - PhÃ´ mai - 40G',2,16000.00),(30,'2026-03-19 13:18:43.794741',4,'Pham Thi D','Tiá»n máº·t',12000.00,17,'Snack Lays GÃ³i - BÃ² NÆ°á»›ng Texas - 30g',1,12000.00),(31,'2026-03-19 13:18:43.796286',4,'Pham Thi D','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',7,350000.00),(32,'2026-03-19 13:42:21.415373',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(33,'2026-03-19 13:42:37.773516',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(34,'2026-03-19 13:43:21.689677',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(35,'2026-03-19 13:43:21.689677',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(36,'2026-03-19 13:43:21.719661',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(37,'2026-03-19 13:43:21.721780',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(38,'2026-03-19 13:43:46.416431',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(39,'2026-03-19 13:43:51.831524',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(40,'2026-03-19 13:43:51.831524',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',1,50000.00),(41,'2026-03-19 14:14:49.896848',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',10,500000.00),(42,'2026-03-19 14:15:03.135723',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',10,500000.00),(43,'2026-03-19 14:15:03.135723',0,'KhÃ¡ch láº»','Tiá»n máº·t',50000.00,10,'Káº¹o mÃºt Chupa Chups GÃ³i - 30 cÃ¡i',10,500000.00),(44,'2026-03-19 15:05:40.199015',7,'Huy','Tiá»n máº·t',23000.00,1,'Sá»¯a dinh dÆ°á»¡ng Vinamilk Bá»‹ch - Ãt Ä‘Æ°á»ng - 220ml',1,23000.00),(45,'2026-03-19 15:07:34.306415',0,'KhÃ¡ch láº»','Tiá»n máº·t',23000.00,1,'Sá»¯a dinh dÆ°á»¡ng Vinamilk Bá»‹ch - Ãt Ä‘Æ°á»ng - 220ml',1,23000.00),(46,'2026-03-19 15:08:36.855694',0,'KhÃ¡ch láº»','Tiá»n máº·t',23000.00,1,'Sá»¯a dinh dÆ°á»¡ng Vinamilk Bá»‹ch - Ãt Ä‘Æ°á»ng - 220ml',1,23000.00);
 
 -- 28. REPORTS + AUDIT LOGS (from new seed)
-INSERT IGNORE INTO reports (type, report_date, data, created_by, status, created_at, completed_at, report_name, format, file_path) VALUES
-('Revenue', CURDATE(), '{"summary":"seed"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Revenue Report', 'PDF', NULL),
-('Inventory', CURDATE(), '{"summary":"seed inventory"}', 5, 'COMPLETED', NOW(), NOW(), 'Seed Inventory Report', 'PDF', NULL),
-('Attendance', CURDATE(), '{"summary":"seed attendance"}', 1, 'COMPLETED', NOW(), NOW(), 'Seed Attendance Report', 'PDF', NULL);
+INSERT INTO `reports` VALUES (1,'2026-03-18 01:40:09.000000','2026-03-18 01:40:09.000000','{\"summary\":\"seed\"}',NULL,'PDF','2026-03-18','Seed Revenue Report','COMPLETED','Revenue',1,NULL),(2,'2026-03-18 01:40:09.000000','2026-03-18 01:40:09.000000','{\"summary\":\"seed inventory\"}',NULL,'PDF','2026-03-18','Seed Inventory Report','COMPLETED','Inventory',5,NULL),(3,'2026-03-18 01:40:09.000000','2026-03-18 01:40:09.000000','{\"summary\":\"seed attendance\"}',NULL,'PDF','2026-03-18','Seed Attendance Report','COMPLETED','Attendance',1,NULL);
 
-INSERT IGNORE INTO audit_logs (user_id, action, entity_name, entity_id, changes, created_at, result, source, details) VALUES
-(1, 'LOGIN', 'User', 1, '{"event":"seed login"}', NOW(), 'OK', 'SYSTEM', 'Initial seed log'),
-(2, 'CREATE', 'Campaign', 1, '{"campaign_code":"CAMP-202602-001"}', NOW(), 'OK', 'SYSTEM', 'Created campaign seed'),
-(5, 'CREATE', 'InventoryCount', 1, '{"count_code":"IC-2026-0001"}', NOW(), 'OK', 'SYSTEM', 'Created inventory count seed'),
-(5, 'CONFIRM', 'InventoryCount', 1, '{"count_code":"IC-2026-0001","confirmed_by":2}', NOW(), 'OK', 'SYSTEM', 'Confirmed inventory count IC-2026-0001'),
-(5, 'CONFIRM', 'InventoryCount', 2, '{"count_code":"IC-2026-0002","confirmed_by":2}', NOW(), 'OK', 'SYSTEM', 'Confirmed inventory count IC-2026-0002'),
-(5, 'SUBMIT', 'InventoryCount', 3, '{"count_code":"IC-2026-0003"}', NOW(), 'OK', 'SYSTEM', 'Submitted IC-2026-0003 for approval'),
-(2, 'REJECT', 'InventoryCount', 6, '{"count_code":"IC-2026-0006","reason":"Du lieu khong khop"}', NOW(), 'OK', 'SYSTEM', 'Rejected inventory count IC-2026-0006');
+INSERT INTO `audit_logs` VALUES (1,'LOGIN','{\"event\":\"seed login\"}','2026-03-18 01:40:09.000000','Initial seed log',1,'User',NULL,'OK','SYSTEM',NULL,1),(2,'CREATE','{\"campaign_code\":\"CAMP-202602-001\"}','2026-03-18 01:40:09.000000','Created campaign seed',1,'Campaign',NULL,'OK','SYSTEM',NULL,2),(3,'CREATE','{\"count_code\":\"IC-2026-0001\"}','2026-03-18 01:40:09.000000','Created inventory count seed',1,'InventoryCount',NULL,'OK','SYSTEM',NULL,5),(4,'CONFIRM','{\"count_code\":\"IC-2026-0001\",\"confirmed_by\":2}','2026-03-18 01:40:09.000000','Confirmed inventory count IC-2026-0001',1,'InventoryCount',NULL,'OK','SYSTEM',NULL,5),(5,'CONFIRM','{\"count_code\":\"IC-2026-0002\",\"confirmed_by\":2}','2026-03-18 01:40:09.000000','Confirmed inventory count IC-2026-0002',2,'InventoryCount',NULL,'OK','SYSTEM',NULL,5),(6,'SUBMIT','{\"count_code\":\"IC-2026-0003\"}','2026-03-18 01:40:09.000000','Submitted IC-2026-0003 for approval',3,'InventoryCount',NULL,'OK','SYSTEM',NULL,5),(7,'REJECT','{\"count_code\":\"IC-2026-0006\",\"reason\":\"Du lieu khong khop\"}','2026-03-18 01:40:09.000000','Rejected inventory count IC-2026-0006',6,'InventoryCount',NULL,'OK','SYSTEM',NULL,2);
 
 -- =============================================================================
 -- ADVERTISEMENTS & AD CONTRACTS
 -- =============================================================================
-INSERT INTO advertisements (
-    slot, sponsor_name, title, subtitle, image_url, link_url,
-    cta_text, cta_color, bg_color, is_active,
-    contract_number, contract_value, contract_start, contract_end,
-    payment_terms, contact_person, contact_email, contact_phone, notes,
-    created_at, updated_at
-) VALUES
-(
-    'LEFT',
-    'SmallTrend Brand',
-    'Mega Sale 50% OFF',
-    'Ưu đãi cuối tuần cho mọi sản phẩm',
-    'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80',
-    '',
-    'Mua ngay',
-    '#4f46e5',
-    '#ffffff',
-    TRUE,
-    'AD-2026-LEFT-001',
-    5000000.00,
-    '2026-01-01',
-    '2026-12-31',
-    'Thanh toán hàng quý, net 30 ngày',
-    'Nguyễn Văn Marketing',
-    'marketing@smalltrend.vn',
-    '0901-234-567',
-    'Hợp đồng quảng cáo nội bộ, ưu tiên slot trái toàn năm 2026',
-    NOW(), NOW()
-),
-(
-    'RIGHT',
-    'Express Delivery Partner',
-    'Giao hàng miễn phí',
-    'Đơn từ 200.000đ — giao trong 2h',
-    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80',
-    '',
-    'Đặt ngay',
-    '#059669',
-    '#f0fdf4',
-    TRUE,
-    'AD-2026-RIGHT-001',
-    12000000.00,
-    '2026-01-01',
-    '2026-06-30',
-    'Thanh toán hàng tháng vào ngày 15',
-    'Trần Thị Logistics',
-    'ads@expressdelivery.vn',
-    '0912-345-678',
-    'Đối tác giao hàng nhanh khu vực HCM & Hà Nội. Hợp đồng gia hạn mỗi 6 tháng.',
-    NOW(), NOW()
-);
+INSERT INTO `advertisements` VALUES (1,'#ffffff','marketing@smalltrend.vn','Nguyá»…n VÄƒn Marketing','0901-234-567','2026-12-31','AD-2026-LEFT-001','2026-01-01',5000000.00,'2026-03-18 01:40:09.000000','#4f46e5','Mua ngay','https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80',_binary '\0','','Há»£p Ä‘á»“ng quáº£ng cÃ¡o ná»™i bá»™, Æ°u tiÃªn slot trÃ¡i toÃ n nÄƒm 2026','Thanh toÃ¡n hÃ ng quÃ½, net 30 ngÃ y','LEFT','SmallTrend Brand','Æ¯u Ä‘Ã£i cuá»‘i tuáº§n cho má»i sáº£n pháº©m','Mega Sale 50% OFF','2026-03-19 15:39:05.966119'),(2,'#f0fdf4','ads@expressdelivery.vn','Tráº§n Thá»‹ Logistics','0912-345-678','2026-06-30','AD-2026-RIGHT-001','2026-01-01',12000000.00,'2026-03-18 01:40:09.000000','#059669','Äáº·t ngay','https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80',_binary '\0','','Äá»‘i tÃ¡c giao hÃ ng nhanh khu vá»±c HCM & HÃ  Ná»™i. Há»£p Ä‘á»“ng gia háº¡n má»—i 6 thÃ¡ng.','Thanh toÃ¡n hÃ ng thÃ¡ng vÃ o ngÃ y 15','RIGHT','Express Delivery Partner','ÄÆ¡n tá»« 200.000Ä‘ â€” giao trong 2h','Giao hÃ ng miá»…n phÃ­','2026-03-19 14:04:19.055381'),(3,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2026-03-19 14:03:25.455314',NULL,NULL,'https://res.cloudinary.com/didvvefmu/image/upload/v1773928997/smalltrend/crm/ads/ymypqgpfxq3wvajk8ycq.jpg',_binary '',NULL,NULL,NULL,'LEFT','KitKat',NULL,'KitKat- Ä‚n lÃ  mÃª','2026-03-19 14:03:25.455314'),(4,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2026-03-19 14:04:02.978638',NULL,NULL,'https://res.cloudinary.com/didvvefmu/image/upload/v1773929027/smalltrend/crm/ads/dhabu2yyxvfnse54t4ds.jpg',_binary '',NULL,NULL,NULL,'RIGHT','HuyHandSome',NULL,'HotDog-Bá»¯a sÃ¡ng tá»‘t lÃ nh cho má»i ngÆ°á»i','2026-03-19 14:04:02.978638');
 
 
 -- =============================================================================
 -- End of SmallTrend Combined Sample Data
 -- =============================================================================
+
+-- SYNCED FROM BACKUP: advertisements
+
+
+-- SYNCED FROM BACKUP: attendance
+
+
+-- SYNCED FROM BACKUP: audit_logs
+
+
+-- SYNCED FROM BACKUP: brands
+
+
+-- SYNCED FROM BACKUP: campaigns
+
+
+-- SYNCED FROM BACKUP: cash_registers
+
+
+-- SYNCED FROM BACKUP: cash_transactions
+
+
+-- SYNCED FROM BACKUP: categories
+
+
+-- SYNCED FROM BACKUP: coupons
+
+
+-- SYNCED FROM BACKUP: coupon_usage
+
+
+-- SYNCED FROM BACKUP: customers
+
+
+-- SYNCED FROM BACKUP: customer_tiers
+
+
+-- SYNCED FROM BACKUP: disposal_vouchers
+
+
+-- SYNCED FROM BACKUP: disposal_voucher_items
+
+
+-- SYNCED FROM BACKUP: gift_redemption_history
+
+
+-- SYNCED FROM BACKUP: inventory_counts
+
+
+-- SYNCED FROM BACKUP: inventory_count_items
+
+
+-- SYNCED FROM BACKUP: inventory_stock
+
+
+-- SYNCED FROM BACKUP: locations
+
+
+-- SYNCED FROM BACKUP: loyalty_gifts
+
+
+-- SYNCED FROM BACKUP: loyalty_transactions
+
+
+-- SYNCED FROM BACKUP: payroll_calculations
+
+
+-- SYNCED FROM BACKUP: permissions
+
+
+-- SYNCED FROM BACKUP: price_expiry_alert_logs
+
+
+-- SYNCED FROM BACKUP: products
+
+
+-- SYNCED FROM BACKUP: product_batches
+
+
+-- SYNCED FROM BACKUP: product_combos
+
+
+-- SYNCED FROM BACKUP: product_combo_items
+
+
+-- SYNCED FROM BACKUP: product_variants
+
+
+-- SYNCED FROM BACKUP: purchase_history
+
+
+-- SYNCED FROM BACKUP: purchase_orders
+
+
+-- SYNCED FROM BACKUP: purchase_order_items
+
+
+-- SYNCED FROM BACKUP: reports
+
+
+-- SYNCED FROM BACKUP: roles
+
+
+-- SYNCED FROM BACKUP: role_permissions
+
+
+-- SYNCED FROM BACKUP: salary_configs
+
+
+-- SYNCED FROM BACKUP: sale_orders
+
+
+-- SYNCED FROM BACKUP: sale_order_histories
+
+
+-- SYNCED FROM BACKUP: sale_order_items
+
+
+-- SYNCED FROM BACKUP: shift_handovers
+
+
+-- SYNCED FROM BACKUP: shift_swap_requests
+
+
+-- SYNCED FROM BACKUP: stock_movements
+
+
+-- SYNCED FROM BACKUP: suppliers
+
+
+-- SYNCED FROM BACKUP: supplier_contracts
+
+
+-- SYNCED FROM BACKUP: tax_rates
+
+
+-- SYNCED FROM BACKUP: tickets
+
+
+-- SYNCED FROM BACKUP: units
+
+
+-- SYNCED FROM BACKUP: unit_conversions
+
+
+-- SYNCED FROM BACKUP: users
+
+
+-- SYNCED FROM BACKUP: user_credentials
+
+
+-- SYNCED FROM BACKUP: variant_attributes
+
+
+-- SYNCED FROM BACKUP: variant_prices
+
+
+-- SYNCED FROM BACKUP: work_shifts
+
+
+-- SYNCED FROM BACKUP: work_shift_assignments
+

@@ -43,9 +43,14 @@ const ShiftSwapTicketsPage = () => {
                 return true;
             }
 
-            const assignedToCurrentUser = Number(ticket?.assignedToUserId || 0) === currentUserId;
+            const status = String(ticket?.status || '').toUpperCase();
             const createdByCurrentUser = Number(ticket?.createdByUserId || ticket?.requesterUserId || 0) === currentUserId;
-            return assignedToCurrentUser || createdByCurrentUser;
+
+            if (createdByCurrentUser) {
+                return true;
+            }
+
+            return status === 'OPEN' || status === 'IN_PROGRESS';
         });
     }, [tickets, isManagerOrAdmin, currentUserId]);
 
@@ -120,24 +125,25 @@ const ShiftSwapTicketsPage = () => {
                                 <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{ticket.status || 'OPEN'}</span>
                             </div>
 
-                            {String(ticket.status || '').toUpperCase() === 'OPEN' && (
-                                <div className="mt-3 flex gap-2 border-t border-slate-200 pt-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleQuickApprove(ticket)}
-                                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                                    >
-                                        <Check size={14} /> V
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleQuickReject(ticket.id)}
-                                        className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700"
-                                    >
-                                        <XCircle size={14} /> X
-                                    </button>
-                                </div>
-                            )}
+                            {String(ticket.status || '').toUpperCase() === 'OPEN'
+                                && Number(ticket?.createdByUserId || ticket?.requesterUserId || 0) !== currentUserId && (
+                                    <div className="mt-3 flex gap-2 border-t border-slate-200 pt-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleQuickApprove(ticket)}
+                                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                                        >
+                                            <Check size={14} /> V
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleQuickReject(ticket.id)}
+                                            className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700"
+                                        >
+                                            <XCircle size={14} /> X
+                                        </button>
+                                    </div>
+                                )}
                         </div>
                     ))}
                 </div>

@@ -149,7 +149,7 @@ public class ShiftWorkforceService {
 
         Attendance saved = attendanceRepository.save(attendance);
 
-        if (assignment != null && shouldMarkAssignmentCompleted(saved.getStatus())) {
+        if (assignment != null && shouldMarkAssignmentCompleted(saved)) {
             assignment.setStatus("COMPLETED");
             assignmentRepository.save(assignment);
         }
@@ -269,14 +269,28 @@ public class ShiftWorkforceService {
                 BigDecimal shiftHours = resolveWorkedHours(assignment.getWorkShift(), attendance);
                 BigDecimal regularHours = shiftHours.min(BigDecimal.valueOf(8));
                 BigDecimal overtimeHours = shiftHours.subtract(regularHours).max(BigDecimal.ZERO);
+                BigDecimal bonusFactor = resolveShiftBonusFactor(assignment.getWorkShift());
+                BigDecimal overtimeFactor = resolveShiftOvertimeFactor(assignment.getWorkShift());
 
                 acc.workedHours = acc.workedHours.add(shiftHours);
                 acc.overtimeHours = acc.overtimeHours.add(overtimeHours);
+                acc.adjustedRegularHours = acc.adjustedRegularHours.add(regularHours.multiply(bonusFactor));
+                acc.adjustedOvertimeHours = acc.adjustedOvertimeHours.add(overtimeHours.multiply(bonusFactor).multiply(overtimeFactor));
             }
         }
 
+        Map<String, LocalDateTime> paidAtMonthMap = paidPayrolls.stream()
+                .filter(item -> "PAID".equalsIgnoreCase(Optional.ofNullable(item.getStatus()).orElse("")))
+                .filter(item -> item.getUser() != null && item.getUser().getId() != null)
+                .filter(item -> item.getPayPeriodStart() != null)
+                .filter(item -> item.getPaidAt() != null)
+                .collect(Collectors.toMap(
+                        item -> key(item.getUser().getId(), item.getPayPeriodStart()),
+                        PayrollCalculation::getPaidAt,
+                        (first, second) -> first));
+
         List<PayrollSummaryResponse.Row> rows = accumulators.values().stream()
-                .map(acc -> toPayrollRow(acc, hourlyRateOverride))
+                .map(acc -> toPayrollRow(acc, hourlyRateOverride, endDate, paidMonthMap, paidAtMonthMap))
                 .sorted(Comparator.comparing(PayrollSummaryResponse.Row::getFullName, Comparator.nullsLast(String::compareToIgnoreCase)))
                 .collect(Collectors.toList());
 
@@ -447,7 +461,11 @@ public class ShiftWorkforceService {
                         : (isPaid ? "Đã thanh toán lương tháng" : "Chưa thanh toán lương tháng"));
     }
 
-    private PayrollSummaryResponse.Row toPayrollRow(PayrollAccumulator acc, BigDecimal hourlyRateOverride) {
+    private PayrollSummaryResponse.Row toPayrollRow(PayrollAccumulator acc,
+            BigDecimal hourlyRateOverride,
+            LocalDate periodEnd,
+            Map<String, Boolean> paidMonthMap,
+            Map<String, LocalDateTime> paidAtMonthMap) {
         SalaryProfile salaryProfile = resolveSalaryProfile(acc.user.getId(), hourlyRateOverride);
 
         BigDecimal hourlyRate = salaryProfile.hourlyRate;
@@ -459,11 +477,10 @@ public class ShiftWorkforceService {
         boolean eligibleForMonthlySalary = true;
 
         if (salaryProfile.salaryType == SalaryType.HOURLY) {
-            regularPay = acc.workedHours.subtract(acc.overtimeHours).max(BigDecimal.ZERO)
+            regularPay = acc.adjustedRegularHours.max(BigDecimal.ZERO)
                     .multiply(hourlyRate);
-            overtimePay = acc.overtimeHours
-                    .multiply(hourlyRate)
-                    .multiply(BigDecimal.valueOf(1.5));
+            overtimePay = acc.adjustedOvertimeHours.max(BigDecimal.ZERO)
+                    .multiply(hourlyRate);
             grossPay = regularPay.add(overtimePay);
             deductions = BigDecimal.valueOf(acc.absentShifts)
                     .multiply(hourlyRate)
@@ -482,6 +499,14 @@ public class ShiftWorkforceService {
             netPay = grossPay;
         }
 
+        String paidKey = key(acc.user.getId(), periodEnd.withDayOfMonth(1));
+        boolean isPaid = Boolean.TRUE.equals(paidMonthMap.get(paidKey));
+        LocalDate dueDate = periodEnd.plusDays(5);
+        int overdueDays = !isPaid && LocalDate.now().isAfter(dueDate)
+                ? (int) ChronoUnit.DAYS.between(dueDate, LocalDate.now())
+                : 0;
+        boolean attendanceFlag = acc.absentShifts > 0 || acc.lateShifts > 0;
+
         return PayrollSummaryResponse.Row.builder()
                 .userId(acc.user.getId())
                 .fullName(acc.user.getFullName())
@@ -499,7 +524,38 @@ public class ShiftWorkforceService {
                 .grossPay(grossPay.setScale(2, RoundingMode.HALF_UP))
                 .deductions(deductions.setScale(2, RoundingMode.HALF_UP))
                 .netPay(netPay.setScale(2, RoundingMode.HALF_UP))
+                .isPaid(isPaid)
+                .paidAt(paidAtMonthMap.get(paidKey))
+                .overdueDays(overdueDays)
+                .attendanceFlag(attendanceFlag)
                 .build();
+    }
+
+    private BigDecimal resolveShiftBonusFactor(WorkShift shift) {
+        if (shift == null) {
+            return BigDecimal.ONE;
+        }
+
+        BigDecimal totalBonusPercent = BigDecimal.ZERO;
+        if (shift.getNightShiftBonus() != null) {
+            totalBonusPercent = totalBonusPercent.add(shift.getNightShiftBonus());
+        }
+        if (shift.getWeekendBonus() != null) {
+            totalBonusPercent = totalBonusPercent.add(shift.getWeekendBonus());
+        }
+        if (shift.getHolidayBonus() != null) {
+            totalBonusPercent = totalBonusPercent.add(shift.getHolidayBonus());
+        }
+
+        return BigDecimal.ONE.add(totalBonusPercent.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
+    }
+
+    private BigDecimal resolveShiftOvertimeFactor(WorkShift shift) {
+        if (shift == null || shift.getOvertimeMultiplier() == null || shift.getOvertimeMultiplier().compareTo(BigDecimal.ONE) < 0) {
+            return BigDecimal.valueOf(1.5);
+        }
+
+        return shift.getOvertimeMultiplier();
     }
 
     private SalaryProfile resolveSalaryProfile(Integer userId, BigDecimal hourlyRateOverride) {
@@ -567,6 +623,10 @@ public class ShiftWorkforceService {
             return BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
         }
 
+        if (attendance != null && attendance.getTimeIn() != null && attendance.getTimeOut() == null) {
+            return BigDecimal.ZERO;
+        }
+
         if (attendance != null && attendance.getShiftWorkingMinutesSnapshot() != null) {
             return BigDecimal.valueOf(attendance.getShiftWorkingMinutesSnapshot())
                     .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
@@ -619,8 +679,12 @@ public class ShiftWorkforceService {
         return status.trim().toUpperCase();
     }
 
-    private boolean shouldMarkAssignmentCompleted(String attendanceStatus) {
-        String normalized = Optional.ofNullable(attendanceStatus).orElse("").trim().toUpperCase();
+    private boolean shouldMarkAssignmentCompleted(Attendance attendance) {
+        if (attendance == null || attendance.getTimeOut() == null) {
+            return false;
+        }
+
+        String normalized = Optional.ofNullable(attendance.getStatus()).orElse("").trim().toUpperCase();
         return "PRESENT".equals(normalized) || "LATE".equals(normalized);
     }
 
@@ -657,20 +721,19 @@ public class ShiftWorkforceService {
         }
 
         LocalDate shiftDate = assignment.getShiftDate();
-        if (shiftDate.isBefore(today)) {
-            return true;
-        }
-
-        if (!shiftDate.isEqual(today)) {
-            return false;
-        }
-
         WorkShift shift = assignment.getWorkShift();
         if (shift == null || shift.getEndTime() == null) {
             return false;
         }
 
-        return !now.isBefore(shift.getEndTime());
+        LocalDateTime shiftEndDateTime = LocalDateTime.of(shiftDate, shift.getEndTime());
+        if (shift.getStartTime() != null && !shift.getEndTime().isAfter(shift.getStartTime())) {
+            shiftEndDateTime = shiftEndDateTime.plusDays(1);
+        }
+
+        LocalDateTime nowDateTime = LocalDateTime.of(today, now);
+
+        return !nowDateTime.isBefore(shiftEndDateTime);
     }
 
     private static class PayrollAccumulator {
@@ -682,6 +745,8 @@ public class ShiftWorkforceService {
         private int absentShifts;
         private BigDecimal workedHours = BigDecimal.ZERO;
         private BigDecimal overtimeHours = BigDecimal.ZERO;
+        private BigDecimal adjustedRegularHours = BigDecimal.ZERO;
+        private BigDecimal adjustedOvertimeHours = BigDecimal.ZERO;
 
         private PayrollAccumulator(User user) {
             this.user = user;
