@@ -92,7 +92,7 @@ public class TicketController {
      * Delegates to service to keep transaction open for lazy-loaded collections.
      */
     @GetMapping("/tickets/lookup/variant-by-sku")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'MANAGER', 'SALES_STAFF')")
     public ResponseEntity<List<Map<String, Object>>> getVariantBySku(@RequestParam("sku") String sku) {
         List<Map<String, Object>> result = ticketService.lookupVariantBySku(sku);
         return ResponseEntity.ok(result);

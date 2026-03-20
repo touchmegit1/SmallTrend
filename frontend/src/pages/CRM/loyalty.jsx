@@ -551,16 +551,16 @@ const GiftRewardManagement = () => {
             </div>
 
             <div className="p-6 space-y-5">
-              {/* Tìm SKU */}
+              {/* Tìm SKU/Tên */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Tìm sản phẩm theo SKU</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Tìm sản phẩm theo SKU hoặc tên</label>
                 <div className="flex gap-2 mb-3">
                   <input
                     type="text"
                     value={skuInput}
                     onChange={e => setSkuInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearchVariant()}
-                    placeholder="Nhập SKU (VD: SP001)..."
+                    placeholder="Nhập SKU hoặc tên sản phẩm..."
                     className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                   />
                   <button

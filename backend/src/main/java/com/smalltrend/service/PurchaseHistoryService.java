@@ -40,6 +40,7 @@ public class PurchaseHistoryService {
                     .price(item.getPrice())
                     .subtotal(item.getSubtotal())
                     .paymentMethod(request.getPaymentMethod())
+                    .voucherDiscountAmount(request.getVoucherDiscountAmount())
                     .build();
 
             histories.add(history);

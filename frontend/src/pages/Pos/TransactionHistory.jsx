@@ -179,6 +179,7 @@ function TransactionHistory() {
         customerId: Number.isInteger(customerId) && customerId > 0 ? customerId : 0,
         customerName: transaction.customer?.name || "Khách lẻ",
         paymentMethod: transaction.payment,
+        voucherDiscountAmount: Number(transaction.discount || 0),
         items: validItems
       };
 

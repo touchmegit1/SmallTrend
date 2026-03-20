@@ -9,6 +9,7 @@ public class SavePurchaseHistoryRequest {
     private Long customerId;
     private String customerName;
     private String paymentMethod;
+    private BigDecimal voucherDiscountAmount;
     private List<PurchaseItem> items;
 
     @Data
