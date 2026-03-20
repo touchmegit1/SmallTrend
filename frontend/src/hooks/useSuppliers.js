@@ -56,7 +56,12 @@ export function useFetchSuppliers() {
             return { success: true };
         } catch (err) {
             console.error('Error deleting supplier:', err);
-            return { success: false, error: err.response?.data?.message || err.message };
+            const rawError = err.response?.data?.message || err.response?.data;
+            const normalizedError = typeof rawError === 'string' ? rawError : rawError?.message;
+            const deleteErrorMessage = normalizedError?.includes('danh mục hoặc thương hiệu')
+                ? 'Lỗi: Không thể xóa nhà cung cấp này vì đang có dữ liệu liên quan!'
+                : (normalizedError || err.message);
+            return { success: false, error: deleteErrorMessage };
         }
     };
 
