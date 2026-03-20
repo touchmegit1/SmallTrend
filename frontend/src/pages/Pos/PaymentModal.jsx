@@ -1083,7 +1083,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
             </div>
 
             {/* Ghi chú */}
-            <div>
+            {/* <div>
               <label
                 style={{
                   display: "block",
@@ -1108,9 +1108,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
                   borderRadius: "4px",
                   fontSize: "13px",
                   resize: "none",
-                }}
+                }}  
               />
-            </div>
+            </div>*/}
           </div>
 
           {/* Right: Khách cần trả */}
