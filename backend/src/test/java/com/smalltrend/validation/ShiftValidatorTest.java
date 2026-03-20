@@ -47,9 +47,9 @@ class ShiftValidatorTest {
                 .shiftCode(" ")
                 .shiftName("")
                 .startTime(LocalTime.of(17, 0))
-                .endTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(17, 0))
                 .breakStartTime(LocalTime.of(7, 0))
-                .breakEndTime(LocalTime.of(6, 0))
+                .breakEndTime(null)
                 .minimumStaffRequired(5)
                 .maximumStaffAllowed(2)
                 .shiftType("TEMPORARY")
@@ -61,9 +61,8 @@ class ShiftValidatorTest {
 
         assertTrue(errors.contains("Shift code is required"));
         assertTrue(errors.contains("Shift name is required"));
-        assertTrue(errors.contains("End time must be after start time"));
-        assertTrue(errors.contains("Break end must be after break start"));
-        assertTrue(errors.contains("Break time must be within shift time"));
+        assertTrue(errors.contains("Start time and end time cannot be equal"));
+        assertTrue(errors.contains("Break start and end must be provided together"));
         assertTrue(errors.contains("Minimum staff cannot exceed maximum staff"));
         assertTrue(errors.contains("Effective to date must be after or equal to effective from date"));
     }

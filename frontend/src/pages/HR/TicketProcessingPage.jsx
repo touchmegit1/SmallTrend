@@ -23,6 +23,11 @@ const defaultCreateForm = {
     reason: '',
 };
 
+const defaultSwapAcceptForm = {
+    targetAssignmentId: '',
+    confirmTakeOver: false,
+};
+
 const TicketProcessingPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -52,6 +57,15 @@ const TicketProcessingPage = () => {
     const [createError, setCreateError] = useState('');
     const [createSubmitting, setCreateSubmitting] = useState(false);
     const [myAssignments, setMyAssignments] = useState([]);
+
+    const [showSwapAcceptModal, setShowSwapAcceptModal] = useState(false);
+    const [swapAcceptTicket, setSwapAcceptTicket] = useState(null);
+    const [swapRequesterAssignment, setSwapRequesterAssignment] = useState(null);
+    const [swapAcceptAssignments, setSwapAcceptAssignments] = useState([]);
+    const [swapAcceptForm, setSwapAcceptForm] = useState(defaultSwapAcceptForm);
+    const [swapAcceptLoading, setSwapAcceptLoading] = useState(false);
+    const [swapAcceptSubmitting, setSwapAcceptSubmitting] = useState(false);
+    const [swapAcceptError, setSwapAcceptError] = useState('');
 
     useEffect(() => {
         if (!currentUserId) {
@@ -111,7 +125,7 @@ const TicketProcessingPage = () => {
 
             setError('');
         } catch (err) {
-            setError(extractErrorMessage(err, 'Khong the tai danh sach ticket xu ly.'));
+            setError(extractErrorMessage(err, 'Không thể tải danh sách ticket xử lý.'));
             setTickets([]);
             setAssignmentMap({});
         } finally {
@@ -142,7 +156,7 @@ const TicketProcessingPage = () => {
     const assignmentOptions = useMemo(() => {
         return myAssignments.map((item) => ({
             value: String(item.id),
-            label: `${item.shiftDate} - ${item.shift?.shiftName || item.shift?.shiftCode || 'Ca lam'}`,
+            label: `${item.shiftDate} - ${item.shift?.shiftName || item.shift?.shiftCode || 'Ca làm'}`,
         }));
     }, [myAssignments]);
 
@@ -168,7 +182,7 @@ const TicketProcessingPage = () => {
     }, [users]);
 
     useEffect(() => {
-        if (!showCreateModal || createForm.assignedToUserId || managerOptions.length === 0) {
+        if (!showCreateModal || createForm.ticketMode === 'SWAP' || createForm.assignedToUserId || managerOptions.length === 0) {
             return;
         }
 
@@ -176,13 +190,13 @@ const TicketProcessingPage = () => {
             ...prev,
             assignedToUserId: managerOptions[0].value,
         }));
-    }, [showCreateModal, createForm.assignedToUserId, managerOptions]);
+    }, [showCreateModal, createForm.ticketMode, createForm.assignedToUserId, managerOptions]);
 
     const openCreateModal = async (prefill = {}) => {
         setCreateError('');
         setShowCreateModal(true);
 
-        const { prefillDate, prefillAssignmentId } = prefill;
+        const { prefillDate, prefillAssignmentId, prefillTargetUserId } = prefill;
         const { startDate, endDate } = resolveMonthRange(prefillDate);
 
         try {
@@ -207,11 +221,12 @@ const TicketProcessingPage = () => {
             setCreateForm({
                 ...defaultCreateForm,
                 assignmentId: resolvedAssignmentId,
+                targetUserId: prefillTargetUserId ? String(prefillTargetUserId) : '',
                 assignedToUserId: defaultAssignee,
             });
         } catch (err) {
             setMyAssignments([]);
-            setCreateError(extractErrorMessage(err, 'Khong the tai du lieu tao ticket.'));
+            setCreateError(extractErrorMessage(err, 'Không thể tải dữ liệu tạo ticket.'));
         }
     };
 
@@ -221,28 +236,28 @@ const TicketProcessingPage = () => {
         setMessage('');
 
         if (!createForm.assignmentId) {
-            setCreateError('Vui long chon ca can tao ticket.');
+            setCreateError('Vui lòng chọn ca cần tạo ticket.');
             return;
         }
 
-        if (!createForm.assignedToUserId) {
-            setCreateError('Vui long chon nguoi tiep nhan ticket.');
+        if (createForm.ticketMode !== 'SWAP' && !createForm.assignedToUserId) {
+            setCreateError('Vui lòng chọn người tiếp nhận ticket.');
             return;
         }
 
         if (!createForm.reason.trim()) {
-            setCreateError('Vui long nhap ly do.');
+            setCreateError('Vui lòng nhập lý do.');
             return;
         }
 
         if (createForm.ticketMode === 'SWAP' && !createForm.targetUserId) {
-            setCreateError('Vui long chon nguoi doi ca.');
+            setCreateError('Vui lòng chọn nhân viên đổi ca.');
             return;
         }
 
         const selectedAssignment = myAssignments.find((entry) => String(entry.id) === String(createForm.assignmentId));
         if (!selectedAssignment) {
-            setCreateError('Khong tim thay ca da chon.');
+            setCreateError('Không tìm thấy ca đã chọn.');
             return;
         }
 
@@ -257,7 +272,6 @@ const TicketProcessingPage = () => {
                     requesterAssignmentId: Number(createForm.assignmentId),
                     targetUserId: Number(createForm.targetUserId),
                     swapMode: 'TAKE_OVER',
-                    assignedToUserId: Number(createForm.assignedToUserId),
                 });
             } else if (createForm.ticketMode === 'UPDATE') {
                 await shiftTicketService.createShiftUpdateTicket({
@@ -278,38 +292,117 @@ const TicketProcessingPage = () => {
 
             setShowCreateModal(false);
             setCreateForm(defaultCreateForm);
-            setMessage('Da tao ticket moi thanh cong.');
+            setMessage('Đã tạo ticket mới thành công.');
             await loadData();
         } catch (err) {
-            setCreateError(extractErrorMessage(err, 'Khong the tao ticket moi.'));
+            setCreateError(extractErrorMessage(err, 'Không thể tạo ticket mới.'));
         } finally {
             setCreateSubmitting(false);
         }
     };
 
-    const handleQuickApproveSwap = async (ticket) => {
-        try {
-            const requesterAssignmentId = extractSwapId(ticket?.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
-            const targetAssignmentId = extractSwapId(ticket?.description, 'SWAP_TARGET_ASSIGNMENT_ID');
+    const openSwapAcceptModal = async (ticket) => {
+        setSwapAcceptError('');
+        setSwapAcceptTicket(ticket);
+        setSwapAcceptForm(defaultSwapAcceptForm);
+        setSwapAcceptAssignments([]);
+        setSwapRequesterAssignment(null);
+        setShowSwapAcceptModal(true);
 
-            if (!requesterAssignmentId) {
-                setError('Ticket doi ca thieu assignment nguoi gui.');
-                return;
-            }
+        const requesterAssignmentId = extractSwapId(ticket?.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
+        if (!requesterAssignmentId) {
+            setSwapAcceptError('Ticket đổi ca thiếu ca làm của người yêu cầu.');
+            return;
+        }
+
+        try {
+            setSwapAcceptLoading(true);
+
+            const requesterAssignment = assignmentMap[String(requesterAssignmentId)]
+                || await shiftService.getAssignment(requesterAssignmentId);
+            setSwapRequesterAssignment(requesterAssignment || null);
+
+            const { startDate, endDate } = resolveMonthRange(requesterAssignment?.shiftDate || null);
+            const myAssignmentRows = await shiftService.getAssignments({
+                userId: currentUserId,
+                startDate,
+                endDate,
+            });
+
+            const targetAssignments = (Array.isArray(myAssignmentRows) ? myAssignmentRows : [])
+                .filter((entry) => entry?.id && String(entry.id) !== String(requesterAssignmentId))
+                .filter((entry) => isFutureOrToday(entry?.shiftDate));
+
+            const ticketTargetAssignmentId = extractSwapId(ticket?.description, 'SWAP_TARGET_ASSIGNMENT_ID');
+            const prefillTargetAssignmentId = targetAssignments.some((entry) => String(entry.id) === String(ticketTargetAssignmentId))
+                ? String(ticketTargetAssignmentId)
+                : '';
+
+            setSwapAcceptAssignments(targetAssignments);
+            setSwapAcceptForm({
+                targetAssignmentId: prefillTargetAssignmentId,
+                confirmTakeOver: false,
+            });
+        } catch (err) {
+            setSwapAcceptError(extractErrorMessage(err, 'Không thể tải dữ liệu chấp nhận đổi ca.'));
+        } finally {
+            setSwapAcceptLoading(false);
+        }
+    };
+
+    const closeSwapAcceptModal = () => {
+        setShowSwapAcceptModal(false);
+        setSwapAcceptTicket(null);
+        setSwapRequesterAssignment(null);
+        setSwapAcceptAssignments([]);
+        setSwapAcceptForm(defaultSwapAcceptForm);
+        setSwapAcceptError('');
+    };
+
+    const handleConfirmAcceptSwap = async () => {
+        if (!swapAcceptTicket?.id) {
+            setSwapAcceptError('Không xác định được ticket đổi ca.');
+            return;
+        }
+
+        const requesterAssignmentId = extractSwapId(swapAcceptTicket?.description, 'SWAP_REQUESTER_ASSIGNMENT_ID');
+        if (!requesterAssignmentId) {
+            setSwapAcceptError('Ticket đổi ca thiếu ca làm của người yêu cầu.');
+            return;
+        }
+
+        const hasCounterShifts = swapAcceptAssignments.length > 0;
+        if (hasCounterShifts && !swapAcceptForm.targetAssignmentId) {
+            setSwapAcceptError('Vui lòng chọn ca của bạn để đổi.');
+            return;
+        }
+
+        if (!hasCounterShifts && !swapAcceptForm.confirmTakeOver) {
+            setSwapAcceptError('Vui lòng xác nhận nhận ca thay tự động.');
+            return;
+        }
+
+        try {
+            setSwapAcceptSubmitting(true);
 
             await shiftService.executeSwap({
                 requesterAssignmentId,
-                targetAssignmentId: targetAssignmentId || null,
+                targetAssignmentId: hasCounterShifts ? Number(swapAcceptForm.targetAssignmentId) : null,
                 accepterUserId: currentUserId,
-                ticketId: ticket.id,
-                note: 'Xu ly doi ca tu trung tam ticket',
+                ticketId: swapAcceptTicket.id,
+                note: hasCounterShifts
+                    ? 'Xử lý đổi ca từ trung tâm ticket (đổi hai chiều)'
+                    : 'Xử lý đổi ca từ trung tâm ticket (nhận ca thay tự động)',
             });
 
-            await shiftTicketService.approveTicket(ticket.id, 'Da xu ly doi ca thanh cong.');
-            setMessage('Da xu ly doi ca thanh cong.');
+            await shiftTicketService.approveTicket(swapAcceptTicket.id, 'Đã xử lý đổi ca thành công.');
+            closeSwapAcceptModal();
+            setMessage('Đã xử lý đổi ca thành công.');
             await loadData();
         } catch (err) {
-            setError(extractErrorMessage(err, 'Khong the xu ly doi ca.'));
+            setSwapAcceptError(extractErrorMessage(err, 'Không thể xử lý đổi ca.'));
+        } finally {
+            setSwapAcceptSubmitting(false);
         }
     };
 
@@ -337,32 +430,31 @@ const TicketProcessingPage = () => {
         setMessage('');
 
         if (!processingTicket?.id) {
-            setProcessError('Khong xac dinh duoc ticket can xu ly.');
+            setProcessError('Không xác định được ticket cần xử lý.');
             return;
         }
 
-        if (!processForm.assignmentId || !processForm.userId || !processForm.shiftId || !processForm.shiftDate) {
-            setProcessError('Vui long dien day du thong tin phan lai ca.');
+        if (!processForm.assignmentId) {
+            setProcessError('Không xác định được assignment của ticket.');
             return;
         }
 
         try {
             setProcessingAction(true);
-            await shiftService.updateAssignment(Number(processForm.assignmentId), {
-                userId: Number(processForm.userId),
-                workShiftId: Number(processForm.shiftId),
-                shiftDate: processForm.shiftDate,
-                status: 'ASSIGNED',
-                notes: processForm.notes?.trim() || null,
-            });
+            const assignment = assignmentMap[String(processForm.assignmentId)] || null;
+            const shiftLabel = assignment?.shift
+                ? `${assignment.shift.shiftName || assignment.shift.shiftCode || 'Ca'} (${formatTime(assignment.shift.startTime)} - ${formatTime(assignment.shift.endTime)})`
+                : '-';
+            const resolution = processForm.notes?.trim()
+                || `Đã hoàn tất xử lý ticket cho assignment #${processForm.assignmentId}, ngày ${processForm.shiftDate || '-'}, nhân viên ${assignment?.user?.fullName || '-'}, ca ${shiftLabel}.`;
 
-            await shiftTicketService.approveTicket(processingTicket.id, 'Da cap nhat phan cong va hoan tat ticket.');
+            await shiftTicketService.approveTicket(processingTicket.id, resolution);
             setShowProcessModal(false);
             setProcessingTicket(null);
-            setMessage('Da cap nhat phan cong va hoan tat ticket.');
+            setMessage('Đã hoàn tất ticket thành công.');
             await loadData();
         } catch (err) {
-            setProcessError(extractErrorMessage(err, 'Khong the hoan tat xu ly ticket.'));
+            setProcessError(extractErrorMessage(err, 'Không thể hoàn tất xử lý ticket.'));
         } finally {
             setProcessingAction(false);
         }
@@ -375,13 +467,13 @@ const TicketProcessingPage = () => {
 
         try {
             setProcessingAction(true);
-            await shiftTicketService.rejectTicket(processingTicket.id, 'Manager tu choi yeu cau, giu nguyen phan cong hien tai.');
+            await shiftTicketService.rejectTicket(processingTicket.id, 'Manager từ chối yêu cầu, giữ nguyên phân công hiện tại.');
             setShowProcessModal(false);
             setProcessingTicket(null);
-            setMessage('Da tu choi ticket va giu nguyen phan cong hien tai.');
+            setMessage('Đã từ chối ticket và giữ nguyên phân công hiện tại.');
             await loadData();
         } catch (err) {
-            setProcessError(extractErrorMessage(err, 'Khong the tu choi ticket.'));
+            setProcessError(extractErrorMessage(err, 'Không thể từ chối ticket.'));
         } finally {
             setProcessingAction(false);
         }
@@ -397,7 +489,7 @@ const TicketProcessingPage = () => {
                             onClick={() => navigate(-1)}
                             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-300"
                         >
-                            <ArrowLeft size={14} /> Quay lai trang truoc
+                            <ArrowLeft size={14} /> Quay lại trang trước
                         </button>
                         <button
                             type="button"
@@ -409,10 +501,10 @@ const TicketProcessingPage = () => {
                     </div>
                     <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
                         <Layers size={24} className="text-indigo-600" />
-                        Trung tam ticket ca lam
+                        Trung tâm ticket ca làm
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        Bảng Yêu Cầu Xử Lý Của Toàn Bộ Nhân Sự Trong Hệ Thống
+                        Bảng yêu cầu xử lý của toàn bộ nhân sự trong hệ thống
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -421,7 +513,7 @@ const TicketProcessingPage = () => {
                         onClick={() => openCreateModal()}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-slate-300"
                     >
-                        <Plus size={16} /> Tao ticket moi
+                        <Plus size={16} /> Tạo ticket mới
                     </button>
                     <button
                         type="button"
@@ -442,22 +534,22 @@ const TicketProcessingPage = () => {
             )}
 
             {loading ? (
-                <div className="text-slate-500">Dang tai ticket...</div>
+                <div className="text-slate-500">Đang tải ticket...</div>
             ) : displayTickets.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">Khong co ticket phu hop.</div>
+                <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">Không có ticket phù hợp.</div>
             ) : (
                 <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
                     <table className="min-w-full divide-y divide-slate-200 text-sm">
                         <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                             <tr>
-                                <th className="px-4 py-3 text-left">Ma ticket</th>
-                                <th className="px-4 py-3 text-left">Ngay ca</th>
+                                <th className="px-4 py-3 text-left">Mã ticket</th>
+                                <th className="px-4 py-3 text-left">Ngày ca</th>
                                 <th className="px-4 py-3 text-left">Ca</th>
-                                <th className="px-4 py-3 text-left">Nguoi tao</th>
-                                <th className="px-4 py-3 text-left">Loai yeu cau</th>
-                                <th className="px-4 py-3 text-left">Ly do</th>
-                                <th className="px-4 py-3 text-left">Trang thai</th>
-                                <th className="px-4 py-3 text-center">Xu ly</th>
+                                <th className="px-4 py-3 text-left">Người tạo</th>
+                                <th className="px-4 py-3 text-left">Loại yêu cầu</th>
+                                <th className="px-4 py-3 text-left">Lý do</th>
+                                <th className="px-4 py-3 text-left">Trạng thái</th>
+                                <th className="px-4 py-3 text-center">Xử lý</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -482,7 +574,7 @@ const TicketProcessingPage = () => {
                                         <td className="px-4 py-3 font-medium text-slate-900">{ticket.ticketCode || `#${ticket.id}`}</td>
                                         <td className="px-4 py-3">{shiftDate}</td>
                                         <td className="px-4 py-3">{shiftLabel}</td>
-                                        <td className="px-4 py-3">{ticket.createdByName || 'He thong'}</td>
+                                        <td className="px-4 py-3">{ticket.createdByName || 'Hệ thống'}</td>
                                         <td className="px-4 py-3">{formatRequestTypeLabel(requestType)}</td>
                                         <td className="px-4 py-3 max-w-[340px] truncate" title={reason}>{reason || '-'}</td>
                                         <td className="px-4 py-3">
@@ -493,9 +585,9 @@ const TicketProcessingPage = () => {
                                                 {canAcceptSwap && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleQuickApproveSwap(ticket)}
+                                                        onClick={() => openSwapAcceptModal(ticket)}
                                                         className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                                                        title="Nhan doi ca"
+                                                        title="Chấp nhận đổi ca"
                                                     >
                                                         <Check size={13} />
                                                     </button>
@@ -506,7 +598,7 @@ const TicketProcessingPage = () => {
                                                         type="button"
                                                         onClick={() => openProcessModal(ticket)}
                                                         className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                                                        title="Xu ly nhanh"
+                                                        title="Xử lý nhanh"
                                                     >
                                                         <Settings2 size={13} />
                                                     </button>
@@ -526,8 +618,8 @@ const TicketProcessingPage = () => {
                     <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">Tao ticket moi</h2>
-                                <p className="text-xs text-slate-500">Tao yeu cau moi tai trung tam ticket va xu ly tap trung.</p>
+                                <h2 className="text-lg font-semibold text-slate-900">Tạo ticket mới</h2>
+                                <p className="text-xs text-slate-500">Tạo yêu cầu mới tại trung tâm ticket và xử lý tập trung.</p>
                             </div>
                             <button
                                 type="button"
@@ -546,25 +638,30 @@ const TicketProcessingPage = () => {
                             )}
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Loai ticket <span className="text-rose-500">*</span></label>
+                                <label className="text-xs font-medium text-slate-600">Loại ticket <span className="text-rose-500">*</span></label>
                                 <CustomSelect
                                     value={createForm.ticketMode}
-                                    onChange={(value) => setCreateForm((prev) => ({ ...prev, ticketMode: value, targetUserId: '' }))}
+                                    onChange={(value) => setCreateForm((prev) => ({
+                                        ...prev,
+                                        ticketMode: value,
+                                        targetUserId: '',
+                                        assignedToUserId: value === 'SWAP' ? '' : (prev.assignedToUserId || managerOptions[0]?.value || ''),
+                                    }))}
                                     options={[
-                                        { value: 'SWAP', label: 'Yeu cau doi ca' },
-                                        { value: 'CANCEL', label: 'Yeu cau nghi ca' },
-                                        { value: 'UPDATE', label: 'Yeu cau cap nhat ca' },
+                                        { value: 'SWAP', label: 'Yêu cầu đổi ca' },
+                                        { value: 'CANCEL', label: 'Yêu cầu nghỉ ca' },
+                                        { value: 'UPDATE', label: 'Yêu cầu cập nhật ca' },
                                     ]}
                                 />
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Ca can xu ly <span className="text-rose-500">*</span></label>
+                                <label className="text-xs font-medium text-slate-600">Ca cần xử lý <span className="text-rose-500">*</span></label>
                                 <CustomSelect
                                     value={createForm.assignmentId}
                                     onChange={(value) => setCreateForm((prev) => ({ ...prev, assignmentId: value }))}
                                     options={[
-                                        { value: '', label: 'Chon ca' },
+                                        { value: '', label: 'Chọn ca' },
                                         ...assignmentOptions,
                                     ]}
                                 />
@@ -572,37 +669,39 @@ const TicketProcessingPage = () => {
 
                             {createForm.ticketMode === 'SWAP' && (
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Nguoi doi ca <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Nhân viên đổi ca <span className="text-rose-500">*</span></label>
                                     <CustomSelect
                                         value={createForm.targetUserId}
                                         onChange={(value) => setCreateForm((prev) => ({ ...prev, targetUserId: value }))}
                                         options={[
-                                            { value: '', label: 'Chon nhan vien' },
+                                            { value: '', label: 'Chọn nhân viên' },
                                             ...coworkerOptions,
                                         ]}
                                     />
                                 </div>
                             )}
 
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Nguoi tiep nhan <span className="text-rose-500">*</span></label>
-                                <CustomSelect
-                                    value={createForm.assignedToUserId}
-                                    onChange={(value) => setCreateForm((prev) => ({ ...prev, assignedToUserId: value }))}
-                                    options={[
-                                        { value: '', label: 'Chon manager/admin' },
-                                        ...managerOptions,
-                                    ]}
-                                />
-                            </div>
+                            {createForm.ticketMode !== 'SWAP' && (
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-slate-600">Người tiếp nhận <span className="text-rose-500">*</span></label>
+                                    <CustomSelect
+                                        value={createForm.assignedToUserId}
+                                        onChange={(value) => setCreateForm((prev) => ({ ...prev, assignedToUserId: value }))}
+                                        options={[
+                                            { value: '', label: 'Chọn manager/admin' },
+                                            ...managerOptions,
+                                        ]}
+                                    />
+                                </div>
+                            )}
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Ly do <span className="text-rose-500">*</span></label>
+                                <label className="text-xs font-medium text-slate-600">Lý do <span className="text-rose-500">*</span></label>
                                 <textarea
                                     value={createForm.reason}
                                     onChange={(event) => setCreateForm((prev) => ({ ...prev, reason: event.target.value }))}
                                     className="min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    placeholder="Nhap ly do yeu cau"
+                                    placeholder="Nhập lý do yêu cầu"
                                 />
                             </div>
 
@@ -619,10 +718,96 @@ const TicketProcessingPage = () => {
                                     disabled={createSubmitting}
                                     className="rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
                                 >
-                                    {createSubmitting ? 'Dang tao...' : 'Tao ticket'}
+                                    {createSubmitting ? 'Đang tạo...' : 'Tạo ticket'}
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {showSwapAcceptModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+                    <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-900">Chấp nhận đổi ca</h2>
+                                <p className="text-xs text-slate-500">Chọn ca đối ứng của bạn hoặc xác nhận nhận ca thay tự động.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeSwapAcceptModal}
+                                className="text-slate-400 hover:text-slate-600"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 p-6">
+                            {swapAcceptError && (
+                                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                                    {swapAcceptError}
+                                </div>
+                            )}
+
+                            {swapAcceptLoading ? (
+                                <div className="text-sm text-slate-500">Đang tải dữ liệu ca làm của bạn...</div>
+                            ) : (
+                                <>
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                        <div><span className="font-medium">Ticket:</span> {swapAcceptTicket?.ticketCode || `#${swapAcceptTicket?.id || ''}`}</div>
+                                        <div><span className="font-medium">Ca người yêu cầu:</span> {swapRequesterAssignment?.shiftDate || '-'} {swapRequesterAssignment?.shift ? `(${swapRequesterAssignment.shift.shiftName || swapRequesterAssignment.shift.shiftCode || 'Ca'})` : ''}</div>
+                                    </div>
+
+                                    {swapAcceptAssignments.length > 0 ? (
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-600">Ca của bạn để đổi <span className="text-rose-500">*</span></label>
+                                            <CustomSelect
+                                                value={swapAcceptForm.targetAssignmentId}
+                                                onChange={(value) => setSwapAcceptForm((prev) => ({ ...prev, targetAssignmentId: value }))}
+                                                options={[
+                                                    { value: '', label: 'Chọn ca của bạn' },
+                                                    ...swapAcceptAssignments.map((item) => ({
+                                                        value: String(item.id),
+                                                        label: `${item.shiftDate} - ${item.shift?.shiftName || item.shift?.shiftCode || 'Ca làm'} (${formatTime(item.shift?.startTime)} - ${formatTime(item.shift?.endTime)})`,
+                                                    })),
+                                                ]}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                                            <p>Hiện bạn không có ca đối ứng phù hợp để đổi hai chiều.</p>
+                                            <label className="inline-flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={swapAcceptForm.confirmTakeOver}
+                                                    onChange={(event) => setSwapAcceptForm((prev) => ({ ...prev, confirmTakeOver: event.target.checked }))}
+                                                />
+                                                <span>Xác nhận nhận ca thay và hệ thống tự động xếp ca cho tôi</span>
+                                            </label>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={closeSwapAcceptModal}
+                                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmAcceptSwap}
+                                disabled={swapAcceptSubmitting || swapAcceptLoading}
+                                className="rounded-lg border border-emerald-600 bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                            >
+                                {swapAcceptSubmitting ? 'Đang xử lý...' : 'Xác nhận'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -632,8 +817,8 @@ const TicketProcessingPage = () => {
                     <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">Xu ly ticket nhanh</h2>
-                                <p className="text-xs text-slate-500">Cap nhat phan cong va hoan tat, hoac tu choi de giu nguyen thong tin hien tai.</p>
+                                <h2 className="text-lg font-semibold text-slate-900">Xử lý ticket nhanh</h2>
+                                <p className="text-xs text-slate-500">Thông tin phân công chỉ đọc từ hệ thống, bạn có thể hoàn tất hoặc từ chối ticket.</p>
                             </div>
                             <button
                                 type="button"
@@ -657,53 +842,53 @@ const TicketProcessingPage = () => {
                                     <input
                                         type="text"
                                         value={processForm.assignmentId}
-                                        onChange={(event) => setProcessForm((prev) => ({ ...prev, assignmentId: event.target.value }))}
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        readOnly
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
                                         placeholder="Id phan cong"
                                     />
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Ngay ca <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Ngày ca <span className="text-rose-500">*</span></label>
                                     <input
                                         type="date"
                                         value={processForm.shiftDate}
-                                        onChange={(event) => setProcessForm((prev) => ({ ...prev, shiftDate: event.target.value }))}
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        readOnly
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
                                     />
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Nhan vien moi <span className="text-rose-500">*</span></label>
-                                    <CustomSelect
-                                        value={processForm.userId}
-                                        onChange={(value) => setProcessForm((prev) => ({ ...prev, userId: value }))}
-                                        options={[
-                                            { value: '', label: 'Chon nhan vien' },
-                                            ...userOptions,
-                                        ]}
+                                    <label className="text-xs font-medium text-slate-600">Nhân viên</label>
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={(assignmentMap[String(processForm.assignmentId)]?.user?.fullName) || '-'}
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
                                     />
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Ca moi <span className="text-rose-500">*</span></label>
-                                    <CustomSelect
-                                        value={processForm.shiftId}
-                                        onChange={(value) => setProcessForm((prev) => ({ ...prev, shiftId: value }))}
-                                        options={[
-                                            { value: '', label: 'Chon ca' },
-                                            ...shiftOptions,
-                                        ]}
+                                    <label className="text-xs font-medium text-slate-600">Ca làm</label>
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={(() => {
+                                            const shift = assignmentMap[String(processForm.assignmentId)]?.shift;
+                                            if (!shift) return '-';
+                                            return `${shift.shiftName || shift.shiftCode || 'Ca'} (${formatTime(shift.startTime)} - ${formatTime(shift.endTime)})`;
+                                        })()}
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
                                     />
                                 </div>
 
                                 <div className="space-y-1 md:col-span-2">
-                                    <label className="text-xs font-medium text-slate-600">Ghi chu cap nhat</label>
+                                    <label className="text-xs font-medium text-slate-600">Ghi chú xử lý</label>
                                     <textarea
                                         value={processForm.notes}
                                         onChange={(event) => setProcessForm((prev) => ({ ...prev, notes: event.target.value }))}
                                         className="min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                        placeholder="Ghi chu sau khi phan lai"
+                                        placeholder="Ghi chú khi hoàn tất ticket"
                                     />
                                 </div>
                             </div>
@@ -716,7 +901,7 @@ const TicketProcessingPage = () => {
                                 disabled={processingAction}
                                 className="inline-flex items-center gap-2 rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                             >
-                                <XCircle size={14} /> Tu choi
+                                <XCircle size={14} /> Từ chối
                             </button>
                             <button
                                 type="button"
@@ -724,7 +909,7 @@ const TicketProcessingPage = () => {
                                 disabled={processingAction}
                                 className="inline-flex items-center gap-2 rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
                             >
-                                <Check size={14} /> Hoan tat
+                                <Check size={14} /> Hoàn tất
                             </button>
                         </div>
                     </div>
@@ -754,15 +939,15 @@ const resolveRequestType = (ticket) => {
     const title = String(ticket?.title || '').toLowerCase();
     const relatedType = String(ticket?.relatedEntityType || '').toUpperCase();
 
-    if (relatedType === 'SHIFT_SWAP' || title.includes('doi ca')) {
+    if (relatedType === 'SHIFT_SWAP' || title.includes('doi ca') || title.includes('đổi ca')) {
         return 'SWAP';
     }
 
-    if (title.includes('nghi ca') || title.includes('xin nghi')) {
+    if (title.includes('nghi ca') || title.includes('nghỉ ca') || title.includes('xin nghi') || title.includes('xin nghỉ')) {
         return 'LEAVE';
     }
 
-    if (title.includes('cap nhat')) {
+    if (title.includes('cap nhat') || title.includes('cập nhật')) {
         return 'UPDATE';
     }
 
@@ -771,15 +956,24 @@ const resolveRequestType = (ticket) => {
 
 const formatRequestTypeLabel = (requestType) => {
     if (requestType === 'SWAP') {
-        return 'Doi ca';
+        return 'Đổi ca';
     }
     if (requestType === 'LEAVE') {
-        return 'Nghi ca';
+        return 'Nghỉ ca';
     }
     if (requestType === 'UPDATE') {
-        return 'Cap nhat ca';
+        return 'Cập nhật ca';
     }
-    return 'Yeu cau ca lam';
+    return 'Yêu cầu ca làm';
+};
+
+const isFutureOrToday = (dateValue) => {
+    if (!dateValue) {
+        return false;
+    }
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return String(dateValue) >= todayIso;
 };
 
 const statusClass = (status) => {

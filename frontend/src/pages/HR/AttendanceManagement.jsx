@@ -285,18 +285,9 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
                                 />
                             </div>
                             <div className="col-span-2">
-                                <CustomSelect
-                                    value={record.status}
-                                    onChange={(value) => updateAttendance(record, { status: value })}
-                                    className="w-full"
-                                    variant="status"
-                                    options={[
-                                        { value: 'PENDING', label: 'Chưa chấm' },
-                                        { value: 'PRESENT', label: 'Có mặt' },
-                                        { value: 'LATE', label: 'Đi muộn' },
-                                        { value: 'ABSENT', label: 'Vắng' },
-                                    ]}
-                                />
+                                <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ${attendanceStatusClass(record.status)}`}>
+                                    {formatAttendanceStatus(record.status)}
+                                </span>
                             </div>
                             <div className="col-span-2">
                                 <input
@@ -347,6 +338,22 @@ const formatDate = (value) => {
 const formatTime = (value) => {
     if (!value) return '--:--';
     return value.toString().slice(0, 5);
+};
+
+const formatAttendanceStatus = (status) => {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'PRESENT') return 'Có mặt';
+    if (normalized === 'LATE') return 'Đi muộn';
+    if (normalized === 'ABSENT') return 'Vắng';
+    return 'Chưa chấm';
+};
+
+const attendanceStatusClass = (status) => {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'PRESENT') return 'bg-emerald-100 text-emerald-700';
+    if (normalized === 'LATE') return 'bg-amber-100 text-amber-700';
+    if (normalized === 'ABSENT') return 'bg-rose-100 text-rose-700';
+    return 'bg-slate-100 text-slate-700';
 };
 
 const validateAttendancePatch = (record, patch) => {

@@ -283,6 +283,7 @@ public class ShiftWorkforceService {
                 .filter(item -> "PAID".equalsIgnoreCase(Optional.ofNullable(item.getStatus()).orElse("")))
                 .filter(item -> item.getUser() != null && item.getUser().getId() != null)
                 .filter(item -> item.getPayPeriodStart() != null)
+                .filter(item -> item.getPaidAt() != null)
                 .collect(Collectors.toMap(
                         item -> key(item.getUser().getId(), item.getPayPeriodStart()),
                         PayrollCalculation::getPaidAt,

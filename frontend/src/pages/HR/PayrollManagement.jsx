@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { shiftService } from '../../services/shiftService';
 import { userService } from '../../services/userService';
-import { Wallet, Users, Clock3, BadgeDollarSign, Settings, X } from 'lucide-react';
+import { Wallet, Users, Clock3, BadgeDollarSign, Settings, Eye, X } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken = 0 }) => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
     const isAdmin = roleName === 'ADMIN' || roleName === 'ROLE_ADMIN';
+    const isManager = roleName === 'MANAGER' || roleName === 'ROLE_MANAGER';
+    const canManageSalary = isAdmin || isManager;
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -251,18 +255,26 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                                     <td className="px-4 py-3 whitespace-nowrap">{formatCurrency(row.hourlyRate)}</td>
                                     <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{formatCurrency(row.netPay)}</td>
                                     <td className="px-4 py-3 whitespace-nowrap">
-                                        {isAdmin ? (
+                                        <div className="flex items-center gap-2">
                                             <button
                                                 type="button"
-                                                onClick={() => openSalaryModal(row)}
+                                                onClick={() => navigate(`/hr/workforce/employee/${row.userId}?fromMonth=${filters.fromMonth}&toMonth=${filters.toMonth}`)}
                                                 className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                                             >
-                                                <Settings size={13} />
-                                                Sửa lương
+                                                <Eye size={13} />
+                                                Xem lương
                                             </button>
-                                        ) : (
-                                            <span className="text-xs text-slate-400">-</span>
-                                        )}
+                                            {canManageSalary && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openSalaryModal(row)}
+                                                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                                >
+                                                    <Settings size={13} />
+                                                    Sửa lương
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -398,7 +410,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
     );
 
     function openSalaryModal(row) {
-        if (!isAdmin) {
+        if (!canManageSalary) {
             return;
         }
         const user = users.find((entry) => String(entry.id) === String(row.userId));
