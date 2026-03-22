@@ -117,6 +117,13 @@ function AdModal({ ad, onClose, onSaved, showToast }) {
                 await adService.update(ad.id, payload);
                 showToast("Cập nhật quảng cáo thành công");
             } else {
+                // Khi tạo mới với isActive = true, tắt ad cũ trên cùng slot nếu có
+                if (payload.isActive) {
+                    const activeAdOnSlot = ads.find(a => a.slot === form.slot && a.isActive);
+                    if (activeAdOnSlot) {
+                        await adService.toggle(activeAdOnSlot.id);
+                    }
+                }
                 await adService.create(payload);
                 showToast("Tạo quảng cáo mới thành công");
             }
@@ -311,6 +318,21 @@ export default function AdsManagement() {
 
     const handleToggle = async (id) => {
         try {
+            const adToToggle = ads.find(a => a.id === id);
+            if (!adToToggle) return;
+
+            // Nếu đang bật ad này (từ inactive -> active)
+            if (!adToToggle.isActive) {
+                // Tìm ad đang active trên cùng slot
+                const activeAdOnSlot = ads.find(a => a.slot === adToToggle.slot && a.isActive && a.id !== id);
+                
+                // Nếu có ad khác đang active, tắt nó trước
+                if (activeAdOnSlot) {
+                    await adService.toggle(activeAdOnSlot.id);
+                }
+            }
+
+            // Toggle ad hiện tại
             await adService.toggle(id);
             await load();
             showToast("Đã cập nhật trạng thái hiển thị");
