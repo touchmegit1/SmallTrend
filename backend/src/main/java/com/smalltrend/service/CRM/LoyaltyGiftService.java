@@ -214,4 +214,26 @@ public class LoyaltyGiftService {
             throw new RuntimeException("Failed to reduce variant stock: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Restore/add variant stock back to inventory
+     * Called when a gift is deleted from loyalty program
+     */
+    @Transactional
+    public void restoreVariantStock(Integer variantId, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new RuntimeException("Quantity must be greater than 0");
+        }
+
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Product variant not found"));
+
+        try {
+            // Restore stock using refund API - semantically correct for restoration
+            inventoryStockService.restockFromRefund(variant, quantity, null, 
+                    "Loyalty gift deletion - stock restoration");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to restore variant stock: " + e.getMessage(), e);
+        }
+    }
 }

@@ -187,9 +187,9 @@ const GiftRewardManagement = () => {
     }
   };
 
-  const handleDeleteGift = async (id) => {
+  const handleDeleteGift = (gift) => {
     if (isCashier) return;
-    setConfirmDialog({ open: true, type: 'delete', payload: id });
+    setConfirmDialog({ open: true, type: 'delete', payload: gift });
   };
 
   const startEditGift = (gift) => {
@@ -239,13 +239,27 @@ const GiftRewardManagement = () => {
     }
   };
 
-  const executeDeleteGift = async (id) => {
+  const executeDeleteGift = async (gift) => {
     if (isCashier) return;
+    if (!gift) return;
+    
     try {
-      await loyaltyService.deleteGift(id);
+      // Cộng lại stock vào kho trước khi xóa
+      if (gift.variantId && gift.stock > 0) {
+        try {
+          await loyaltyService.restoreVariantStock(gift.variantId, gift.stock);
+        } catch (restoreErr) {
+          showToast('Lỗi khi cộng lại stock: ' + (restoreErr?.response?.data?.message || restoreErr.message), 'error');
+          return; // Không tiếp tục xóa nếu restore fail
+        }
+      }
+      
+      // Sau đó mới xóa gift
+      await loyaltyService.deleteGift(gift.id);
+      showToast('Xóa quà tặng thành công!');
       await refetchGifts();
     } catch (err) {
-      showToast('Lỗi khi xóa quà tặng', 'error');
+      showToast('Lỗi khi xóa quà tặng: ' + (err?.response?.data?.message || err.message), 'error');
     }
   };
 
@@ -553,7 +567,7 @@ const GiftRewardManagement = () => {
                           ))}
                           {!isCashier && (
                             <button
-                              onClick={() => handleDeleteGift(gift.id)}
+                              onClick={() => handleDeleteGift(gift)}
                               className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-500"
                               title="Xóa"
                             >

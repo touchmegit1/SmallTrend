@@ -109,4 +109,28 @@ public class LoyaltyGiftController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
+
+    @PostMapping("/restore-stock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<?> restoreVariantStock(@RequestBody Map<String, Integer> request) {
+        try {
+            Integer variantId = request.get("variantId");
+            Integer quantity = request.get("quantity");
+            
+            if (variantId == null || quantity == null) {
+                return ResponseEntity.badRequest().body(new HashMap<String, String>() {{
+                    put("message", "variantId và quantity là bắt buộc");
+                }});
+            }
+            
+            loyaltyGiftService.restoreVariantStock(variantId, quantity);
+            return ResponseEntity.ok(new HashMap<String, String>() {{
+                put("message", "Cộng stock thành công");
+            }});
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
 }

@@ -52,6 +52,15 @@ const loyaltyService = {
             quantity
         });
         return response.data;
+    },
+
+    // Restore/add variant stock back to inventory
+    restoreVariantStock: async (variantId, quantity) => {
+        const response = await api.post('/crm/loyalty-gifts/restore-stock', {
+            variantId,
+            quantity
+        });
+        return response.data;
     }
 };
 
