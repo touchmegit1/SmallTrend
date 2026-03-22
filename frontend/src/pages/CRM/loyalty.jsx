@@ -121,11 +121,19 @@ const GiftRewardManagement = () => {
     if (!skuInput.trim()) return;
     try {
       setLoadingVariants(true);
-      const result = await ticketService.getVariantBySku(skuInput.trim());
-      setSkuVariants(result);
+      // Tìm kiếm bằng SKU hoặc tên sản phẩm
+      const result = await ticketService.searchVariants(skuInput.trim());
+      setSkuVariants(result || []);
       setSelectedVariant(null);
     } catch (err) {
-      showToast('Lỗi khi tìm sản phẩm', 'error');
+      // Fallback: tìm kiếm chỉ bằng SKU khi API tìm kiếm không khả dụng
+      try {
+        const result = await ticketService.getVariantBySku(skuInput.trim());
+        setSkuVariants(result || []);
+        setSelectedVariant(null);
+      } catch (fallbackErr) {
+        showToast('Lỗi khi tìm sản phẩm', 'error');
+      }
     } finally {
       setLoadingVariants(false);
     }
@@ -135,15 +143,41 @@ const GiftRewardManagement = () => {
     e.preventDefault();
     if (isCashier) return;
     if (!selectedVariant) { showToast('Vui lòng chọn sản phẩm!', 'warning'); return; }
+    
+    const stock = parseInt(formData.stock);
+    const availableStock = selectedVariant.totalStock || 0;
+    
+    // Validate stock trước khi tạo
+    if (stock > availableStock) {
+      showToast(`Không đủ hàng! Có ${availableStock} cái trong kho, bạn muốn thêm ${stock} cái.`, 'error');
+      return;
+    }
+    
+    if (stock <= 0) {
+      showToast('Số lượng phải lớn hơn 0', 'warning');
+      return;
+    }
+    
     try {
       setSavingGift(true);
+      
+      // Trừ stock từ inventory trước (ưu tiên)
+      try {
+        await loyaltyService.reduceVariantStock(selectedVariant.id, stock);
+      } catch (stockErr) {
+        showToast('Lỗi khi trừ stock: ' + (stockErr?.response?.data?.message || stockErr.message), 'error');
+        return; // Không tiếp tục tạo gift nếu trừ stock fail
+      }
+      
+      // Sau đó mới tạo quà tặng
       await loyaltyService.createGift({
         variantId: selectedVariant.id,
         name: formData.name,
         requiredPoints: parseInt(formData.requiredPoints),
-        stock: parseInt(formData.stock),
+        stock: stock,
       });
-      showToast('Thêm quà thành công!');
+      
+      showToast('Thêm quà thành công! (đã trừ ' + stock + ' cái từ kho)');
       setIsModalOpen(false);
       await refetchGifts();
     } catch (err) {
@@ -550,16 +584,16 @@ const GiftRewardManagement = () => {
             </div>
 
             <div className="p-6 space-y-5">
-              {/* Tìm SKU */}
+              {/* Tìm SKU hoặc tên sản phẩm */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Tìm sản phẩm theo SKU</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Tìm sản phẩm theo SKU hoặc tên</label>
                 <div className="flex gap-2 mb-3">
                   <input
                     type="text"
                     value={skuInput}
                     onChange={e => setSkuInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearchVariant()}
-                    placeholder="Nhập SKU (VD: SP001)..."
+                    placeholder="Nhập SKU hoặc tên sản phẩm (VD: SP001 hoặc Áo thun)..."
                     className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                   />
                   <button
@@ -592,28 +626,61 @@ const GiftRewardManagement = () => {
 
               {/* Form chi tiết */}
               {selectedVariant && (
-                <form onSubmit={handleSubmitGift} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Tên hiển thị *</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Điểm yêu cầu *</label>
-                      <input type="number" min="1" value={formData.requiredPoints}
-                        onChange={e => setFormData(f => ({ ...f, requiredPoints: e.target.value }))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500" required />
+                <>
+                  {/* Hiển thị sản phẩm đã chọn */}
+                  <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <div className="flex items-start gap-3">
+                      <img src={selectedVariant.imageUrl || 'https://placehold.co/60x60'} className="w-12 h-12 rounded-lg object-cover" alt="" />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-slate-800">{selectedVariant.productName}</p>
+                        <p className="text-xs text-slate-500 font-mono mt-0.5">SKU: {selectedVariant.sku}</p>
+                        <div className="mt-2 flex items-center gap-4">
+                          <div>
+                            <p className="text-xs text-slate-600">Tồn kho hiện tại:</p>
+                            <p className="text-lg font-bold text-indigo-600">{selectedVariant.totalStock || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-600">Giá bán:</p>
+                            <p className="text-lg font-bold text-emerald-600">{Number(selectedVariant.sellPrice || 0).toLocaleString('vi-VN')}đ</p>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedVariant(null)}
+                        className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500"
+                        title="Chọn sản phẩm khác"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
+                  </div>
+
+                  <form onSubmit={handleSubmitGift} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Số lượng tồn *</label>
-                      <input type="number" min="1" value={formData.stock}
-                        onChange={e => setFormData(f => ({ ...f, stock: e.target.value }))}
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Tên hiển thị *</label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Điểm yêu cầu *</label>
+                        <input type="number" min="1" value={formData.requiredPoints}
+                          onChange={e => setFormData(f => ({ ...f, requiredPoints: e.target.value }))}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Số lượng thêm * (tối đa: {selectedVariant.totalStock || 0})</label>
+                        <input type="number" min="1" max={selectedVariant.totalStock || 0} value={formData.stock}
+                          onChange={e => {
+                            const val = parseInt(e.target.value) || 0;
+                            setFormData(f => ({ ...f, stock: e.target.value }));
+                          }}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500" required />
                     </div>
                   </div>
@@ -627,7 +694,8 @@ const GiftRewardManagement = () => {
                       {savingGift ? 'Đang lưu...' : 'Lưu vào kho'}
                     </button>
                   </div>
-                </form>
+                  </form>
+                </>
               )}
               {!selectedVariant && (
                 <div className="flex justify-end pt-2 border-t border-slate-100">

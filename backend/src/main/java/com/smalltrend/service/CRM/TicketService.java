@@ -406,6 +406,33 @@ public class TicketService {
         }).toList();
     }
 
+    /**
+     * Search product variants by SKU or product name — useful for loyalty gift lookup
+     * Runs in transaction to access lazy collections.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> searchVariantsByKeyword(String keyword) {
+        var variants = productVariantRepository.searchByKeyword(keyword);
+        return variants.stream().map(v -> {
+            Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", v.getId());
+            map.put("sku", v.getSku());
+            map.put("barcode", v.getBarcode());
+            map.put("sellPrice", v.getSellPrice());
+            map.put("productName", v.getProduct() != null ? v.getProduct().getName() : null);
+            map.put("unitName", v.getUnit() != null ? v.getUnit().getName() : null);
+            map.put("imageUrl", v.getProduct() != null && v.getProduct().getImageUrl() != null ? 
+                                v.getProduct().getImageUrl() : null);
+            int totalStock = 0;
+            if (v.getInventoryStocks() != null) {
+                totalStock = v.getInventoryStocks().stream()
+                        .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0).sum();
+            }
+            map.put("totalStock", totalStock);
+            return map;
+        }).toList();
+    }
+
     public TicketResponse updateTicket(Long id, UpdateTicketRequest request) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));

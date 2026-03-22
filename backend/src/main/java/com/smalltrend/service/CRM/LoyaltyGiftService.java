@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.UUID;
+import com.smalltrend.service.inventory.InventoryStockService;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +34,7 @@ public class LoyaltyGiftService {
     private final CustomerRepository customerRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final GiftRedemptionHistoryRepository historyRepository;
+    private final InventoryStockService inventoryStockService;
 
     public List<LoyaltyGiftResponse> getAllActiveGifts() {
         return loyaltyGiftRepository.findByIsActiveTrue().stream()
@@ -189,5 +191,27 @@ public class LoyaltyGiftService {
         response.setActive(gift.isActive());
         response.setCreatedAt(gift.getCreatedAt());
         return response;
+    }
+
+    /**
+     * Reduce product variant stock from inventory system
+     * Called when a gift is added to loyalty program
+     */
+    @Transactional
+    public void reduceVariantStock(Integer variantId, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new RuntimeException("Quantity must be greater than 0");
+        }
+
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new RuntimeException("Product variant not found"));
+
+        try {
+            // Reduce stock from inventory system using deductStock
+            // Use null for orderId since this is for gift allocation
+            inventoryStockService.deductStock(variant, quantity, null, "Gift reward allocation");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to reduce variant stock: " + e.getMessage(), e);
+        }
     }
 }

@@ -97,4 +97,15 @@ public class TicketController {
         List<Map<String, Object>> result = ticketService.lookupVariantBySku(sku);
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * Search product variants by SKU or product name — for gift reward lookup.
+     * Supports fuzzy search on both SKU and product name fields.
+     */
+    @GetMapping("/tickets/lookup/search-variants")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER')")
+    public ResponseEntity<List<Map<String, Object>>> searchVariants(@RequestParam("keyword") String keyword) {
+        List<Map<String, Object>> result = ticketService.searchVariantsByKeyword(keyword);
+        return ResponseEntity.ok(result);
+    }
 }
