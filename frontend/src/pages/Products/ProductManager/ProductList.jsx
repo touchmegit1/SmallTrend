@@ -3,7 +3,7 @@ import Button from "../ProductComponents/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
 import { Badge } from "../ProductComponents/badge";
-import { Plus, Edit, Package, Eye, CheckCircle, Power, Trash2, AlertTriangle, X, Filter, Layers, Tag, Box, Puzzle, Loader2 } from "lucide-react";
+import { Plus, Edit, Package, Eye, CheckCircle, Power, Trash2, AlertTriangle, X, Filter, Layers, Tag, Box, Puzzle, Loader2, Search } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditProductModal from "./EditProductModal";
 import { useAuth } from "../../../context/AuthContext";
@@ -35,6 +35,7 @@ export function ProductListScreen() {
   const [filterBrand, setFilterBrand] = useState(null);
   const [filterProduct, setFilterProduct] = useState(null);
   const [filterVariant, setFilterVariant] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // State cho variants data (fetch theo product)
   const [variantsData, setVariantsData] = useState([]);
@@ -175,6 +176,7 @@ export function ProductListScreen() {
     setFilterBrand(null);
     setFilterProduct(null);
     setFilterVariant(null);
+    setSearchTerm("");
     setVariantsData([]);
   };
 
@@ -277,6 +279,22 @@ export function ProductListScreen() {
       result = result.filter((p) => String(p.id) === String(filterProduct));
     }
 
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    if (normalizedSearch) {
+      result = result.filter((p) => {
+        const productName = (p.name || "").toLowerCase();
+        const brandName = (getBrandName(p.brand_id) || "").toLowerCase();
+        const supplierName = (p.supplier_name || "").toLowerCase();
+        const categoryName = (p.category_name || "").toLowerCase();
+        return (
+          productName.includes(normalizedSearch)
+          || brandName.includes(normalizedSearch)
+          || supplierName.includes(normalizedSearch)
+          || categoryName.includes(normalizedSearch)
+        );
+      });
+    }
+
     return [...result].sort((a, b) => {
       if (!sortField) return 0;
       let aValue, bValue;
@@ -301,7 +319,7 @@ export function ProductListScreen() {
       if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
       return 0;
     });
-  }, [products, filterCategory, filterBrand, filterProduct, sortField, sortOrder]);
+  }, [products, filterCategory, filterBrand, filterProduct, sortField, sortOrder, searchTerm, brands]);
 
   // --- DROPDOWN OPTIONS ---
   const categoryOptions = useMemo(() => {
@@ -330,7 +348,7 @@ export function ProductListScreen() {
     ...(variantsData || []).map((v) => ({ value: String(v.id), label: v.name })),
   ], [filterProduct, variantsLoading, variantsData]);
 
-  const hasAnyFilter = filterCategory || filterBrand || filterProduct || filterVariant;
+  const hasAnyFilter = filterCategory || filterBrand || filterProduct || filterVariant || searchTerm.trim();
   const activeStep = filterVariant ? 4 : filterProduct ? 3 : filterBrand ? 2 : filterCategory ? 1 : 0;
 
   // --- TRẠNG THÁI CHỜ ---
@@ -439,6 +457,21 @@ export function ProductListScreen() {
             </div>
           )}
         </div>
+
+        <Card className="border-0 shadow-sm bg-white/90 backdrop-blur-sm rounded-2xl max-w-3xl mx-auto w-full">
+          <CardContent className="p-4">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm theo tên sản phẩm, thương hiệu, nhà cung cấp..."
+                className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* ============================================================ */}
         {/* BỘ LỌC PHÂN CẤP: Category → Brand → Product → Variant        */}
