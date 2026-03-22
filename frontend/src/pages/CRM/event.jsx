@@ -717,8 +717,13 @@ const EventManagement = () => {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Đơn hàng tối thiểu (đ)</label>
-                  <input type="number" min="0" value={voucherForm.minPurchaseAmount}
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Đơn hàng tối thiểu (đ)
+                    {voucherForm.campaignId && <span className="text-xs text-gray-400 ml-2">(từ sự kiện: {campaigns.find(c => String(c.id) === voucherForm.campaignId)?.minPurchaseAmount}đ)</span>}
+                  </label>
+                  <input type="number" 
+                    min="0" 
+                    value={voucherForm.minPurchaseAmount}
                     onChange={e => setVoucherForm({ ...voucherForm, minPurchaseAmount: e.target.value })}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                 </div>
@@ -730,12 +735,13 @@ const EventManagement = () => {
                       const selectedCampaign = campaigns.find(c => String(c.id) === campaignId);
                       let newForm = { ...voucherForm, campaignId };
                       
-                      // Auto-fill dates from selected campaign
+                      // Auto-fill dates and minimum purchase amount from selected campaign
                       if (selectedCampaign) {
                         newForm = {
                           ...newForm,
                           startDate: selectedCampaign.startDate || voucherForm.startDate,
                           endDate: selectedCampaign.endDate || voucherForm.endDate,
+                          minPurchaseAmount: selectedCampaign.minPurchaseAmount || voucherForm.minPurchaseAmount,
                         };
                       }
                       
@@ -749,25 +755,17 @@ const EventManagement = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Ngày bắt đầu
-                    {voucherForm.campaignId && <span className="text-xs text-gray-400 ml-2">(tự động từ sự kiện)</span>}
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Ngày bắt đầu</label>
                   <input type="date" 
-                    disabled={!!voucherForm.campaignId}
                     value={voucherForm.startDate}
                     min={!editingVoucher ? today : undefined}
                     onChange={e => setVoucherForm({ ...voucherForm, startDate: e.target.value })}
-                    className={`w-full border rounded-lg p-2.5 text-sm focus:outline-none transition-colors ${
-                      voucherForm.campaignId 
-                        ? 'border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed' 
-                        : 'border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
-                    }`} />
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Ngày hết hạn *
-                    {voucherForm.campaignId && <span className="text-xs text-gray-400 ml-2">(tự động từ sự kiện)</span>}
+                    {voucherForm.campaignId && <span className="text-xs text-gray-400 ml-2">(tự động từ sự kiện - không chỉnh sửa)</span>}
                   </label>
                   <input type="date" 
                     required 
