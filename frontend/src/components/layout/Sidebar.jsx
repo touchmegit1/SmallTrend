@@ -89,16 +89,17 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
 
   const hrChildren = canManageWorkforce
     ? [
-      { label: "Danh sách nhân viên", path: "/hr/workforce" },
-      { label: "Lịch làm việc", path: "/hr/schedule" },
+      { label: "Nhân sự tổng hợp", path: "/hr/workforce" },
+      { label: "Lịch làm việc chung", path: "/hr/schedule" },
       { label: "Phân ca làm việc", path: "/hr/shifts" },
-      { label: "Chấm công", path: "/hr/attendance" },
-      { label: "Tính lương", path: "/hr/payroll" },
-      { label: "Ticket đổi ca", path: "/hr/shift-tickets" },
+      { label: "Trung tâm ticket", path: "/hr/ticket-processing" },
+      { label: "Tổng hợp cá nhân & lương", path: "/hr/my-payroll" },
     ]
     : [
-      { label: "Lịch làm việc", path: "/hr/schedule" },
+      { label: "Lịch làm việc chung", path: "/hr/schedule" },
+      { label: "Trung tâm ticket", path: "/hr/ticket-processing" },
       { label: "Chấm công", path: "/hr/my-attendance" },
+      { label: "Tổng hợp cá nhân & lương", path: "/hr/my-payroll" },
     ];
 
   const navItems = showBusinessMenu

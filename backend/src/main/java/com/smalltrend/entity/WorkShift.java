@@ -125,16 +125,31 @@ public class WorkShift {
 
     private void calculateWorkingMinutes() {
         if (startTime != null && endTime != null) {
-            // Tính tổng phút trong ca
-            plannedMinutes = (int) java.time.Duration.between(startTime, endTime).toMinutes();
+            int dayMinutes = 24 * 60;
+            int shiftStart = startTime.toSecondOfDay() / 60;
+            int shiftEnd = endTime.toSecondOfDay() / 60;
+
+            plannedMinutes = shiftEnd - shiftStart;
+            if (plannedMinutes <= 0) {
+                plannedMinutes += dayMinutes;
+            }
 
             // Trừ đi thời gian nghỉ
             if (breakStartTime != null && breakEndTime != null) {
-                breakMinutes = (int) java.time.Duration.between(breakStartTime, breakEndTime).toMinutes();
+                int breakStart = breakStartTime.toSecondOfDay() / 60;
+                int breakEnd = breakEndTime.toSecondOfDay() / 60;
+                breakMinutes = breakEnd - breakStart;
+                if (breakMinutes <= 0) {
+                    breakMinutes += dayMinutes;
+                }
                 workingMinutes = plannedMinutes - breakMinutes;
             } else {
                 breakMinutes = 0;
                 workingMinutes = plannedMinutes;
+            }
+
+            if (workingMinutes < 0) {
+                workingMinutes = 0;
             }
         }
     }

@@ -151,13 +151,32 @@ const Category_Brand = () => {
       return;
     }
 
+    const normalizedCategoryCode = formData.code?.trim().toUpperCase();
+
+    if (activeTab === 'categories') {
+      const isCodeExisted = categories?.some((category) => {
+        const categoryCode = category.code?.trim()?.toUpperCase();
+        if (categoryCode !== normalizedCategoryCode) return false;
+        if (modalMode === 'edit' && category.id === selectedItem?.id) return false;
+        return true;
+      });
+
+      if (isCodeExisted) {
+        setToastMessage('Lỗi: Mã danh mục đã tồn tại!');
+        setTimeout(() => setToastMessage(""), 3000);
+        return;
+      }
+    }
+
     try {
-      // Tuỳ biến hành động gọi theo trường hợp tab điều hướng 
+      // Tuỳ biến hành động gọi theo trường hợp tab điều hướng
       if (activeTab === 'categories') {
+        const categoryPayload = { ...formData, code: normalizedCategoryCode };
+
         if (modalMode === 'add') {
-          await createCategory(formData);
+          await createCategory(categoryPayload);
         } else {
-          await updateCategory(selectedItem.id, formData);
+          await updateCategory(selectedItem.id, categoryPayload);
         }
       } else {
         if (modalMode === 'add') {

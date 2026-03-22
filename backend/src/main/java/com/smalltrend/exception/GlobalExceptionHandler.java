@@ -68,7 +68,7 @@ public class GlobalExceptionHandler {
         if (msg != null && (msg.contains("foreign key constraint") || msg.contains("a foreign key constraint fails"))) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new MessageResponse(
-                            "Lỗi: Không thể xóa vì danh mục hoặc thương hiệu này đang có sản phẩm áp dụng!"));
+                            "Lỗi: Không thể xóa vì dữ liệu này đang được sử dụng ở nơi khác!"));
         }
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new MessageResponse("Lỗi CSDL: " + msg));

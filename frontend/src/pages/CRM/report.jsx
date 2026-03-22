@@ -370,7 +370,7 @@ export default function CRMReport() {
             {/* HEADER */}
             <div>
                 <h1 className="text-2xl font-bold text-slate-800">Báo cáo & Thống kê CRM</h1>
-                <p className="text-slate-500 mt-1">Tổng quan toàn bộ hệ thống CRM. Nhấn vào thẻ để xem chi tiết.</p>
+
             </div>
 
             {/* REPORT ACTION GROUPS */}

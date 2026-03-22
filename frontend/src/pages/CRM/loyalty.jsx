@@ -121,11 +121,19 @@ const GiftRewardManagement = () => {
     if (!skuInput.trim()) return;
     try {
       setLoadingVariants(true);
-      const result = await ticketService.getVariantBySku(skuInput.trim());
-      setSkuVariants(result);
+      // Tìm kiếm bằng SKU hoặc tên sản phẩm
+      const result = await ticketService.searchVariants(skuInput.trim());
+      setSkuVariants(result || []);
       setSelectedVariant(null);
     } catch (err) {
-      showToast('Lỗi khi tìm sản phẩm', 'error');
+      // Fallback: tìm kiếm chỉ bằng SKU khi API tìm kiếm không khả dụng
+      try {
+        const result = await ticketService.getVariantBySku(skuInput.trim());
+        setSkuVariants(result || []);
+        setSelectedVariant(null);
+      } catch (fallbackErr) {
+        showToast('Lỗi khi tìm sản phẩm', 'error');
+      }
     } finally {
       setLoadingVariants(false);
     }
@@ -135,14 +143,40 @@ const GiftRewardManagement = () => {
     e.preventDefault();
     if (isCashier) return;
     if (!selectedVariant) { showToast('Vui lòng chọn sản phẩm!', 'warning'); return; }
+
+    const stock = parseInt(formData.stock);
+    const availableStock = selectedVariant.totalStock || 0;
+
+    // Validate stock trước khi tạo
+    if (stock > availableStock) {
+      showToast(`Không đủ hàng! Có ${availableStock} cái trong kho, bạn muốn thêm ${stock} cái.`, 'error');
+      return;
+    }
+
+    if (stock <= 0) {
+      showToast('Số lượng phải lớn hơn 0', 'warning');
+      return;
+    }
+
     try {
       setSavingGift(true);
+
+      // Trừ stock từ inventory trước (ưu tiên)
+      try {
+        await loyaltyService.reduceVariantStock(selectedVariant.id, stock);
+      } catch (stockErr) {
+        showToast('Lỗi khi trừ stock: ' + (stockErr?.response?.data?.message || stockErr.message), 'error');
+        return; // Không tiếp tục tạo gift nếu trừ stock fail
+      }
+
+      // Sau đó mới tạo quà tặng
       await loyaltyService.createGift({
         variantId: selectedVariant.id,
         name: formData.name,
         requiredPoints: parseInt(formData.requiredPoints),
-        stock: parseInt(formData.stock),
+        stock: stock,
       });
+
       showToast('Thêm quà thành công!');
       setIsModalOpen(false);
       await refetchGifts();
@@ -153,9 +187,9 @@ const GiftRewardManagement = () => {
     }
   };
 
-  const handleDeleteGift = async (id) => {
+  const handleDeleteGift = (gift) => {
     if (isCashier) return;
-    setConfirmDialog({ open: true, type: 'delete', payload: id });
+    setConfirmDialog({ open: true, type: 'delete', payload: gift });
   };
 
   const startEditGift = (gift) => {
@@ -205,13 +239,27 @@ const GiftRewardManagement = () => {
     }
   };
 
-  const executeDeleteGift = async (id) => {
+  const executeDeleteGift = async (gift) => {
     if (isCashier) return;
+    if (!gift) return;
+
     try {
-      await loyaltyService.deleteGift(id);
+      // Cộng lại stock vào kho trước khi xóa
+      if (gift.variantId && gift.stock > 0) {
+        try {
+          await loyaltyService.restoreVariantStock(gift.variantId, gift.stock);
+        } catch (restoreErr) {
+          showToast('Lỗi khi cộng lại stock: ' + (restoreErr?.response?.data?.message || restoreErr.message), 'error');
+          return; // Không tiếp tục xóa nếu restore fail
+        }
+      }
+
+      // Sau đó mới xóa gift
+      await loyaltyService.deleteGift(gift.id);
+      showToast('Xóa quà tặng thành công!');
       await refetchGifts();
     } catch (err) {
-      showToast('Lỗi khi xóa quà tặng', 'error');
+      showToast('Lỗi khi xóa quà tặng: ' + (err?.response?.data?.message || err.message), 'error');
     }
   };
 
@@ -263,7 +311,6 @@ const GiftRewardManagement = () => {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Quản lý Loyalty & Quà tặng</h1>
-          <p className="text-slate-500 mt-1">Tra cứu điểm tích lũy và quản lý kho quà đổi thưởng.</p>
         </div>
         {!isCashier && (
           <button
@@ -418,118 +465,117 @@ const GiftRewardManagement = () => {
                     const isEditing = editingGiftId === gift.id;
 
                     return (
-                    <tr key={gift.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-4">
-                        <img
-                          src={gift.image || 'https://placehold.co/80x80?text=Gift'}
-                          alt={gift.name}
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-100"
-                        />
-                      </td>
-                      <td className="px-5 py-4">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editGiftForm.name}
-                            onChange={(e) => setEditGiftForm((prev) => ({ ...prev, name: e.target.value }))}
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      <tr key={gift.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                        <td className="px-5 py-4">
+                          <img
+                            src={gift.image || 'https://placehold.co/80x80?text=Gift'}
+                            alt={gift.name}
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-100"
                           />
-                        ) : (
-                          <p className="font-medium text-slate-800 text-sm">{gift.name}</p>
-                        )}
-                        <p className="text-xs text-slate-400 font-mono">{gift.sku}</p>
-                      </td>
-                      <td className="px-5 py-4">
-                        {isEditing ? (
-                          <div className="relative max-w-28">
+                        </td>
+                        <td className="px-5 py-4">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editGiftForm.name}
+                              onChange={(e) => setEditGiftForm((prev) => ({ ...prev, name: e.target.value }))}
+                              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            />
+                          ) : (
+                            <p className="font-medium text-slate-800 text-sm">{gift.name}</p>
+                          )}
+                          <p className="text-xs text-slate-400 font-mono">{gift.sku}</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          {isEditing ? (
+                            <div className="relative max-w-28">
+                              <input
+                                type="number"
+                                min="1"
+                                value={editGiftForm.requiredPoints}
+                                onChange={(e) => setEditGiftForm((prev) => ({ ...prev, requiredPoints: e.target.value }))}
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">pts</span>
+                            </div>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-bold">
+                              {gift.requiredPoints} pts
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {isEditing ? (
                             <input
                               type="number"
-                              min="1"
-                              value={editGiftForm.requiredPoints}
-                              onChange={(e) => setEditGiftForm((prev) => ({ ...prev, requiredPoints: e.target.value }))}
-                              className="w-full border border-slate-200 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                              min="0"
+                              value={editGiftForm.stock}
+                              onChange={(e) => setEditGiftForm((prev) => ({ ...prev, stock: e.target.value }))}
+                              className="w-24 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">pts</span>
-                          </div>
-                        ) : (
-                          <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-bold">
-                            {gift.requiredPoints} pts
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            min="0"
-                            value={editGiftForm.stock}
-                            onChange={(e) => setEditGiftForm((prev) => ({ ...prev, stock: e.target.value }))}
-                            className="w-24 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                          />
-                        ) : (
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${gift.stock > 10 ? 'bg-emerald-50 text-emerald-700' : gift.stock > 0 ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
-                            {gift.stock}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleRedeemGift(gift)}
-                            disabled={!currentCustomer || !canAfford || outOfStock}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                              !currentCustomer
-                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                : outOfStock
-                                  ? 'bg-red-100 text-red-500 cursor-not-allowed'
-                                  : !canAfford
-                                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            }`}
-                            title={!currentCustomer ? 'Hãy nhập khách hàng trước khi đổi quà' : 'Đổi quà'}
-                          >
-                            {!currentCustomer ? 'Nhập khách hàng' : outOfStock ? 'Hết' : !canAfford ? 'Thiếu điểm' : 'Đổi ngay'}
-                          </button>
-                          {!isCashier && (isEditing ? (
-                            <>
-                              <button
-                                onClick={() => saveEditGift(gift.id)}
-                                disabled={savingGiftUpdate}
-                                className="p-2 hover:bg-emerald-50 rounded-lg transition-colors text-emerald-600 disabled:opacity-50"
-                                title="Lưu"
-                              >
-                                <Check size={16} />
-                              </button>
-                              <button
-                                onClick={cancelEditGift}
-                                disabled={savingGiftUpdate}
-                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 disabled:opacity-50"
-                                title="Hủy"
-                              >
-                                <X size={16} />
-                              </button>
-                            </>
                           ) : (
-                            <button
-                              onClick={() => startEditGift(gift)}
-                              className="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-indigo-600"
-                              title="Sửa"
-                            >
-                              <Pencil size={16} />
-                            </button>
-                          ))}
-                          {!isCashier && (
-                            <button
-                              onClick={() => handleDeleteGift(gift.id)}
-                              className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-500"
-                              title="Xóa"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${gift.stock > 10 ? 'bg-emerald-50 text-emerald-700' : gift.stock > 0 ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
+                              {gift.stock}
+                            </span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleRedeemGift(gift)}
+                              disabled={!currentCustomer || !canAfford || outOfStock}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!currentCustomer
+                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                  : outOfStock
+                                    ? 'bg-red-100 text-red-500 cursor-not-allowed'
+                                    : !canAfford
+                                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                }`}
+                              title={!currentCustomer ? 'Hãy nhập khách hàng trước khi đổi quà' : 'Đổi quà'}
+                            >
+                              {!currentCustomer ? 'Nhập khách hàng' : outOfStock ? 'Hết' : !canAfford ? 'Thiếu điểm' : 'Đổi ngay'}
+                            </button>
+                            {!isCashier && (isEditing ? (
+                              <>
+                                <button
+                                  onClick={() => saveEditGift(gift.id)}
+                                  disabled={savingGiftUpdate}
+                                  className="p-2 hover:bg-emerald-50 rounded-lg transition-colors text-emerald-600 disabled:opacity-50"
+                                  title="Lưu"
+                                >
+                                  <Check size={16} />
+                                </button>
+                                <button
+                                  onClick={cancelEditGift}
+                                  disabled={savingGiftUpdate}
+                                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 disabled:opacity-50"
+                                  title="Hủy"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => startEditGift(gift)}
+                                className="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-indigo-600"
+                                title="Sửa"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                            ))}
+                            {!isCashier && (
+                              <button
+                                onClick={() => handleDeleteGift(gift)}
+                                className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-500"
+                                title="Xóa"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>
@@ -551,8 +597,9 @@ const GiftRewardManagement = () => {
             </div>
 
             <div className="p-6 space-y-5">
-              {/* Tìm SKU/Tên */}
+              {/* Tìm SKU hoặc tên sản phẩm */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Tìm sản phẩm theo SKU hoặc tên</label>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Tìm sản phẩm theo SKU hoặc tên</label>
                 <div className="flex gap-2 mb-3">
                   <input
@@ -560,7 +607,7 @@ const GiftRewardManagement = () => {
                     value={skuInput}
                     onChange={e => setSkuInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearchVariant()}
-                    placeholder="Nhập SKU hoặc tên sản phẩm..."
+                    placeholder="Nhập SKU hoặc tên sản phẩm (VD: SP001 hoặc Áo thun)..."
                     className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                   />
                   <button
@@ -593,42 +640,84 @@ const GiftRewardManagement = () => {
 
               {/* Form chi tiết */}
               {selectedVariant && (
-                <form onSubmit={handleSubmitGift} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Tên hiển thị *</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Điểm yêu cầu *</label>
-                      <input type="number" min="1" value={formData.requiredPoints}
-                        onChange={e => setFormData(f => ({ ...f, requiredPoints: e.target.value }))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500" required />
+                <>
+                  {/* Hiển thị sản phẩm đã chọn */}
+                  <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <div className="flex items-start gap-3">
+                      <img src={selectedVariant.imageUrl || 'https://placehold.co/60x60'} className="w-12 h-12 rounded-lg object-cover" alt="" />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-slate-800">{selectedVariant.productName}</p>
+                        <p className="text-xs text-slate-500 font-mono mt-0.5">SKU: {selectedVariant.sku}</p>
+                        <div className="mt-2 flex items-center gap-4">
+                          <div>
+                            <p className="text-xs text-slate-600">Tồn kho hiện tại:</p>
+                            <p className="text-lg font-bold text-indigo-600">{selectedVariant.totalStock || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-600">Giá bán:</p>
+                            <p className="text-lg font-bold text-emerald-600">{Number(selectedVariant.sellPrice || 0).toLocaleString('vi-VN')}đ</p>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedVariant(null)}
+                        className="p-1.5 hover:bg-red-100 rounded-lg transition-colors text-red-500"
+                        title="Chọn sản phẩm khác"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
+                  </div>
+
+                  <form onSubmit={handleSubmitGift} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Số lượng tồn *</label>
-                      <input type="number" min="1" value={formData.stock}
-                        onChange={e => setFormData(f => ({ ...f, stock: e.target.value }))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500" required />
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Tên hiển thị *</label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        required
+                      />
                     </div>
-                  </div>
-                  <div className="flex gap-3 pt-2 border-t border-slate-100">
-                    <button type="button" onClick={() => setIsModalOpen(false)}
-                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-lg text-sm transition-colors">
-                      Hủy
-                    </button>
-                    <button type="submit" disabled={savingGift}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm disabled:opacity-60 transition-colors">
-                      {savingGift ? 'Đang lưu...' : 'Lưu vào kho'}
-                    </button>
-                  </div>
-                </form>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Điểm yêu cầu *</label>
+                        <input type="number" min="1" value={formData.requiredPoints}
+                          onChange={e => setFormData(f => ({ ...f, requiredPoints: e.target.value }))}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Số lượng thêm * (tối đa: {selectedVariant.totalStock || 0})</label>
+                        <input type="number" min="1" max={selectedVariant.totalStock || 0} value={formData.stock}
+                          onChange={e => {
+                            const val = parseInt(e.target.value) || 0;
+                            setFormData(f => ({ ...f, stock: e.target.value }));
+                          }}
+                          className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 ${formData.stock && parseInt(formData.stock) > (selectedVariant.totalStock || 0)
+                              ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                              : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'
+                            }`} required />
+                        {formData.stock && parseInt(formData.stock) > (selectedVariant.totalStock || 0) && (
+                          <p className="text-red-600 text-xs mt-1.5 font-medium">
+                            Đã vượt quá số lượng tồn kho
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-3 pt-2 border-t border-slate-100">
+                      <button type="button" onClick={() => setIsModalOpen(false)}
+                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-lg text-sm transition-colors">
+                        Hủy
+                      </button>
+                      <button type="submit" disabled={savingGift}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm disabled:opacity-60 transition-colors">
+                        {savingGift ? 'Đang lưu...' : 'Lưu vào kho'}
+                      </button>
+                    </div>
+                  </form>
+                </>
               )}
               {!selectedVariant && (
                 <div className="flex justify-end pt-2 border-t border-slate-100">

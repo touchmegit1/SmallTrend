@@ -43,6 +43,24 @@ const loyaltyService = {
     getCustomerHistory: async (customerId) => {
         const response = await api.get(`/crm/loyalty-gifts/history/${customerId}`);
         return response.data;
+    },
+
+    // Reduce variant stock from inventory
+    reduceVariantStock: async (variantId, quantity) => {
+        const response = await api.post('/crm/loyalty-gifts/reduce-stock', {
+            variantId,
+            quantity
+        });
+        return response.data;
+    },
+
+    // Restore/add variant stock back to inventory
+    restoreVariantStock: async (variantId, quantity) => {
+        const response = await api.post('/crm/loyalty-gifts/restore-stock', {
+            variantId,
+            quantity
+        });
+        return response.data;
     }
 };
 

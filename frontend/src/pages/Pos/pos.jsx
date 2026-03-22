@@ -169,6 +169,27 @@ export default function POS() {
       setSelectedProductIndex(prev => prev > 0 ? prev - 1 : 0);
     } else if (e.key === 'Enter') {
       e.preventDefault();
+      const normalizedTerm = (searchTerm || '').trim().toLowerCase();
+      if (!normalizedTerm) return;
+
+      const isNumericSearch = /^\d+$/.test(normalizedTerm);
+
+      if (isNumericSearch) {
+        const exactCodeMatch = filteredProducts.find((product) =>
+          (product.barcode && product.barcode.toLowerCase() === normalizedTerm) ||
+          (product.sku && product.sku.toLowerCase() === normalizedTerm)
+        );
+
+        if (exactCodeMatch) {
+          addToCart(exactCodeMatch);
+          setSearchTerm('');
+          setSelectedProductIndex(-1);
+        } else {
+          alert('Không tìm thấy sản phẩm với mã đã nhập.');
+        }
+        return;
+      }
+
       if (filteredProducts.length > 0) {
         const indexToAdd = selectedProductIndex >= 0 && selectedProductIndex < filteredProducts.length
           ? selectedProductIndex : 0;
@@ -294,6 +315,23 @@ export default function POS() {
   useEffect(() => {
     localStorage.setItem('pendingQROrders', JSON.stringify(pendingQROrders));
   }, [pendingQROrders]);
+
+  useEffect(() => {
+    const hasUnfinishedTransaction =
+      orders.some((order) => Array.isArray(order.cart) && order.cart.length > 0) ||
+      pendingQROrders.length > 0;
+
+    if (!hasUnfinishedTransaction) return;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = 'Bạn đang có giao dịch chưa hoàn thành.';
+      return 'Bạn đang có giao dịch chưa hoàn thành.';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [orders, pendingQROrders]);
 
   useEffect(() => {
     const refreshSuspendedOrders = () => {

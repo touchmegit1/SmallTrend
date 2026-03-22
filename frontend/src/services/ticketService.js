@@ -37,6 +37,12 @@ const ticketService = {
         const response = await api.get('/crm/tickets/lookup/variant-by-sku', { params: { sku } });
         return response.data;
     },
+
+    // Lookup: product variant by SKU or name
+    searchVariants: async (keyword) => {
+        const response = await api.get('/crm/tickets/lookup/search-variants', { params: { keyword } });
+        return response.data;
+    },
 };
 
 export default ticketService;

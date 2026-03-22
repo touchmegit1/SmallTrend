@@ -10,6 +10,7 @@ import com.smalltrend.entity.User;
 import com.smalltrend.entity.UserCredential;
 import com.smalltrend.entity.enums.SalaryType;
 import com.smalltrend.exception.UserException;
+import com.smalltrend.repository.PayrollCalculationRepository;
 import com.smalltrend.repository.RoleRepository;
 import com.smalltrend.repository.UserCredentialsRepository;
 import com.smalltrend.repository.UserRepository;
@@ -33,6 +34,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -43,6 +45,7 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final UserCredentialsRepository userCredentialsRepository;
     private final RoleRepository roleRepository;
+    private final PayrollCalculationRepository payrollCalculationRepository;
     private final CloudinaryService cloudinaryService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -51,12 +54,14 @@ public class UserService implements UserDetailsService {
             UserRepository userRepository,
             UserCredentialsRepository userCredentialsRepository,
             RoleRepository roleRepository,
+            PayrollCalculationRepository payrollCalculationRepository,
             CloudinaryService cloudinaryService,
             @Lazy PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.userCredentialsRepository = userCredentialsRepository;
         this.roleRepository = roleRepository;
+        this.payrollCalculationRepository = payrollCalculationRepository;
         this.cloudinaryService = cloudinaryService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -341,6 +346,11 @@ public class UserService implements UserDetailsService {
             user.setStatus(request.getStatus().toUpperCase());
         }
 
+        if (isSalaryConfigChanged(user, request)
+                && payrollCalculationRepository.existsByUserIdAndStatusNotIgnoreCase(user.getId(), "PAID")) {
+            throw new RuntimeException("Phải thanh toán hết lương cũ trước khi thay đổi cấu hình lương");
+        }
+
         applySalaryFields(user,
                 request.getSalaryType(),
                 request.getBaseSalary(),
@@ -350,6 +360,44 @@ public class UserService implements UserDetailsService {
                 request.getWorkingHoursPerMonth());
 
         return userRepository.save(user);
+    }
+
+    private boolean isSalaryConfigChanged(User user, UserUpdateRequest request) {
+        if (request == null || user == null) {
+            return false;
+        }
+
+        SalaryType incomingSalaryType = parseSalaryType(request.getSalaryType());
+        if (incomingSalaryType != null && incomingSalaryType != user.getSalaryType()) {
+            return true;
+        }
+
+        if (request.getBaseSalary() != null
+                && !Objects.equals(request.getBaseSalary(), user.getBaseSalary())) {
+            return true;
+        }
+
+        if (request.getHourlyRate() != null
+                && !Objects.equals(request.getHourlyRate(), user.getHourlyRate())) {
+            return true;
+        }
+
+        if (request.getMinRequiredShifts() != null
+                && !Objects.equals(request.getMinRequiredShifts(), user.getMinRequiredShifts())) {
+            return true;
+        }
+
+        if (request.getCountLateAsPresent() != null
+                && !Objects.equals(request.getCountLateAsPresent(), user.getCountLateAsPresent())) {
+            return true;
+        }
+
+        if (request.getWorkingHoursPerMonth() != null
+                && !Objects.equals(request.getWorkingHoursPerMonth(), user.getWorkingHoursPerMonth())) {
+            return true;
+        }
+
+        return false;
     }
 
     public void deleteUser(Integer id) {

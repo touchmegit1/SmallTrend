@@ -38,6 +38,7 @@ import { calculateProfit, calculateTaxInclusivePrice } from "../../../utils/pric
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 const PRICE_SYNC_NOTICE_KEY = "priceSyncNotice";
 const PRICE_SYNC_HISTORY_KEY = "priceSyncNotifications";
+const PRICE_SYNC_BROADCAST_KEY = "priceSyncNoticeBroadcast";
 const MAX_PRICE_SYNC_NOTIFICATIONS = 30;
 
 const formatSyncedItemLabel = (item) => {
@@ -207,6 +208,38 @@ const PriceSetting = () => {
     useEffect(() => {
         fetchVariants();
         consumePriceSyncNotice();
+    }, [consumePriceSyncNotice]);
+
+    useEffect(() => {
+        const handleLivePriceSyncNotice = (event) => {
+            const detail = event?.detail;
+            if (!detail) return;
+            try {
+                sessionStorage.setItem(PRICE_SYNC_NOTICE_KEY, JSON.stringify(detail));
+            } catch {
+                // ignore storage write errors
+            }
+            consumePriceSyncNotice();
+        };
+
+        const handleBroadcastPriceSyncNotice = (event) => {
+            if (event.key !== PRICE_SYNC_BROADCAST_KEY || !event.newValue) return;
+            try {
+                const detail = JSON.parse(event.newValue);
+                if (!detail) return;
+                sessionStorage.setItem(PRICE_SYNC_NOTICE_KEY, JSON.stringify(detail));
+                consumePriceSyncNotice();
+            } catch {
+                // ignore invalid broadcast payload
+            }
+        };
+
+        window.addEventListener("price-sync-notice", handleLivePriceSyncNotice);
+        window.addEventListener("storage", handleBroadcastPriceSyncNotice);
+        return () => {
+            window.removeEventListener("price-sync-notice", handleLivePriceSyncNotice);
+            window.removeEventListener("storage", handleBroadcastPriceSyncNotice);
+        };
     }, [consumePriceSyncNotice]);
 
     const toDateOnly = (dateStr) => {

@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Wallet, CalendarClock, Clock3, UserRoundCheck } from 'lucide-react';
+import { ArrowLeft, Wallet, CalendarClock, Clock3, UserRoundCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { shiftService } from '../../services/shiftService';
 import { useAuth } from '../../context/AuthContext';
 
 const MyPayrollSummary = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [filters, setFilters] = useState(() => {
@@ -78,6 +80,22 @@ const MyPayrollSummary = () => {
     return (
         <div className="space-y-5">
             <div>
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-300"
+                    >
+                        <ArrowLeft size={14} /> Quay về trang trước
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/hr/workforce')}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-300"
+                    >
+                        <ArrowLeft size={14} /> Về nhân sự tổng hợp
+                    </button>
+                </div>
                 <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
                     <Wallet size={24} className="text-indigo-600" />
                     Lương cá nhân
@@ -128,7 +146,11 @@ const MyPayrollSummary = () => {
                 {attendanceRows.map((item) => (
                     <div key={item.id} className="grid grid-cols-5 gap-2 border-b border-slate-100 px-4 py-3 text-sm text-slate-700">
                         <div>{item.date || '-'}</div>
-                        <div>{formatAttendanceStatus(item.status)}</div>
+                        <div>
+                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColorClass(item.status)}`}>
+                                {formatAttendanceStatus(item.status)}
+                            </span>
+                        </div>
                         <div>{item.shiftName || '-'}</div>
                         <div>{item.timeIn || '-'}</div>
                         <div>{item.timeOut || '-'}</div>
@@ -176,6 +198,21 @@ const formatAttendanceStatus = (status) => {
     if (status === 'LATE') return 'Đi trễ';
     if (status === 'ABSENT') return 'Vắng';
     return status;
+};
+
+const getStatusColorClass = (status) => {
+    switch (status) {
+        case 'PRESENT':
+            return 'bg-emerald-100 text-emerald-700';
+        case 'LATE':
+            return 'bg-amber-100 text-amber-700';
+        case 'ABSENT':
+            return 'bg-rose-100 text-rose-700';
+        case 'PENDING':
+            return 'bg-slate-100 text-slate-700';
+        default:
+            return 'bg-slate-100 text-slate-700';
+    }
 };
 
 export default MyPayrollSummary;

@@ -6,6 +6,7 @@ import {
     MANAGER_ROLES,
     CASHIER_ROLES,
     INVENTORY_ROLES,
+    STAFF_ROLES,
     hasAnyRole,
     normalizeRole,
 } from '../../utils/rolePermissions';
@@ -41,6 +42,9 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
             }
             if (hasAnyRole(user, CASHIER_ROLES)) {
                 return <Navigate to="/pos" replace />;
+            }
+            if (hasAnyRole(user, STAFF_ROLES)) {
+                return <Navigate to="/hr/schedule" replace />;
             }
             const normalizedRole = normalizeRole(user);
             if (normalizedRole) {

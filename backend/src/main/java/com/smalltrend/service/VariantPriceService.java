@@ -243,6 +243,28 @@ public class VariantPriceService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public int deactivateExpiredActivePrices() {
+        LocalDate today = LocalDate.now();
+        List<VariantPrice> expiredActivePrices = variantPriceRepository
+                .findExpiredByStatusWithVariant(VariantPriceStatus.ACTIVE, today);
+
+        if (expiredActivePrices.isEmpty()) {
+            return 0;
+        }
+
+        for (VariantPrice price : expiredActivePrices) {
+            price.setStatus(VariantPriceStatus.INACTIVE);
+            variantPriceRepository.save(price);
+
+            ProductVariant variant = price.getVariant();
+            variant.setSellPrice(java.math.BigDecimal.ZERO);
+            productVariantRepository.save(variant);
+        }
+
+        return expiredActivePrices.size();
+    }
+
     private BigDecimal normalizePurchasePrice(BigDecimal purchasePrice) {
         if (purchasePrice == null) {
             return BigDecimal.ZERO;
