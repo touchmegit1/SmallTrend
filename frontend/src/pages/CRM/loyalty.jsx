@@ -177,7 +177,7 @@ const GiftRewardManagement = () => {
         stock: stock,
       });
       
-      showToast('Thêm quà thành công! (đã trừ ' + stock + ' cái từ kho)');
+      showToast('Thêm quà thành công!');
       setIsModalOpen(false);
       await refetchGifts();
     } catch (err) {
@@ -681,8 +681,17 @@ const GiftRewardManagement = () => {
                             const val = parseInt(e.target.value) || 0;
                             setFormData(f => ({ ...f, stock: e.target.value }));
                           }}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500" required />
-                    </div>
+                        className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 ${
+                          formData.stock && parseInt(formData.stock) > (selectedVariant.totalStock || 0)
+                            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                            : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'
+                        }`} required />
+                        {formData.stock && parseInt(formData.stock) > (selectedVariant.totalStock || 0) && (
+                          <p className="text-red-600 text-xs mt-1.5 font-medium">
+                            Đã vượt quá số lượng tồn kho
+                          </p>
+                        )}
+                      </div>
                   </div>
                   <div className="flex gap-3 pt-2 border-t border-slate-100">
                     <button type="button" onClick={() => setIsModalOpen(false)}
