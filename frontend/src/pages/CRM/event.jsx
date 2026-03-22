@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useToast, ToastContainer } from '../../hooks/useToast.jsx';
 import eventService from '../../services/eventService';
@@ -75,33 +75,6 @@ const EventManagement = () => {
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState({ open: false, type: null, id: null, label: '' });
-
-  // Auto-update status for expired items
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Check and update expired campaigns to COMPLETED
-    campaigns.forEach(async (campaign) => {
-      if (campaign.status !== 'COMPLETED' && campaign.status !== 'CANCELLED' && campaign.endDate && campaign.endDate < today) {
-        try {
-          await eventService.updateCampaign(campaign.id, { ...campaign, status: 'COMPLETED' });
-        } catch (err) {
-          console.error('Failed to auto-update campaign status:', err);
-        }
-      }
-    });
-
-    // Check and update expired vouchers to EXPIRED
-    vouchers.forEach(async (voucher) => {
-      if (voucher.status !== 'EXPIRED' && voucher.status !== 'CANCELLED' && voucher.endDate && voucher.endDate < today) {
-        try {
-          await eventService.updateVoucher(voucher.id, { ...voucher, status: 'EXPIRED' });
-        } catch (err) {
-          console.error('Failed to auto-update voucher status:', err);
-        }
-      }
-    });
-  }, [campaigns, vouchers]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 

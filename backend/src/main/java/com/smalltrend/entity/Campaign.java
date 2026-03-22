@@ -122,5 +122,17 @@ public class Campaign {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
+        
+        // Tự động cập nhật status: DRAFT → ACTIVE khi tới ngày bắt đầu
+        if (status != null && status.equals("DRAFT") && startDate != null && 
+            (today.isAfter(startDate) || today.isEqual(startDate))) {
+            status = "ACTIVE";
+        }
+        
+        // Tự động cập nhật status: ACTIVE → COMPLETED khi hết hạn
+        if (status != null && status.equals("ACTIVE") && endDate != null && today.isAfter(endDate)) {
+            status = "COMPLETED";
+        }
     }
 }
