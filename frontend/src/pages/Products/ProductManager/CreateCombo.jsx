@@ -21,6 +21,7 @@ const CreateCombo = () => {
     comboName: "",
     description: "",
     comboPrice: "",
+    discountPercent: "",
     isActive: true,
   });
   const [selectedVariants, setSelectedVariants] = useState([]);
@@ -64,6 +65,73 @@ const CreateCombo = () => {
     }));
   };
 
+  const syncDiscountFromComboPrice = (comboPriceValue) => {
+    const parsedComboPrice = Number(comboPriceValue);
+    if (!Number.isFinite(parsedComboPrice) || parsedComboPrice <= 0 || totalPrice <= 0) {
+      return "";
+    }
+    const roundedPrice = Math.round(parsedComboPrice / 100) * 100;
+    const rawDiscountPercent = ((totalPrice - roundedPrice) / totalPrice) * 100;
+    const clampedDiscountPercent = Math.min(99.99, Math.max(0.01, rawDiscountPercent));
+    return Number(clampedDiscountPercent.toFixed(2)).toString();
+  };
+
+  const handleComboPriceChange = (e) => {
+    const value = e.target.value;
+    setErrorMsg("");
+
+    if (value === "") {
+      setFormData((prev) => ({ ...prev, comboPrice: "", discountPercent: "" }));
+      return;
+    }
+
+    const parsedComboPrice = Number(value);
+    if (!Number.isFinite(parsedComboPrice)) {
+      setFormData((prev) => ({ ...prev, comboPrice: value }));
+      return;
+    }
+
+    const boundedComboPrice = totalPrice > 0 ? Math.min(parsedComboPrice, totalPrice) : parsedComboPrice;
+    const normalizedComboPrice = Number.isFinite(boundedComboPrice)
+      ? Number(boundedComboPrice.toFixed(2)).toString()
+      : value;
+
+    setFormData((prev) => ({
+      ...prev,
+      comboPrice: normalizedComboPrice,
+      discountPercent: syncDiscountFromComboPrice(normalizedComboPrice),
+    }));
+  };
+
+  const handleDiscountPercentChange = (e) => {
+    const value = e.target.value;
+    setErrorMsg("");
+
+    if (value === "") {
+      setFormData((prev) => ({ ...prev, discountPercent: "", comboPrice: "" }));
+      return;
+    }
+
+    const parsedDiscountPercent = Number(value);
+    if (!Number.isFinite(parsedDiscountPercent)) {
+      setFormData((prev) => ({ ...prev, discountPercent: value }));
+      return;
+    }
+
+    const clampedDiscountPercent = Math.min(99.99, Math.max(0.01, parsedDiscountPercent));
+    const comboPriceByPercent = totalPrice > 0
+      ? Math.round((totalPrice * (1 - clampedDiscountPercent / 100)) / 100) * 100
+      : 0;
+
+    const normalizedDiscountPercent = Number(clampedDiscountPercent.toFixed(2)).toString();
+
+    setFormData((prev) => ({
+      ...prev,
+      discountPercent: normalizedDiscountPercent,
+      comboPrice: totalPrice > 0 ? comboPriceByPercent.toString() : "",
+    }));
+  };
+
   // Thêm một Variant (sản phẩm con) vào danh sách Combo dự kiến
   const addVariant = (variant) => {
     const existing = selectedVariants.find((v) => v.id === variant.id);
@@ -98,10 +166,13 @@ const CreateCombo = () => {
   const comboPriceNumber = Number(formData.comboPrice) || 0;
   const roundedComboPrice = comboPriceNumber > 0 ? Math.round(comboPriceNumber / 100) * 100 : 0;
   const discountAmount = totalPrice - roundedComboPrice;
-  const discountPercent =
+  const computedDiscountPercent =
     totalPrice > 0 && roundedComboPrice > 0
-      ? ((discountAmount / totalPrice) * 100).toFixed(0)
+      ? Number((((discountAmount / totalPrice) * 100).toFixed(2)))
       : 0;
+  const discountPercent = formData.discountPercent === ""
+    ? computedDiscountPercent
+    : Number(formData.discountPercent);
   const isComboPriceNotAboveCost = roundedComboPrice > 0 && roundedComboPrice < totalCost;
 
   const filteredVariants = availableVariants.filter(
@@ -171,6 +242,7 @@ const CreateCombo = () => {
   const validateForm = () => {
     const normalizedName = (formData.comboName || "").trim();
     const parsedComboPrice = Number(formData.comboPrice);
+    const parsedDiscountPercent = Number(formData.discountPercent);
 
     if (!normalizedName) {
       return "Vui lòng nhập tên combo";
@@ -178,6 +250,14 @@ const CreateCombo = () => {
 
     if (!Number.isFinite(parsedComboPrice) || parsedComboPrice <= 0) {
       return "Giá combo phải lớn hơn 0";
+    }
+
+    if (totalPrice > 0 && parsedComboPrice > totalPrice) {
+      return "Giá combo không được vượt quá giá gốc";
+    }
+
+    if (!Number.isFinite(parsedDiscountPercent) || parsedDiscountPercent <= 0 || parsedDiscountPercent >= 100) {
+      return "% giảm giá phải lớn hơn 0 và nhỏ hơn 100";
     }
 
     if (roundedComboPrice < totalCost) {
@@ -236,6 +316,7 @@ const CreateCombo = () => {
         comboName: formData.comboName.trim(),
         imageUrl,
         comboPrice: roundedComboPrice,
+        discountPercent: formData.discountPercent === "" ? 0 : Number(formData.discountPercent),
         originalPrice: totalPrice,
         isActive: formData.isActive === true || formData.isActive === "true",
         items: selectedVariants.map((v) => ({
@@ -347,14 +428,38 @@ const CreateCombo = () => {
                       className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       type="number"
                       min="1"
+                      max={totalPrice > 0 ? totalPrice : undefined}
                       placeholder="0"
                       name="comboPrice"
                       value={formData.comboPrice}
-                      onChange={handleChange}
+                      onChange={handleComboPriceChange}
                       required
                     />
                     <p className="mt-2 text-xs text-gray-500">
                       Giá combo sẽ được làm tròn theo bội số 100đ: <span className="font-semibold">{roundedComboPrice.toLocaleString()}đ</span>
+                    </p>
+                    <p className="mt-1 text-xs text-amber-600">
+                      Giá Combo phải lớn hơn 0, không vượt Giá gốc và phải lớn hơn hoặc bằng Tổng giá nhập.
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-sm font-semibold text-gray-700">
+                      Giảm giá (%) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      className="mt-2 h-11 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      type="number"
+                      min="0.01"
+                      max="99.99"
+                      step="0.01"
+                      placeholder="0"
+                      name="discountPercent"
+                      value={formData.discountPercent}
+                      onChange={handleDiscountPercentChange}
+                      required
+                    />
+                    <p className="mt-1 text-xs text-amber-600">
+                      % giảm giá chỉ được nhập lớn hơn 0% và nhỏ hơn 100% (0.01% - 99.99%).
                     </p>
                   </div>
                 </div>
