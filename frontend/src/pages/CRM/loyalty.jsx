@@ -263,7 +263,6 @@ const GiftRewardManagement = () => {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Quản lý Loyalty & Quà tặng</h1>
-          <p className="text-slate-500 mt-1">Tra cứu điểm tích lũy và quản lý kho quà đổi thưởng.</p>
         </div>
         {!isCashier && (
           <button

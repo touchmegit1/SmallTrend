@@ -437,7 +437,6 @@ export default function CustomerManagement() {
           <div className="flex justify-between items-end">
             <div>
               <h1 className="text-2xl font-bold text-slate-800">Quản lý Khách hàng</h1>
-              <p className="text-slate-500 mt-1">Danh sách và thông tin chi tiết khách hàng.</p>
             </div>
             <div className="flex gap-2">
               <button

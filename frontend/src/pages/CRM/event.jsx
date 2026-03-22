@@ -274,7 +274,6 @@ const EventManagement = () => {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Quản lý Sự kiện &amp; Khuyến Mãi</h1>
-          <p className="text-slate-500 mt-1">Quản lý chính sách khuyến mãi, sự kiện và voucher.</p>
         </div>
         <div className="flex gap-2">
           {activeTab === 'campaigns' && (
