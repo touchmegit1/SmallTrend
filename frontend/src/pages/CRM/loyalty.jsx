@@ -161,15 +161,7 @@ const GiftRewardManagement = () => {
     try {
       setSavingGift(true);
 
-      // Trừ stock từ inventory trước (ưu tiên)
-      try {
-        await loyaltyService.reduceVariantStock(selectedVariant.id, stock);
-      } catch (stockErr) {
-        showToast('Lỗi khi trừ stock: ' + (stockErr?.response?.data?.message || stockErr.message), 'error');
-        return; // Không tiếp tục tạo gift nếu trừ stock fail
-      }
-
-      // Sau đó mới tạo quà tặng
+      // Backend createGift đã tự trừ stock inventory
       await loyaltyService.createGift({
         variantId: selectedVariant.id,
         name: formData.name,

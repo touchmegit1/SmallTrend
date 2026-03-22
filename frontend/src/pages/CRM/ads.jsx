@@ -63,7 +63,7 @@ function SlotBadge({ slot }) {
     );
 }
 
-function AdModal({ ad, onClose, onSaved, showToast }) {
+function AdModal({ ad, onClose, onSaved, showToast, ads = [] }) {
     const isEdit = !!ad?.id;
     const [form, setForm] = useState(ad ? { ...initialForm, ...ad } : initialForm);
     const [saving, setSaving] = useState(false);
@@ -374,6 +374,7 @@ export default function AdsManagement() {
                     onClose={() => setModal(null)}
                     onSaved={load}
                     showToast={showToast}
+                    ads={ads}
                 />
             )}
 
