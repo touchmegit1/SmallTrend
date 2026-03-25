@@ -14,3 +14,7 @@ Desktop.ini
 
 # General Environment
 .env
+
+# Private keys
+swp391_key.pem
+*.pem
