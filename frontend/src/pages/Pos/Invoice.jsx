@@ -14,8 +14,9 @@ export default function Invoice({ transaction, onClose, shortcuts }) {
   const parseMoney = (value) => parseInt((value || 0).toString().replace(/[^0-9]/g, ""), 10) || 0;
   const totalAmount = parseMoney(transaction.total);
   const pointsDiscount = Number(transaction.pointsDiscount || 0);
+  const voucherDiscount = Number(transaction.discount || 0);
   const refundedAmount = Number(transaction.refundedAmount || 0);
-  const subTotal = totalAmount + pointsDiscount + refundedAmount;
+  const subTotal = totalAmount + pointsDiscount + voucherDiscount + refundedAmount;
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === printKey) {
@@ -137,6 +138,12 @@ export default function Invoice({ transaction, onClose, shortcuts }) {
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", color: "#dc3545" }}>
                 <span>Giảm giá (điểm):</span>
                 <span>-{pointsDiscount.toLocaleString()} đ</span>
+              </div>
+            )}
+            {voucherDiscount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", color: "#dc3545" }}>
+                <span>Giảm giá (voucher):</span>
+                <span>-{voucherDiscount.toLocaleString()} đ</span>
               </div>
             )}
             {refundedAmount > 0 && (

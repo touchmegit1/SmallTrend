@@ -15,6 +15,7 @@ import com.smalltrend.repository.GiftRedemptionHistoryRepository;
 import com.smalltrend.repository.LoyaltyGiftRepository;
 import com.smalltrend.repository.LoyaltyTransactionRepository;
 import com.smalltrend.repository.ProductVariantRepository;
+import com.smalltrend.service.inventory.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +47,12 @@ public class LoyaltyGiftService {
     public LoyaltyGiftResponse createGift(CreateLoyaltyGiftRequest request) {
         ProductVariant variant = productVariantRepository.findById(request.getVariantId())
                 .orElseThrow(() -> new RuntimeException("Product variant not found"));
+
+        if (request.getStock() == null || request.getStock() <= 0) {
+            throw new RuntimeException("Stock must be greater than 0");
+        }
+
+        inventoryStockService.deductStock(variant, request.getStock(), null, "LOYALTY_GIFT_CREATE");
 
         LoyaltyGift gift = LoyaltyGift.builder()
                 .variant(variant)

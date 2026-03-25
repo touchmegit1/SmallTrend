@@ -984,6 +984,7 @@ export default function POS() {
             customerId: transaction.customer?.id || 0,
             customerName: transaction.customer?.name || "Khách lẻ",
             paymentMethod: transaction.payment,
+            voucherDiscountAmount: Number(orderData.discount || 0),
             items: validItems
           };
           await api.post('/pos/purchase-history', request);
@@ -1185,6 +1186,7 @@ export default function POS() {
             customerId: transaction.customer?.id || 0,
             customerName: transaction.customer?.name || "Khách lẻ",
             paymentMethod: transaction.payment,
+            voucherDiscountAmount: Number(orderData.discount || 0),
             items: validItems
           };
           await api.post('/pos/purchase-history', request);

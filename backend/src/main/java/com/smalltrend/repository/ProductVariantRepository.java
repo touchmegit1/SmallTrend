@@ -17,6 +17,8 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     List<ProductVariant> findBySkuContainingIgnoreCase(String sku);
 
+    List<ProductVariant> findBySkuContainingIgnoreCaseOrProduct_NameContainingIgnoreCase(String sku, String productName);
+
     List<ProductVariant> findByProductId(Integer productId);
 
     Optional<ProductVariant> findByProductIdAndIsBaseUnitTrue(Integer productId);

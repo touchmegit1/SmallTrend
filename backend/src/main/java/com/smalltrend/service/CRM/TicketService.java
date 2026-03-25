@@ -387,7 +387,7 @@ public class TicketService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> lookupVariantBySku(String sku) {
-        var variants = productVariantRepository.findBySkuContainingIgnoreCase(sku);
+        var variants = productVariantRepository.findBySkuContainingIgnoreCaseOrProduct_NameContainingIgnoreCase(sku, sku);
         return variants.stream().map(v -> {
             Map<String, Object> map = new java.util.HashMap<>();
             map.put("id", v.getId());

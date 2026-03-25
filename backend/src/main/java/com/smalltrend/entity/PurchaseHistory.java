@@ -50,6 +50,9 @@ public class PurchaseHistory {
     @Column(name = "payment_method", length = 50)
     private String paymentMethod;
 
+    @Column(name = "voucher_discount_amount", precision = 12, scale = 2)
+    private BigDecimal voucherDiscountAmount;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
