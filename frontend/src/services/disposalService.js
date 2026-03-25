@@ -78,9 +78,8 @@ export const getExpiredBatches = async (locationId) => {
   }));
 };
 
-export const saveDisposalDraft = async (voucherData, userId) => {
-  // Map frontend state to Spring Boot request exact format
-  const payload = {
+function mapVoucherPayload(voucherData) {
+  return {
     id: voucherData.id ?? null,
     locationId: voucherData.location_id ?? voucherData.locationId,
     reasonType: voucherData.reason ?? voucherData.reason_type ?? voucherData.reasonType,
@@ -91,6 +90,10 @@ export const saveDisposalDraft = async (voucherData, userId) => {
       quantity: item.quantity,
     })),
   };
+}
+
+export const saveDisposalDraft = async (voucherData, userId) => {
+  const payload = mapVoucherPayload(voucherData);
 
   const response = await fetch(`${SPRING_API}/draft?userId=${userId || 1}`, {
     method: "POST",
@@ -98,6 +101,19 @@ export const saveDisposalDraft = async (voucherData, userId) => {
     body: JSON.stringify(payload),
   });
   if (!response.ok) await parseError(response, "Failed to save draft");
+  const data = await response.json();
+  return mapToFrontend(data);
+};
+
+export const createAndApproveDisposalVoucher = async (voucherData, userId) => {
+  const payload = mapVoucherPayload(voucherData);
+
+  const response = await fetch(`${SPRING_API}/confirm?userId=${userId || 1}`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) await parseError(response, "Failed to confirm disposal voucher");
   const data = await response.json();
   return mapToFrontend(data);
 };

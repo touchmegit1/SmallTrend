@@ -3,6 +3,7 @@ import { Plus, Search, Trash2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDisposalList } from "../../hooks/useDisposalList";
 import { formatCurrency } from "../../utils/inventory";
+import { formatDisposalCode } from "../../utils/disposalVoucher";
 import CustomSelect from "../../components/common/CustomSelect";
 
 const STATUS_CONFIG = {
@@ -13,19 +14,19 @@ const STATUS_CONFIG = {
     dot: "bg-yellow-400",
     border: "border-yellow-200",
   },
+  PENDING: {
+    label: "Đang xử lý",
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    dot: "bg-indigo-500",
+    border: "border-indigo-200",
+  },
   CONFIRMED: {
     label: "Đã xác nhận",
     bg: "bg-green-50",
     text: "text-green-700",
     dot: "bg-green-500",
     border: "border-green-200",
-  },
-  PENDING: {
-    label: "Chờ duyệt",
-    bg: "bg-indigo-50",
-    text: "text-indigo-700",
-    dot: "bg-indigo-500",
-    border: "border-indigo-200",
   },
   REJECTED: {
     label: "Từ chối",
@@ -102,7 +103,10 @@ export default function DisposalList() {
   const statusOptions = [
     { value: "ALL", label: `Tất cả (${statusCounts["ALL"] || 0})` },
     { value: "DRAFT", label: `Nháp (${statusCounts["DRAFT"] || 0})` },
-    { value: "PENDING", label: `Chờ duyệt (${statusCounts["PENDING"] || 0})` },
+    {
+      value: "PENDING",
+      label: `Đang xử lý (${statusCounts["PENDING"] || 0})`,
+    },
     {
       value: "CONFIRMED",
       label: `Đã xác nhận (${statusCounts["CONFIRMED"] || 0})`,
@@ -267,7 +271,7 @@ export default function DisposalList() {
                       >
                         <td className="px-4 py-3">
                           <span className="font-mono text-sm font-semibold text-red-600">
-                            {v.code}
+                            {formatDisposalCode(v.code)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-700">

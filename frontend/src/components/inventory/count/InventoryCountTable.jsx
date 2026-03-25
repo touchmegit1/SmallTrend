@@ -19,8 +19,9 @@ const InventoryCountRow = memo(function InventoryCountRow({
   const inputRef = useRef(null);
   const status = classifyCountItem(item);
   const colors = COUNT_ITEM_COLORS[status];
-  const hasDifference =
-    item.actual_quantity !== null && item.difference_quantity !== 0;
+  const hasActualCount =
+    item.actual_quantity !== null && item.actual_quantity !== undefined;
+  const hasDifference = hasActualCount && (item.difference_quantity ?? 0) !== 0;
   const needsReason = hasDifference && !item.reason;
 
   const handleKeyDown = useCallback(
@@ -124,9 +125,8 @@ const InventoryCountRow = memo(function InventoryCountRow({
       {/* Difference */}
       <td className="px-3 py-2.5 w-24 text-right">
         <span className={`text-sm font-bold font-mono ${colors.text}`}>
-          {item.actual_quantity !== null
-            ? (item.difference_quantity > 0 ? "+" : "") +
-            item.difference_quantity
+          {hasActualCount
+            ? `${(item.difference_quantity ?? 0) > 0 ? "+" : ""}${item.difference_quantity ?? 0}`
             : "—"}
         </span>
       </td>
@@ -134,8 +134,8 @@ const InventoryCountRow = memo(function InventoryCountRow({
       {/* Difference Value */}
       <td className="px-3 py-2.5 w-32 text-right">
         <span className={`text-xs font-medium ${colors.text}`}>
-          {item.actual_quantity !== null
-            ? formatVNDCount(item.difference_value)
+          {hasActualCount
+            ? formatVNDCount(item.difference_value ?? 0)
             : "—"}
         </span>
       </td>

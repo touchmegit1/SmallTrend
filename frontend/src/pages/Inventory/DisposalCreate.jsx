@@ -4,7 +4,6 @@ import {
   getExpiredBatches,
   getNextDisposalCode,
   saveDisposalDraft,
-  submitDisposalVoucher,
   approveDisposalVoucher,
 } from "../../services/disposalService";
 import { getActiveLocations } from "../../services/inventoryService";
@@ -202,7 +201,6 @@ export default function DisposalCreate() {
         userId,
       );
 
-      await submitDisposalVoucher(draft.id);
       await approveDisposalVoucher(draft.id, userId);
 
       toast.success("XĂ¡c nháº­n thĂ nh cĂ´ng! Tá»“n kho Ä‘Ă£ Ä‘Æ°á»£c trá»«.");
