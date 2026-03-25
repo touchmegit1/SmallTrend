@@ -14,6 +14,7 @@ Desktop.ini
 
 # General Environment
 .env
+deploy/env/backend.env
 
 # Private keys
 swp391_key.pem

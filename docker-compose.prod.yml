@@ -1,0 +1,19 @@
+services:
+  backend:
+    image: ${REGISTRY:-docker.io}/${IMAGE_NAMESPACE}/smalltrend-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - ./deploy/env/backend.env
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - uploads_data:/app/uploads
+
+  frontend:
+    image: ${REGISTRY:-docker.io}/${IMAGE_NAMESPACE}/smalltrend-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:80"
+
+volumes:
+  uploads_data:
