@@ -30,6 +30,17 @@ export function ProductListScreen() {
   const { user } = useAuth();
   const canEditProducts = canManageProducts(user);
 
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api';
+  const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, '');
+  const resolveProductImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('blob:')) {
+      return imageUrl;
+    }
+    return `${apiOrigin}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+  };
+
+
   // --- STATE QUẢN LÝ FILTER PHÂN CẤP ---
   const [filterCategory, setFilterCategory] = useState(null);
   const [filterBrand, setFilterBrand] = useState(null);
@@ -768,7 +779,7 @@ export function ProductListScreen() {
                         <div className="flex items-center gap-2">
                           {v.image_url ? (
                             <img
-                              src={v.image_url.startsWith('http') ? v.image_url : `http://localhost:8081${v.image_url.startsWith('/') ? '' : '/'}${v.image_url}`}
+                              src={resolveProductImageUrl(v.image_url)}
                               alt={v.name}
                               className="w-9 h-9 rounded-lg object-cover shadow-sm border border-gray-100"
                             />
@@ -875,7 +886,7 @@ export function ProductListScreen() {
                         <div className="flex items-center gap-2">
                           {product.image_url ? (
                             <img
-                              src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8081${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`}
+                              src={resolveProductImageUrl(product.image_url)}
                               alt={product.name}
                               className="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100 bg-white"
                             />
