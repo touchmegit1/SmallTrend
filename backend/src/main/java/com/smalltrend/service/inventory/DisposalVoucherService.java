@@ -176,14 +176,30 @@ public class DisposalVoucherService {
         return toResponse(saved);
     }
 
+    @Transactional
+    public DisposalVoucherResponse createAndApprove(DisposalVoucherRequest request, Long userId) {
+        DisposalVoucherResponse draft = saveDraft(request, userId);
+        return approveVoucher(draft.getId(), userId);
+    }
+
     // Approve voucher (deduct stock)
     @Transactional
     public DisposalVoucherResponse approveVoucher(Long id, Long userId) {
         DisposalVoucher voucher = disposalVoucherRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Disposal voucher not found"));
 
-        if (voucher.getStatus() != DisposalStatus.PENDING) {
-            throw new RuntimeException("Only PENDING vouchers can be approved");
+        if (voucher.getStatus() == DisposalStatus.CONFIRMED) {
+            return toResponse(voucher);
+        }
+
+        if (voucher.getStatus() != DisposalStatus.DRAFT
+                && voucher.getStatus() != DisposalStatus.REJECTED
+                && voucher.getStatus() != DisposalStatus.PENDING) {
+            throw new RuntimeException("Only DRAFT, REJECTED, or PENDING vouchers can be approved");
+        }
+
+        if (voucher.getItems().isEmpty()) {
+            throw new RuntimeException("Cannot approve voucher without items");
         }
 
         User user = userRepository.findById(userId.intValue())

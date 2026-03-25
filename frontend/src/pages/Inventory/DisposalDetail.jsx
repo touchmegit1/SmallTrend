@@ -10,6 +10,7 @@ import {
   DV_STATUS_CONFIG,
   REASON_TYPE,
   REASON_CONFIG,
+  formatDisposalCode,
 } from "../../utils/disposalVoucher";
 import {
   formatDate,
@@ -33,6 +34,7 @@ export default function DisposalDetail() {
     saving,
     error,
     isEditable,
+    canConfirm,
     totals,
     updateVoucher,
     addItem,
@@ -61,6 +63,8 @@ export default function DisposalDetail() {
   const executeConfirmedAction = async () => {
     if (confirmState !== "confirmDeduction") return;
 
+    closeConfirm();
+
     const confirmedVoucher = await confirmAndDeduct();
     if (confirmedVoucher) {
       toast.success("Đã xử lý phiếu và trừ tồn kho.");
@@ -71,8 +75,6 @@ export default function DisposalDetail() {
         }
       }
     }
-
-    closeConfirm();
   };
 
   const openConfirmDeduction = () => setConfirmState("confirmDeduction");
@@ -147,7 +149,7 @@ export default function DisposalDetail() {
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5 font-mono">
-            {voucher.code || "Đang tạo..."}
+            {formatDisposalCode(voucher.code) || "Đang tạo..."}
           </p>
         </div>
       </div>
@@ -376,7 +378,7 @@ export default function DisposalDetail() {
                 Mã phiếu
               </p>
               <p className="font-mono text-sm font-semibold text-red-600">
-                {voucher.code}
+                {formatDisposalCode(voucher.code)}
               </p>
             </div>
 
@@ -533,22 +535,26 @@ export default function DisposalDetail() {
           </div>
 
           {/* Actions */}
-          {isEditable && (
+          {(isEditable || canConfirm) && (
             <div className="space-y-3">
-              <button
-                onClick={handleSaveDraft}
-                disabled={saving}
-                className="w-full px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm disabled:opacity-50"
-              >
-                {saving ? "Đang lưu..." : "Lưu nháp"}
-              </button>
-              <button
-                onClick={handleConfirmDeduction}
-                disabled={saving || items.length === 0}
-                className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? "Đang xử lý..." : "Xác nhận & Trừ kho"}
-              </button>
+              {isEditable && (
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={saving}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm disabled:opacity-50"
+                >
+                  {saving ? "Đang lưu..." : "Lưu nháp"}
+                </button>
+              )}
+              {canConfirm && (
+                <button
+                  onClick={handleConfirmDeduction}
+                  disabled={saving || items.length === 0}
+                  className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? "Đang xử lý..." : "Xác nhận & Trừ kho"}
+                </button>
+              )}
             </div>
           )}
 

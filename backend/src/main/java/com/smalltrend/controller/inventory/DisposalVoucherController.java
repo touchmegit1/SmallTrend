@@ -5,6 +5,7 @@ import com.smalltrend.service.inventory.DisposalVoucherService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,12 +46,20 @@ public class DisposalVoucherController {
         return ResponseEntity.ok(disposalVoucherService.saveDraft(request, userId));
     }
 
+    @PostMapping("/confirm")
+    public ResponseEntity<DisposalVoucherResponse> createAndApprove(
+            @Valid @RequestBody DisposalVoucherRequest request,
+            @RequestParam("userId") Long userId) {
+        return ResponseEntity.ok(disposalVoucherService.createAndApprove(request, userId));
+    }
+
     @PutMapping("/{id}/submit")
     public ResponseEntity<DisposalVoucherResponse> submitForApproval(@PathVariable("id") Long id) {
         return ResponseEntity.ok(disposalVoucherService.submitForApproval(id));
     }
 
     @PutMapping("/{id}/approve")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'INVENTORY_STAFF', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_INVENTORY_STAFF')")
     public ResponseEntity<DisposalVoucherResponse> approveVoucher(
             @PathVariable("id") Long id,
             @RequestParam("userId") Long userId) {

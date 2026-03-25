@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { getDisposalVouchers, submitDisposalVoucher, approveDisposalVoucher, rejectDisposalVoucher } from "../services/disposalService";
+import { getDisposalVouchers } from "../services/disposalService";
 import { getLocations } from "../services/inventoryService";
 
 export function useDisposalList() {

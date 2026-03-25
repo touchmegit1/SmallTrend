@@ -15,6 +15,8 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.CompletableFuture;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -179,18 +181,19 @@ public class InventoryOutOfStockNotificationService {
                 + "</ul>"
                 + "</div>";
 
-        boolean deliveredAny = false;
         for (String recipient : recipients) {
-            try {
-                sendEmail(recipient, subject, html);
-                deliveredAny = true;
-            } catch (Exception ex) {
-                log.error("Failed to send realtime out-of-stock alert to {}", recipient, ex);
-            }
+            CompletableFuture.runAsync(() -> {
+                try {
+                    sendEmail(recipient, subject, html);
+                } catch (Exception ex) {
+                    log.error("Failed to send realtime out-of-stock alert to {}", recipient, ex);
+                }
+            });
         }
 
-        return deliveredAny;
+        return true; // dispatch async send to avoid blocking stock update request
     }
+
 
     private String buildDailySummaryHtml(List<InventoryStock> outOfStockItems) {
         String rows = outOfStockItems.stream()

@@ -11,8 +11,8 @@ import {
   getNextDisposalCode,
   getExpiredBatches,
   saveDisposalDraft,
-  submitDisposalVoucher,
   approveDisposalVoucher,
+  createAndApproveDisposalVoucher,
 } from "../services/disposalService";
 
 export function useDisposalVoucher(voucherId = null) {
@@ -141,6 +141,11 @@ export function useDisposalVoucher(voucherId = null) {
   const isEditable =
     voucher.status === DV_STATUS.DRAFT || voucher.status === DV_STATUS.REJECTED;
 
+  const canConfirm =
+    voucher.status === DV_STATUS.DRAFT ||
+    voucher.status === DV_STATUS.REJECTED ||
+    voucher.status === DV_STATUS.PENDING;
+
   // ─── Update voucher fields ─────────────────────────────
   const updateVoucher = useCallback((field, value) => {
     setVoucher((prev) => ({ ...prev, [field]: value }));
@@ -209,7 +214,7 @@ export function useDisposalVoucher(voucherId = null) {
         items: items,
       };
 
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user.id || 1;
 
       const savedVoucher = await saveDisposalDraft(voucherData, userId);
@@ -238,14 +243,16 @@ export function useDisposalVoucher(voucherId = null) {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user.id || 1;
 
-      let currentVoucherId = voucherId || voucher.id;
-      if (!currentVoucherId) {
-        const saved = await saveDraft();
-        currentVoucherId = saved.id;
-      }
+      const currentVoucherId = voucherId || voucher.id;
+      const voucherData = {
+        ...voucher,
+        items,
+      };
 
-      await submitDisposalVoucher(currentVoucherId);
-      const confirmedVoucher = await approveDisposalVoucher(currentVoucherId, userId);
+      const confirmedVoucher = currentVoucherId
+        ? await approveDisposalVoucher(currentVoucherId, userId)
+        : await createAndApproveDisposalVoucher(voucherData, userId);
+
       setVoucher(confirmedVoucher);
       return confirmedVoucher;
     } catch (err) {
@@ -254,7 +261,7 @@ export function useDisposalVoucher(voucherId = null) {
     } finally {
       setSaving(false);
     }
-  }, [voucher, items, validationBatches, voucherId, saveDraft, toast]);
+  }, [voucher, items, validationBatches, voucherId, toast]);
 
   return {
     voucher,
@@ -265,6 +272,7 @@ export function useDisposalVoucher(voucherId = null) {
     saving,
     error,
     isEditable,
+    canConfirm,
     totals,
 
     updateVoucher,
