@@ -59,12 +59,12 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Replace `domain.com` and `www.domain.com` in `deploy/nginx/smalltrend.conf` before reloading Nginx.
+The repo is pre-configured for `smalltrend.me` and `www.smalltrend.me` in the Nginx file.
 
 ### 2.5 Issue SSL cert
 
 ```bash
-sudo certbot --nginx -d domain.com -d www.domain.com
+sudo certbot --nginx -d smalltrend.me -d www.smalltrend.me
 sudo systemctl status certbot.timer
 ```
 
@@ -79,7 +79,7 @@ Create these repository secrets:
 - `SSH_PRIVATE_KEY`
 - `SSH_PORT` (optional, default 22)
 - `DEPLOY_PATH` (example: `/opt/smalltrend`)
-- `HEALTHCHECK_URL` (example: `https://domain.com/api/ai/health`)
+- `HEALTHCHECK_URL` (example: `https://smalltrend.me/api/ai/health`)
 - `MIGRATION_COMMAND` (optional, example: `docker compose -f docker-compose.prod.yml exec -T backend java -jar app.jar --spring.flyway.enabled=true`)
 
 ## 4. Deploy flow
@@ -103,7 +103,7 @@ export IMAGE_NAMESPACE=<dockerhub-user>
 export IMAGE_TAG=latest
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d --remove-orphans
-curl -f https://domain.com/api/ai/health
+curl -f https://smalltrend.me/api/ai/health
 ```
 
 ## 6. Security checklist
