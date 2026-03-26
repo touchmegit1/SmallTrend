@@ -27,7 +27,6 @@ import CRMloyalty from "./pages/CRM/loyalty";
 import ProductList from "./pages/Products/ProductManager/ProductList";
 import CRMreport from "./pages/CRM/report";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
-import DisposalCreate from "./pages/Inventory/disposal/DisposalCreate";
 import DisposalDetail from "./pages/Inventory/disposal/DisposalDetail";
 import DisposalList from "./pages/Inventory/disposal/DisposalList";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
@@ -167,7 +166,7 @@ function App() {
         <Route path="inventory-counts/:id" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><InventoryCountDetail /></ProtectedRoute>} />
         <Route path="inventory/locations" element={<ProtectedRoute allowedRoles={INVENTORY_OVERVIEW_ROLES}><LocationManagement /></ProtectedRoute>} />
         <Route path="inventory/disposal" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><DisposalList /></ProtectedRoute>} />
-        <Route path="inventory/disposal/create" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><DisposalCreate /></ProtectedRoute>} />
+        <Route path="inventory/disposal/create" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><DisposalDetail /></ProtectedRoute>} />
         <Route path="inventory/disposal/:id" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><DisposalDetail /></ProtectedRoute>} />
         <Route path="inventory/purchase-orders" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><PurchaseOrderList /></ProtectedRoute>} />
         <Route path="inventory/purchase-orders/create" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><CreatePurchaseOrder /></ProtectedRoute>} />
