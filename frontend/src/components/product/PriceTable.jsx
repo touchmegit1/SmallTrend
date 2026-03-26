@@ -212,7 +212,10 @@ export default function PriceTable({
 
                                         {/* SKU */}
                                         <td className="px-2 py-2">
-                                            <span className="inline-block max-w-[140px] sm:max-w-[180px] font-mono text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 whitespace-normal break-all" title={variant.sku}>
+                                            <span
+                                                className="inline-block max-w-[150px] sm:max-w-[220px] font-mono text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
+                                                title={variant.sku}
+                                            >
                                                 {variant.sku}
                                             </span>
                                         </td>
