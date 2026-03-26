@@ -1,7 +1,7 @@
 package com.smalltrend.validation.inventory.count;
 
-import com.smalltrend.dto.inventory.inventorycount.InventoryCountItemRequest;
-import com.smalltrend.dto.inventory.inventorycount.InventoryCountRequest;
+import com.smalltrend.dto.inventory.count.InventoryCountItemRequest;
+import com.smalltrend.dto.inventory.count.InventoryCountRequest;
 import com.smalltrend.exception.InventoryCountException;
 import org.springframework.stereotype.Component;
 
