@@ -12,7 +12,6 @@ import {
   getExpiredBatches,
   saveDisposalDraft,
   approveDisposalVoucher,
-  createAndApproveDisposalVoucher,
 } from "../../../services/inventory/disposalService";
 
 export function useDisposalVoucher(voucherId = null) {
@@ -249,9 +248,12 @@ export function useDisposalVoucher(voucherId = null) {
         items,
       };
 
-      const confirmedVoucher = currentVoucherId
-        ? await approveDisposalVoucher(currentVoucherId, userId)
-        : await createAndApproveDisposalVoucher(voucherData, userId);
+      const draftVoucher = currentVoucherId
+        ? null
+        : await saveDisposalDraft(voucherData, userId);
+
+      const approvalTargetId = currentVoucherId || draftVoucher?.id;
+      const confirmedVoucher = await approveDisposalVoucher(approvalTargetId, userId);
 
       setVoucher(confirmedVoucher);
       return confirmedVoucher;
