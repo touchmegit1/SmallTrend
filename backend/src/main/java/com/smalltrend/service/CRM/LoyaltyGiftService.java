@@ -15,7 +15,7 @@ import com.smalltrend.repository.GiftRedemptionHistoryRepository;
 import com.smalltrend.repository.LoyaltyGiftRepository;
 import com.smalltrend.repository.LoyaltyTransactionRepository;
 import com.smalltrend.repository.ProductVariantRepository;
-import com.smalltrend.service.inventory.InventoryStockService;
+import com.smalltrend.service.inventory.shared.InventoryStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.UUID;
-import com.smalltrend.service.inventory.InventoryStockService;
+import com.smalltrend.service.inventory.shared.InventoryStockService;
 
 @Service
 @RequiredArgsConstructor

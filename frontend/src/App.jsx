@@ -14,10 +14,10 @@ import MyPayrollSummary from "./pages/HR/MyPayrollSummary";
 import TicketProcessingPage from "./pages/HR/TicketProcessingPage";
 import AdminShiftMonitorPage from "./pages/HR/AdminShiftMonitorPage";
 import EmployeeDetailPage from "./pages/HR/EmployeeDetailPage";
-import InventoryDashboard from "./pages/Inventory/InventoryDashboard";
-import InventoryCountList from "./pages/Inventory/InventoryCountList";
-import InventoryCountDetail from "./pages/Inventory/InventoryCountDetail";
-import LocationManagement from "./pages/Inventory/LocationManagement";
+import InventoryDashboard from "./pages/Inventory/dashboard/InventoryDashboard";
+import InventoryCountList from "./pages/Inventory/count/InventoryCountList";
+import InventoryCountDetail from "./pages/Inventory/count/InventoryCountDetail";
+import LocationManagement from "./pages/Inventory/location/LocationManagement";
 import PosComplain from "./pages/Pos/complain";
 import CRMcustomer from "./pages/CRM/customer";
 import AdsManagement from "./pages/CRM/ads";
@@ -27,8 +27,9 @@ import CRMloyalty from "./pages/CRM/loyalty";
 import ProductList from "./pages/Products/ProductManager/ProductList";
 import CRMreport from "./pages/CRM/report";
 import AttendanceManagement from "./pages/HR/AttendanceManagement";
-import DisposalDetail from "./pages/Inventory/DisposalDetail";
-import DisposalList from "./pages/Inventory/DisposalList";
+import DisposalCreate from "./pages/Inventory/disposal/DisposalCreate";
+import DisposalDetail from "./pages/Inventory/disposal/DisposalDetail";
+import DisposalList from "./pages/Inventory/disposal/DisposalList";
 import ReportforCashier from "./pages/Pos/ReportforCashier";
 import AddNewProduct from "./pages/Products/ProductManager/AddNewProduct";
 import ProductDetail from "./pages/Products/ProductManager/ProductDetail";
@@ -44,8 +45,8 @@ import AiChatPage from "./pages/Admin/AiChatPage";
 import AiSettingsPage from "./pages/Admin/AiSettingsPage";
 import Suppliers from "./pages/Products/ProductManager/Suppliers";
 import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
-import PurchaseOrderList from "./pages/Inventory/PurchaseOrderList";
-import CreatePurchaseOrder from "./pages/Inventory/CreatePurchaseOrder";
+import PurchaseOrderList from "./pages/Inventory/purchase/PurchaseOrderList";
+import CreatePurchaseOrder from "./pages/Inventory/purchase/CreatePurchaseOrder";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
 import NotFoundPage from "./pages/Common/NotFoundPage";
 import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
@@ -166,7 +167,7 @@ function App() {
         <Route path="inventory-counts/:id" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><InventoryCountDetail /></ProtectedRoute>} />
         <Route path="inventory/locations" element={<ProtectedRoute allowedRoles={INVENTORY_OVERVIEW_ROLES}><LocationManagement /></ProtectedRoute>} />
         <Route path="inventory/disposal" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><DisposalList /></ProtectedRoute>} />
-        <Route path="inventory/disposal/create" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><DisposalDetail /></ProtectedRoute>} />
+        <Route path="inventory/disposal/create" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><DisposalCreate /></ProtectedRoute>} />
         <Route path="inventory/disposal/:id" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><DisposalDetail /></ProtectedRoute>} />
         <Route path="inventory/purchase-orders" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><PurchaseOrderList /></ProtectedRoute>} />
         <Route path="inventory/purchase-orders/create" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><CreatePurchaseOrder /></ProtectedRoute>} />
