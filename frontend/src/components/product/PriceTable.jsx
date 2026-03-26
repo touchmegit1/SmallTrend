@@ -69,7 +69,8 @@ export default function PriceTable({
     onCreatePriceModalOpen,
     onViewHistory,
     onEffectiveDateChange,
-    onExpiryDateChange
+    onExpiryDateChange,
+    focusedVariantId = null
 }) {
     const allSelected = variants.length > 0 && selectedIds.length === variants.length;
     const someSelected = selectedIds.length > 0 && !allSelected;
@@ -168,13 +169,14 @@ export default function PriceTable({
 
                                 return (
                                     <tr
+                                        id={`variant-row-${variant.id}`}
                                         key={variant.id}
                                         className={`transition-colors group ${isSelected
                                             ? "bg-blue-50/60"
                                             : hasNegativeProfit
                                                 ? "bg-red-50/30 hover:bg-red-50/50"
                                                 : "hover:bg-blue-50/20"
-                                            }`}
+                                            } ${focusedVariantId === variant.id ? "ring-2 ring-blue-400" : ""}`}
                                     >
                                         {/* Checkbox */}
                                         <td className="px-2 py-2 text-center">
