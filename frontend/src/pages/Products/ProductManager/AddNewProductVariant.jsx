@@ -16,6 +16,7 @@ import api from "../../../config/axiosConfig";
  * Hỗ trợ sinh SKU/Barcode tự động, khai báo thuộc tính và cấu hình quy đổi đơn vị.
  */
 const AddNewProductVariant = () => {
+  // REVIEW FLOW: nhập mã/đơn vị/thuộc tính -> (tuỳ chọn) upload ảnh + khai báo quy đổi -> tạo variant -> tạo conversion -> quay về màn detail.
   const navigate = useNavigate();
   const location = useLocation();
   const product = location.state?.product;
@@ -283,6 +284,7 @@ const AddNewProductVariant = () => {
   };
 
   // Hàm Submit: Tiến hành Upload image (nếu có) trước rồi lấy URL đính vào payload Variant để Post tạo mới
+  // REVIEW FLOW (SUBMIT): validate -> upload ảnh -> tạo variant -> nếu có thì tạo conversion -> quay về detail.
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg("");

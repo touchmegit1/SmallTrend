@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ProductValidator {
 
+    // REVIEW FLOW: đảm bảo tồn tại dữ liệu liên quan (product/category/brand/tax) và chặn vi phạm rule tên trùng hoặc xoá quá 2 phút.
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;

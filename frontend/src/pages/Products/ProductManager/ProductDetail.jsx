@@ -25,6 +25,8 @@ import { canManageProducts } from "../../../utils/roleUtils";
  * chỉnh sửa, in mã vạch, quy đổi đơn vị và xóa variant trong thời gian cho phép.
  */
 function ProductDetail() {
+  // REVIEW FLOW: màn này đi theo thứ tự
+  // 1) load product cha -> 2) load variants -> 3) thao tác variant/product -> 4) refresh list.
   const { id: productId } = useParams(); // Lấy mã ID sản phẩm trên path URL
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,6 +71,7 @@ function ProductDetail() {
   /**
    * Call API đóng băng hoặc un-ban 1 variant thay đổi trạng thái is_active
    */
+  // REVIEW FLOW (ACTION): xác nhận trên modal -> gọi API toggle-status -> reload variants + hiện toast.
   const confirmToggleStatus = async () => {
     if (!canManageProduct) return;
     try {
@@ -125,6 +128,7 @@ function ProductDetail() {
     setShowDeleteConfirm(true);
   };
 
+  // REVIEW FLOW (DELETE): chỉ cho xoá trong 2 phút -> gọi API delete -> đóng modal + refresh danh sách.
   const confirmDeleteVariant = async () => {
     if (!canManageProduct) return;
     try {

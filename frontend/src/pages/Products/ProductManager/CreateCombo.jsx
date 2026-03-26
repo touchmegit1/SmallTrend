@@ -397,6 +397,7 @@ const CreateCombo = () => {
   };
 
   // Xử lý gửi API để lưu danh sách con thành Combo duy nhất
+  // REVIEW FLOW: validate dữ liệu + giá -> upload ảnh -> map items -> createCombo.
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg("");

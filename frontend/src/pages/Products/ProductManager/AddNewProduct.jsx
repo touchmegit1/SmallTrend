@@ -177,6 +177,7 @@ const AddNewProduct = () => {
   };
 
   // --- HANDLER SUBMIT TỔNG CHÍNH ---
+  // REVIEW FLOW: validate form -> upload ảnh (nếu có) -> gọi API tạo product -> điều hướng về list.
   const handleSubmit = async (e) => {
     e.preventDefault();
 

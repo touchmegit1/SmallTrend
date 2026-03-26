@@ -45,6 +45,7 @@ const mapSupplierToFormData = (supplier) => ({
 });
 
 export function SuppliersScreen() {
+  // REVIEW FLOW: fetch danh sách nhà cung cấp -> lọc/tìm kiếm -> mở modal add/edit -> gọi API lưu/xoá -> refresh danh sách.
   const { user } = useAuth();
   const canEditProducts = canManageProducts(user);
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,6 +71,7 @@ export function SuppliersScreen() {
     setTimeout(() => setToast(""), 3000);
   };
 
+  // REVIEW FLOW (LIST): chuẩn hoá nguồn suppliers -> filter theo keyword + trạng thái -> render bảng kết quả.
   const filteredSuppliers = useMemo(() => {
     return (suppliers || []).filter((supplier) => {
       const matchesSearch =

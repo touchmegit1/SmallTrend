@@ -14,6 +14,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { canManageProducts } from "../../../utils/roleUtils";
 
 const Category_Brand = () => {
+  // REVIEW FLOW: chọn tab Category/Brand -> lọc/sắp xếp dữ liệu -> add/edit/delete qua modal -> refresh và hiển thị toast phản hồi.
   const { user } = useAuth();
   const canEditProducts = canManageProducts(user);
   // Trạng thái quản lý điều hướng và modal
@@ -204,7 +205,7 @@ const Category_Brand = () => {
     return [...new Set(countries)].sort();
   }, [brands, activeTab]);
 
-  // Bộ tổng hợp Filter: Chỉ hiện các từ khoá trùng, quốc gia khớp và sắp xếp theo ngày sinh
+  // REVIEW FLOW (LIST): lấy data theo tab hiện tại -> lọc theo search/country -> sort theo ngày tạo để render bảng.
   const filteredData = useMemo(() => {
     let filtered = data.filter(item =>
       item.name?.toLowerCase()?.includes(searchQuery.toLowerCase())

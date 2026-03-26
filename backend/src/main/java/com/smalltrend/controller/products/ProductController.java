@@ -33,6 +33,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductController {
 
+    // REVIEW FLOW: Controller nhận request -> phân quyền @PreAuthorize -> chuyển cho service xử lý nghiệp vụ -> trả response cho frontend.
     private final ProductService productService;
     private final ProductVariantService productVariantService;
     private final UnitConversionService unitConversionService;
@@ -187,6 +188,7 @@ public class ProductController {
     }
 
     // ─── Variant Prices ──────────────────────────────────────────────────────
+    // REVIEW FLOW (PRICE): tạo/lấy/cập nhật giá theo variant -> service tự quản lý active/inactive + lịch sử hiệu lực giá.
     // Tạo giá mới cho variant (giá cũ chuyển INACTIVE)
     @PostMapping("/variants/{variantId}/prices")
     @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
@@ -271,6 +273,7 @@ public class ProductController {
         ));
     }
 
+    // REVIEW FLOW (PRODUCT CRUD): tạo/cập nhật/toggle/xoá product sẽ gọi ProductService, nơi enforce rule validate + propagate trạng thái xuống variants.
     @PostMapping
     @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<ProductResponse> create(@RequestBody CreateProductRequest request) {
