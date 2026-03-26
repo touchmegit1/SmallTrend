@@ -1,0 +1,197 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-frontend:
+    name: Frontend Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint:ci
+
+      - name: Build
+        run: npm run build
+
+  quality-backend:
+    name: Backend Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test1234
+          MYSQL_DATABASE: smalltrend_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DB_URL: jdbc:mysql://localhost:3306/smalltrend_test?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+      DB_USERNAME: root
+      DB_PASSWORD: test1234
+      JWT_SECRET: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
+      CLOUDINARY_CLOUD_NAME: ci_dummy
+      CLOUDINARY_API_KEY: "000000000000000"
+      CLOUDINARY_API_SECRET: ci_dummy_secret
+      SPRING_SQL_INIT_MODE: never
+      SPRING_JPA_DDL_AUTO: create-drop
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+          cache: maven
+
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+
+      - name: Build jar (skip tests)
+        run: ./mvnw -B clean package -Dmaven.test.skip=true
+
+  docker:
+    name: Build And Push Images
+    runs-on: ubuntu-latest
+    needs: [quality-frontend, quality-backend]
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Backend image metadata
+        id: backend-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/smalltrend-backend
+          tags: |
+            type=raw,value=latest
+            type=sha
+            type=ref,event=tag
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.backend-meta.outputs.tags }}
+          labels: ${{ steps.backend-meta.outputs.labels }}
+
+      - name: Frontend image metadata
+        id: frontend-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/smalltrend-frontend
+          tags: |
+            type=raw,value=latest
+            type=sha
+            type=ref,event=tag
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=/api
+          tags: ${{ steps.frontend-meta.outputs.tags }}
+          labels: ${{ steps.frontend-meta.outputs.labels }}
+
+  deploy:
+    name: Deploy To Azure VM
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          IMAGE_TAG: ${{ github.sha }}
+          PREVIOUS_IMAGE_TAG: ${{ github.event.before }}
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          MIGRATION_COMMAND: ${{ secrets.MIGRATION_COMMAND }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: DEPLOY_PATH,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,IMAGE_TAG,PREVIOUS_IMAGE_TAG,HEALTHCHECK_URL,MIGRATION_COMMAND
+          script: |
+            set -e
+            cd "$DEPLOY_PATH"
+
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+            export REGISTRY=docker.io
+            export IMAGE_NAMESPACE="$DOCKERHUB_USERNAME"
+            export IMAGE_TAG="$IMAGE_TAG"
+
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            if [ -n "$MIGRATION_COMMAND" ]; then
+              eval "$MIGRATION_COMMAND"
+            fi
+
+            sleep 20
+            if ! curl -fsS "$HEALTHCHECK_URL" > /dev/null; then
+              if [ -n "$PREVIOUS_IMAGE_TAG" ] && [ "$PREVIOUS_IMAGE_TAG" != "0000000000000000000000000000000000000000" ]; then
+                export IMAGE_TAG="$PREVIOUS_IMAGE_TAG"
+                docker compose -f docker-compose.prod.yml pull
+                docker compose -f docker-compose.prod.yml up -d --remove-orphans
+              fi
+              exit 1
+            fi

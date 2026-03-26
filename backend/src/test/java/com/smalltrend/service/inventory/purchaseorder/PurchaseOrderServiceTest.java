@@ -374,6 +374,8 @@ class PurchaseOrderServiceTest {
 
         assertEquals("SHORTAGE_PENDING_APPROVAL", response.getStatus());
         verify(inventoryManagerNotificationService, timeout(1000).times(1)).notifyManagers(any(), any());
+        verify(inventoryStockRepository, never()).save(any());
+        verify(stockMovementRepository, never()).save(any());
     }
 
     @Test
@@ -463,7 +465,7 @@ class PurchaseOrderServiceTest {
     }
 
     @Test
-    void updateStock_shouldHandleUnitConversion() {
+    void receiveGoods_shouldNotUpdateStockImmediately_whenUnitConversionOrderHasShortage() {
         Unit fromUnit = Unit.builder().id(2).name("Box").build();
         ProductVariant otherVariant = ProductVariant.builder().id(2).unit(fromUnit).product(product).build();
 
@@ -489,9 +491,11 @@ class PurchaseOrderServiceTest {
                         .build()
         ));
 
-        purchaseOrderService.receiveGoods(1, req);
-        verify(inventoryStockRepository).save(stockCaptor.capture());
-        assertEquals(5, stockCaptor.getValue().getQuantity());
+        PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
+
+        assertEquals("SHORTAGE_PENDING_APPROVAL", response.getStatus());
+        verify(inventoryStockRepository, never()).save(any());
+        verify(stockMovementRepository, never()).save(any());
     }
 
     @Test
@@ -509,6 +513,49 @@ class PurchaseOrderServiceTest {
         order.setStatus(PurchaseOrderStatus.PENDING);
         when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
         assertEquals("REJECTED", purchaseOrderService.rejectOrder(1, "reason").getStatus());
+    }
+
+    @Test
+    void closeShortage_shouldUpdateStockAndSetReceived() {
+        order.setStatus(PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL);
+        order.setItems(new ArrayList<>());
+        order.getItems().add(PurchaseOrderItem.builder()
+                .id(1)
+                .variant(variant)
+                .quantity(10)
+                .receivedQuantity(7)
+                .unitCost(BigDecimal.ONE)
+                .totalCost(new BigDecimal("7"))
+                .purchaseOrder(order)
+                .build());
+
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+
+        PurchaseOrderResponse response = purchaseOrderService.closeShortage(1, "close note");
+
+        assertEquals("RECEIVED", response.getStatus());
+        verify(inventoryStockRepository, atLeastOnce()).save(any());
+        verify(stockMovementRepository, atLeastOnce()).save(any());
+    }
+
+    @Test
+    void rejectShortage_shouldRequireReason() {
+        order.setStatus(PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL);
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+
+        assertThrows(RuntimeException.class, () -> purchaseOrderService.rejectShortage(1, "  "));
+    }
+
+    @Test
+    void rejectShortage_shouldSetRejectedWithoutStockUpdate() {
+        order.setStatus(PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL);
+        when(purchaseOrderRepository.findById(1)).thenReturn(Optional.of(order));
+
+        PurchaseOrderResponse response = purchaseOrderService.rejectShortage(1, "missing too much");
+
+        assertEquals("REJECTED", response.getStatus());
+        verify(inventoryStockRepository, never()).save(any());
+        verify(stockMovementRepository, never()).save(any());
     }
 
     @Test

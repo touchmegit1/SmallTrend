@@ -382,10 +382,6 @@ public class PurchaseOrderService {
             order.setNotes(receiptRequest.getNotes());
         }
 
-        if (!stockItemRequests.isEmpty()) {
-            updateStock(order, stockItemRequests, false);
-        }
-
         List<SyncedPurchasePriceItemResponse> syncedPurchasePriceItems = syncPurchasePrices(order);
         int syncedPurchasePriceCount = syncedPurchasePriceItems.size();
         LocalDateTime syncedPurchasePriceAt = syncedPurchasePriceCount > 0 ? LocalDateTime.now() : null;
@@ -402,6 +398,9 @@ public class PurchaseOrderService {
             order.setStatus(PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL);
             notifyManagersOnShortage(order);
         } else {
+            if (!stockItemRequests.isEmpty()) {
+                updateStock(order, stockItemRequests, false);
+            }
             order.setStatus(PurchaseOrderStatus.RECEIVED);
             order.setShortageReason(null);
             order.setShortageSubmittedAt(null);
@@ -409,7 +408,6 @@ public class PurchaseOrderService {
             order.setManagerDecisionNote(null);
             order.setManagerDecidedAt(null);
         }
-
         purchaseOrderRepository.save(order);
 
         log.info("Purchase Order {} receive processed. Status={}, stock delta updated.",
@@ -431,6 +429,26 @@ public class PurchaseOrderService {
         if (order.getStatus() != PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL) {
             throw new RuntimeException("Chỉ có thể chốt thiếu khi phiếu đang chờ quản lý xử lý thiếu hàng.");
         }
+
+        List<PurchaseOrderItemRequest> stockItemRequests = (order.getItems() == null ? List.<PurchaseOrderItemRequest>of() : order.getItems().stream()
+                .filter(Objects::nonNull)
+                .map(item -> PurchaseOrderItemRequest.builder()
+                        .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                        .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                                ? item.getVariant().getProduct().getId().intValue() : null)
+                        .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0)
+                        .unitCost(item.getUnitCost())
+                        .totalCost(item.getTotalCost())
+                        .expiryDate(item.getExpiryDate())
+                        .build())
+                .filter(req -> req.getQuantity() != null && req.getQuantity() > 0)
+                .toList());
+
+        if (stockItemRequests.isEmpty()) {
+            throw new RuntimeException("Không có số lượng thực nhận để chốt thiếu.");
+        }
+
+        updateStock(order, stockItemRequests, false);
 
         order.setManagerDecision("CLOSE_SHORTAGE");
         order.setManagerDecisionNote(managerDecisionNote);
@@ -466,6 +484,30 @@ public class PurchaseOrderService {
         purchaseOrderRepository.save(order);
 
         log.info("Purchase Order {} moved to SUPPLIER_SUPPLEMENT_PENDING.", order.getOrderNumber());
+        return toDetailResponse(order);
+    }
+
+    @Transactional
+    public PurchaseOrderResponse rejectShortage(Integer orderId, String reason) {
+        PurchaseOrder order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập với ID: " + orderId));
+
+        if (order.getStatus() != PurchaseOrderStatus.SHORTAGE_PENDING_APPROVAL) {
+            throw new RuntimeException("Chỉ có thể từ chối nhập hàng khi phiếu đang chờ quản lý xử lý thiếu hàng.");
+        }
+
+        if (reason == null || reason.isBlank()) {
+            throw new RuntimeException("Lý do từ chối nhập hàng là bắt buộc.");
+        }
+
+        order.setManagerDecision("REJECT_SHORTAGE");
+        order.setManagerDecisionNote(reason.trim());
+        order.setManagerDecidedAt(LocalDateTime.now());
+        order.setStatus(PurchaseOrderStatus.REJECTED);
+        order.setRejectionReason(reason.trim());
+        purchaseOrderRepository.save(order);
+
+        log.info("Purchase Order {} shortage rejected by manager. Reason: {}", order.getOrderNumber(), reason);
         return toDetailResponse(order);
     }
 

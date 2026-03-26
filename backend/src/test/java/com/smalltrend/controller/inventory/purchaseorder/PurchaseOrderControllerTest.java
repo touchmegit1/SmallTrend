@@ -233,6 +233,18 @@ class PurchaseOrderControllerTest {
     }
 
     @Test
+    void rejectShortage_shouldPassReasonWhenPayloadProvided() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.rejectShortage(1, "Từ chối nhập hàng thiếu")).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.rejectShortage(1, Map.of("rejectionReason", "Từ chối nhập hàng thiếu"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).rejectShortage(1, "Từ chối nhập hàng thiếu");
+    }
+
+    @Test
     void cancelOrder_shouldReturnOk() {
         PurchaseOrderResponse expected = new PurchaseOrderResponse();
         when(purchaseOrderService.cancelOrder(1)).thenReturn(expected);
