@@ -189,11 +189,20 @@ public class VariantPriceService {
             price.setStatus(VariantPriceStatus.INACTIVE);
         } else {
             // Activate this price → deactivate all others for the same variant
+            // Preserve the purchase price from the current active price
             List<VariantPrice> activePrices = variantPriceRepository.findByVariantIdAndStatus(
                     price.getVariant().getId(), VariantPriceStatus.ACTIVE);
+            BigDecimal currentPurchasePrice = null;
             for (VariantPrice activePrice : activePrices) {
+                if (currentPurchasePrice == null && activePrice.getPurchasePrice() != null) {
+                    currentPurchasePrice = activePrice.getPurchasePrice();
+                }
                 activePrice.setStatus(VariantPriceStatus.INACTIVE);
                 variantPriceRepository.save(activePrice);
+            }
+            // Copy purchase price from old active price to newly activated price
+            if (currentPurchasePrice != null) {
+                price.setPurchasePrice(currentPurchasePrice);
             }
             price.setStatus(VariantPriceStatus.ACTIVE);
         }
