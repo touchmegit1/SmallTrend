@@ -173,14 +173,14 @@ jobs:
             set -e
             cd "$DEPLOY_PATH"
 
-            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            echo "$DOCKERHUB_TOKEN" | sudo docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
             export REGISTRY=docker.io
             export IMAGE_NAMESPACE="$DOCKERHUB_USERNAME"
             export IMAGE_TAG="$IMAGE_TAG"
 
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml pull
+            sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             if [ -n "$MIGRATION_COMMAND" ]; then
               eval "$MIGRATION_COMMAND"
@@ -190,8 +190,8 @@ jobs:
             if ! curl -fsS "$HEALTHCHECK_URL" > /dev/null; then
               if [ -n "$PREVIOUS_IMAGE_TAG" ] && [ "$PREVIOUS_IMAGE_TAG" != "0000000000000000000000000000000000000000" ]; then
                 export IMAGE_TAG="$PREVIOUS_IMAGE_TAG"
-                docker compose -f docker-compose.prod.yml pull
-                docker compose -f docker-compose.prod.yml up -d --remove-orphans
+                sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml pull
+                sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml up -d --remove-orphans
               fi
               exit 1
             fi
