@@ -1,6 +1,5 @@
 package com.smalltrend.service.products;
 
-import com.smalltrend.service.VariantPriceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

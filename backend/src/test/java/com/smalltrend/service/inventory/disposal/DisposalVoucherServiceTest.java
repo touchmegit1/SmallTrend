@@ -2,8 +2,8 @@ package com.smalltrend.service.inventory.disposal;
 
 import com.smalltrend.dto.inventory.disposal.*;
 import com.smalltrend.entity.*;
-import com.smalltrend.service.inventory.DisposalVoucherService;
-import com.smalltrend.service.inventory.InventoryOutOfStockNotificationService;
+import com.smalltrend.service.inventory.disposal.DisposalVoucherService;
+import com.smalltrend.service.inventory.shared.InventoryOutOfStockNotificationService;
 import com.smalltrend.entity.enums.DisposalReason;
 import com.smalltrend.entity.enums.DisposalStatus;
 import com.smalltrend.repository.*;

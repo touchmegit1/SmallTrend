@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Plus, Edit, Trash2, Search, CheckCircle, XCircle, Tag, FolderTree, X, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Badge } from "../ProductComponents/badge";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Label } from "../ProductComponents/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Badge } from "../../../components/product/badge";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Label } from "../../../components/product/label";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchProducts } from "../../../hooks/products";

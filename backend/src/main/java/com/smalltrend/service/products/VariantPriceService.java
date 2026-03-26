@@ -1,4 +1,4 @@
-package com.smalltrend.service;
+package com.smalltrend.service.products;
 
 import com.smalltrend.dto.inventory.dashboard.PriceExpiryAlertResponse;
 import com.smalltrend.dto.products.VariantPriceRequest;

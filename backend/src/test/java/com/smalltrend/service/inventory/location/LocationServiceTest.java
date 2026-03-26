@@ -17,7 +17,7 @@ import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.LocationRepository;
 import com.smalltrend.repository.PurchaseOrderRepository;
 import com.smalltrend.repository.StockMovementRepository;
-import com.smalltrend.service.inventory.LocationService;
+import com.smalltrend.service.inventory.location.LocationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,7 +57,7 @@ class LocationServiceTest {
     @Mock
     private DisposalVoucherRepository disposalVoucherRepository;
     @Mock
-    private com.smalltrend.service.inventory.InventoryOutOfStockNotificationService outOfStockNotificationService;
+    private com.smalltrend.service.inventory.shared.InventoryOutOfStockNotificationService outOfStockNotificationService;
 
     @InjectMocks
     private LocationService locationService;

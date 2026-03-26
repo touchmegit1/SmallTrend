@@ -1,7 +1,7 @@
-package com.smalltrend.service;
+package com.smalltrend.service.products;
 
-import com.smalltrend.dto.pos.BarcodeLookupResponse;
-import com.smalltrend.dto.pos.ProductVariantRespone;
+import com.smalltrend.dto.products.BarcodeLookupResponse;
+import com.smalltrend.dto.products.ProductVariantRespone;
 import com.smalltrend.entity.ProductVariant;
 import com.smalltrend.entity.UnitConversion;
 import com.smalltrend.repository.ProductVariantRepository;

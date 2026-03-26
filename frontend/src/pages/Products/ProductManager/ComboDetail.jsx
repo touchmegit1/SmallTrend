@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Package2, Edit, Calendar, Trash2 } from "lucide-react"
-import Button from "../ProductComponents/button";
-import { Card } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Label } from "../ProductComponents/label";
-import { Badge } from "../ProductComponents/badge";
+import Button from "../../../components/product/button";
+import { Card } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Label } from "../../../components/product/label";
+import { Badge } from "../../../components/product/badge";
 import EditComboModal from "./EditComboModal";
 import { useProductCombos } from "../../../hooks/product_combos";
 import { useAuth } from "../../../context/AuthContext";

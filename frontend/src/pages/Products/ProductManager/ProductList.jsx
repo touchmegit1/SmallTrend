@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
-import Button from "../ProductComponents/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Badge } from "../ProductComponents/badge";
+import Button from "../../../components/product/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Badge } from "../../../components/product/badge";
 import { Plus, Edit, Package, Eye, CheckCircle, Power, Trash2, AlertTriangle, X, Filter, Layers, Tag, Box, Puzzle, Loader2, Search } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditProductModal from "./EditProductModal";

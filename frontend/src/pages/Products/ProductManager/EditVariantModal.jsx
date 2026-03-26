@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Save, Image as ImageIcon, Upload, Plus, Trash, Zap, Barcode, Loader2 } from "lucide-react";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Label } from "../ProductComponents/label";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Label } from "../../../components/product/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
 import UnitConversionSection from "./UnitConversionSection";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";

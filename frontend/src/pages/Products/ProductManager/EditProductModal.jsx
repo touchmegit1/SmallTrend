@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Save, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Label } from "../ProductComponents/label";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Label } from "../../../components/product/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchTaxRates } from "../../../hooks/taxRates";

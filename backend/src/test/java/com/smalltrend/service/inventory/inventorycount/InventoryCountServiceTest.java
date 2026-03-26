@@ -1,9 +1,9 @@
 package com.smalltrend.service.inventory.inventorycount;
 
-import com.smalltrend.dto.inventory.inventorycount.*;
+import com.smalltrend.dto.inventory.count.*;
 import com.smalltrend.entity.*;
-import com.smalltrend.service.inventory.InventoryCountService;
-import com.smalltrend.service.inventory.InventoryOutOfStockNotificationService;
+import com.smalltrend.service.inventory.count.InventoryCountService;
+import com.smalltrend.service.inventory.shared.InventoryOutOfStockNotificationService;
 import com.smalltrend.repository.*;
 import com.smalltrend.validation.inventory.count.InventoryCountRequestValidator;
 import org.junit.jupiter.api.BeforeEach;

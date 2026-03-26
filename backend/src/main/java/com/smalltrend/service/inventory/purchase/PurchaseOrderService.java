@@ -6,8 +6,9 @@ import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
 import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
-import com.smalltrend.service.VariantPriceService;
 import com.smalltrend.service.inventory.shared.InventoryManagerNotificationService;
+import com.smalltrend.service.products.VariantPriceService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

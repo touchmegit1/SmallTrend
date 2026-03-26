@@ -1,4 +1,4 @@
-package com.smalltrend.controller.pos;
+package com.smalltrend.controller.products;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;

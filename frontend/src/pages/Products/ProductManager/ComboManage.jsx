@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Badge } from "../ProductComponents/badge";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Badge } from "../../../components/product/badge";
 import { Plus, Search, Edit, Package2, Eye, CheckCircle, Trash2, Power } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditComboModal from "./EditComboModal";

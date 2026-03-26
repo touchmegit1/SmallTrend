@@ -1,6 +1,5 @@
-package com.smalltrend.dto.pos;
+package com.smalltrend.dto.products;
 
-import com.smalltrend.dto.products.UnitConversionResponse;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.util.List;

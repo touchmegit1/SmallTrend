@@ -1,12 +1,12 @@
 package com.smalltrend.service.inventory.purchaseorder;
 
 import com.smalltrend.dto.common.MessageResponse;
-import com.smalltrend.dto.inventory.purchaseorder.*;
+import com.smalltrend.dto.inventory.purchase.*;
 import com.smalltrend.dto.inventory.dashboard.ProductResponse;
 import com.smalltrend.entity.*;
-import com.smalltrend.service.inventory.InventoryManagerNotificationService;
-import com.smalltrend.service.inventory.PurchaseOrderService;
-import com.smalltrend.service.VariantPriceService;
+import com.smalltrend.service.inventory.shared.InventoryManagerNotificationService;
+import com.smalltrend.service.products.VariantPriceService;
+import com.smalltrend.service.inventory.purchase.PurchaseOrderService;
 import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
 import org.junit.jupiter.api.BeforeEach;

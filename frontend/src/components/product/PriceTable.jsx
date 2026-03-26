@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Button from "./button";
 import { Input } from "./input";
-import { calculateProfit, formatCurrency } from "../../../utils/priceCalculation";
+import { calculateProfit, formatCurrency } from "../../utils/priceCalculation";
 
 const DateInput = ({ dateValue, onChange, disabled = false }) => {
     const [focused, setFocused] = React.useState(false);

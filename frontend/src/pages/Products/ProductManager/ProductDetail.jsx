@@ -3,11 +3,11 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, Package, Edit, Box, Calendar, Power, Printer, Trash2, DollarSign, History } from "lucide-react";
 
 // Tái sử dụng components từ Design system UI thư mục chung ProductComponents
-import Button from "../ProductComponents/button";
-import { Card } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Label } from "../ProductComponents/label";
-import { Badge } from "../ProductComponents/badge";
+import Button from "../../../components/product/button";
+import { Card } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Label } from "../../../components/product/label";
+import { Badge } from "../../../components/product/badge";
 
 // Gọi import các sub-modal Form Add/Edit
 import EditProductModal from "./EditProductModal";

@@ -1,10 +1,10 @@
 import { useState, useRef, useMemo } from "react";
 import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Trash, Zap, Barcode, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Label } from "../ProductComponents/label";
-import { Badge } from "../ProductComponents/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Label } from "../../../components/product/label";
+import { Badge } from "../../../components/product/badge";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useFetchUnits, useFetchVariants } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";

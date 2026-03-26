@@ -1,7 +1,7 @@
 package com.smalltrend.service.products;
 
-import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
+import com.smalltrend.dto.products.ProductVariantRespone;
 import com.smalltrend.entity.*;
 import com.smalltrend.repository.*;
 

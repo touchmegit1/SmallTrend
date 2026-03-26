@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Label } from "../ProductComponents/label";
-import { Textarea } from "../ProductComponents/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Badge } from "../ProductComponents/badge";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Label } from "../../../components/product/label";
+import { Textarea } from "../../../components/product/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Badge } from "../../../components/product/badge";
 import {
   Plus,
   Search,

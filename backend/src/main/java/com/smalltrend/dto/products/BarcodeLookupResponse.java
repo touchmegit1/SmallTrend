@@ -1,4 +1,4 @@
-package com.smalltrend.dto.pos;
+package com.smalltrend.dto.products;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

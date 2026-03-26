@@ -1,4 +1,4 @@
-package com.smalltrend.validation.supplier;
+package com.smalltrend.validation.product;
 
 import com.smalltrend.entity.Supplier;
 import com.smalltrend.repository.SupplierRepository;

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Edit, Trash2, X, Save, CheckCircle, Barcode, Tag } from 'lucide-react';
-import Button from '../ProductComponents/button';
-import { Input } from '../ProductComponents/input';
-import { Label } from '../ProductComponents/label';
-import { Badge } from '../ProductComponents/badge';
+import Button from '../../../components/product/button';
+import { Input } from '../../../components/product/input';
+import { Label } from '../../../components/product/label';
+import { Badge } from '../../../components/product/badge';
 import ConfirmDialog from '../../../components/common/ConfirmDialog';
 import api from '../../../config/axiosConfig';
 
@@ -61,7 +61,7 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
         setDeleteStatusMsg("");
 
         deleteTimeoutRef.current = setTimeout(() => {
-            setDeleteStatusMsg("Đang xử lý lâu hơn dự kiến (quá 2 phút), vui lòng chờ thêm...");
+            setDeleteStatusMsg("Không thể xoá quy đổi vì thao tác đã quá 2 phút. Vui lòng thử lại.");
         }, 120000);
 
         try {

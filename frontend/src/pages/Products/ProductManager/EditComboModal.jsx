@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Save, Plus, Search, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Label } from "../ProductComponents/label";
-import { Textarea } from "../ProductComponents/textarea";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Label } from "../../../components/product/label";
+import { Textarea } from "../../../components/product/textarea";
 import axios from "../../../config/axiosConfig";
 
 // Modal Popup dùng chung để sửa thông tin của một Combo đã tồn tại

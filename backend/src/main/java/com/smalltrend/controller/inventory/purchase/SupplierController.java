@@ -1,7 +1,8 @@
 package com.smalltrend.controller.inventory.purchase;
 
 import com.smalltrend.dto.supplier.SupplierDTO;
-import com.smalltrend.service.SupplierService;
+import com.smalltrend.service.products.SupplierService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

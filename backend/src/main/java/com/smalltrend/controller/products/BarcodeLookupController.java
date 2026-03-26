@@ -1,7 +1,8 @@
-package com.smalltrend.controller.pos;
+package com.smalltrend.controller.products;
 
-import com.smalltrend.dto.pos.BarcodeLookupResponse;
-import com.smalltrend.service.BarcodeLookupService;
+import com.smalltrend.dto.products.BarcodeLookupResponse;
+import com.smalltrend.service.products.BarcodeLookupService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
