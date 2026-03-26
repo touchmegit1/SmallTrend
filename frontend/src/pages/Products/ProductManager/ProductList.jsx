@@ -76,10 +76,6 @@ export function ProductListScreen() {
   const { brands } = useFetchBrands();
   const { taxRates } = useFetchTaxRates();
 
-  // Debug: Check if categories are loaded
-  useEffect(() => {
-    console.log('Categories loaded:', categories);
-  }, [categories]);
 
   // --- CÁC HÀM TIỆN ÍCH (HELPER) ---
   const getCategoryName = (categoryId) => {
@@ -160,7 +156,6 @@ export function ProductListScreen() {
 
   // --- CASCADE RESET HANDLERS ---
   const handleCategoryChange = (val) => {
-    console.log('handleCategoryChange called with:', val);
     setFilterCategory(val);
     setFilterBrand(null);
     setFilterProduct(null);
@@ -181,8 +176,6 @@ export function ProductListScreen() {
   };
 
   const handleVariantChange = (val) => {
-    console.log('handleVariantChange called with:', val);
-    console.log('variantsData:', variantsData);
     setFilterVariant(val);
   };
 
@@ -338,13 +331,10 @@ export function ProductListScreen() {
 
   // --- DROPDOWN OPTIONS ---
   const categoryOptions = useMemo(() => {
-    console.log('Creating categoryOptions, categories:', categories);
     const options = [
       { value: null, label: 'Tất cả danh mục' },
       ...(categories || []).map((c) => ({ value: String(c.id), label: c.name })),
     ];
-    console.log('CategoryOptions created:', options);
-    console.log('Current filterCategory:', filterCategory);
     return options;
   }, [categories, filterCategory]);
 
