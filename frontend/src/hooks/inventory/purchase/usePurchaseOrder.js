@@ -14,6 +14,7 @@ import {
   rejectPurchaseOrder,
   closeShortageOrder,
   requestSupplierSupplementOrder,
+  rejectShortageOrder,
 } from "../../../services/inventory/inventoryService";
 import {
   PO_STATUS,
@@ -876,7 +877,7 @@ export function usePurchaseOrder(initialId = null) {
         }
 
         if (response?.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
-          toast.success("Đã nhập kho phần hàng nhận được và chuyển sang chờ quản lý xử lý thiếu.");
+          toast.success("Đã ghi nhận kiểm kê thiếu và chuyển phiếu sang chờ quản lý xử lý.");
         } else {
           toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
         }
@@ -1010,6 +1011,48 @@ export function usePurchaseOrder(initialId = null) {
     [initialId, order.status],
   );
 
+  const rejectShortage = useCallback(async (rejectionReason) => {
+    if (!initialId) return false;
+    if (order.status !== PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
+      toast.warning("Chỉ có thể từ chối khi phiếu đang chờ quản lý xử lý thiếu hàng.");
+      return false;
+    }
+    if (!rejectionReason || rejectionReason.trim() === "") {
+      toast.warning("Bạn phải nhập lý do từ chối nhập hàng.");
+      return false;
+    }
+
+    setSaving(true);
+    try {
+      const response = await rejectShortageOrder(initialId, rejectionReason.trim());
+      if (response) {
+        const { mappedOrder, mappedItems, mappedReceiptItems } =
+          mapOrderStateFromResponse(response, products);
+        setOrder(mappedOrder);
+        setItems(mappedItems);
+        setReceiptItems(mappedReceiptItems);
+      }
+      toast.success("Đã từ chối nhập hàng thiếu và chuyển phiếu về trạng thái từ chối.");
+      return true;
+    } catch (err) {
+      console.error("Reject shortage error", err);
+      toast.error("Lỗi khi từ chối nhập hàng thiếu: " + err.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [initialId, order.status, products]);
+
+  const rejectOrderUnified = useCallback(
+    async (navigate, rejectionReason) => {
+      if (order.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
+        return rejectShortage(rejectionReason);
+      }
+      return rejectOrder(navigate, rejectionReason);
+    },
+    [order.status, rejectOrder, rejectShortage],
+  );
+
   const deleteOrder = useCallback(
     async (navigate) => {
       if (!initialId) return false;
@@ -1070,7 +1113,7 @@ export function usePurchaseOrder(initialId = null) {
     receiveGoods,
     closeShortage,
     requestSupplierSupplement,
-    rejectOrder,
+    rejectOrder: rejectOrderUnified,
     deleteOrder,
   };
 }

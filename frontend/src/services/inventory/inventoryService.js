@@ -311,6 +311,19 @@ export const requestSupplierSupplementOrder = async (id, managerDecisionNote) =>
   return response.json();
 };
 
+export const rejectShortageOrder = async (id, rejectionReason) => {
+  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/shortage/reject`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ rejectionReason }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || "Lỗi khi từ chối nhập hàng thiếu");
+  }
+  return response.json();
+};
+
 // ═══════════════════════════════════════════════════════════
 //  Reference Data (Spring Boot backend)
 // ═══════════════════════════════════════════════════════════
