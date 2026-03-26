@@ -382,9 +382,9 @@ public class PurchaseOrderService {
             order.setNotes(receiptRequest.getNotes());
         }
 
-        List<SyncedPurchasePriceItemResponse> syncedPurchasePriceItems = syncPurchasePrices(order);
-        int syncedPurchasePriceCount = syncedPurchasePriceItems.size();
-        LocalDateTime syncedPurchasePriceAt = syncedPurchasePriceCount > 0 ? LocalDateTime.now() : null;
+        List<SyncedPurchasePriceItemResponse> syncedPurchasePriceItems = new ArrayList<>();
+        int syncedPurchasePriceCount = 0;
+        LocalDateTime syncedPurchasePriceAt = null;
 
         if (hasShortage) {
             if (receiptRequest.getShortageReason() == null || receiptRequest.getShortageReason().isBlank()) {
@@ -407,6 +407,10 @@ public class PurchaseOrderService {
             order.setManagerDecision(null);
             order.setManagerDecisionNote(null);
             order.setManagerDecidedAt(null);
+
+            syncedPurchasePriceItems = syncPurchasePrices(order);
+            syncedPurchasePriceCount = syncedPurchasePriceItems.size();
+            syncedPurchasePriceAt = syncedPurchasePriceCount > 0 ? LocalDateTime.now() : null;
         }
         purchaseOrderRepository.save(order);
 
