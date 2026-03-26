@@ -1,10 +1,11 @@
 package com.smalltrend.service.inventory;
 
-import com.smalltrend.dto.inventory.purchaseorder.NotifyManagerEmailRequest;
+import com.smalltrend.dto.inventory.purchase.NotifyManagerEmailRequest;
 import com.smalltrend.entity.PurchaseOrder;
 import com.smalltrend.entity.Role;
 import com.smalltrend.entity.User;
 import com.smalltrend.repository.UserRepository;
+import com.smalltrend.service.inventory.shared.InventoryManagerNotificationService;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;

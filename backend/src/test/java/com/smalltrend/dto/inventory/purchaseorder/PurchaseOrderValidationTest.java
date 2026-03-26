@@ -1,4 +1,4 @@
-package com.smalltrend.dto.inventory.purchaseorder;
+package com.smalltrend.dto.inventory.purchase;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;

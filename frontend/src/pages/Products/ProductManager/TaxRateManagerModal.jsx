@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, X, Save, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
-import Button from '../ProductComponents/button';
-import { Input } from '../ProductComponents/input';
-import { Label } from '../ProductComponents/label';
+import Button from '../../../components/product/button';
+import { Input } from '../../../components/product/input';
+import { Label } from '../../../components/product/label';
 import api from '../../../config/axiosConfig';
 
 /**

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { X, DollarSign, Calendar, Percent, TrendingUp } from 'lucide-react';
 import { createVariantPrice } from '../../../hooks/useVariantPrices';
+import { useFetchTaxRates } from '../../../hooks/taxRates';
 import { calculatePriceBreakdown, formatCurrency } from '../../../utils/priceCalculation';
 
 /**
@@ -19,6 +20,33 @@ const CreatePriceModal = ({ isOpen, onClose, variant, onPriceCreated }) => {
   const [error, setError] = useState('');
   const [isDateFocused, setIsDateFocused] = useState(false);
   const [isExpiryDateFocused, setIsExpiryDateFocused] = useState(false);
+  const { taxRates } = useFetchTaxRates();
+
+  const taxPercentValue = String(Number(formData.taxPercent) || 0);
+
+  const taxRateOptions = useMemo(() => {
+    const source = Array.isArray(taxRates)
+      ? taxRates.filter((tax) => tax?.active !== false)
+      : [];
+
+    const mapped = source.map((tax) => ({
+      id: tax.id,
+      rate: String(Number(tax.rate) || 0),
+      label: `${tax.name} (${Number(tax.rate) || 0}%)`,
+    }));
+
+    const hasCurrentRate = mapped.some((option) => option.rate === taxPercentValue);
+    if (!hasCurrentRate) {
+      mapped.unshift({
+        id: 'current-tax',
+        rate: taxPercentValue,
+        label: `Thuế hiện tại (${taxPercentValue}%)`,
+      });
+    }
+
+    return mapped;
+  }, [taxRates, taxPercentValue]);
+
 
   if (!isOpen) return null;
 
@@ -175,17 +203,18 @@ const CreatePriceModal = ({ isOpen, onClose, variant, onPriceCreated }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Thuế (%)</label>
             <div className="relative">
               <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="number"
+              <select
                 name="taxPercent"
-                value={formData.taxPercent}
+                value={taxPercentValue}
                 onChange={handleChange}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                placeholder="10"
-                min="0"
-                max="100"
-                step="0.1"
-              />
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white"
+              >
+                {taxRateOptions.map((tax) => (
+                  <option key={tax.id} value={tax.rate}>
+                    {tax.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

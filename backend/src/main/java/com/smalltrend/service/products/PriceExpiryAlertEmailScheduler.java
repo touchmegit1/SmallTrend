@@ -3,7 +3,7 @@ package com.smalltrend.service.products;
 import com.smalltrend.dto.inventory.dashboard.PriceExpiryAlertResponse;
 import com.smalltrend.entity.PriceExpiryAlertLog;
 import com.smalltrend.repository.PriceExpiryAlertLogRepository;
-import com.smalltrend.service.VariantPriceService;
+
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -392,12 +392,19 @@ function TransactionHistory() {
     const oldTotal = parseInt((refundModal.total || '').toString().replace(/[^0-9]/g, '')) || 0;
     const pointsDiscount = Number(refundModal.pointsDiscount || 0);
     const noCashCollectedByPoints = oldTotal === 0 && pointsDiscount > 0;
+
+    const customerPaidAmount = Number(refundModal.customerMoney || 0);
+    const alreadyRefundedAmount = Number(refundModal.refundedAmount || 0);
+    const remainingRefundableAmount = Math.max(0, customerPaidAmount - alreadyRefundedAmount);
+
     if (noCashCollectedByPoints) {
       refundAmount = 0;
+    } else {
+      refundAmount = Math.min(refundAmount, remainingRefundableAmount);
     }
 
     const newTotal = Math.max(0, oldTotal - refundAmount);
-    const totalRefundedAmount = Number(refundModal.refundedAmount || 0) + refundAmount;
+    const totalRefundedAmount = alreadyRefundedAmount + refundAmount;
 
     const refundNoteMessage = noCashCollectedByPoints
       ? `Hoàn trả 0đ (đơn đã dùng điểm về 0đ) lúc ${new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}`
@@ -1339,15 +1346,20 @@ function TransactionHistory() {
             {/* Tóm tắt số tiền hoàn trả */}
             {(() => {
               const items = refundModal.cart || refundModal.items || [];
-              const amt = items.reduce((s, item, i) => s + (refundQtys[i] || 0) * (item.price || 0), 0);
-              return amt > 0 ? (
+              const rawRefundAmount = items.reduce((s, item, i) => s + (refundQtys[i] || 0) * (item.price || 0), 0);
+              const customerPaidAmount = Number(refundModal.customerMoney || 0);
+              const alreadyRefundedAmount = Number(refundModal.refundedAmount || 0);
+              const remainingRefundableAmount = Math.max(0, customerPaidAmount - alreadyRefundedAmount);
+              const previewRefundAmount = Math.min(rawRefundAmount, remainingRefundableAmount);
+
+              return previewRefundAmount > 0 ? (
                 <div style={{
                   padding: "10px 14px", marginBottom: "16px",
                   background: "#fff3cd", borderRadius: "8px", border: "1px solid #ffc107",
                   fontSize: "14px", display: "flex", justifyContent: "space-between"
                 }}>
                   <span>Số tiền cần hoàn lại cho khách:</span>
-                  <strong style={{ color: "#e67e22" }}>{amt.toLocaleString()}đ</strong>
+                  <strong style={{ color: "#e67e22" }}>{previewRefundAmount.toLocaleString()}đ</strong>
                 </div>
               ) : null;
             })()}

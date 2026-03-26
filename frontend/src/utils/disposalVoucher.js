@@ -16,7 +16,7 @@ export const DV_STATUS_CONFIG = {
     badgeBg: "bg-amber-100",
   },
   [DV_STATUS.PENDING]: {
-    label: "Chờ duyệt",
+    label: "Đang xử lý",
     bg: "bg-indigo-50",
     text: "text-indigo-700",
     border: "border-indigo-200",
@@ -52,9 +52,9 @@ export const REASON_CONFIG = {
 
 // ─── Allowed Transitions ─────────────────────────────────────
 export const DV_TRANSITIONS = {
-  [DV_STATUS.DRAFT]: [DV_STATUS.PENDING],
-  [DV_STATUS.REJECTED]: [DV_STATUS.PENDING],
-  [DV_STATUS.PENDING]: [DV_STATUS.CONFIRMED, DV_STATUS.REJECTED],
+  [DV_STATUS.DRAFT]: [DV_STATUS.CONFIRMED],
+  [DV_STATUS.REJECTED]: [DV_STATUS.CONFIRMED],
+  [DV_STATUS.PENDING]: [DV_STATUS.CONFIRMED],
   [DV_STATUS.CONFIRMED]: [],
 };
 
@@ -78,6 +78,29 @@ export function generateDVCode(existingVouchers = []) {
   }
 
   return `${prefix}${String(maxNum + 1).padStart(4, "0")}`;
+}
+
+export function formatDisposalCode(code) {
+  if (!code) return "";
+
+  const normalized = String(code).trim();
+  const upper = normalized.toUpperCase();
+
+  if (!upper.startsWith("DV")) return normalized;
+
+  const digits = upper.replace(/^DV-?/, "").replace(/\D/g, "");
+
+  // Target display style: DV-YYYYMM-XXX
+  // Supports:
+  // - DV-202602-001 (9 digits)
+  // - DV20260325001 (11 digits: YYYYMMDD + XXX)
+  if (digits.length >= 9) {
+    const yearMonth = digits.slice(0, 6);
+    const seq = digits.slice(-3);
+    return `DV-${yearMonth}-${seq}`;
+  }
+
+  return normalized;
 }
 
 // ─── Validation ──────────────────────────────────────────────

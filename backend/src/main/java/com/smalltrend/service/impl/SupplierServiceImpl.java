@@ -3,8 +3,9 @@ package com.smalltrend.service.impl;
 import com.smalltrend.dto.supplier.SupplierDTO;
 import com.smalltrend.entity.Supplier;
 import com.smalltrend.repository.SupplierRepository;
-import com.smalltrend.service.SupplierService;
-import com.smalltrend.validation.supplier.SupplierValidator;
+import com.smalltrend.service.products.SupplierService;
+import com.smalltrend.validation.product.SupplierValidator;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

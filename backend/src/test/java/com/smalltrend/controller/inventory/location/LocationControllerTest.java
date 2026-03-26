@@ -1,11 +1,11 @@
 package com.smalltrend.controller.inventory.location;
 
-import com.smalltrend.controller.inventory.LocationController;
+import com.smalltrend.controller.inventory.location.LocationController;
 import com.smalltrend.dto.inventory.location.FullLocationResponse;
 import com.smalltrend.dto.inventory.location.LocationRequest;
 import com.smalltrend.dto.inventory.location.LocationStockItemResponse;
 import com.smalltrend.dto.inventory.location.LocationTransferRequest;
-import com.smalltrend.service.inventory.LocationService;
+import com.smalltrend.service.inventory.location.LocationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

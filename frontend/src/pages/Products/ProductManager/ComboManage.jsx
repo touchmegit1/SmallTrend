@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Badge } from "../ProductComponents/badge";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Badge } from "../../../components/product/badge";
 import { Plus, Search, Edit, Package2, Eye, CheckCircle, Trash2, Power } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditComboModal from "./EditComboModal";
@@ -15,6 +15,7 @@ import { useProductCombos } from "../../../hooks/product_combos";
 // Component quản lý danh sách các Combo Sản phẩm
 // Nơi hiển thị, lọc, tìm kiếm và thao tác các combo như xoá, sửa
 const ComboManage = () => {
+  // REVIEW FLOW: load danh sách combo -> filter/sort trên UI -> thao tác sửa/xoá/toggle -> hook tự đồng bộ lại dữ liệu.
   const { user } = useAuth();
   const canEditProducts = canManageProducts(user);
   const { combos, loading, error, deleteCombo, updateCombo, toggleComboStatus } = useProductCombos();
@@ -42,6 +43,7 @@ const ComboManage = () => {
     }
   };
 
+  // REVIEW FLOW (LIST): nhận data từ hook -> lọc theo search + trạng thái -> sort theo cột người dùng chọn trước khi render bảng.
   const filteredCombos = combos
     .filter((combo) => {
       const matchesSearch =

@@ -1,9 +1,9 @@
 import { useState, useRef } from "react";
 import { ArrowLeft, Save, Image as ImageIcon, X, Upload, Plus, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Label } from "../ProductComponents/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Label } from "../../../components/product/label";
 import { useNavigate } from "react-router-dom";
 import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
@@ -177,6 +177,7 @@ const AddNewProduct = () => {
   };
 
   // --- HANDLER SUBMIT TỔNG CHÍNH ---
+  // REVIEW FLOW: validate form -> upload ảnh (nếu có) -> gọi API tạo product -> điều hướng về list.
   const handleSubmit = async (e) => {
     e.preventDefault();
 

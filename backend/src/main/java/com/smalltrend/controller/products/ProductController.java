@@ -4,19 +4,20 @@ import com.smalltrend.dto.inventory.dashboard.PriceExpiryAlertResponse;
 import com.smalltrend.dto.products.CreateProductRequest;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.dto.products.ProductResponse;
+import com.smalltrend.dto.products.ProductVariantRespone;
 import com.smalltrend.dto.products.UnitConversionRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
 import com.smalltrend.dto.products.UnitRequest;
 import com.smalltrend.dto.products.UnitResponse;
 import com.smalltrend.dto.products.VariantPriceRequest;
 import com.smalltrend.dto.products.VariantPriceResponse;
-import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.service.products.PriceExpiryAlertEmailScheduler;
 import com.smalltrend.service.products.ProductService;
 import com.smalltrend.service.products.ProductVariantService;
-import com.smalltrend.service.UnitConversionService;
-import com.smalltrend.service.UnitService;
-import com.smalltrend.service.VariantPriceService;
+import com.smalltrend.service.products.UnitConversionService;
+import com.smalltrend.service.products.UnitService;
+import com.smalltrend.service.products.VariantPriceService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductController {
 
+    // REVIEW FLOW: Controller nhận request -> phân quyền @PreAuthorize -> chuyển cho service xử lý nghiệp vụ -> trả response cho frontend.
     private final ProductService productService;
     private final ProductVariantService productVariantService;
     private final UnitConversionService unitConversionService;
@@ -187,6 +189,7 @@ public class ProductController {
     }
 
     // ─── Variant Prices ──────────────────────────────────────────────────────
+    // REVIEW FLOW (PRICE): tạo/lấy/cập nhật giá theo variant -> service tự quản lý active/inactive + lịch sử hiệu lực giá.
     // Tạo giá mới cho variant (giá cũ chuyển INACTIVE)
     @PostMapping("/variants/{variantId}/prices")
     @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
@@ -271,6 +274,7 @@ public class ProductController {
         ));
     }
 
+    // REVIEW FLOW (PRODUCT CRUD): tạo/cập nhật/toggle/xoá product sẽ gọi ProductService, nơi enforce rule validate + propagate trạng thái xuống variants.
     @PostMapping
     @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<ProductResponse> create(@RequestBody CreateProductRequest request) {

@@ -1,10 +1,10 @@
 package com.smalltrend.controller.inventory.purchaseorder;
 
 import com.smalltrend.dto.common.MessageResponse;
-import com.smalltrend.dto.inventory.purchaseorder.*;
+import com.smalltrend.dto.inventory.purchase.*;
 import com.smalltrend.dto.inventory.dashboard.*;
-import com.smalltrend.controller.inventory.PurchaseOrderController;
-import com.smalltrend.service.inventory.PurchaseOrderService;
+import com.smalltrend.controller.inventory.purchase.PurchaseOrderController;
+import com.smalltrend.service.inventory.purchase.PurchaseOrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

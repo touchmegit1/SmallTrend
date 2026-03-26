@@ -16,13 +16,13 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import api from "../../../config/axiosConfig";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import PriceTable from "../ProductComponents/PriceTable";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import PriceTable from "../../../components/product/PriceTable";
 import CreatePriceModal from "./CreatePriceModal";
 import PriceHistoryModal from "./PriceHistoryModal";
 import TaxRateManagerModal from "./TaxRateManagerModal";
-import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
+import BulkUpdatePanel from "../../../components/product/BulkUpdatePanel";
 import { useAuth } from "../../../context/AuthContext";
 import { canManageProducts } from "../../../utils/roleUtils";
 import { calculateProfit, calculateTaxInclusivePrice } from "../../../utils/priceCalculation";

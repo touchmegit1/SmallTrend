@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductComboServiceImpl implements ProductComboService {
 
+    // REVIEW FLOW: validate combo + items -> chuẩn hoá giá -> kiểm tra giá so với tổng cost -> lưu combo -> lưu danh sách item.
     private static final BigDecimal PRICE_ROUND_STEP = BigDecimal.valueOf(100);
 
     private final ProductComboRepository productComboRepository;

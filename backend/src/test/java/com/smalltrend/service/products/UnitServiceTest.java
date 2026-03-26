@@ -6,7 +6,7 @@ import com.smalltrend.entity.Unit;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.UnitConversionRepository;
 import com.smalltrend.repository.UnitRepository;
-import com.smalltrend.service.UnitService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

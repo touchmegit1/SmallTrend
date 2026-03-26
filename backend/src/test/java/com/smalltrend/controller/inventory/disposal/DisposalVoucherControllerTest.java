@@ -1,10 +1,10 @@
 package com.smalltrend.controller.inventory.disposal;
 
-import com.smalltrend.controller.inventory.DisposalVoucherController;
+import com.smalltrend.controller.inventory.disposal.DisposalVoucherController;
 import com.smalltrend.dto.inventory.disposal.DisposalVoucherRequest;
 import com.smalltrend.dto.inventory.disposal.DisposalVoucherResponse;
 import com.smalltrend.dto.inventory.disposal.ExpiredBatchResponse;
-import com.smalltrend.service.inventory.DisposalVoucherService;
+import com.smalltrend.service.inventory.disposal.DisposalVoucherService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

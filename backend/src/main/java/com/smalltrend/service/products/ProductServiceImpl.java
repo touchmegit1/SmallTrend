@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
+    // REVIEW FLOW: validate dữ liệu product -> map request vào entity -> lưu DB -> map response trả về.
     private final ProductRepository productRepository;
     private final ProductValidator productValidator;
 
@@ -77,6 +78,7 @@ public class ProductServiceImpl implements ProductService {
 
     // Sửa thông tin Sản phẩm đã tồn tại. Nếu cập nhật trạng thái (Active)
     // thì thay đổi sẽ áp dụng lan truyền xuống các Biến thể (Variants) con
+    // REVIEW FLOW (UPDATE): lấy product cũ -> validate tên mới -> apply request -> nếu đổi trạng thái thì propagate xuống variant -> save.
     @Override
     @Transactional
     public ProductResponse update(Integer id, CreateProductRequest request) {
