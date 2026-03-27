@@ -24,7 +24,7 @@ import Button from "./button";
 import { Input } from "./input";
 import { calculateProfit, formatCurrency } from "../../utils/priceCalculation";
 
-const DateInput = ({ dateValue, onChange, disabled = false }) => {
+const DateInput = ({ dateValue, onChange, disabled = false, minDate }) => {
     const [focused, setFocused] = React.useState(false);
     const dateOnly = dateValue ? dateValue.split('T')[0] : '';
 
@@ -41,6 +41,8 @@ const DateInput = ({ dateValue, onChange, disabled = false }) => {
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             disabled={disabled}
+            readOnly={!focused}
+            min={focused ? minDate : undefined}
             className="w-[85px] text-center text-[11px] font-semibold text-gray-700 bg-gray-50 hover:bg-white border rounded-md px-1 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
         />
     );
@@ -72,6 +74,12 @@ export default function PriceTable({
     onExpiryDateChange,
     focusedVariantId = null
 }) {
+    const today = React.useMemo(() => {
+        const now = new Date();
+        const tzOffset = now.getTimezoneOffset() * 60000;
+        return new Date(now.getTime() - tzOffset).toISOString().split("T")[0];
+    }, []);
+
     const allSelected = variants.length > 0 && selectedIds.length === variants.length;
     const someSelected = selectedIds.length > 0 && !allSelected;
 
@@ -282,6 +290,7 @@ export default function PriceTable({
                                                     dateValue={variant.activeExpiryDate}
                                                     onChange={(val) => onExpiryDateChange?.(variant, val)}
                                                     disabled={readOnly}
+                                                    minDate={today}
                                                 />
                                             ) : (
                                                 <span className="text-[11px] text-gray-400 italic">—</span>

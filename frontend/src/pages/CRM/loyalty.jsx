@@ -592,7 +592,6 @@ const GiftRewardManagement = () => {
               {/* Tìm SKU hoặc tên sản phẩm */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                 <label className="block text-sm font-medium text-slate-700 mb-2">Tìm sản phẩm theo SKU hoặc tên</label>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Tìm sản phẩm theo SKU hoặc tên</label>
                 <div className="flex gap-2 mb-3">
                   <input
                     type="text"

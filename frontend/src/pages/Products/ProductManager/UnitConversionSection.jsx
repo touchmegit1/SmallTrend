@@ -60,24 +60,32 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
         setIsDeleting(true);
         setDeleteStatusMsg("");
 
-        deleteTimeoutRef.current = setTimeout(() => {
-            setDeleteStatusMsg("Không thể xoá quy đổi vì thao tác đã quá 2 phút. Vui lòng thử lại.");
-        }, 120000);
-
         try {
-            await api.delete(`/products/conversions/${id}`);
+            const timeoutPromise = new Promise((_, reject) => {
+                deleteTimeoutRef.current = setTimeout(() => {
+                    reject(new Error("Không thể xoá quy đổi vì thao tác đã quá 2 phút. Vui lòng thử lại."));
+                }, 120000);
+            });
+
+            await Promise.race([
+                api.delete(`/products/conversions/${id}`),
+                timeoutPromise,
+            ]);
+
             setConversions(prev => prev.filter(c => c.id !== id));
             if (onSuccess) onSuccess();
+            setDeleteStatusMsg("");
+            setConfirmDeleteId(null);
         } catch (err) {
             console.error("Lỗi xóa quy đổi:", err);
+            const msg = err?.response?.data?.message || err?.response?.data || err?.message || "Không thể xoá quy đổi. Vui lòng thử lại.";
+            setDeleteStatusMsg(typeof msg === "string" ? msg : "Không thể xoá quy đổi. Vui lòng thử lại.");
         } finally {
             if (deleteTimeoutRef.current) {
                 clearTimeout(deleteTimeoutRef.current);
                 deleteTimeoutRef.current = null;
             }
             setIsDeleting(false);
-            setDeleteStatusMsg("");
-            setConfirmDeleteId(null);
         }
     };
 
