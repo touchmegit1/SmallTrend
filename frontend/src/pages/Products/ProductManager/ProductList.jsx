@@ -88,6 +88,18 @@ export function ProductListScreen() {
     return brand?.name || 'N/A';
   };
 
+  const getTaxDisplay = (product) => {
+    const matchedTax = (taxRates || []).find((tax) => String(tax.id) === String(product.tax_rate_id));
+    const taxName = product.tax_rate_name || matchedTax?.name || 'N/A';
+    const taxRate = matchedTax?.rate;
+
+    if (taxRate === null || taxRate === undefined || taxRate === '') {
+      return taxName;
+    }
+
+    return `${taxName} (${taxRate}%)`;
+  };
+
   // --- DEPENDENT FILTER LOGIC ---
 
   // Brands lọc theo Category đã chọn
@@ -914,7 +926,7 @@ export function ProductListScreen() {
                       {/* Cột 3: Thuế */}
                       <TableCell>
                         <Badge className="bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 border border-amber-200 font-medium" variant="ghost">
-                          {product.tax_rate_name || 'N/A'}
+                          {getTaxDisplay(product)}
                         </Badge>
                       </TableCell>
 
