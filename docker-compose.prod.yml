@@ -32,7 +32,7 @@ services:
     env_file:
       - ./deploy/env/backend.env
     ports:
-      - "127.0.0.1:8081:8081"
+      - "8081:8081"
     volumes:
       - uploads_data:/app/uploads
 
@@ -40,7 +40,7 @@ services:
     image: ${REGISTRY:-docker.io}/${IMAGE_NAMESPACE:-hungnq315}/smalltrend-frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:80"
+      - "3000:80"
 
 volumes:
   mysql_data:
