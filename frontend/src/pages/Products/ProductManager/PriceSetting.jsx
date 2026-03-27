@@ -40,6 +40,12 @@ const PRICE_SYNC_HISTORY_KEY = "priceSyncNotifications";
 const PRICE_SYNC_BROADCAST_KEY = "priceSyncNoticeBroadcast";
 const MAX_PRICE_SYNC_NOTIFICATIONS = 30;
 
+const getTodayDateInput = () => {
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - tzOffset).toISOString().split("T")[0];
+};
+
 const formatSyncedItemLabel = (item) => {
     const name = item?.productName || "Sản phẩm";
     const sku = item?.sku || "-";
@@ -442,6 +448,13 @@ const PriceSetting = () => {
     };
 
     const handleExpiryDateChange = async (variant, newDateStr) => {
+        const today = getTodayDateInput();
+        if (newDateStr && newDateStr < today) {
+            setErrorMsg("Ngày hết hiệu lực không được nhỏ hơn ngày hiện tại.");
+            setTimeout(() => setErrorMsg(""), 4000);
+            return;
+        }
+
         try {
             await api.put(`/products/variants/${variant.id}/prices/active/expiry`, { expiryDate: newDateStr || null });
             setSuccessMsg(`Đã cập nhật ngày hết hiệu lực cho ${variant.name}`);

@@ -33,7 +33,6 @@ const initialFormData = {
   phone: "",
   email: "",
   address: "",
-  status: "active",
 };
 
 const mapSupplierToFormData = (supplier) => ({
@@ -42,7 +41,6 @@ const mapSupplierToFormData = (supplier) => ({
   phone: supplier?.phone || "",
   email: supplier?.email || "",
   address: supplier?.address || "",
-  status: supplier?.status || "active",
 });
 
 export function SuppliersScreen() {
@@ -50,7 +48,6 @@ export function SuppliersScreen() {
   const { user } = useAuth();
   const canEditProducts = canManageProducts(user);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
@@ -97,23 +94,17 @@ export function SuppliersScreen() {
     setTimeout(() => setToast(""), 3000);
   };
 
-  // REVIEW FLOW (LIST): chuẩn hoá nguồn suppliers -> filter theo keyword + trạng thái -> render bảng kết quả.
+  // REVIEW FLOW (LIST): chuẩn hoá nguồn suppliers -> filter theo keyword -> render bảng kết quả.
   const filteredSuppliers = useMemo(() => {
     return (suppliers || []).filter((supplier) => {
-      const matchesSearch =
+      return (
         supplier.name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
         supplier.contact_person?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
         supplier.phone?.includes(searchQuery) ||
-        supplier.email?.toLowerCase()?.includes(searchQuery.toLowerCase());
-
-      const matchesStatus =
-        filterStatus === "all" ||
-        (filterStatus === "active" && supplier.status === "active") ||
-        (filterStatus === "inactive" && supplier.status === "inactive");
-
-      return matchesSearch && matchesStatus;
+        supplier.email?.toLowerCase()?.includes(searchQuery.toLowerCase())
+      );
     });
-  }, [suppliers, searchQuery, filterStatus]);
+  }, [suppliers, searchQuery]);
 
   const handleAdd = () => {
     if (!canEditProducts) return;
@@ -136,6 +127,7 @@ export function SuppliersScreen() {
     const payload = {
       ...formData,
       contact_person: formData.contact_person?.trim(),
+      status: editingSupplier?.status || "active",
     };
 
     const result = editingSupplier
@@ -205,7 +197,7 @@ export function SuppliersScreen() {
             <h1 className="text-3xl font-bold text-gray-900">Quản lý nhà cung cấp</h1>
             <p className="text-gray-600 mt-2">
               Tổng số: <span className="font-semibold text-blue-600">{filteredSuppliers.length}</span> nhà cung cấp
-              {searchQuery || filterStatus !== "all" ? <span className="text-gray-400"> (đang lọc)</span> : null}
+              {searchQuery ? <span className="text-gray-400"> (đang lọc)</span> : null}
             </p>
           </div>
 
@@ -245,11 +237,11 @@ export function SuppliersScreen() {
         <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-6 py-3">
             <h3 className="text-white font-bold text-sm">Tìm kiếm & bộ lọc</h3>
-            <p className="text-blue-100 text-xs">Lọc danh sách nhà cung cấp theo từ khóa và trạng thái</p>
+            <p className="text-blue-100 text-xs">Lọc danh sách nhà cung cấp theo từ khóa</p>
           </div>
           <CardContent className="p-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative md:col-span-2">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   placeholder="Tìm theo tên, người liên hệ, SĐT hoặc email..."
@@ -258,16 +250,6 @@ export function SuppliersScreen() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-
-              <select
-                className="w-full h-11 px-4 text-base bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="active">Đang hợp tác</option>
-                <option value="inactive">Ngưng hợp tác</option>
-              </select>
             </div>
           </CardContent>
         </Card>
@@ -292,7 +274,6 @@ export function SuppliersScreen() {
                     <TableHead className="font-bold text-gray-700">Nhà cung cấp</TableHead>
                     <TableHead className="font-bold text-gray-700">Liên hệ</TableHead>
                     <TableHead className="font-bold text-gray-700">Địa chỉ</TableHead>
-                    <TableHead className="font-bold text-gray-700">Trạng thái</TableHead>
                     <TableHead className="text-center font-bold text-gray-700">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -337,14 +318,6 @@ export function SuppliersScreen() {
                           <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
                           <span>{supplier.address || "—"}</span>
                         </div>
-                      </TableCell>
-
-                      <TableCell>
-                        {supplier.status === "active" ? (
-                          <Badge className="bg-green-50 text-green-700 border border-green-200">Đang hợp tác</Badge>
-                        ) : (
-                          <Badge className="bg-red-50 text-red-700 border border-red-200">Ngưng hợp tác</Badge>
-                        )}
                       </TableCell>
 
                       <TableCell className="text-center">
@@ -546,21 +519,6 @@ export function SuppliersScreen() {
                           rows={3}
                           required
                         />
-                      </div>
-                      <div>
-                        <Label>
-                          Trạng thái <span className="text-red-600">*</span>
-                        </Label>
-                        <select
-                          name="status"
-                          className="w-full mt-2 h-11 px-4 border border-gray-200 rounded-xl bg-gray-50"
-                          value={formData.status}
-                          onChange={handleChange}
-                          required
-                        >
-                          <option value="active">Đang hợp tác</option>
-                          <option value="inactive">Ngưng hợp tác</option>
-                        </select>
                       </div>
                     </div>
                   </CardContent>
