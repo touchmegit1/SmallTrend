@@ -244,11 +244,32 @@ public class ProductController {
         return ResponseEntity.ok(variantPriceService.updateActivePriceExpiry(variantId, newDate));
     }
 
+    // Cập nhật ngày hết hiệu lực cho một bản ghi giá theo priceId (cho phép null để bỏ hết hạn)
+    @PutMapping("/prices/{priceId}/expiry")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
+    public ResponseEntity<VariantPriceResponse> updatePriceExpiry(
+            @PathVariable("priceId") Integer priceId,
+            @RequestBody java.util.Map<String, String> request) {
+        String dateStr = request.get("expiryDate");
+        java.time.LocalDate newDate = (dateStr != null && !dateStr.isBlank())
+                ? java.time.LocalDate.parse(dateStr.split("T")[0])
+                : null;
+        return ResponseEntity.ok(variantPriceService.updatePriceExpiry(priceId, newDate));
+    }
+
     // Toggle trạng thái active/inactive của một bản ghi giá
     @PutMapping("/prices/{priceId}/toggle-status")
     @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<VariantPriceResponse> togglePriceStatus(@PathVariable("priceId") Integer priceId) {
         return ResponseEntity.ok(variantPriceService.togglePriceStatus(priceId));
+    }
+
+    // Xóa một bản ghi giá (chỉ cho phép khi không ACTIVE)
+    @DeleteMapping("/prices/{priceId}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
+    public ResponseEntity<String> deletePrice(@PathVariable("priceId") Integer priceId) {
+        variantPriceService.deletePrice(priceId);
+        return ResponseEntity.ok("Đã xóa bản ghi giá");
     }
 
     // Lấy danh sách giá sắp hết hiệu lực theo số ngày cảnh báo

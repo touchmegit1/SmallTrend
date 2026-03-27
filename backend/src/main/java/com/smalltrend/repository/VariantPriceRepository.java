@@ -27,12 +27,15 @@ public interface VariantPriceRepository extends JpaRepository<VariantPrice, Inte
             FROM VariantPrice vp
             JOIN FETCH vp.variant v
             JOIN FETCH v.product p
+            LEFT JOIN FETCH v.unit u
             WHERE vp.status = :status
-              AND vp.expiryDate = :targetDate
+              AND vp.expiryDate IS NOT NULL
+              AND vp.expiryDate BETWEEN :startDate AND :endDate
             """)
-    List<VariantPrice> findByStatusAndExpiryDateWithVariant(
+    List<VariantPrice> findByStatusAndExpiryDateRangeWithVariant(
             @Param("status") VariantPriceStatus status,
-            @Param("targetDate") LocalDate targetDate);
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
     @Query("""
             SELECT vp

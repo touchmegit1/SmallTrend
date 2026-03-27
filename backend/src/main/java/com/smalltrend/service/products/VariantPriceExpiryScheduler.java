@@ -12,7 +12,7 @@ public class VariantPriceExpiryScheduler {
 
     private final VariantPriceService variantPriceService;
 
-    @Scheduled(cron = "${app.notifications.price-expiry.auto-inactive-cron:0 */10 * * * *}")
+    @Scheduled(cron = "${app.notifications.price-expiry.auto-inactive-cron:0 0 0 * * *}")
     public void autoDeactivateExpiredVariantPrices() {
         int deactivatedCount = variantPriceService.deactivateExpiredActivePrices();
         if (deactivatedCount > 0) {

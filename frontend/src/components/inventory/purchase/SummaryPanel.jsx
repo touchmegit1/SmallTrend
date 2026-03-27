@@ -30,13 +30,19 @@ export default function SummaryPanel({
     order.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL;
   const isSupplierSupplementPending =
     order.status === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING;
+  const isRejected = order.status === PO_STATUS.REJECTED;
   const showMetaInfo =
     allowMetaEdit ||
     isReceived ||
     isShortagePendingApproval ||
-    isSupplierSupplementPending;
+    isSupplierSupplementPending ||
+    isRejected;
   const showPaymentInfo =
-    isChecking || isReceived || isShortagePendingApproval || isSupplierSupplementPending;
+    isChecking ||
+    isReceived ||
+    isShortagePendingApproval ||
+    isSupplierSupplementPending ||
+    isRejected;
   const shortageReason =
     order.shortage_reason || order.shortageReason || "";
   const managerDecisionNote =
@@ -45,7 +51,7 @@ export default function SummaryPanel({
     (isShortagePendingApproval || isSupplierSupplementPending) &&
     String(shortageReason).trim() !== "";
   const showManagerDecisionNote =
-    (isSupplierSupplementPending || isReceived) &&
+    (isSupplierSupplementPending || isReceived || isRejected) &&
     String(managerDecisionNote).trim() !== "";
 
   const selectedSupplier = suppliers.find(

@@ -107,6 +107,12 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(purchaseOrderService.requestSupplierSupplement(id, note));
     }
 
+    @PutMapping("/purchase-orders/{id}/shortage/reject")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER')")
+    public ResponseEntity<PurchaseOrderResponse> rejectShortage(@PathVariable("id") Integer id, @RequestBody Map<String, String> payload) {
+        return ResponseEntity.ok(purchaseOrderService.rejectShortage(id, payload.get("rejectionReason")));
+    }
+
     // ─── Cancel & Delete ─────────────────────────────────────
 
     @PutMapping("/purchase-orders/{id}/cancel")

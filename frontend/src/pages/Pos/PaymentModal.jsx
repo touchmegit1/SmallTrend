@@ -29,7 +29,6 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
           }
         );
         const data = await response.json();
-        console.log("SePay API response:", JSON.stringify(data));
 
         if (data.transactions && data.transactions.length > 0) {
           // Double-check: verify at least one transaction content contains our exact payment code

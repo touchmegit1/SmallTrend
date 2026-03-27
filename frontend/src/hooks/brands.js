@@ -12,12 +12,8 @@ export function useFetchBrands() {
   const fetchBrands = async () => {
     try {
       setLoading(true);
-      console.log('[Brands Hook] Fetching brands from /api/brands...');
       const response = await api.get('/brands');
-      console.log('[Brands Hook] Raw response status:', response.status);
-      console.log('[Brands Hook] Raw response data:', response.data);
       const data = Array.isArray(response.data) ? response.data : [];
-      console.log('[Brands Hook] Parsed brands count:', data.length);
       setBrands(data);
       setError(null);
     } catch (err) {

@@ -14,6 +14,7 @@ import {
   rejectPurchaseOrder,
   closeShortageOrder,
   requestSupplierSupplementOrder,
+  rejectShortageOrder,
 } from "../../../services/inventory/inventoryService";
 import {
   PO_STATUS,
@@ -876,7 +877,7 @@ export function usePurchaseOrder(initialId = null) {
         }
 
         if (response?.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
-          toast.success("Đã nhập kho phần hàng nhận được và chuyển sang chờ quản lý xử lý thiếu.");
+          toast.success("Đã ghi nhận kiểm kê thiếu và chuyển phiếu sang chờ quản lý xử lý.");
         } else {
           toast.success("Đã xác nhận nhập kho và cập nhật tồn kho thành công!");
         }
@@ -920,6 +921,40 @@ export function usePurchaseOrder(initialId = null) {
       const managerDecisionNote =
         order.manager_decision_note ?? order.managerDecisionNote ?? "";
       const response = await closeShortageOrder(initialId, managerDecisionNote);
+
+      const syncedCount = Number(
+        response?.syncedPurchasePriceCount
+        ?? response?.synced_purchase_price_count
+        ?? 0,
+      ) || 0;
+      if (syncedCount > 0) {
+        const syncedItemsRaw =
+          response?.syncedPurchasePriceItems
+          ?? response?.synced_purchase_price_items;
+        const syncedItems = Array.isArray(syncedItemsRaw) ? syncedItemsRaw : [];
+        const noticePayload = {
+          syncedCount,
+          orderNumber: response?.orderNumber || response?.order_number || order.po_number || null,
+          syncedItems,
+          createdAt:
+            response?.syncedPurchasePriceAt
+            || response?.synced_purchase_price_at
+            || new Date().toISOString(),
+        };
+        try {
+          sessionStorage.setItem("priceSyncNotice", JSON.stringify(noticePayload));
+          localStorage.setItem(
+            "priceSyncNoticeBroadcast",
+            JSON.stringify({ ...noticePayload, _broadcastAt: Date.now() }),
+          );
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("price-sync-notice", { detail: noticePayload }));
+          }
+        } catch (storageError) {
+          console.error("Không thể lưu thông báo đồng bộ giá:", storageError);
+        }
+      }
+
       if (response) {
         const { mappedOrder, mappedItems, mappedReceiptItems } =
           mapOrderStateFromResponse(response, products);
@@ -928,6 +963,9 @@ export function usePurchaseOrder(initialId = null) {
         setReceiptItems(mappedReceiptItems);
       }
       toast.success("Đã chốt thiếu và cập nhật tồn kho theo số thực nhận.");
+      if (syncedCount > 0) {
+        toast.info(`Đã đồng bộ giá nhập cho ${syncedCount} sản phẩm từ quyết định chốt thiếu.`);
+      }
       return true;
     } catch (err) {
       console.error("Close shortage error", err);
@@ -1010,6 +1048,48 @@ export function usePurchaseOrder(initialId = null) {
     [initialId, order.status],
   );
 
+  const rejectShortage = useCallback(async (rejectionReason) => {
+    if (!initialId) return false;
+    if (order.status !== PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
+      toast.warning("Chỉ có thể từ chối khi phiếu đang chờ quản lý xử lý thiếu hàng.");
+      return false;
+    }
+    if (!rejectionReason || rejectionReason.trim() === "") {
+      toast.warning("Bạn phải nhập lý do từ chối nhập hàng.");
+      return false;
+    }
+
+    setSaving(true);
+    try {
+      const response = await rejectShortageOrder(initialId, rejectionReason.trim());
+      if (response) {
+        const { mappedOrder, mappedItems, mappedReceiptItems } =
+          mapOrderStateFromResponse(response, products);
+        setOrder(mappedOrder);
+        setItems(mappedItems);
+        setReceiptItems(mappedReceiptItems);
+      }
+      toast.success("Đã từ chối nhập hàng thiếu và chuyển phiếu về trạng thái từ chối.");
+      return true;
+    } catch (err) {
+      console.error("Reject shortage error", err);
+      toast.error("Lỗi khi từ chối nhập hàng thiếu: " + err.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [initialId, order.status, products]);
+
+  const rejectOrderUnified = useCallback(
+    async (navigate, rejectionReason) => {
+      if (order.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL) {
+        return rejectShortage(rejectionReason);
+      }
+      return rejectOrder(navigate, rejectionReason);
+    },
+    [order.status, rejectOrder, rejectShortage],
+  );
+
   const deleteOrder = useCallback(
     async (navigate) => {
       if (!initialId) return false;
@@ -1070,7 +1150,7 @@ export function usePurchaseOrder(initialId = null) {
     receiveGoods,
     closeShortage,
     requestSupplierSupplement,
-    rejectOrder,
+    rejectOrder: rejectOrderUnified,
     deleteOrder,
   };
 }
