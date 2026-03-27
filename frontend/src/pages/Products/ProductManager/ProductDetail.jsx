@@ -3,11 +3,11 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, Package, Edit, Box, Calendar, Power, Printer, Trash2, DollarSign, History } from "lucide-react";
 
 // Tái sử dụng components từ Design system UI thư mục chung ProductComponents
-import Button from "../ProductComponents/button";
-import { Card } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Label } from "../ProductComponents/label";
-import { Badge } from "../ProductComponents/badge";
+import Button from "../../../components/product/button";
+import { Card } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Label } from "../../../components/product/label";
+import { Badge } from "../../../components/product/badge";
 
 // Gọi import các sub-modal Form Add/Edit
 import EditProductModal from "./EditProductModal";
@@ -25,6 +25,8 @@ import { canManageProducts } from "../../../utils/roleUtils";
  * chỉnh sửa, in mã vạch, quy đổi đơn vị và xóa variant trong thời gian cho phép.
  */
 function ProductDetail() {
+  // REVIEW FLOW: màn này đi theo thứ tự
+  // 1) load product cha -> 2) load variants -> 3) thao tác variant/product -> 4) refresh list.
   const { id: productId } = useParams(); // Lấy mã ID sản phẩm trên path URL
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,6 +71,7 @@ function ProductDetail() {
   /**
    * Call API đóng băng hoặc un-ban 1 variant thay đổi trạng thái is_active
    */
+  // REVIEW FLOW (ACTION): xác nhận trên modal -> gọi API toggle-status -> reload variants + hiện toast.
   const confirmToggleStatus = async () => {
     if (!canManageProduct) return;
     try {
@@ -125,6 +128,7 @@ function ProductDetail() {
     setShowDeleteConfirm(true);
   };
 
+  // REVIEW FLOW (DELETE): chỉ cho xoá trong 2 phút -> gọi API delete -> đóng modal + refresh danh sách.
   const confirmDeleteVariant = async () => {
     if (!canManageProduct) return;
     try {

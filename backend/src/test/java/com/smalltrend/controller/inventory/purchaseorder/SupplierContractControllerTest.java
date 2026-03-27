@@ -1,6 +1,6 @@
 package com.smalltrend.controller.inventory.purchaseorder;
 
-import com.smalltrend.controller.inventory.SupplierContractController;
+import com.smalltrend.controller.inventory.purchase.SupplierContractController;
 import com.smalltrend.entity.SupplierContract;
 import com.smalltrend.entity.enums.ContractStatus;
 import com.smalltrend.service.SupplierContractService;

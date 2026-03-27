@@ -5,11 +5,11 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "../ProductComponents/card";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import { Label } from "../ProductComponents/label";
-import { Textarea } from "../ProductComponents/textarea";
+} from "../../../components/product/card";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import { Label } from "../../../components/product/label";
+import { Textarea } from "../../../components/product/textarea";
 import { useNavigate } from "react-router-dom";
 import axios from "../../../config/axiosConfig";
 import { useProductCombos } from "../../../hooks/product_combos";
@@ -397,6 +397,7 @@ const CreateCombo = () => {
   };
 
   // Xử lý gửi API để lưu danh sách con thành Combo duy nhất
+  // REVIEW FLOW: validate dữ liệu + giá -> upload ảnh -> map items -> createCombo.
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg("");

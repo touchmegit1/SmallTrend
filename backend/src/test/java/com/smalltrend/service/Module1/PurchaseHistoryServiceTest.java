@@ -6,7 +6,7 @@ import com.smalltrend.entity.PurchaseHistory;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.PurchaseHistoryRepository;
 import com.smalltrend.service.PurchaseHistoryService;
-import com.smalltrend.service.inventory.InventoryStockService;
+import com.smalltrend.service.inventory.shared.InventoryStockService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;

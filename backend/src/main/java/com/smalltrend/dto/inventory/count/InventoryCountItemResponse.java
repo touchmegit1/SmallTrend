@@ -1,0 +1,23 @@
+package com.smalltrend.dto.inventory.count;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class InventoryCountItemResponse {
+    private Integer id;
+    private Integer productId;
+    private Integer variantId;
+    private Integer systemQuantity;
+    private Integer actualQuantity;
+    private Integer differenceQuantity;
+    private BigDecimal differenceValue;
+    private String reason;
+}

@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ProductVariantValidator {
 
+    // REVIEW FLOW: kiểm tra tồn tại product/unit/variant -> validate format + unique SKU/Barcode/PLU -> chặn activate sai trạng thái product cha.
     private final ProductVariantRepository productVariantRepository;
     private final ProductRepository productRepository;
     private final UnitRepository unitRepository;

@@ -1,10 +1,10 @@
 package com.smalltrend.controller.inventory.purchaseorder;
 
 import com.smalltrend.dto.common.MessageResponse;
-import com.smalltrend.dto.inventory.purchaseorder.*;
+import com.smalltrend.dto.inventory.purchase.*;
 import com.smalltrend.dto.inventory.dashboard.*;
-import com.smalltrend.controller.inventory.PurchaseOrderController;
-import com.smalltrend.service.inventory.PurchaseOrderService;
+import com.smalltrend.controller.inventory.purchase.PurchaseOrderController;
+import com.smalltrend.service.inventory.purchase.PurchaseOrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -230,6 +230,18 @@ class PurchaseOrderControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(expected, response.getBody());
         verify(purchaseOrderService).requestSupplierSupplement(1, null);
+    }
+
+    @Test
+    void rejectShortage_shouldPassReasonWhenPayloadProvided() {
+        PurchaseOrderResponse expected = new PurchaseOrderResponse();
+        when(purchaseOrderService.rejectShortage(1, "Từ chối nhập hàng thiếu")).thenReturn(expected);
+
+        ResponseEntity<PurchaseOrderResponse> response = controller.rejectShortage(1, Map.of("rejectionReason", "Từ chối nhập hàng thiếu"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expected, response.getBody());
+        verify(purchaseOrderService).rejectShortage(1, "Từ chối nhập hàng thiếu");
     }
 
     @Test

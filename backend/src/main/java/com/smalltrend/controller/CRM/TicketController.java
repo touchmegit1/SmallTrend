@@ -26,21 +26,21 @@ public class TicketController {
     private final UserRepository userRepository;
 
     @GetMapping("/tickets")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ROLE_ADMIN','MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<List<TicketResponse>> getAllTickets() {
         List<TicketResponse> tickets = ticketService.getAllTickets();
         return ResponseEntity.ok(tickets);
     }
 
     @GetMapping("/tickets/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ROLE_ADMIN','MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<TicketResponse> getTicketById(@PathVariable("id") Long id) {
         TicketResponse ticket = ticketService.getTicketById(id);
         return ResponseEntity.ok(ticket);
     }
 
     @PostMapping("/tickets")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ROLE_ADMIN','MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<?> createTicket(@RequestBody CreateTicketRequest request) {
         try {
             TicketResponse ticket = ticketService.createTicket(request);
@@ -53,7 +53,7 @@ public class TicketController {
     }
 
     @PutMapping("/tickets/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ROLE_ADMIN','MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','INVENTORY_STAFF','ROLE_INVENTORY_STAFF','SALES_STAFF','ROLE_SALES_STAFF')")
     public ResponseEntity<TicketResponse> updateTicket(
             @PathVariable("id") Long id,
             @RequestBody UpdateTicketRequest request) {
@@ -88,8 +88,8 @@ public class TicketController {
     }
 
     /**
-     * Lookup product variant by SKU — for refund restock.
-     * Delegates to service to keep transaction open for lazy-loaded collections.
+     * Lookup product variant by SKU — for refund restock. Delegates to service
+     * to keep transaction open for lazy-loaded collections.
      */
     @GetMapping("/tickets/lookup/variant-by-sku")
     @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'MANAGER', 'SALES_STAFF')")

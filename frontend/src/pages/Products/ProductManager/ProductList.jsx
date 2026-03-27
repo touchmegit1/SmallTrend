@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
-import Button from "../ProductComponents/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ProductComponents/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ProductComponents/table";
-import { Badge } from "../ProductComponents/badge";
+import Button from "../../../components/product/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/product/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/product/table";
+import { Badge } from "../../../components/product/badge";
 import { Plus, Edit, Package, Eye, CheckCircle, Power, Trash2, AlertTriangle, X, Filter, Layers, Tag, Box, Puzzle, Loader2, Search } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import EditProductModal from "./EditProductModal";
@@ -29,6 +29,21 @@ export function ProductListScreen() {
   const location = useLocation();
   const { user } = useAuth();
   const canEditProducts = canManageProducts(user);
+
+  // Chuẩn hoá domain backend để khi ảnh chỉ là path tương đối
+  // thì vẫn render đúng trên giao diện.
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api';
+
+  // Hàm dùng chung: đổi imageUrl thành URL đầy đủ để hiển thị ảnh sản phẩm.
+  const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, '');
+  const resolveProductImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('blob:')) {
+      return imageUrl;
+    }
+    return `${apiOrigin}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+  };
+
 
   // --- STATE QUẢN LÝ FILTER PHÂN CẤP ---
   const [filterCategory, setFilterCategory] = useState(null);
@@ -61,10 +76,6 @@ export function ProductListScreen() {
   const { brands } = useFetchBrands();
   const { taxRates } = useFetchTaxRates();
 
-  // Debug: Check if categories are loaded
-  useEffect(() => {
-    console.log('Categories loaded:', categories);
-  }, [categories]);
 
   // --- CÁC HÀM TIỆN ÍCH (HELPER) ---
   const getCategoryName = (categoryId) => {
@@ -145,7 +156,6 @@ export function ProductListScreen() {
 
   // --- CASCADE RESET HANDLERS ---
   const handleCategoryChange = (val) => {
-    console.log('handleCategoryChange called with:', val);
     setFilterCategory(val);
     setFilterBrand(null);
     setFilterProduct(null);
@@ -166,8 +176,6 @@ export function ProductListScreen() {
   };
 
   const handleVariantChange = (val) => {
-    console.log('handleVariantChange called with:', val);
-    console.log('variantsData:', variantsData);
     setFilterVariant(val);
   };
 
@@ -323,13 +331,10 @@ export function ProductListScreen() {
 
   // --- DROPDOWN OPTIONS ---
   const categoryOptions = useMemo(() => {
-    console.log('Creating categoryOptions, categories:', categories);
     const options = [
       { value: null, label: 'Tất cả danh mục' },
       ...(categories || []).map((c) => ({ value: String(c.id), label: c.name })),
     ];
-    console.log('CategoryOptions created:', options);
-    console.log('Current filterCategory:', filterCategory);
     return options;
   }, [categories, filterCategory]);
 
@@ -768,7 +773,7 @@ export function ProductListScreen() {
                         <div className="flex items-center gap-2">
                           {v.image_url ? (
                             <img
-                              src={v.image_url.startsWith('http') ? v.image_url : `http://localhost:8081${v.image_url.startsWith('/') ? '' : '/'}${v.image_url}`}
+                              src={resolveProductImageUrl(v.image_url)}
                               alt={v.name}
                               className="w-9 h-9 rounded-lg object-cover shadow-sm border border-gray-100"
                             />
@@ -875,7 +880,7 @@ export function ProductListScreen() {
                         <div className="flex items-center gap-2">
                           {product.image_url ? (
                             <img
-                              src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8081${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`}
+                              src={resolveProductImageUrl(product.image_url)}
                               alt={product.name}
                               className="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100 bg-white"
                             />

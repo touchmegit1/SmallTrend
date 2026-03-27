@@ -12,20 +12,19 @@ import {
     Save,
     Search,
     Trash2,
+    X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
 import api from "../../../config/axiosConfig";
-import Button from "../ProductComponents/button";
-import { Input } from "../ProductComponents/input";
-import PriceTable from "../ProductComponents/PriceTable";
+import Button from "../../../components/product/button";
+import { Input } from "../../../components/product/input";
+import PriceTable from "../../../components/product/PriceTable";
 import CreatePriceModal from "./CreatePriceModal";
 import PriceHistoryModal from "./PriceHistoryModal";
 import TaxRateManagerModal from "./TaxRateManagerModal";
-import BulkUpdatePanel from "../ProductComponents/BulkUpdatePanel";
 import { useAuth } from "../../../context/AuthContext";
 import { canManageProducts } from "../../../utils/roleUtils";
-import { calculateProfit, calculateTaxInclusivePrice } from "../../../utils/priceCalculation";
+import { calculateProfit } from "../../../utils/priceCalculation";
 
 /**
  * Thiết lập Giá sản phẩm — phiên bản đơn giản.
@@ -79,6 +78,22 @@ const PriceSetting = () => {
     const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [historyHydrated, setHistoryHydrated] = useState(false);
+    const [nearExpiryAlerts, setNearExpiryAlerts] = useState([]);
+    const [showAllNearExpiry, setShowAllNearExpiry] = useState(false);
+    const [focusedVariantId, setFocusedVariantId] = useState(null);
+
+    const handleNearExpiryClick = useCallback((alert) => {
+        if (!alert?.variantId) return;
+
+        const targetVariant = variants.find((v) => v.id === alert.variantId);
+        if (!targetVariant) return;
+
+        setCategoryFilter("");
+        setSearchTerm(targetVariant.sku || targetVariant.name || "");
+        setSelectedIds([targetVariant.id]);
+        setFocusedVariantId(targetVariant.id);
+    }, [variants]);
+
 
     useEffect(() => {
         try {
@@ -189,11 +204,6 @@ const PriceSetting = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
-    // ─── Edit ────────────────────────────────
-    const [editingId, setEditingId] = useState(null);
-    const [editPrice, setEditPrice] = useState("");
-    const [savingId, setSavingId] = useState(null);
-
     // ─── Selection ───────────────────────────
     const [selectedIds, setSelectedIds] = useState([]);
 
@@ -242,60 +252,20 @@ const PriceSetting = () => {
         };
     }, [consumePriceSyncNotice]);
 
-    const toDateOnly = (dateStr) => {
-        if (!dateStr) return null;
-        const normalized = String(dateStr).length === 10 ? `${dateStr}T00:00:00` : dateStr;
-        const d = new Date(normalized);
-        if (Number.isNaN(d.getTime())) return null;
-        d.setHours(0, 0, 0, 0);
-        return d;
-    };
-
-    const isExpiryReached = (dateStr) => {
-        const expiryDate = toDateOnly(dateStr);
-        if (!expiryDate) return false;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return expiryDate <= today;
-    };
-
     const fetchVariants = async () => {
         setLoading(true);
         setErrorMsg("");
         try {
-            const res = await api.get("/products/variants");
-            const variantsData = res.data || [];
+            const variantsRes = await api.get("/products/variants");
+            const variantsData = variantsRes.data || [];
+            setVariants(variantsData);
 
-            // Nếu giá ACTIVE của variant đã tới hạn, tự chuyển về INACTIVE trước khi render bảng.
-            const expiredActiveVariants = variantsData.filter(
-                (v) => v.activeExpiryDate && isExpiryReached(v.activeExpiryDate)
-            );
-
-            if (expiredActiveVariants.length > 0) {
-                await Promise.all(
-                    expiredActiveVariants.map(async (v) => {
-                        try {
-                            const activePriceRes = await api.get(`/products/variants/${v.id}/prices/active`);
-                            const activePrice = activePriceRes?.data;
-
-                            if (
-                                activePrice?.id &&
-                                activePrice?.status === "ACTIVE" &&
-                                activePrice?.expiryDate &&
-                                isExpiryReached(activePrice.expiryDate)
-                            ) {
-                                await api.put(`/products/prices/${activePrice.id}/toggle-status`);
-                            }
-                        } catch (toggleErr) {
-                            console.error(`Error auto-deactivating expired price for variant ${v.id}:`, toggleErr);
-                        }
-                    })
-                );
-
-                const refreshedRes = await api.get("/products/variants");
-                setVariants(refreshedRes.data || []);
-            } else {
-                setVariants(variantsData);
+            try {
+                const alertsRes = await api.get("/products/price-expiry-alerts", { params: { days: 7 } });
+                setNearExpiryAlerts(Array.isArray(alertsRes.data) ? alertsRes.data : []);
+            } catch (alertsErr) {
+                console.error("Error fetching near expiry alerts:", alertsErr);
+                setNearExpiryAlerts([]);
             }
         } catch (err) {
             console.error("Error fetching variants:", err);
@@ -400,6 +370,45 @@ const PriceSetting = () => {
 
     useEffect(() => { setCurrentPage(1); }, [searchTerm, categoryFilter, itemsPerPage]);
 
+    useEffect(() => {
+        if (!focusedVariantId) return;
+        const targetIndex = processedVariants.findIndex((v) => v.id === focusedVariantId);
+        if (targetIndex >= 0) {
+            const nextPage = Math.floor(targetIndex / itemsPerPage) + 1;
+            setCurrentPage(nextPage);
+        }
+    }, [focusedVariantId, processedVariants, itemsPerPage]);
+
+    useEffect(() => {
+        if (!focusedVariantId) return;
+        const timer = setTimeout(() => setFocusedVariantId(null), 3000);
+        return () => clearTimeout(timer);
+    }, [focusedVariantId]);
+
+    useEffect(() => {
+        if (!focusedVariantId) return;
+        const rowEl = document.getElementById(`variant-row-${focusedVariantId}`);
+        rowEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, [focusedVariantId, paginatedVariants]);
+
+    useEffect(() => {
+        if (focusedVariantId && !processedVariants.some((v) => v.id === focusedVariantId)) {
+            setFocusedVariantId(null);
+        }
+    }, [focusedVariantId, processedVariants]);
+
+    useEffect(() => {
+        if (nearExpiryAlerts.length === 0) {
+            setFocusedVariantId(null);
+        }
+    }, [nearExpiryAlerts]);
+
+    useEffect(() => {
+        if (!focusedVariantId) return;
+        setSelectedIds((prev) => (prev.includes(focusedVariantId) ? prev : [focusedVariantId]));
+    }, [focusedVariantId]);
+
+
     // ═══════════════════════════════════════════
     // SORT
     // ═══════════════════════════════════════════
@@ -462,173 +471,6 @@ const PriceSetting = () => {
         );
     }, [paginatedVariants]);
 
-    // ═══════════════════════════════════════════
-    // BULK: Increase by %
-    // ═══════════════════════════════════════════
-    const handleBulkIncrease = async (percent) => {
-        const toUpdate = variants.filter((v) => selectedIds.includes(v.id));
-        if (toUpdate.length === 0) return;
-
-        setErrorMsg("");
-        let ok = 0, fail = 0, invalid = 0;
-
-        for (const v of toUpdate) {
-            const costPrice = Number(v.costPrice) || 0;
-            const taxPercent = Number(v.activeTaxPercent) || Number(v.taxRate) || 0;
-            const currentFinal = Number(v.activeSellingPrice) || Number(v.sellPrice) || 0;
-            const explicitBase = Number(v.activeBaseSellingPrice);
-            const currentBase = Number.isFinite(explicitBase) && explicitBase > 0
-                ? explicitBase
-                : (taxPercent >= 0 ? currentFinal / (1 + taxPercent / 100) : currentFinal);
-
-            const increasedBase = Number((currentBase * (1 + percent / 100)).toFixed(2));
-            if (increasedBase <= 0 || increasedBase < costPrice) {
-                invalid++;
-                continue;
-            }
-
-            const finalData = calculateTaxInclusivePrice(increasedBase, taxPercent, 100);
-
-            try {
-                await api.post(`/products/variants/${v.id}/prices`, {
-                    purchasePrice: costPrice,
-                    baseSellingPrice: increasedBase,
-                    taxPercent,
-                    effectiveDate: new Date().toISOString().split("T")[0],
-                    expiryDate: null,
-                });
-
-                setVariants((prev) => prev.map((pv) => (
-                    pv.id === v.id
-                        ? {
-                            ...pv,
-                            activeBaseSellingPrice: increasedBase,
-                            activeSellingPrice: Number(finalData.sellingPrice) || 0,
-                            activeTaxPercent: taxPercent,
-                            activeEffectiveDate: new Date().toISOString().split("T")[0],
-                            activeExpiryDate: null,
-                        }
-                        : pv
-                )));
-                ok++;
-            } catch {
-                fail++;
-            }
-        }
-
-        if (fail > 0 || invalid > 0) {
-            const invalidMsg = invalid > 0 ? `, ${invalid} bỏ qua vì giá trước VAT không hợp lệ hoặc thấp hơn giá nhập` : "";
-            setErrorMsg(`Cập nhật: ${ok} thành công, ${fail} thất bại${invalidMsg}.`);
-        } else {
-            setSuccessMsg(`Đã tăng giá ${ok} sản phẩm thành công!`);
-            setTimeout(() => setSuccessMsg(""), 4000);
-        }
-        setSelectedIds([]);
-    };
-
-    // ═══════════════════════════════════════════
-    // BULK: Import Excel
-    // ═══════════════════════════════════════════
-    const handleImportExcel = (file) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const wb = XLSX.read(e.target.result, { type: "binary" });
-                const ws = wb.Sheets[wb.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(ws);
-
-                let updated = 0;
-                let invalid = 0;
-                let failed = 0;
-                const updatesById = new Map();
-                const effectiveDate = new Date().toISOString().split("T")[0];
-
-                for (const row of rows) {
-                    const sku = String(row["SKU"] || row["sku"] || "").trim();
-                    if (!sku) continue;
-
-                    const variant = variants.find((v) => v.sku === sku);
-                    if (!variant) continue;
-
-                    const taxPercent = Number(variant.activeTaxPercent) || Number(variant.taxRate) || 0;
-                    const costPrice = Number(variant.costPrice) || 0;
-
-                    const baseFromFile = parseFloat(
-                        row["Base Selling Price"]
-                        || row["baseSellingPrice"]
-                        || row["Giá trước VAT"]
-                        || row["Giá bán trước VAT"]
-                        || Number.NaN
-                    );
-
-                    const finalFromFile = parseFloat(
-                        row["Selling Price"]
-                        || row["sellPrice"]
-                        || row["Giá bán"]
-                        || Number.NaN
-                    );
-
-                    const computedBase = !Number.isNaN(baseFromFile)
-                        ? baseFromFile
-                        : (!Number.isNaN(finalFromFile) && taxPercent >= 0
-                            ? finalFromFile / (1 + taxPercent / 100)
-                            : Number.NaN);
-
-                    const baseSellingPrice = Number(computedBase);
-
-                    if (!Number.isFinite(baseSellingPrice) || baseSellingPrice <= 0 || baseSellingPrice < costPrice) {
-                        invalid++;
-                        continue;
-                    }
-
-                    try {
-                        const finalData = calculateTaxInclusivePrice(baseSellingPrice, taxPercent, 100);
-
-                        await api.post(`/products/variants/${variant.id}/prices`, {
-                            purchasePrice: costPrice,
-                            baseSellingPrice,
-                            taxPercent,
-                            effectiveDate,
-                            expiryDate: null,
-                        });
-
-                        updatesById.set(variant.id, {
-                            activeBaseSellingPrice: baseSellingPrice,
-                            activeSellingPrice: Number(finalData.sellingPrice) || 0,
-                            activeTaxPercent: taxPercent,
-                            activeEffectiveDate: effectiveDate,
-                            activeExpiryDate: null,
-                        });
-                        updated++;
-                    } catch {
-                        failed++;
-                    }
-                }
-
-                if (updatesById.size > 0) {
-                    setVariants((prev) => prev.map((v) => {
-                        const update = updatesById.get(v.id);
-                        return update ? { ...v, ...update } : v;
-                    }));
-                }
-
-                if (invalid > 0 || failed > 0) {
-                    const invalidMsg = invalid > 0
-                        ? `, ${invalid} dòng bỏ qua do giá trước VAT không hợp lệ hoặc thấp hơn giá nhập`
-                        : "";
-                    const failedMsg = failed > 0 ? `, ${failed} dòng cập nhật thất bại` : "";
-                    setErrorMsg(`Import hoàn tất: ${updated} dòng thành công${invalidMsg}${failedMsg}.`);
-                } else {
-                    setSuccessMsg(`Import thành công! Đã cập nhật ${updated} sản phẩm.`);
-                    setTimeout(() => setSuccessMsg(""), 5000);
-                }
-            } catch (err) {
-                console.error("Excel import error:", err);
-                setErrorMsg("Không thể đọc file Excel. Vui lòng kiểm tra định dạng.");
-            }
-        };
-        reader.readAsBinaryString(file);
-    };
 
     // ═══════════════════════════════════════════
     // RENDER
@@ -754,8 +596,18 @@ const PriceSetting = () => {
                                     placeholder="Tìm theo tên, SKU, thương hiệu..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10 h-11 w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
+                                    className="pl-10 pr-10 h-11 w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
                                 />
+                                {searchTerm && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchTerm("")}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        aria-label="Xóa từ khóa tìm kiếm"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
 
                             <Button
@@ -817,14 +669,62 @@ const PriceSetting = () => {
                     </div>
                 )}
 
-                {/* ─── BULK UPDATE ─── */}
-                {canEditProducts && (
-                    <BulkUpdatePanel
-                        selectedCount={selectedIds.length}
-                        onIncreaseByPercent={handleBulkIncrease}
-                        onImportExcel={handleImportExcel}
-                    />
-                )}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h3 className="text-sm font-semibold text-amber-800">Giá sắp hết hiệu lực trong 7 ngày</h3>
+                                {nearExpiryAlerts.length > 0 && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800">
+                                            {nearExpiryAlerts.length} sản phẩm
+                                        </span>
+                                        {nearExpiryAlerts.length > 3 && (
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setShowAllNearExpiry((prev) => !prev)}
+                                                className="h-7 px-2 text-xs border-amber-300 text-amber-800 hover:bg-amber-100"
+                                            >
+                                                {showAllNearExpiry ? "Thu gọn" : `Xem thêm ${nearExpiryAlerts.length - 3}`}
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {nearExpiryAlerts.length === 0 ? (
+                                <p className="text-sm text-amber-700 mt-1">Không có sản phẩm nào sắp hết hiệu lực giá trong 7 ngày tới.</p>
+                            ) : (
+                                <div className="mt-3 rounded-lg border border-amber-200 bg-white overflow-hidden">
+                                    <div className="max-h-44 overflow-auto divide-y divide-amber-100">
+                                        {(showAllNearExpiry ? nearExpiryAlerts : nearExpiryAlerts.slice(0, 3)).map((alert) => (
+                                            <button
+                                                key={`${alert.variantPriceId}-${alert.variantId}`}
+                                                type="button"
+                                                onClick={() => handleNearExpiryClick(alert)}
+                                                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-amber-50 transition-colors"
+                                            >
+                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                                    <div className="font-medium text-gray-900 truncate">{alert.variantName || "N/A"}</div>
+                                                    <div className="text-xs text-amber-700">
+                                                        {Number.isFinite(Number(alert.daysUntilExpiry))
+                                                            ? `Còn ${Number(alert.daysUntilExpiry)} ngày`
+                                                            : ""}
+                                                    </div>
+                                                </div>
+                                                <div className="text-xs text-gray-500 truncate">SKU: {alert.sku || "-"}</div>
+                                                <div className="text-xs text-gray-600">
+                                                    Hết hiệu lực: {alert.expiryDate ? new Date(alert.expiryDate).toLocaleDateString("vi-VN") : "Chưa có"}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
 
                 {/* ─── TABLE ─── */}
                 <PriceTable
@@ -840,6 +740,7 @@ const PriceSetting = () => {
                     onViewHistory={(v) => setHistoryVariant(v)}
                     onEffectiveDateChange={canEditProducts ? handleEffectiveDateChange : undefined}
                     onExpiryDateChange={canEditProducts ? handleExpiryDateChange : undefined}
+                    focusedVariantId={focusedVariantId}
                 />
 
                 {/* ─── PAGINATION ─── */}

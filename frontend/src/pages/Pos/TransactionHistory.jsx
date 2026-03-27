@@ -390,8 +390,29 @@ function TransactionHistory() {
     items.forEach((item, i) => { refundAmount += (refundQtys[i] || 0) * (item.price || 0); });
 
     const oldTotal = parseInt((refundModal.total || '').toString().replace(/[^0-9]/g, '')) || 0;
+    const pointsDiscount = Number(refundModal.pointsDiscount || 0);
+    const noCashCollectedByPoints = oldTotal === 0 && pointsDiscount > 0;
+
+    const customerPaidAmount = Number(refundModal.customerMoney || 0);
+    const alreadyRefundedAmount = Number(refundModal.refundedAmount || 0);
+    const remainingRefundableAmount = Math.max(0, customerPaidAmount - alreadyRefundedAmount);
+
+    if (noCashCollectedByPoints) {
+      refundAmount = 0;
+    } else {
+      refundAmount = Math.min(refundAmount, remainingRefundableAmount);
+    }
+
     const newTotal = Math.max(0, oldTotal - refundAmount);
-    const totalRefundedAmount = Number(refundModal.refundedAmount || 0) + refundAmount;
+    const totalRefundedAmount = alreadyRefundedAmount + refundAmount;
+
+    const refundNoteMessage = noCashCollectedByPoints
+      ? `Hoàn trả 0đ (đơn đã dùng điểm về 0đ) lúc ${new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}`
+      : `Hoàn trả ${refundAmount.toLocaleString()}đ lúc ${new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+
+    const refundSuccessMessage = noCashCollectedByPoints
+      ? 'Đã hoàn trả hàng thành công (đơn 0đ do dùng điểm nên không hoàn tiền)!'
+      : 'Đã hoàn trả thành công!';
 
     const updatedTransaction = {
       ...refundModal,
@@ -401,7 +422,7 @@ function TransactionHistory() {
       quantity: `${newItems.reduce((s, it) => s + (it.qty || it.quantity || 1), 0)} món`,
       status: newItems.length === 0 ? 'Đã hoàn trả' : 'Hoàn thành',
       refundedAmount: totalRefundedAmount,
-      refundNote: `Hoàn trả ${refundAmount.toLocaleString()}đ lúc ${new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}`,
+      refundNote: refundNoteMessage,
     };
 
     const updatedTransactions = transactions.map(t => t.id === refundModal.id ? updatedTransaction : t);
@@ -409,7 +430,7 @@ function TransactionHistory() {
     localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
     setSelectedTransaction(prev => (prev?.id === updatedTransaction.id ? updatedTransaction : prev));
     setRefundModal(null);
-    showNotificationModal('Đã hoàn trả thành công!');
+    showNotificationModal(refundSuccessMessage);
   };
 
   const saveCustomerInfo = () => {
@@ -653,6 +674,7 @@ function TransactionHistory() {
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="Hoàn thành">Hoàn thành</option>
+            <option value="Đã hoàn trả">Đã hoàn trả</option>
             <option value="Chờ thanh toán">Chờ thanh toán (Đơn treo)</option>
           </select>
 
@@ -1324,15 +1346,20 @@ function TransactionHistory() {
             {/* Tóm tắt số tiền hoàn trả */}
             {(() => {
               const items = refundModal.cart || refundModal.items || [];
-              const amt = items.reduce((s, item, i) => s + (refundQtys[i] || 0) * (item.price || 0), 0);
-              return amt > 0 ? (
+              const rawRefundAmount = items.reduce((s, item, i) => s + (refundQtys[i] || 0) * (item.price || 0), 0);
+              const customerPaidAmount = Number(refundModal.customerMoney || 0);
+              const alreadyRefundedAmount = Number(refundModal.refundedAmount || 0);
+              const remainingRefundableAmount = Math.max(0, customerPaidAmount - alreadyRefundedAmount);
+              const previewRefundAmount = Math.min(rawRefundAmount, remainingRefundableAmount);
+
+              return previewRefundAmount > 0 ? (
                 <div style={{
                   padding: "10px 14px", marginBottom: "16px",
                   background: "#fff3cd", borderRadius: "8px", border: "1px solid #ffc107",
                   fontSize: "14px", display: "flex", justifyContent: "space-between"
                 }}>
                   <span>Số tiền cần hoàn lại cho khách:</span>
-                  <strong style={{ color: "#e67e22" }}>{amt.toLocaleString()}đ</strong>
+                  <strong style={{ color: "#e67e22" }}>{previewRefundAmount.toLocaleString()}đ</strong>
                 </div>
               ) : null;
             })()}

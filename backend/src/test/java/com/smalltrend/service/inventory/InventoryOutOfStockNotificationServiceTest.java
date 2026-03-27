@@ -4,6 +4,7 @@ import com.smalltrend.entity.*;
 import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductBatchRepository;
 import com.smalltrend.repository.UserRepository;
+import com.smalltrend.service.inventory.shared.InventoryOutOfStockNotificationService;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;

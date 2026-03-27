@@ -16,6 +16,7 @@ import java.util.Set;
 @Component
 public class ProductComboValidator {
 
+    // REVIEW FLOW: validate tên/giá/items combo -> chặn trùng variant trong cùng combo -> kiểm tra unique tên và mã combo trước khi lưu.
     private final ProductComboRepository productComboRepository;
     private final ProductVariantRepository productVariantRepository;
 

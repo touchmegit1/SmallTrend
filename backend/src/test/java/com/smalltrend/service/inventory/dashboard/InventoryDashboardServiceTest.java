@@ -2,7 +2,7 @@ package com.smalltrend.service.inventory.dashboard;
 
 import com.smalltrend.dto.inventory.dashboard.*;
 import com.smalltrend.entity.*;
-import com.smalltrend.service.inventory.InventoryDashboardService;
+import com.smalltrend.service.inventory.dashboard.InventoryDashboardService;
 import com.smalltrend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

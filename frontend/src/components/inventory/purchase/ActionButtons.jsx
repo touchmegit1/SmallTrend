@@ -25,6 +25,8 @@ export default function ActionButtons({
   onReceiveGoods,
   onCloseShortage,
   onRequestSupplement,
+  onRejectShortage,
+  forceViewOnly = false,
   layout = "panel",
   footerHint = "",
 }) {
@@ -36,9 +38,9 @@ export default function ActionButtons({
   const isInventoryStaff = ["INVENTORY_STAFF", "ROLE_INVENTORY_STAFF"].includes(
     userRole,
   );
-  const canCheckAndReceive = isAdmin || isInventoryStaff;
-  const canStartChecking = isInventoryStaff;
-  const canCreatePurchaseRequest = isAdmin || isInventoryStaff;
+  const canCheckAndReceive = !forceViewOnly && (isAdmin || isInventoryStaff);
+  const canStartChecking = !forceViewOnly && isInventoryStaff;
+  const canCreatePurchaseRequest = !forceViewOnly && (isAdmin || isInventoryStaff);
 
   const isDraft = status === PO_STATUS.DRAFT || status === PO_STATUS.REJECTED;
   const isPending = status === PO_STATUS.PENDING;
@@ -144,6 +146,14 @@ export default function ActionButtons({
     if (isManagerActionableShortage) {
       return (
         <>
+          <button
+            onClick={onRejectShortage}
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            <Eye size={16} />
+            Từ chối nhập hàng
+          </button>
           <button
             onClick={onRequestSupplement}
             disabled={saving}

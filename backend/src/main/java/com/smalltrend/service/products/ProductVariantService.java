@@ -12,8 +12,8 @@ import com.smalltrend.entity.Product;
 import com.smalltrend.entity.Unit;
 import com.smalltrend.entity.ProductBatch;
 import com.smalltrend.entity.InventoryStock;
-import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.dto.products.CreateVariantRequest;
+import com.smalltrend.dto.products.ProductVariantRespone;
 import com.smalltrend.dto.products.UnitConversionResponse;
 import com.smalltrend.entity.UnitConversion;
 import com.smalltrend.validation.product.ProductVariantValidator;
@@ -39,6 +39,7 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class ProductVariantService {
 
+    // REVIEW FLOW: validate product/unit/SKU/barcode -> tạo/cập nhật variant -> đồng bộ batch, conversion, stock và dữ liệu giá liên quan.
     private final ProductVariantRepository productVariantRepository;
     private final UnitRepository unitRepository;
     private final InventoryStockRepository inventoryStockRepository;
@@ -87,6 +88,7 @@ public class ProductVariantService {
      * Tạo mới một variant cho product. Thực hiện đầy đủ validate nghiệp vụ
      * trước khi lưu.
      */
+    // REVIEW FLOW (CREATE): validate product/unit + rule SKU/Barcode/PLU -> dựng entity variant -> lưu variant -> (nếu có) tạo batch giá vốn ban đầu.
     public ProductVariantRespone createVariant(Integer productId, CreateVariantRequest request) {
         Product product = productVariantValidator.requireExistingProduct(productId);
         Unit unit = productVariantValidator.requireExistingUnit(request.getUnitId());
@@ -132,6 +134,7 @@ public class ProductVariantService {
      * Cập nhật thông tin variant hiện có. Nếu có costPrice thì cập nhật batch
      * mới nhất hoặc tạo batch mới khi chưa có dữ liệu batch.
      */
+    // REVIEW FLOW (UPDATE): tìm variant hiện tại -> validate unique/format -> cập nhật trường thay đổi -> đồng bộ costPrice vào batch gần nhất.
     public ProductVariantRespone updateVariant(Integer variantId, CreateVariantRequest request) {
         ProductVariant variant = productVariantValidator.requireExistingVariant(variantId);
         Unit unit = productVariantValidator.requireExistingUnit(request.getUnitId());

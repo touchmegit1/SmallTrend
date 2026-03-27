@@ -4,19 +4,20 @@ import com.smalltrend.dto.inventory.dashboard.PriceExpiryAlertResponse;
 import com.smalltrend.dto.products.CreateProductRequest;
 import com.smalltrend.dto.products.CreateVariantRequest;
 import com.smalltrend.dto.products.ProductResponse;
+import com.smalltrend.dto.products.ProductVariantRespone;
 import com.smalltrend.dto.products.UnitConversionRequest;
 import com.smalltrend.dto.products.UnitConversionResponse;
 import com.smalltrend.dto.products.UnitRequest;
 import com.smalltrend.dto.products.UnitResponse;
 import com.smalltrend.dto.products.VariantPriceRequest;
 import com.smalltrend.dto.products.VariantPriceResponse;
-import com.smalltrend.dto.pos.ProductVariantRespone;
 import com.smalltrend.service.products.PriceExpiryAlertEmailScheduler;
 import com.smalltrend.service.products.ProductService;
 import com.smalltrend.service.products.ProductVariantService;
-import com.smalltrend.service.UnitConversionService;
-import com.smalltrend.service.UnitService;
-import com.smalltrend.service.VariantPriceService;
+import com.smalltrend.service.products.UnitConversionService;
+import com.smalltrend.service.products.UnitService;
+import com.smalltrend.service.products.VariantPriceService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductController {
 
+    // REVIEW FLOW: Controller nhận request -> phân quyền @PreAuthorize -> chuyển cho service xử lý nghiệp vụ -> trả response cho frontend.
     private final ProductService productService;
     private final ProductVariantService productVariantService;
     private final UnitConversionService unitConversionService;
@@ -187,6 +189,7 @@ public class ProductController {
     }
 
     // ─── Variant Prices ──────────────────────────────────────────────────────
+    // REVIEW FLOW (PRICE): tạo/lấy/cập nhật giá theo variant -> service tự quản lý active/inactive + lịch sử hiệu lực giá.
     // Tạo giá mới cho variant (giá cũ chuyển INACTIVE)
     @PostMapping("/variants/{variantId}/prices")
     @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
@@ -241,11 +244,32 @@ public class ProductController {
         return ResponseEntity.ok(variantPriceService.updateActivePriceExpiry(variantId, newDate));
     }
 
+    // Cập nhật ngày hết hiệu lực cho một bản ghi giá theo priceId (cho phép null để bỏ hết hạn)
+    @PutMapping("/prices/{priceId}/expiry")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
+    public ResponseEntity<VariantPriceResponse> updatePriceExpiry(
+            @PathVariable("priceId") Integer priceId,
+            @RequestBody java.util.Map<String, String> request) {
+        String dateStr = request.get("expiryDate");
+        java.time.LocalDate newDate = (dateStr != null && !dateStr.isBlank())
+                ? java.time.LocalDate.parse(dateStr.split("T")[0])
+                : null;
+        return ResponseEntity.ok(variantPriceService.updatePriceExpiry(priceId, newDate));
+    }
+
     // Toggle trạng thái active/inactive của một bản ghi giá
     @PutMapping("/prices/{priceId}/toggle-status")
     @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<VariantPriceResponse> togglePriceStatus(@PathVariable("priceId") Integer priceId) {
         return ResponseEntity.ok(variantPriceService.togglePriceStatus(priceId));
+    }
+
+    // Xóa một bản ghi giá (chỉ cho phép khi không ACTIVE)
+    @DeleteMapping("/prices/{priceId}")
+    @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
+    public ResponseEntity<String> deletePrice(@PathVariable("priceId") Integer priceId) {
+        variantPriceService.deletePrice(priceId);
+        return ResponseEntity.ok("Đã xóa bản ghi giá");
     }
 
     // Lấy danh sách giá sắp hết hiệu lực theo số ngày cảnh báo
@@ -271,6 +295,7 @@ public class ProductController {
         ));
     }
 
+    // REVIEW FLOW (PRODUCT CRUD): tạo/cập nhật/toggle/xoá product sẽ gọi ProductService, nơi enforce rule validate + propagate trạng thái xuống variants.
     @PostMapping
     @PreAuthorize("hasAnyAuthority('MANAGER','ROLE_MANAGER')")
     public ResponseEntity<ProductResponse> create(@RequestBody CreateProductRequest request) {

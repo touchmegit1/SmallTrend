@@ -1,8 +1,9 @@
 package com.smalltrend.controller.inventory.purchaseorder;
 
-import com.smalltrend.controller.inventory.SupplierController;
+import com.smalltrend.controller.inventory.purchase.SupplierController;
 import com.smalltrend.dto.supplier.SupplierDTO;
-import com.smalltrend.service.SupplierService;
+import com.smalltrend.service.products.SupplierService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
