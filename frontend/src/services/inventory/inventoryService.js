@@ -1,8 +1,6 @@
 const SPRING_API =
   import.meta.env.VITE_INVENTORY_API_BASE_URL || "http://localhost:8081/api/inventory";
 
-const JSON_API = import.meta.env.VITE_JSON_API_BASE_URL || "http://localhost:3001";
-
 // ─── Helper: get auth token ──────────────────────────────
 function getAuthHeaders() {
   const token = localStorage.getItem("token");
@@ -37,16 +35,12 @@ export const getPurchaseOrders = async () => {
     supplier_id: order.supplierId || order.supplier_id,
     supplier_name: order.supplierName || order.supplier_name,
     contract_id: order.contractId || order.contract_id,
-    contract_number: order.contractNumber || order.contract_number,
-    contract_title: order.contractTitle || order.contract_title,
     location_id: order.locationId || order.location_id,
     total_amount: order.totalAmount ?? order.total_amount,
     created_at: order.createdAt || order.created_at,
-    confirmed_at: order.confirmedAt || order.confirmed_at,
     tax_percent: order.taxPercent ?? order.tax_percent,
     shipping_fee: order.shippingFee ?? order.shipping_fee,
     paid_amount: order.paidAmount ?? order.paid_amount,
-    remaining_amount: order.remainingAmount ?? order.remaining_amount,
     tax_amount: order.taxAmount ?? order.tax_amount,
     shortage_reason: order.shortageReason || order.shortage_reason,
     manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
@@ -69,16 +63,12 @@ export const getPurchaseOrderById = async (id) => {
     supplier_id: order.supplierId || order.supplier_id,
     supplier_name: order.supplierName || order.supplier_name,
     contract_id: order.contractId || order.contract_id,
-    contract_number: order.contractNumber || order.contract_number,
-    contract_title: order.contractTitle || order.contract_title,
     location_id: order.locationId || order.location_id,
     total_amount: order.totalAmount ?? order.total_amount,
     created_at: order.createdAt || order.created_at,
-    confirmed_at: order.confirmedAt || order.confirmed_at,
     tax_percent: order.taxPercent ?? order.tax_percent,
     shipping_fee: order.shippingFee ?? order.shipping_fee,
     paid_amount: order.paidAmount ?? order.paid_amount,
-    remaining_amount: order.remainingAmount ?? order.remaining_amount,
     tax_amount: order.taxAmount ?? order.tax_amount,
     shortage_reason: order.shortageReason || order.shortage_reason,
     manager_decision_note: order.managerDecisionNote || order.manager_decision_note,
@@ -108,38 +98,6 @@ export const createPurchaseOrder = async (orderData) => {
     const err = await response.json().catch(() => null);
     throw new Error(err?.message || "Failed to save draft");
   }
-  return response.json();
-};
-
-export const confirmPurchaseOrder = async (orderData) => {
-  const payload = mapOrderToBackend(orderData);
-  const response = await fetch(`${SPRING_API}/purchase-orders/confirm`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => null);
-    throw new Error(err?.message || "Failed to confirm order");
-  }
-  return response.json();
-};
-
-export const confirmExistingOrder = async (id) => {
-  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/confirm`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to confirm order");
-  return response.json();
-};
-
-export const cancelPurchaseOrder = async (id) => {
-  const response = await fetch(`${SPRING_API}/purchase-orders/${id}/cancel`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to cancel order");
   return response.json();
 };
 
@@ -223,14 +181,6 @@ function mapOrderToBackend(orderData) {
 }
 
 // ─── New: Contract & Goods Receipt APIs ──────────────────
-
-export const getContractsBySupplier = async (supplierId) => {
-  const response = await fetch(`${SPRING_API}/suppliers/${supplierId}/contracts`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to fetch contracts");
-  return response.json();
-};
 
 export const startCheckingOrder = async (id) => {
   const response = await fetch(`${SPRING_API}/purchase-orders/${id}/start-checking`, {
