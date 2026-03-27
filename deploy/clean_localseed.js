@@ -5,15 +5,15 @@ const outFile = 'deploy/fix_seed.sql';
 
 const data = fs.readFileSync(inFile, 'utf8');
 
-// The transactional or buggy tables to completely skip
-// This will clean out the old historical data that has incompatible schemas
+// Các bảng lỗi sẽ bị xóa khỏi output
 const skipTables = [
     'tickets', 'shift_handovers', 'shift_swap_requests', 'payroll_calculations',
     'disposal_vouchers', 'disposal_voucher_items', 'inventory_counts', 'inventory_count_items',
     'gift_redemption_history', 'loyalty_transactions', 'coupon_usage', 'audit_logs',
     'cash_transactions', 'sale_order_histories', 'purchase_order_items', 'purchase_orders',
     'sale_order_items', 'sale_orders', 'stock_movements', 'price_expiry_alert_logs',
-    'loyalty_gifts', 'product_combos', 'product_combo_items'
+    'loyalty_gifts', 'product_combos', 'product_combo_items', 'purchase_history',
+    'salary_configs', 'attendance', 'reports'
 ];
 
 const COLUMN_MAPS = {
@@ -36,21 +36,33 @@ const COLUMN_MAPS = {
 
 let lines = data.split('\n');
 let out = ["SET FOREIGN_KEY_CHECKS = 0;"];
+let isSkipping = false;
 
 for (let line of lines) {
-    let skip = false;
-
-    // Skip explicitly bad tables to ensure clean seed
-    for (let table of skipTables) {
-        if (line.includes(`INSERT INTO \`${table}\``)) {
-            skip = true;
-            break;
+    if (!isSkipping) {
+        let shouldSkip = false;
+        for (let table of skipTables) {
+            if (line.includes(`INSERT INTO \`${table}\``)) {
+                shouldSkip = true;
+                break;
+            }
         }
+
+        if (shouldSkip) {
+            isSkipping = true;
+            if (line.includes(';')) {
+                isSkipping = false;
+            }
+            continue;
+        }
+    } else {
+        // Đang trong mode skip nội dung statement đa dòng
+        if (line.includes(';')) {
+            isSkipping = false; // Kết thúc statement
+        }
+        continue;
     }
 
-    if (skip) continue;
-
-    // Apply mapping if it's one of our target tables
     let processedLine = line;
     for (const [table, cols] of Object.entries(COLUMN_MAPS)) {
         const re = new RegExp(`(INSERT INTO \`${table}\`)(?: \\\([^)]+\\\))? VALUES `, 'g');
