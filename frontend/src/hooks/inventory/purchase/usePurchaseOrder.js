@@ -89,7 +89,7 @@ const toReceiptItem = (item, orderStatus) => {
   const checkingQuantity = Number(
     item.checking_quantity ?? item.checkingQuantity ?? item.quantity ?? 0,
   );
-  const sourceUnitCost = Number(item.unit_price ?? item.unitCost ?? 0);
+  const sourceUnitCost = Number(item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0);
   const conversionFactor = Number(item.conversion_factor ?? item.conversionFactor ?? 1);
   const normalizedFactor = Number.isFinite(conversionFactor) && conversionFactor > 0
     ? conversionFactor
@@ -146,7 +146,7 @@ const buildReceiptPayloadItems = (receiptItems, items) => {
           0,
       }),
       unitCost: mapReceiptItemToBaseCost({
-        unitCost: ri.unitCost ?? item.unit_price ?? item.unitCost ?? 0,
+        unitCost: ri.unitCost ?? item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0,
       }),
       expiryDate: normalizeExpiryDate(
         ri.expiryDate ?? ri.expiry_date ?? item.expiry_date ?? item.expiryDate,
@@ -258,9 +258,6 @@ const updateItemField = (prevItems, key, field, value) => {
   });
 };
 
-const updateItemBatchesByKey = (prevItems, key, batches) =>
-  prevItems.map((item) => (item._key === key ? { ...item, batches } : item));
-
 const upsertReceiptItem = (prevReceiptItems, itemId, field, value) => {
   const exists = prevReceiptItems.some((ri) => ri.itemId === itemId);
   if (!exists) {
@@ -335,7 +332,6 @@ export function usePurchaseOrder(initialId = null) {
 
   const [order, setOrder] = useState(createDefaultOrder(""));
   const [items, setItems] = useState([]);
-  const [batchEditItem, setBatchEditItem] = useState(null);
   const [supplierQuery, setSupplierQuery] = useState("");
 
   // State cho kiểm kê (NV kho)
@@ -580,23 +576,6 @@ export function usePurchaseOrder(initialId = null) {
     setItems((prev) => updateItemField(prev, _key, field, value));
   }, []);
 
-  const openBatchEditor = useCallback((_key) => {
-    setBatchEditItem(_key);
-  }, []);
-
-  const closeBatchEditor = useCallback(() => {
-    setBatchEditItem(null);
-  }, []);
-
-  const updateItemBatches = useCallback((_key, batches) => {
-    setItems((prev) => updateItemBatchesByKey(prev, _key, batches));
-  }, []);
-
-  const batchEditData = useMemo(() => {
-    if (!batchEditItem) return null;
-    return items.find((i) => i._key === batchEditItem) || null;
-  }, [batchEditItem, items]);
-
   // ─── Cập nhật số lượng kiểm kê ────────────────────────────
   const updateReceiptItem = useCallback((itemId, field, value) => {
     setReceiptItems((prev) => upsertReceiptItem(prev, itemId, field, value));
@@ -622,7 +601,6 @@ export function usePurchaseOrder(initialId = null) {
           subtotal: financials.subtotal,
           tax_amount: financials.taxAmount,
           total_amount: financials.total,
-          remaining_amount: financials.remaining,
           items,
         };
 
@@ -679,7 +657,6 @@ export function usePurchaseOrder(initialId = null) {
           subtotal: financials.subtotal,
           tax_amount: financials.taxAmount,
           total_amount: financials.total,
-          remaining_amount: financials.remaining,
           items,
         };
 
@@ -1136,11 +1113,6 @@ export function usePurchaseOrder(initialId = null) {
     importProducts,
     removeItem,
     updateItem,
-    batchEditItem,
-    batchEditData,
-    openBatchEditor,
-    closeBatchEditor,
-    updateItemBatches,
     receiptItems,
     updateReceiptItem,
     saveDraft,
