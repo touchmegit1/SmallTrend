@@ -275,7 +275,7 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                   <div className="relative flex-1 rounded-2xl overflow-hidden group border border-gray-100 shadow-sm">
                     {/* Hỗ trợ String xử lý đường dẫn Image Config nếu là Link hệ thống Local từ BaseURL backend hay Link Full Http CDN */}
                     <img
-                      src={imagePreview.startsWith('blob:') || imagePreview.startsWith('http') ? imagePreview : `http://localhost:8081${imagePreview.startsWith('/') ? '' : '/'}${imagePreview}`}
+                      src={imagePreview.startsWith('blob:') || imagePreview.startsWith('http') ? imagePreview : `${import.meta.env.PROD ? "" : "http://localhost:8081"}${imagePreview.startsWith('/') ? '' : '/'}${imagePreview}`}
                       alt="Product Master Visual"
                       className="w-full h-full object-contain rounded-2xl bg-white"
                       style={{ minHeight: '280px' }}

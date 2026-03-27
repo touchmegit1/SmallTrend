@@ -55,7 +55,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
         variant.image_url
           ? variant.image_url.startsWith("http")
             ? variant.image_url
-            : `http://localhost:8081${variant.image_url.startsWith("/") ? "" : "/"}${variant.image_url}`
+            : `${import.meta.env.PROD ? "" : "http://localhost:8081"}${variant.image_url.startsWith("/") ? "" : "/"}${variant.image_url}`
           : null,
       );
       setErrorMsg("");
@@ -233,7 +233,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       if (imageFile) {
         imageUrl = await uploadImage();
         // Return full path without localhost URL to save on DB
-        if (imageUrl) imageUrl = imageUrl.replace("http://localhost:8081", "");
+        if (imageUrl) imageUrl = imageUrl.replace(import.meta.env.PROD ? "" : "http://localhost:8081", "");
       } else if (imagePreview) {
         // Keep the old image
         imageUrl = variant.image_url;

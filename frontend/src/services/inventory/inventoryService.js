@@ -1,5 +1,5 @@
 const SPRING_API =
-  import.meta.env.VITE_INVENTORY_API_BASE_URL || "http://localhost:8081/api/inventory";
+  import.meta.env.PROD ? "/api/inventory" : (import.meta.env.VITE_INVENTORY_API_BASE_URL || "http://localhost:8081/api/inventory");
 
 // ─── Helper: get auth token ──────────────────────────────
 function getAuthHeaders() {

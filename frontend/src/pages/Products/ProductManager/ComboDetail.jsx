@@ -138,7 +138,7 @@ const ComboDetail = () => {
               <div className="aspect-[4/3] bg-white rounded-lg flex items-center justify-center overflow-hidden">
                 {combo.imageUrl ? (
                   <img
-                    src={combo.imageUrl.startsWith("http") ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith("/") ? "" : "/"}${combo.imageUrl}`}
+                    src={combo.imageUrl.startsWith("http") ? combo.imageUrl : `${import.meta.env.PROD ? "" : "http://localhost:8081"}${combo.imageUrl.startsWith("/") ? "" : "/"}${combo.imageUrl}`}
                     alt={combo.comboName}
                     className="w-full h-full object-contain"
                   />

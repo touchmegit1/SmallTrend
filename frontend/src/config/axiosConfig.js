@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api',
+    baseURL: import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'),
     headers: {
         'Content-Type': 'application/json',
     },
@@ -62,7 +62,7 @@ api.interceptors.response.use(
             try {
                 // Quick validation call - if this fails, token is bad
                 await axios.get(
-                    `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'}/auth/validate`,
+                    `${import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api')}/auth/validate`,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 // Token is valid - this is a genuine permission error (user lacks role)

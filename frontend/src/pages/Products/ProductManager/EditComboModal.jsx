@@ -735,7 +735,7 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
               {imagePreview ? (
                 <div className="relative flex-1 rounded-2xl overflow-hidden group border border-gray-100 shadow-sm">
                   <img
-                    src={imagePreview.startsWith('blob:') || imagePreview.startsWith('http') ? imagePreview : `http://localhost:8081${imagePreview.startsWith('/') ? '' : '/'}${imagePreview}`}
+                    src={imagePreview.startsWith('blob:') || imagePreview.startsWith('http') ? imagePreview : `${import.meta.env.PROD ? "" : "http://localhost:8081"}${imagePreview.startsWith('/') ? '' : '/'}${imagePreview}`}
                     alt="Combo Visual"
                     className="w-full h-full object-contain rounded-2xl bg-white"
                   />

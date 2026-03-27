@@ -1,4 +1,4 @@
-const SPRING_API = "http://localhost:8081/api/inventory/disposal-vouchers";
+const SPRING_API = import.meta.env.PROD ? "/api/inventory/disposal-vouchers" : "http://localhost:8081/api/inventory/disposal-vouchers";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token");
