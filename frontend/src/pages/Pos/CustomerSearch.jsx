@@ -19,6 +19,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
   }));
 
   useEffect(() => {
+    // Xử lý fetchTiers.
     const fetchTiers = async () => {
       try {
         const data = await customerTierService.getAllTiers();
@@ -74,6 +75,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
     }
   };
 
+  // Xử lý handleSearch.
   const handleSearch = async () => {
     if (!isPhoneValid) {
       alert("Số điện thoại phải có 10-11 số!");
@@ -94,7 +96,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
       onSelectCustomer(selected);
     } catch (error) {
       try {
-        // Fallback: đối chiếu từ danh sách customers (giống màn CRM) để tránh lệch do endpoint search trả lỗi không mong muốn
+        // Dự phòng: đối chiếu từ danh sách khách hàng (giống màn CRM) để tránh lệch khi endpoint tìm kiếm lỗi.
         const allCustomers = await customerService.getAllCustomers();
         const matched = (Array.isArray(allCustomers) ? allCustomers : []).find(
           (c) => normalizePhone(c.phone) === cleanPhone
@@ -133,6 +135,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
     setShowRegister(true);
   };
 
+  // Xử lý handleRegister.
   const handleRegister = async () => {
     if (!name.trim() || !isPhoneValid) {
       alert("Vui lòng nhập đầy đủ thông tin hợp lệ!");
@@ -150,7 +153,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
         alert("Số điện thoại đã tồn tại, đã chọn khách hàng có sẵn.");
         return;
       } catch (_) {
-        // Not found -> continue create
+        // Không tìm thấy -> tiếp tục tạo mới.
       }
 
       await customerService.createCustomer(name.trim(), phone);

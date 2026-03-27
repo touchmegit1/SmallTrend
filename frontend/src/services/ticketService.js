@@ -26,19 +26,19 @@ const ticketService = {
         return response.data;
     },
 
-    // Lookup: users by role ID
+    // Tra cứu người dùng theo mã vai trò.
     getUsersByRole: async (roleId) => {
         const response = await api.get(`/crm/tickets/lookup/users-by-role/${roleId}`);
         return response.data;
     },
 
-    // Lookup: product variant by SKU
+    // Tra cứu biến thể sản phẩm theo SKU.
     getVariantBySku: async (sku) => {
         const response = await api.get('/crm/tickets/lookup/variant-by-sku', { params: { sku } });
         return response.data;
     },
 
-    // Lookup: product variant by SKU or name
+    // Tra cứu biến thể sản phẩm theo SKU hoặc tên.
     searchVariants: async (keyword) => {
         const response = await api.get('/crm/tickets/lookup/search-variants', { params: { keyword } });
         return response.data;

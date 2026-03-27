@@ -1,13 +1,13 @@
 import api from '../config/axiosConfig';
 
 const posService = {
-  // Get all products for POS
+  // Lấy tất cả sản phẩm cho POS.
   async getAllProducts() {
     const response = await api.get('/products/variants');
     return response.data;
   },
 
-  // Search products by name or barcode
+  // Tìm sản phẩm theo tên hoặc mã vạch.
   async searchProducts(searchTerm) {
     const response = await api.get('/products/variants', {
       params: { search: searchTerm }
@@ -15,7 +15,7 @@ const posService = {
     return response.data;
   },
 
-  // Get product by barcode (for QR scanner)
+  // Lấy sản phẩm theo mã vạch (cho máy quét QR).
   async getProductByBarcode(barcode) {
     const response = await api.get('/products/variants', {
       params: { barcode }

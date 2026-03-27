@@ -14,6 +14,7 @@ export default function QRPendingWidget({ pendingOrder, onComplete, onCancel }) 
   const qrUrl = `https://qr.sepay.vn/img?bank=MBBank&acc=0961390486&template=compact&amount=${amount}&des=${paymentCode}`;
 
   useEffect(() => {
+    // Xử lý checkPayment.
     const checkPayment = async () => {
       try {
         const response = await fetch(

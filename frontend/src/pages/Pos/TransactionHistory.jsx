@@ -67,6 +67,7 @@ function TransactionHistory() {
   }, []);
 
   useEffect(() => {
+    // Xử lý loadAndSaveTransactions.
     const loadAndSaveTransactions = async () => {
       const savedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       setTransactions(savedTransactions);
@@ -82,6 +83,7 @@ function TransactionHistory() {
     loadAndSaveTransactions();
   }, []);
 
+  // Xử lý savePurchaseHistory.
   const savePurchaseHistory = async (transaction) => {
     const items = transaction.cart || transaction.items || [];
     if (items.length === 0) return;
@@ -309,6 +311,7 @@ function TransactionHistory() {
     setShowActionMenu(null);
   };
 
+  // Xử lý confirmRefund.
   const confirmRefund = async () => {
     if (!refundModal) return;
     const items = refundModal.cart || refundModal.items || [];

@@ -35,7 +35,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     long countByUnitId(Integer unitId);
 
-    // Search variants by SKU or product name (case-insensitive)
+    // Tìm biến thể theo SKU hoặc tên sản phẩm (không phân biệt hoa thường).
     @Query("SELECT pv FROM ProductVariant pv " +
            "LEFT JOIN pv.product p " +
            "WHERE LOWER(pv.sku) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

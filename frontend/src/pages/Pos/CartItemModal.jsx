@@ -107,7 +107,7 @@ export default function CartItemModal({ item, products, onClose, onConfirm }) {
             const selected = displayUnits.find(s => s.id === selectedProductId);
             newItem = { ...item, ...selected };
         }
-        // Update local fields
+        // Cập nhật các trường dữ liệu cục bộ.
         newItem.qty = Number(qty);
         newItem.price = Number(price);
         newItem.note = note;
