@@ -444,9 +444,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
           setFocusedField("notes");
           notesRef.current?.focus();
         } else if (focusedField === "notes") {
-          setFocusedField("paymentMethod");
-          if (!paymentMethod) setPaymentMethod("cash");
+          if (!paymentMethod || paymentMethod === "cash") {
+            if (!paymentMethod) setPaymentMethod("cash");
+            setFocusedField("cashAmount");
+            cashInputRef.current?.focus();
+          } else {
+            setFocusedField("paymentMethod");
+          }
         } else if (focusedField === "paymentMethod") {
+          if (!paymentMethod) setPaymentMethod("cash");
           if (paymentMethod === "cash") {
             setFocusedField("cashAmount");
             cashInputRef.current?.focus();
