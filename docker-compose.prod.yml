@@ -22,7 +22,7 @@ services:
       - mysql_data:/var/lib/mysql
 
   backend:
-    image: ${REGISTRY:-docker.io}/${IMAGE_NAMESPACE:-touchmegit1}/smalltrend-backend:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-docker.io}/${IMAGE_NAMESPACE:-hungnq315}/smalltrend-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       mysql:
@@ -35,7 +35,7 @@ services:
       - uploads_data:/app/uploads
 
   frontend:
-    image: ${REGISTRY:-docker.io}/${IMAGE_NAMESPACE:-touchmegit1}/smalltrend-frontend:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-docker.io}/${IMAGE_NAMESPACE:-hungnq315}/smalltrend-frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:80"
