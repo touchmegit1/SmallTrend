@@ -5,6 +5,8 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+    env_file:
+      - ./deploy/env/backend.env
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-smalltrend}
       MYSQL_USER: ${DB_USERNAME:-smalltrend}
