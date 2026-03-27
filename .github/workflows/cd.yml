@@ -159,7 +159,7 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: sha-${{ github.sha }}
           PREVIOUS_IMAGE_TAG: ${{ github.event.before }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
           MIGRATION_COMMAND: ${{ secrets.MIGRATION_COMMAND }}
