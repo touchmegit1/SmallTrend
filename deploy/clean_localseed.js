@@ -97,7 +97,7 @@ addMock('sale_order_items',
 // 2. Purchase Orders
 addMock('purchase_orders', 
     '`id`, `po_number`, `supplier_id`, `contract_id`, `created_by`, `location_id`, `order_date`, `expected_delivery_date`, `actual_delivery_date`, `status`, `subtotal`, `tax_amount`, `tax_percent`, `discount_amount`, `shipping_fee`, `paid_amount`, `total_amount`, `notes`, `rejection_reason`, `shortage_reason`, `shortage_submitted_at`, `manager_decision`, `manager_decision_note`, `manager_decided_at`, `created_at`, `updated_at`', 
-    "1, 'PO-202603-001', 1, null, 1, 1, '2026-03-28', '2026-03-29', '2026-03-29', 'COMPLETED', 100000, 0, 0, 0, 0, 100000, 100000, 'Mock', null, null, null, null, null, null, '2026-03-28 10:00:00', '2026-03-28 10:00:00'");
+    "1, 'PO-202603-001', 1, null, 1, 1, '2026-03-28', '2026-03-29', '2026-03-29', 'RECEIVED', 100000, 0, 0, 0, 0, 100000, 100000, 'Mock', null, null, null, null, null, null, '2026-03-28 10:00:00', '2026-03-28 10:00:00'");
 addMock('purchase_order_items', 
     '`id`, `purchase_order_id`, `variant_id`, `quantity`, `unit_cost`, `total_cost`, `received_quantity`, `notes`, `expiry_date`', 
     "1, 1, 1, 10, 10000, 100000, 10, 'Mock', '2030-01-01'");
