@@ -1,3 +1,4 @@
+// Hiển thị thành phần stat card.
 export default function StatCard({
   title,
   value,

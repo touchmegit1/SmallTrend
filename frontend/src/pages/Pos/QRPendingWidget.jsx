@@ -3,6 +3,7 @@ import api from "../../config/axiosConfig";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
+// Hiển thị thành phần qrpending widget.
 export default function QRPendingWidget({ pendingOrder, onComplete, onCancel }) {
   const { amount, paymentCode, orderData, id } = pendingOrder;
   const [status, setStatus] = useState("waiting"); // waiting | success
@@ -13,6 +14,7 @@ export default function QRPendingWidget({ pendingOrder, onComplete, onCancel }) 
   const qrUrl = `https://qr.sepay.vn/img?bank=MBBank&acc=0961390486&template=compact&amount=${amount}&des=${paymentCode}`;
 
   useEffect(() => {
+    // Xử lý checkPayment.
     const checkPayment = async () => {
       try {
         const response = await fetch(

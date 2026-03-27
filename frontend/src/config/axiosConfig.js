@@ -7,6 +7,7 @@ const api = axios.create({
     },
 });
 
+// Xử lý isAuthEndpoint.
 const isAuthEndpoint = (url = '') => {
     return url.includes('/auth/login')
         || url.includes('/auth/logout')
@@ -14,13 +15,14 @@ const isAuthEndpoint = (url = '') => {
         || url.includes('/auth/me');
 };
 
+// Xử lý clearAndRedirect.
 const clearAndRedirect = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/login';
 };
 
-// Request interceptor - add JWT token to every request
+// Interceptor request - thêm JWT token vào mọi request.
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -34,7 +36,7 @@ api.interceptors.request.use(
     }
 );
 
-// Response interceptor - handle auth errors
+// Interceptor response - xử lý lỗi xác thực.
 api.interceptors.response.use(
     (response) => response,
     async (error) => {

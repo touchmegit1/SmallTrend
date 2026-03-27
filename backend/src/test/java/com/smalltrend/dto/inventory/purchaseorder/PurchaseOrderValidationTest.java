@@ -1,5 +1,8 @@
-package com.smalltrend.dto.inventory.purchase;
+package com.smalltrend.dto.inventory.purchaseorder;
 
+import com.smalltrend.dto.inventory.purchase.GoodsReceiptRequest;
+import com.smalltrend.dto.inventory.purchase.PurchaseOrderItemRequest;
+import com.smalltrend.dto.inventory.purchase.PurchaseOrderRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

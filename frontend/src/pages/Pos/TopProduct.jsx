@@ -1,3 +1,4 @@
+// Hiển thị thành phần top product.
 export default function TopProduct({
   rank,
   name,

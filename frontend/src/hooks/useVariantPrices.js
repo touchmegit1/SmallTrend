@@ -25,3 +25,17 @@ export const toggleVariantPriceStatus = async (priceId) => {
   const response = await api.put(`${API_BASE}/prices/${priceId}/toggle-status`);
   return response.data;
 };
+
+// Cập nhật ngày hết hiệu lực theo priceId (cho phép null)
+export const updateVariantPriceExpiry = async (priceId, expiryDate) => {
+  const response = await api.put(`${API_BASE}/prices/${priceId}/expiry`, {
+    expiryDate: expiryDate || null,
+  });
+  return response.data;
+};
+
+// Xóa một bản ghi giá (không cho xóa bản ghi đang ACTIVE)
+export const deleteVariantPrice = async (priceId) => {
+  const response = await api.delete(`${API_BASE}/prices/${priceId}`);
+  return response.data;
+};

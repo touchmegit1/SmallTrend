@@ -12,10 +12,17 @@ import ActionButtons from "../../../components/inventory/purchase/ActionButtons"
 import RejectionModal from "../../../components/ui/RejectionModal";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import GoodsReceiptTable from "../../../components/inventory/purchase/GoodsReceiptTable";
+import { useAuth } from "../../../context/AuthContext";
 
 function CreatePurchaseOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userRole = String(user?.role?.name || user?.role || "").toUpperCase();
+  const isManager = ["MANAGER", "ROLE_MANAGER"].includes(userRole);
+  const isAdmin = ["ADMIN", "ROLE_ADMIN"].includes(userRole);
+  const isManagerOrAdmin = isManager || isAdmin;
+  const isInventoryStaff = ["INVENTORY_STAFF", "ROLE_INVENTORY_STAFF"].includes(userRole);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
 
@@ -134,10 +141,17 @@ function CreatePurchaseOrder() {
   };
 
   const handleRejectSubmit = async (reason) => {
-    const result = await rejectOrder(navigate, reason);
+    const result = await rejectOrder(
+      isShortagePendingApproval ? undefined : navigate,
+      reason,
+    );
     if (result) {
       setShowRejectionModal(false);
     }
+  };
+
+  const handleRejectShortageClick = () => {
+    setShowRejectionModal(true);
   };
 
   if (loading) {
@@ -171,8 +185,15 @@ function CreatePurchaseOrder() {
     );
   }
 
+  const isRejectedAfterShortage =
+    order.status === PO_STATUS.REJECTED &&
+    Boolean(order.shortage_submitted_at || order.manager_decision || order.shortage_reason);
+  const isRejectedViewOnlyForInventoryStaff =
+    isInventoryStaff && isRejectedAfterShortage && !isManagerOrAdmin;
+
   const isEditable =
-    order.status === PO_STATUS.DRAFT || order.status === PO_STATUS.REJECTED;
+    (order.status === PO_STATUS.DRAFT || order.status === PO_STATUS.REJECTED) &&
+    !isRejectedViewOnlyForInventoryStaff;
   const isChecking = order.status === PO_STATUS.CHECKING;
   const isShortagePendingApproval =
     order.status === PO_STATUS.SHORTAGE_PENDING_APPROVAL;
@@ -180,7 +201,11 @@ function CreatePurchaseOrder() {
     order.status === PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING;
   const isReceived = order.status === PO_STATUS.RECEIVED;
   const isReceiptView =
-    isChecking || isReceived || isShortagePendingApproval || isSupplierSupplementPending;
+    isChecking ||
+    isReceived ||
+    isShortagePendingApproval ||
+    isSupplierSupplementPending ||
+    isRejectedAfterShortage;
   const statusCfg = PO_STATUS_CONFIG[order.status] || PO_STATUS_CONFIG.DRAFT;
 
   const totalQty = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
@@ -293,12 +318,14 @@ function CreatePurchaseOrder() {
                 status={order.status}
                 saving={saving}
                 isEditMode={!!id}
+                forceViewOnly={isRejectedViewOnlyForInventoryStaff}
                 layout="inline"
                 footerHint={bottomHint}
                 onSaveDraft={() => saveDraft(navigate)}
                 onSubmitForApproval={() => submitForApproval(navigate)}
                 onConfirm={() => openConfirm("confirmOrder")}
                 onReject={handleRejectClick}
+                onRejectShortage={handleRejectShortageClick}
                 onDelete={() => openConfirm("deleteOrder")}
                 onStartChecking={() => openConfirm("startChecking")}
                 onReceiveGoods={() => openConfirm("receiveGoods")}
@@ -333,10 +360,12 @@ function CreatePurchaseOrder() {
               status={order.status}
               saving={saving}
               isEditMode={!!id}
+              forceViewOnly={isRejectedViewOnlyForInventoryStaff}
               onSaveDraft={() => saveDraft(navigate)}
               onSubmitForApproval={() => submitForApproval(navigate)}
               onConfirm={() => openConfirm("confirmOrder")}
               onReject={handleRejectClick}
+              onRejectShortage={handleRejectShortageClick}
               onDelete={() => openConfirm("deleteOrder")}
               onStartChecking={() => openConfirm("startChecking")}
               onReceiveGoods={() => openConfirm("receiveGoods")}

@@ -1,3 +1,4 @@
+// Hiển thị thành phần cart area.
 export default function CartArea({ cart }) {
   return (
     <div>

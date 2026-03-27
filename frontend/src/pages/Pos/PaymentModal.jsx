@@ -8,6 +8,7 @@ import eventService from "../../services/eventService";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
+// Hiển thị thành phần qrtransfer modal.
 const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
   const [paymentCode] = useState(() => "DH" + Date.now());
   const [status, setStatus] = useState("waiting"); // waiting | success | error
@@ -15,8 +16,9 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
 
   const qrUrl = `https://qr.sepay.vn/img?bank=MBBank&acc=0961390486&template=compact&amount=${amount}&des=${paymentCode}`;
 
-  // Auto-poll SePay API to check for payment
+  // Tự động gọi SePay API định kỳ để kiểm tra thanh toán.
   useEffect(() => {
+    // Xử lý checkPayment.
     const checkPayment = async () => {
       try {
         const response = await fetch(
@@ -29,10 +31,9 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
           }
         );
         const data = await response.json();
-        console.log("SePay API response:", JSON.stringify(data));
 
         if (data.transactions && data.transactions.length > 0) {
-          // Double-check: verify at least one transaction content contains our exact payment code
+          // Kiểm tra lại: xác thực có ít nhất một giao dịch chứa đúng mã thanh toán.
           const matched = data.transactions.some(tx => {
             const content = (tx.transaction_content || tx.content || tx.description || "").toUpperCase();
             return content.includes(paymentCode.toUpperCase());
@@ -41,7 +42,7 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
           if (matched) {
             setStatus("success");
             clearInterval(pollingRef.current);
-            // Auto-complete after showing success for 10s
+            // Tự động hoàn tất sau khi hiển thị thành công 10 giây.
             setTimeout(() => {
               onSuccess();
             }, 10000);
@@ -53,7 +54,7 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
       }
     };
 
-    // Delay 5 seconds before first poll to let the user scan first
+    // Trì hoãn 5 giây trước lần kiểm tra đầu để người dùng kịp quét.
     const initialDelay = setTimeout(() => {
       checkPayment(); // first check
       pollingRef.current = setInterval(checkPayment, 3000);
@@ -65,8 +66,9 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
     };
   }, [amount, paymentCode, onSuccess]);
 
-  // Keyboard shortcuts
+  // Phím tắt bàn phím.
   useEffect(() => {
+    // Xử lý key down.
     const handleKeyDown = (e) => {
       e.stopPropagation();
       if (e.key === 'Escape') {
@@ -194,7 +196,7 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
     </div>
   );
 };
-// Helper: tìm hạng thành viên phù hợp dựa trên spentAmount
+// Hàm hỗ trợ tìm hạng thành viên phù hợp theo tổng chi tiêu.
 const getCustomerTier = (spentAmount, tiers) => {
   if (!tiers || tiers.length === 0) return null;
   return [...tiers]
@@ -202,6 +204,7 @@ const getCustomerTier = (spentAmount, tiers) => {
     .find(tier => spentAmount >= Number(tier.minSpending)) || null;
 };
 
+// Thực hiện build updated customer after payment.
 const buildUpdatedCustomerAfterPayment = (selectedCustomer, finalTotal, tiers, usePoints, pointsDiscount) => {
   if (!selectedCustomer || !selectedCustomer.id) return selectedCustomer;
 
@@ -225,6 +228,7 @@ const buildUpdatedCustomerAfterPayment = (selectedCustomer, finalTotal, tiers, u
   };
 };
 
+// Hiển thị thành phần payment modal.
 export default function PaymentModal({ cart, customer, onClose, onComplete, onStartQRPayment, shortcuts }) {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
@@ -267,6 +271,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     return acc;
   }, {});
 
+  // Lấy voucher discount amount.
   const getVoucherDiscountAmount = (voucherItem) => {
     if (!voucherItem) return 0;
     if (voucherItem.couponType === 'PERCENTAGE') {
@@ -278,6 +283,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     return Math.max(0, Number(voucherItem.discountAmount || 0));
   };
 
+  // Lấy voucher campaign id.
   const getVoucherCampaignId = (voucherItem) => {
     const rawId = voucherItem?.campaignId ?? voucherItem?.campaign?.id;
     const parsed = Number(rawId);
@@ -304,24 +310,29 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     }
   }, [availableVouchers, selectedVoucherId]);
 
+  // Chọn hoặc bỏ chọn voucher sau khi kiểm tra điều kiện áp dụng.
   const selectVoucher = (voucherItem) => {
     if (!voucherItem) return;
 
+    // Không cho dùng voucher khi đang bật dùng điểm.
     if (usePoints) {
       setVoucherSelectionError("Không thể dùng voucher khi đang chọn sử dụng điểm.");
       return;
     }
 
+    // Chặn voucher nếu chưa đạt giá trị đơn tối thiểu.
     const minPurchaseAmount = Number(voucherItem.minPurchaseAmount || 0);
     if (minPurchaseAmount > 0 && subtotal < minPurchaseAmount) {
       setVoucherSelectionError(`Đơn hàng chưa đủ điều kiện áp dụng voucher này (tối thiểu ${minPurchaseAmount.toLocaleString()}đ).`);
       return;
     }
 
+    // Xóa lỗi và toggle voucher đang chọn.
     setVoucherSelectionError("");
     setSelectedVoucherId(prev => (prev === voucherItem.id ? null : voucherItem.id));
   };
 
+  // Hỗ trợ chọn voucher bằng phím Enter.
   const handleVoucherKeyDown = (e, voucherItem) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -329,7 +340,9 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     }
   };
 
+  // Bật/tắt dùng điểm và kiểm tra xung đột với voucher.
   const handleToggleUsePoints = (checked) => {
+    // Chỉ cho phép một hình thức giảm giá tại cùng thời điểm.
     if (checked && selectedVoucherId != null) {
       setVoucherSelectionError("Chỉ được chọn một hình thức giảm giá: điểm hoặc voucher.");
       return;
@@ -342,11 +355,13 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     setUsePoints(checked);
   };
 
+  // Kiểm tra voucher có đạt điều kiện tối thiểu theo giá trị đơn hàng hay không.
   const isVoucherApplicable = (voucherItem) => {
     const minPurchaseAmount = Number(voucherItem?.minPurchaseAmount || 0);
     return minPurchaseAmount <= 0 || subtotal >= minPurchaseAmount;
   };
 
+  // Trả về thông báo validate cho voucher chưa đủ điều kiện.
   const getVoucherValidationMessage = (voucherItem) => {
     if (!isVoucherApplicable(voucherItem)) {
       return `Chưa đủ điều kiện: Đơn tối thiểu ${Number(voucherItem.minPurchaseAmount || 0).toLocaleString()}đ`;
@@ -354,6 +369,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     return "";
   };
 
+  // Kiểm tra voucher selected.
   const isVoucherSelected = (voucherId) => selectedVoucherId === voucherId;
 
 
@@ -364,6 +380,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
 
   const standaloneVouchers = availableVouchers.filter(v => getVoucherCampaignId(v) == null);
 
+  // Thực hiện format voucher discount.
   const formatVoucherDiscount = (voucherItem) => {
     if (voucherItem.couponType === 'PERCENTAGE') {
       return `${Number(voucherItem.discountPercent || 0)}%`;
@@ -377,6 +394,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
 
   // Fetch danh sách hạng thành viên khi mở modal
   useEffect(() => {
+    // Xử lý fetchTiers.
     const fetchTiers = async () => {
       try {
         const response = await customerTierService.getAllTiers();
@@ -389,6 +407,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   }, []);
 
   useEffect(() => {
+    // Xử lý fetchPromotions.
     const fetchPromotions = async () => {
       setLoadingPromotions(true);
       try {
@@ -417,6 +436,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   }, []);
 
   useEffect(() => {
+    // Xử lý key down.
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -424,9 +444,15 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
           setFocusedField("notes");
           notesRef.current?.focus();
         } else if (focusedField === "notes") {
-          setFocusedField("paymentMethod");
-          if (!paymentMethod) setPaymentMethod("cash");
+          if (!paymentMethod || paymentMethod === "cash") {
+            if (!paymentMethod) setPaymentMethod("cash");
+            setFocusedField("cashAmount");
+            cashInputRef.current?.focus();
+          } else {
+            setFocusedField("paymentMethod");
+          }
         } else if (focusedField === "paymentMethod") {
+          if (!paymentMethod) setPaymentMethod("cash");
           if (paymentMethod === "cash") {
             setFocusedField("cashAmount");
             cashInputRef.current?.focus();
@@ -534,6 +560,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [focusedField, paymentMethod, cashAmount, finalTotal, suggestedIndex, shortcuts, onClose]);
 
+  // Lấy suggested amounts.
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
 
@@ -551,6 +578,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     ];
   };
 
+  // Xử lý completePaymentProcess.
   const completePaymentProcess = async (method, receivedAmt, changeAmt) => {
     let customerToUpdate = selectedCustomer;
 
@@ -599,6 +627,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     });
   };
 
+  // Xử lý initiatePayment.
   const initiatePayment = async () => {
     if (finalTotal === 0) {
       // Đơn 0đ: Hoàn tất ngay không cần nhập tiền

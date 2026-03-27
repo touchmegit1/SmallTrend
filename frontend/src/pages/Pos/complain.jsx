@@ -60,6 +60,7 @@ const RELATED_ENTITY_TYPES = [
   { value: 'Product', label: 'Sản phẩm' }
 ];
 
+// Hiển thị thành phần customer complaint system.
 export default function CustomerComplaintSystem() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +99,7 @@ export default function CustomerComplaintSystem() {
   const { toasts, showToast, removeToast } = useToast();
   const isComplaintReadOnlyForManager = hasAnyRole(user, MANAGER_ROLES);
 
+  // Lấy tier.
   const getTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
     let matched = null;
@@ -123,7 +125,7 @@ export default function CustomerComplaintSystem() {
     refundQuantity: 1
   });
 
-  // Fetch tickets
+  // Lấy danh sách ticket.
   const fetchTickets = async () => {
     try {
       setLoading(true);
@@ -142,7 +144,7 @@ export default function CustomerComplaintSystem() {
     fetchTickets();
   }, []);
 
-  // Filter & search
+  // Lọc và tìm kiếm.
   const filtered = tickets.filter(t => {
     if (filterStatus !== 'ALL' && t.status !== filterStatus) return false;
     if (filterPriority !== 'ALL' && t.priority !== filterPriority) return false;
@@ -158,7 +160,7 @@ export default function CustomerComplaintSystem() {
     return true;
   });
 
-  // Sort by priority (URGENT > HIGH > NORMAL > LOW) then by newest
+  // Sắp xếp theo mức ưu tiên (URGENT > HIGH > NORMAL > LOW), sau đó theo mới nhất.
   const priorityOrder = { URGENT: 4, HIGH: 3, NORMAL: 2, LOW: 1 };
   filtered.sort((a, b) => {
     const pA = priorityOrder[a.priority] || 0;
@@ -176,7 +178,7 @@ export default function CustomerComplaintSystem() {
     resolved: tickets.filter(t => t.status === 'RESOLVED').length
   };
 
-  // Reset form
+  // Đặt lại biểu mẫu.
   const resetForm = () => {
     setForm({
       ticketType: 'REFUND',
@@ -203,17 +205,19 @@ export default function CustomerComplaintSystem() {
     setCustomerNotFound(false);
   };
 
+  // Mở create.
   const openCreate = () => {
     if (isComplaintReadOnlyForManager) return;
     resetForm();
     setShowModal(true);
   };
 
+  // Mở edit.
   const openEdit = (ticket) => {
     if (isComplaintReadOnlyForManager) return;
     setEditingTicket(ticket);
 
-    // Extract customer info from description
+    // Tách thông tin khách hàng từ mô tả.
     let cleanDesc = ticket.description || '';
     let extractedPhone = '';
     let extractedName = '';
@@ -253,6 +257,7 @@ export default function CustomerComplaintSystem() {
     setShowModal(true);
   };
 
+  // Xử lý handleSave.
   const handleSave = async () => {
     if (isComplaintReadOnlyForManager) return;
     try {
@@ -284,7 +289,7 @@ export default function CustomerComplaintSystem() {
 
       if (editingTicket) {
 
-        // Add customer details to description if provided
+        // Thêm thông tin khách hàng vào mô tả nếu có.
         let desc = form.description;
         if (customerPhone || customerName) {
           desc = `[Khách hàng: ${customerName || '—'} - SĐT: ${customerPhone || '—'}]\n${desc}`;
@@ -301,7 +306,7 @@ export default function CustomerComplaintSystem() {
           refundQuantity: form.refundQuantity ? Number(form.refundQuantity) : null
         });
       } else {
-        // Add customer details to description if provided
+        // Thêm thông tin khách hàng vào mô tả nếu có.
         let desc = form.description;
         if (customerPhone || customerName) {
           desc = `[Khách hàng: ${customerName || '—'} - SĐT: ${customerPhone || '—'}]\n${desc}`;
@@ -336,6 +341,7 @@ export default function CustomerComplaintSystem() {
     }
   };
 
+  // Xử lý handleDelete.
   const handleDelete = async (id) => {
     if (isComplaintReadOnlyForManager) return;
     try {
@@ -348,6 +354,7 @@ export default function CustomerComplaintSystem() {
     }
   };
 
+  // Thực hiện format date.
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('vi-VN', {
@@ -359,6 +366,7 @@ export default function CustomerComplaintSystem() {
     });
   };
 
+  // Hiển thị thành phần status badge.
   const StatusBadge = ({ status }) => {
     const effectiveStatus = status === 'OPEN' ? 'IN_PROGRESS' : status;
     const cfg = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.IN_PROGRESS;
@@ -371,6 +379,7 @@ export default function CustomerComplaintSystem() {
     );
   };
 
+  // Hiển thị thành phần priority badge.
   const PriorityBadge = ({ priority }) => {
     const cfg = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.NORMAL;
     const Icon = cfg.icon;
@@ -731,6 +740,7 @@ export default function CustomerComplaintSystem() {
                         return;
                       }
 
+                      // Thực hiện normalize phone.
                       const normalizePhone = (value) => (value || '').replace(/\s+/g, '');
                       const cleanPhone = normalizePhone(phone);
 

@@ -313,17 +313,17 @@ export default function TaxRateManagerModal({ onClose, onDataChange }) {
                                                     <Button
                                                         variant="ghost" size="sm"
                                                         onClick={() => handleEdit(tax)}
-                                                        className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
+                                                        className="h-10 w-10 p-0 text-blue-600 hover:bg-blue-50"
                                                     >
-                                                        <Edit className="w-4 h-4" />
+                                                        <Edit className="w-5 h-5" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost" size="sm"
                                                         onClick={() => setDeleteTarget(tax)}
-                                                        className="h-8 w-8 p-0 text-red-500 hover:bg-red-50"
+                                                        className="h-10 w-10 p-0 text-red-500 hover:bg-red-50"
                                                         disabled={actionLoading}
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Trash2 className="w-5 h-5" />
                                                     </Button>
                                                 </div>
                                             </td>

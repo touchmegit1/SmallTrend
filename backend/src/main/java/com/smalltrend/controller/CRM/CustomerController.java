@@ -21,18 +21,21 @@ public class CustomerController {
 
     @GetMapping("/customers")
     @PreAuthorize("hasAnyAuthority('ADMIN','ROLE_ADMIN','MANAGER','ROLE_MANAGER','CASHIER','ROLE_CASHIER','SALES_STAFF','ROLE_SALES_STAFF')")
+    // Lấy all customers.
     public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
         List<CustomerResponse> customers = customerService.getAllCustomers();
         return ResponseEntity.ok(customers);
     }
 
     @GetMapping("/customers/{id}")
+    // Lấy customer by id.
     public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable("id") Integer id) {
         CustomerResponse customer = customerService.getCustomerById(id);
         return ResponseEntity.ok(customer);
     }
 
     @GetMapping("/customers/phone/{phone}")
+    // Lấy customer by phone.
     public ResponseEntity<?> getCustomerByPhone(@PathVariable("phone") String phone) {
         try {
             CustomerResponse customer = customerService.getCustomerByPhone(phone);
@@ -44,18 +47,21 @@ public class CustomerController {
     }
 
     @GetMapping("/customers/search")
+    // Tìm customer by phone.
     public ResponseEntity<CustomerResponse> searchCustomerByPhone(@RequestParam("phone") String phone) {
         CustomerResponse customer = customerService.getCustomerByPhone(phone);
         return ResponseEntity.ok(customer);
     }
 
     @PostMapping("/customers")
+    // Tạo customer.
     public ResponseEntity<CustomerResponse> createCustomer(@RequestBody CreateCustomerRequest request) {
         CustomerResponse customer = customerService.createCustomer(request.getName(), request.getPhone());
         return ResponseEntity.status(HttpStatus.CREATED).body(customer);
     }
 
     @PutMapping("/customers/{id}")
+    // Cập nhật customer.
     public ResponseEntity<CustomerResponse> updateCustomer(
             @PathVariable("id") Integer id,
             @RequestBody UpdateCustomerRequest request) {
@@ -70,6 +76,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/customers/{id}")
+    // Xóa customer.
     public ResponseEntity<Void> deleteCustomer(@PathVariable("id") Integer id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.noContent().build();

@@ -26,6 +26,7 @@ public class ProductVariantController {
      * Lấy tất cả product variants
      */
     @GetMapping("/product")
+    // Lấy all product variants.
     public ResponseEntity<List<ProductVariantRespone>> getAllProductVariants() {
         return ResponseEntity.ok(productService.getAllProductVariants());
     }
@@ -34,6 +35,7 @@ public class ProductVariantController {
      * Lấy chỉ những variant đang có coupon (dùng cho Event Promotion section)
      */
     @GetMapping("/product/with-coupon")
+    // Lấy variants with coupon.
     public ResponseEntity<List<ProductVariantRespone>> getVariantsWithCoupon() {
         return ResponseEntity.ok(productService.getVariantsWithCoupon());
     }
@@ -42,6 +44,7 @@ public class ProductVariantController {
      * Áp coupon cho sản phẩm theo SKU
      */
     @PutMapping("/product/{sku}/coupon/{couponId}")
+    // Áp dụng coupon.
     public ResponseEntity<?> applyCoupon(@PathVariable String sku, @PathVariable Integer couponId) {
         try {
             ProductVariantRespone result = productService.applyCoupon(sku, couponId);
@@ -57,6 +60,7 @@ public class ProductVariantController {
      * Xóa coupon khỏi sản phẩm theo SKU
      */
     @DeleteMapping("/product/{sku}/coupon")
+    // Gỡ coupon.
     public ResponseEntity<?> removeCoupon(@PathVariable String sku) {
         try {
             ProductVariantRespone result = productService.removeCoupon(sku);

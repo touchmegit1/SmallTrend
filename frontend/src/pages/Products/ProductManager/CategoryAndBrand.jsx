@@ -32,6 +32,19 @@ const Category_Brand = () => {
   // Trạng thái hiển thị cảnh báo (Toast Alert) & mở rộng xem chi tiết (Accordion)
   const [toastMessage, setToastMessage] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
+  const [showProductsModal, setShowProductsModal] = useState(false);
+  const [selectedGroupItem, setSelectedGroupItem] = useState(null);  // category/brand đang xem danh sách sản phẩm
+
+  const handleOpenProductsModal = (item) => {
+    setSelectedGroupItem(item);
+    setShowProductsModal(true);
+  };
+
+  const handleCloseProductsModal = () => {
+    setShowProductsModal(false);
+    setSelectedGroupItem(null);
+  };  // đóng modal & reset item đang xem
+
 
   // Lưu trữ các trường dữ liệu đang được nhập trên form
   const [formData, setFormData] = useState({
@@ -48,6 +61,27 @@ const Category_Brand = () => {
   const { brands, loading: brandLoading, error: brandError, createBrand, updateBrand, deleteBrand, fetchBrands } = useFetchBrands();
   const { products } = useFetchProducts();
   const { suppliers } = useFetchSuppliers();
+
+  const productsOfSelectedGroup = useMemo(() => {
+    if (!selectedGroupItem?.id) return [];
+
+    const filtered = (products || []).filter((p) => {
+      if (activeTab === 'categories') {
+        return String(p.category_id) === String(selectedGroupItem.id);
+      }
+      return String(p.brand_id) === String(selectedGroupItem.id);
+    });
+
+    return filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [products, activeTab, selectedGroupItem]);
+
+  const getProductDisplayName = (product) => product?.name || product?.product_name || 'Sản phẩm chưa có tên';
+  const getProductStatus = (product) => {
+    if (typeof product?.is_active === 'boolean') return product.is_active;
+    if (typeof product?.isActive === 'boolean') return product.isActive;
+    return null;
+  };
+
 
   // Đếm nhanh số lượng sản phẩm được quy chiếu trong cùng 1 danh mục/thương hiệu 
   const productCountMap = useMemo(() => {
@@ -428,15 +462,26 @@ const Category_Brand = () => {
                           )}
                         </div>
                         <div className="flex flex-col">
-                          <button
-                            onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)}
-                            className="flex items-center gap-2 text-left group"
-                          >
-                            <span className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{item.name}</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenProductsModal(item)}
+                              className="font-semibold text-gray-800 hover:text-blue-600 transition-colors text-left"
+                              title={`Xem sản phẩm thuộc ${item.name}`}
+                            >
+                              {item.name}
+                            </button>
                             {item.description && (
-                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedRow === item.id ? 'rotate-180' : ''}`} />
+                              <button
+                                type="button"
+                                onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                title="Xem mô tả"
+                              >
+                                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedRow === item.id ? 'rotate-180' : ''}`} />
+                              </button>
                             )}
-                          </button>
+                          </div>
                           {/* Sổ thông tin mô tả chi tiết thông qua nút Expand */}
                           {expandedRow === item.id && item.description && (
                             <div className="mt-2 text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg animate-in slide-in-from-top-2 duration-200">
@@ -527,6 +572,63 @@ const Category_Brand = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {showProductsModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+          onClick={handleCloseProductsModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Sản phẩm thuộc {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'}: {selectedGroupItem?.name || 'N/A'}
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Tổng cộng {productsOfSelectedGroup.length} sản phẩm
+              </p>
+              <button
+                type="button"
+                onClick={handleCloseProductsModal}
+                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-auto">
+              {productsOfSelectedGroup.length === 0 ? (
+                <div className="text-center text-gray-500 py-12">
+                  Không có sản phẩm nào trong {activeTab === 'categories' ? 'danh mục' : 'thương hiệu'} này.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {productsOfSelectedGroup.map((product) => {
+                    const status = getProductStatus(product);
+                    return (
+                      <div
+                        key={product.id}
+                        className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 flex items-start justify-between gap-4"
+                      >
+                        <div>
+                          <div className="font-semibold text-gray-900">{getProductDisplayName(product)}</div>
+                        </div>
+                        {status !== null && (
+                          <Badge className={status ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}>
+                            {status ? 'Đang bán' : 'Ngừng bán'}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KHỐI HIỂN THỊ: Form Popup dùng để chèn thông tin Tạo Bản Ghi Mới hoặc Sửa thông tin */}
       {canEditProducts && showModal && (

@@ -11,6 +11,8 @@ echo "=========================================="
 # Variables
 REPO_URL="https://github.com/YOUR_USERNAME/SmallTrend.git"
 DEPLOY_PATH="/opt/smalltrend"
+TARGET_USER="${SUDO_USER:-$USER}"
+TARGET_BRANCH="main"
 
 # Step 1: Update system
 echo "[1/7] Updating system packages..."
@@ -27,7 +29,12 @@ sudo apt-get install -y \
 # Step 3: Install Docker
 echo "[3/7] Installing Docker..."
 sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Non-interactive dearmor so this script works via Azure VM extension/CI shells.
+if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --batch --yes -o /etc/apt/keyrings/docker.gpg
+fi
+
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
 echo \
@@ -40,24 +47,39 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 
 # Step 4: Configure Docker permissions
 echo "[4/7] Configuring Docker permissions..."
-sudo usermod -aG docker $USER
+sudo usermod -aG docker "$TARGET_USER"
 echo "⚠️  Please log out and log back in for Docker group to take effect"
 echo "    Or run: newgrp docker"
 
 # Step 5: Create deployment directory
 echo "[5/7] Creating deployment directory..."
 sudo mkdir -p "$DEPLOY_PATH"
-sudo chown -R $USER:$USER "$DEPLOY_PATH"
+sudo chown -R "$TARGET_USER":"$TARGET_USER" "$DEPLOY_PATH"
 
 # Step 6: Clone repository
 echo "[6/7] Cloning SmallTrend repository..."
 cd "$DEPLOY_PATH"
-git clone "$REPO_URL" .
-git checkout main
+if [ -d .git ]; then
+  echo "Existing git repository detected. Updating source..."
+  git remote set-url origin "$REPO_URL"
+  git fetch origin
+  git checkout "$TARGET_BRANCH"
+  git pull --ff-only origin "$TARGET_BRANCH"
+elif [ -z "$(ls -A "$DEPLOY_PATH")" ]; then
+  git clone --branch "$TARGET_BRANCH" "$REPO_URL" .
+else
+  echo "ERROR: $DEPLOY_PATH is not empty and is not a git repository."
+  echo "Please clean it manually or set DEPLOY_PATH to an empty directory, then rerun."
+  exit 1
+fi
 
 # Step 7: Prepare environment file
 echo "[7/7] Creating backend environment file..."
-cp deploy/env/backend.env.example deploy/env/backend.env
+if [ ! -f deploy/env/backend.env ]; then
+  cp deploy/env/backend.env.example deploy/env/backend.env
+else
+  echo "deploy/env/backend.env already exists. Keeping current values."
+fi
 
 echo ""
 echo "=========================================="

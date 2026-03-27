@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+// Hiển thị thành phần customer form.
 export default function CustomerForm({ onSave }) {
   const [phone, setPhone] = useState("");
 

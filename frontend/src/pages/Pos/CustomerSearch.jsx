@@ -19,6 +19,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
   }));
 
   useEffect(() => {
+    // Xử lý fetchTiers.
     const fetchTiers = async () => {
       try {
         const data = await customerTierService.getAllTiers();
@@ -39,6 +40,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
   const isPhoneValid = phone.length >= 10 && phone.length <= 11;
   const canRegister = isPhoneValid && !foundCustomer;
 
+  // Lấy customer tier.
   const getCustomerTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
     return [...tiers]
@@ -46,6 +48,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
       .find((tier) => spentAmount >= Number(tier.minSpending)) || null;
   };
 
+  // Thực hiện map customer for select.
   const mapCustomerForSelect = (customer) => {
     const spentAmount = Number(customer?.spentAmount) || 0;
     const tier = getCustomerTier(spentAmount);
@@ -61,6 +64,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
     };
   };
 
+  // Xử lý key down.
   const handleKeyDown = (e, action) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -71,12 +75,14 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
     }
   };
 
+  // Xử lý handleSearch.
   const handleSearch = async () => {
     if (!isPhoneValid) {
       alert("Số điện thoại phải có 10-11 số!");
       return;
     }
 
+    // Thực hiện normalize phone.
     const normalizePhone = (value) => (value || "").replace(/\s+/g, "");
     const cleanPhone = normalizePhone(phone);
 
@@ -90,7 +96,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
       onSelectCustomer(selected);
     } catch (error) {
       try {
-        // Fallback: đối chiếu từ danh sách customers (giống màn CRM) để tránh lệch do endpoint search trả lỗi không mong muốn
+        // Dự phòng: đối chiếu từ danh sách khách hàng (giống màn CRM) để tránh lệch khi endpoint tìm kiếm lỗi.
         const allCustomers = await customerService.getAllCustomers();
         const matched = (Array.isArray(allCustomers) ? allCustomers : []).find(
           (c) => normalizePhone(c.phone) === cleanPhone
@@ -124,10 +130,12 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
     }
   };
 
+  // Xử lý open register.
   const handleOpenRegister = () => {
     setShowRegister(true);
   };
 
+  // Xử lý handleRegister.
   const handleRegister = async () => {
     if (!name.trim() || !isPhoneValid) {
       alert("Vui lòng nhập đầy đủ thông tin hợp lệ!");
@@ -145,7 +153,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
         alert("Số điện thoại đã tồn tại, đã chọn khách hàng có sẵn.");
         return;
       } catch (_) {
-        // Not found -> continue create
+        // Không tìm thấy -> tiếp tục tạo mới.
       }
 
       await customerService.createCustomer(name.trim(), phone);

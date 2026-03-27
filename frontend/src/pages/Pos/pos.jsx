@@ -12,6 +12,7 @@ import api from "../../config/axiosConfig";
 import ticketService from "../../services/ticketService";
 import eventService from "../../services/eventService";
 
+// Hiển thị thành phần pos.
 export default function POS() {
   const searchInputRef = useRef(null);
   const discontinuedModalOpenedAtRef = useRef(0);
@@ -60,19 +61,19 @@ export default function POS() {
 
   const activeOrder = orders.find(order => order.id === activeOrderId) || { id: activeOrderId, cart: [], customer: null, usePoints: false };
 
-  // Fetch products from backend
+  // Lấy danh sách sản phẩm từ backend.
   useEffect(() => {
     loadProducts();
   }, []);
 
-  // Auto focus search input on mount
+  // Tự động focus ô tìm kiếm khi khởi tạo.
   useEffect(() => {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
   }, []);
 
-  // Reset selected index when search term changes
+  // Đặt lại chỉ mục đã chọn khi từ khóa tìm kiếm thay đổi.
   useEffect(() => {
     if (searchTerm) {
       const filtered = products.filter(product =>
@@ -107,14 +108,14 @@ export default function POS() {
     }
   }, [searchTerm, products]);
 
-  // Re-focus when switching orders or closing modals
+  // Focus lại khi chuyển đơn hoặc đóng modal.
   useEffect(() => {
     if (searchInputRef.current && !showPaymentModal && !showInvoice && !showShortcuts) {
       searchInputRef.current.focus();
     }
   }, [activeOrderId, showPaymentModal, showInvoice, showShortcuts]);
 
-  // Keyboard navigation handler
+  // Xử lý điều hướng bằng bàn phím.
   const handleKeyDown = (e) => {
     if (showDiscontinuedModal) {
       if (e.key === 'Enter') {
@@ -130,7 +131,7 @@ export default function POS() {
     if (e.key === shortcuts.deleteOrder) {
       e.preventDefault();
       if (orders.length > 1) {
-        // Find next or previous order id to set active
+        // Tìm mã đơn tiếp theo hoặc trước đó để đặt trạng thái đang chọn.
         const sortedOrders = [...orders].sort((a, b) => a.id - b.id);
         const currentIndex = sortedOrders.findIndex(o => o.id === activeOrderId);
         const nextIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex + 1;
@@ -222,6 +223,7 @@ export default function POS() {
   };
 
   useEffect(() => {
+    // Xử lý key press.
     const handleKeyPress = (e) => {
       // Bỏ qua phím tắt nếu đang mở modal (ngoại trừ F9/F10 trong payment modal thì đã xử lý bên trong modal)
       if (showPaymentModal || showInvoice || showShortcuts) return;
@@ -250,6 +252,7 @@ export default function POS() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [activeOrder.cart, showPaymentModal, showInvoice, showShortcuts, orders, activeOrderId, shortcuts, navigate]);
 
+  // Xử lý loadProducts.
   const loadProducts = async () => {
     try {
       setLoading(true);
@@ -276,17 +279,8 @@ export default function POS() {
         alert('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
         window.location.href = '/login';
       } else {
-        // Fallback to mock data if backend is not available
-        console.warn('Backend not available, using mock data');
-        const mockProducts = [
-          { id: 1, name: "Coca Cola 330ml", price: 15000, barcode: "123456", sku: "COCA-330", stock: 50 },
-          { id: 2, name: "Pepsi 330ml", price: 14000, barcode: "123457", sku: "PEPSI-330", stock: 30 },
-          { id: 3, name: "Sting 330ml", price: 12000, barcode: "123458", sku: "STING-330", stock: 25 },
-          { id: 4, name: "Bánh mì sandwich", price: 25000, barcode: "123459", sku: "BANH-MI", stock: 10 },
-          { id: 5, name: "Sữa tươi Vinamilk", price: 28000, barcode: "123460", sku: "SUA-VNM", stock: 20 },
-          { id: 6, name: "Nước suối Lavie", price: 8000, barcode: "123461", sku: "NUOC-LAVIE", stock: 100 }
-        ];
-        setProducts(mockProducts);
+        console.warn('Backend not available, products will be empty');
+        setProducts([]);
         setCombos([]);
       }
     } finally {
@@ -296,6 +290,7 @@ export default function POS() {
 
   // Load backend combos separately just in case product load fails slightly or we want them independent
   useEffect(() => {
+    // Xử lý fetchCombos.
     const fetchCombos = async () => {
       try {
         const response = await api.get('/product-combos');
@@ -323,6 +318,7 @@ export default function POS() {
 
     if (!hasUnfinishedTransaction) return;
 
+    // Xử lý before unload.
     const handleBeforeUnload = (event) => {
       event.preventDefault();
       event.returnValue = 'Bạn đang có giao dịch chưa hoàn thành.';
@@ -334,6 +330,7 @@ export default function POS() {
   }, [orders, pendingQROrders]);
 
   useEffect(() => {
+    // Thực hiện refresh suspended orders.
     const refreshSuspendedOrders = () => {
       const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       const waitingOrders = transactions.filter((t) => t.status === 'Chờ thanh toán');
@@ -346,6 +343,7 @@ export default function POS() {
   }, []);
 
   useEffect(() => {
+    // Xử lý refreshUnresolvedTickets.
     const refreshUnresolvedTickets = async () => {
       try {
         const tickets = await ticketService.getAllTickets();
@@ -395,6 +393,7 @@ export default function POS() {
     return 0;
   });
 
+  // Đóng discontinued modal.
   const closeDiscontinuedModal = () => {
     setShowDiscontinuedModal(false);
     setTimeout(() => {
@@ -404,29 +403,35 @@ export default function POS() {
     }, 0);
   };
 
+  // Thực hiện show unavailable warning.
   const showUnavailableWarning = (message) => {
     discontinuedModalOpenedAtRef.current = Date.now();
     setDiscontinuedMessage(message);
     setShowDiscontinuedModal(true);
   };
 
+  // Thực hiện show discontinued warning.
   const showDiscontinuedWarning = (itemName) => {
     showUnavailableWarning(`${itemName || 'Sản phẩm này'} đã ngừng bán. Vui lòng chọn sản phẩm khác.`);
   };
 
+  // Lấy positive number.
   const getPositiveNumber = (value) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  // Lấy item price.
   const getItemPrice = (item) => {
     return getPositiveNumber(item?.sellPrice ?? item?.comboPrice ?? item?.price);
   };
 
+  // Lấy item stock.
   const getItemStock = (item) => {
     return Math.max(0, getPositiveNumber(item?.stockQuantity ?? item?.stock));
   };
 
+  // Lấy combo retail total.
   const getComboRetailTotal = (combo) => {
     return (combo?.items || []).reduce((sum, comboItem) => {
       const productInfo = products.find(p => p.id === comboItem.productVariantId);
@@ -435,10 +440,12 @@ export default function POS() {
     }, 0);
   };
 
+  // Lấy combo savings.
   const getComboSavings = (combo) => {
     return getComboRetailTotal(combo) - getPositiveNumber(combo?.comboPrice ?? combo?.price);
   };
 
+  // Lấy max applicable combo count.
   const getMaxApplicableComboCount = (cart, combo) => {
     const comboItems = combo?.items || [];
     if (comboItems.length === 0) return 0;
@@ -456,6 +463,7 @@ export default function POS() {
     return Number.isFinite(maxCount) ? maxCount : 0;
   };
 
+  // Thực hiện auto apply best combos.
   const autoApplyBestCombos = (cart) => {
     let workingCart = [...cart];
 
@@ -508,31 +516,39 @@ export default function POS() {
     return workingCart;
   };
 
+  // Kiểm tra sản phẩm có đủ điều kiện bán hay không.
   const validateSellableItem = (item, itemName = 'Sản phẩm này') => {
+    // Chặn sản phẩm đã ngừng bán.
     if (isInactiveItem(item)) {
       return `${itemName} đã ngừng bán. Vui lòng chọn sản phẩm khác.`;
     }
 
+    // Chặn sản phẩm chưa có giá hợp lệ.
     const price = getItemPrice(item);
     if (price <= 0) {
       return `${itemName} chưa thiết lập giá bán hoặc giá bằng 0đ, không thể bán.`;
     }
 
+    // Chặn sản phẩm hết hàng hoặc chưa nhập kho.
     const stock = getItemStock(item);
     if (stock <= 0) {
       return `${itemName} chưa nhập kho hoặc đã hết hàng, không thể bán.`;
     }
 
+    // Hợp lệ để bán.
     return null;
   };
 
+  // Kiểm tra combo có đủ điều kiện bán hay không.
   const validateSellableCombo = (combo) => {
     const comboName = combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này';
 
+    // Chặn combo đã ngừng bán.
     if (isInactiveItem(combo)) {
       return `${comboName} đã ngừng bán. Vui lòng chọn sản phẩm khác.`;
     }
 
+    // Chặn combo chưa có giá hợp lệ.
     const comboPrice = getPositiveNumber(combo?.comboPrice ?? combo?.price);
     if (comboPrice <= 0) {
       return `${comboName} chưa thiết lập giá bán hoặc giá bằng 0đ, không thể bán.`;
@@ -544,18 +560,22 @@ export default function POS() {
       const requiredQty = getPositiveNumber(comboItem.quantity || 1);
       const productName = productInfo?.name || 'Sản phẩm trong combo';
 
+      // Chặn khi thiếu dữ liệu sản phẩm trong combo.
       if (!productInfo) {
         return `${comboName} có sản phẩm chưa nhập kho, không thể bán.`;
       }
 
+      // Tái sử dụng validate sản phẩm lẻ cho từng item trong combo.
       const itemError = validateSellableItem(productInfo, productName);
       if (itemError) return `${comboName} không thể bán vì ${itemError.toLowerCase()}`;
 
+      // Chặn khi tồn kho sản phẩm không đủ số lượng yêu cầu trong combo.
       if (getItemStock(productInfo) < requiredQty) {
         return `${comboName} không đủ tồn kho để bán.`;
       }
     }
 
+    // Hợp lệ để bán.
     return null;
   };
 
@@ -564,6 +584,7 @@ export default function POS() {
 
     discontinuedConfirmButtonRef.current?.focus();
 
+    // Xử lý discontinued modal enter.
     const handleDiscontinuedModalEnter = (e) => {
       if (e.key === 'Enter') {
         const elapsed = Date.now() - discontinuedModalOpenedAtRef.current;
@@ -584,16 +605,19 @@ export default function POS() {
     }
   }, [showDiscontinuedModal, showPaymentModal, showInvoice, showShortcuts, activeOrderId]);
 
+  // Kiểm tra inactive status.
   const isInactiveStatus = (status) => {
     if (!status || typeof status !== 'string') return false;
     const normalized = status.toUpperCase();
     return ['INACTIVE', 'DISCONTINUED', 'STOP_SELLING', 'STOPPED', 'NGUNG_BAN'].includes(normalized);
   };
 
+  // Kiểm tra inactive item.
   const isInactiveItem = (item) => {
     return item?.isActive === false || item?.productActive === false || item?.active === false || isInactiveStatus(item?.status);
   };
 
+  // Thêm to cart.
   const addToCart = (product) => {
     const itemError = validateSellableItem(product, product?.name || 'Sản phẩm này');
     if (itemError) {
@@ -675,6 +699,7 @@ export default function POS() {
     }, 100);
   };
 
+  // Thêm combo to cart.
   const addComboToCart = (combo) => {
     const comboError = validateSellableCombo(combo);
     if (comboError) {
@@ -747,6 +772,7 @@ export default function POS() {
     updateCart(currentCart);
   };
 
+  // Cập nhật cart.
   const updateCart = (newCart) => {
     const cartAfterAutoApply = autoApplyBestCombos(newCart);
     const normalizedCart = [];
@@ -833,6 +859,7 @@ export default function POS() {
     }, 100);
   };
 
+  // Cập nhật customer.
   const updateCustomer = (customer) => {
     // Luôn giữ lại spentAmount nếu có khi update khách
     setOrders(orders.map(order =>
@@ -842,12 +869,14 @@ export default function POS() {
 
 
 
+  // Cập nhật use points.
   const updateUsePoints = (usePoints) => {
     setOrders(orders.map(order =>
       order.id === activeOrderId ? { ...order, usePoints } : order
     ));
   };
 
+  // Thêm new order.
   const addNewOrder = () => {
     const newId = Math.max(...orders.map(o => o.id)) + 1;
     const newOrders = [...orders, { id: newId, cart: [], customer: null, usePoints: false }].sort((a, b) => a.id - b.id);
@@ -855,6 +884,7 @@ export default function POS() {
     setActiveOrderId(newId);
   };
 
+  // Xóa order.
   const deleteOrder = (orderId) => {
     if (orders.length > 1) {
       const newOrders = orders.filter(order => order.id !== orderId).sort((a, b) => a.id - b.id);
@@ -865,6 +895,7 @@ export default function POS() {
     }
   };
 
+  // Xử lý redeemVoucherUsageIfNeeded.
   const redeemVoucherUsageIfNeeded = async (voucherId) => {
     if (!voucherId) return;
     try {
@@ -874,6 +905,7 @@ export default function POS() {
     }
   };
 
+  // Xử lý completeOrder.
   const completeOrder = async (orderData) => {
     // Xóa đơn chờ thanh toán
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
@@ -1019,6 +1051,7 @@ export default function POS() {
     }
   };
 
+  // Xử lý start qrpayment.
   const handleStartQRPayment = (orderData, amount, paymentCode) => {
     const orderId = `ORDER_${activeOrderId}`;
     const orderDataWithOrderId = { ...orderData, orderId };
@@ -1076,6 +1109,7 @@ export default function POS() {
     setShowPaymentModal(false);
   };
 
+  // Xử lý handleCompleteQRPayment.
   const handleCompleteQRPayment = async (id, orderData) => {
     const transaction = {
       id: `#HD${Date.now().toString().slice(-6)}`,
@@ -1209,10 +1243,12 @@ export default function POS() {
     setPendingQROrders(prev => prev.filter(o => o.id !== id));
   };
 
+  // Xử lý cancel qrpayment.
   const handleCancelQRPayment = (id) => {
     setPendingQROrders(prev => prev.filter(o => o.id !== id));
   };
 
+  // Xử lý print current invoice.
   const handlePrintCurrentInvoice = () => {
     const currentOrder = activeOrder;
     if (currentOrder.cart.length === 0) {

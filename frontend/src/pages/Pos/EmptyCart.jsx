@@ -1,3 +1,4 @@
+// Hiển thị thành phần empty cart.
 export default function EmptyCart() {
   return (
     <div style={{

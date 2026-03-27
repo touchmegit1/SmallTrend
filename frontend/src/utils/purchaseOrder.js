@@ -85,43 +85,6 @@ export const PO_STATUS_CONFIG = {
   },
 };
 
-export const ALLOWED_TRANSITIONS = {
-  [PO_STATUS.DRAFT]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
-  [PO_STATUS.PENDING]: [PO_STATUS.CONFIRMED, PO_STATUS.REJECTED, PO_STATUS.CANCELLED],
-  [PO_STATUS.REJECTED]: [PO_STATUS.PENDING, PO_STATUS.CANCELLED],
-  [PO_STATUS.CONFIRMED]: [PO_STATUS.CHECKING], // QĐ duyệt → NV kho kiểm kê
-  [PO_STATUS.CHECKING]: [PO_STATUS.RECEIVED, PO_STATUS.SHORTAGE_PENDING_APPROVAL],
-  [PO_STATUS.SHORTAGE_PENDING_APPROVAL]: [
-    PO_STATUS.RECEIVED,
-    PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING,
-  ],
-  [PO_STATUS.SUPPLIER_SUPPLEMENT_PENDING]: [PO_STATUS.CHECKING],
-  [PO_STATUS.RECEIVED]: [], // terminal
-  [PO_STATUS.CANCELLED]: [], // terminal
-};
-
-export function canTransitionTo(currentStatus, targetStatus) {
-  return (ALLOWED_TRANSITIONS[currentStatus] || []).includes(targetStatus);
-}
-
-// ─── Code Generation ─────────────────────────────────────
-// Format: NH001, NH002, NH003 ...
-export function generatePOCode(existingOrders = []) {
-  const prefix = "NH";
-
-  // Find highest existing number
-  let maxNum = 0;
-  for (const order of existingOrders) {
-    const code = order.po_number || order.code || "";
-    if (code.startsWith(prefix)) {
-      const num = parseInt(code.slice(prefix.length), 10);
-      if (!isNaN(num) && num > maxNum) maxNum = num;
-    }
-  }
-
-  return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
-}
-
 // ─── Financial Calculations ──────────────────────────────
 
 /** Calculate line item total: (qty × unit_price) – item_discount */
@@ -176,23 +139,6 @@ export function validateDraft(order, items) {
   return { valid: errors.length === 0, errors };
 }
 
-/**
- * Validate order for CONFIRM (strict rules).
- * Returns { valid: boolean, errors: string[] }
- */
-export function validateConfirm(order, items) {
-  const draftResult = validateDraft(order, items);
-  const errors = [...draftResult.errors];
-
-  // No need to duplicate supplier_id and location_id checks since they are now in validateDraft
-
-  // Check batches – each item should have batch info for perishable goods
-  // (Optional: we make this a warning, not a hard error)
-
-
-  return { valid: errors.length === 0, errors };
-}
-
 // ─── Default Order Shape ─────────────────────────────────
 
 export function createDefaultOrder(code) {
@@ -201,8 +147,6 @@ export function createDefaultOrder(code) {
     supplier_id: null,
     supplier_name: "",
     contract_id: null,
-    contract_number: "",
-    contract_title: "",
     location_id: null,
     status: PO_STATUS.DRAFT,
     discount: 0,
@@ -213,20 +157,13 @@ export function createDefaultOrder(code) {
     notes: "",
     created_by: 1, // TODO: get from auth context
     created_at: new Date().toISOString(),
-    confirmed_at: null,
   };
 }
 
 // ─── Default Item Shape ──────────────────────────────────
 
 export function createOrderItem(product) {
-  const unitPrice = Number(
-    product.unit_price ??
-      product.unitPrice ??
-      product.purchase_price ??
-      product.purchasePrice ??
-      0,
-  );
+  const unitPrice = Number(product.purchase_price ?? 0);
 
   return {
     _key: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,

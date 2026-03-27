@@ -1,3 +1,4 @@
+// Hiển thị thành phần payment panel.
 export default function PaymentPanel({ cart, customer, usePoints, onOpenPayment }) {
   const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.qty || 1), 0);
   const pointsDiscount = usePoints && customer ? Math.min(customer.existingPoints * 100, subtotal) : 0;

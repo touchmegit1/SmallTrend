@@ -76,10 +76,6 @@ export function ProductListScreen() {
   const { brands } = useFetchBrands();
   const { taxRates } = useFetchTaxRates();
 
-  // Debug: Check if categories are loaded
-  useEffect(() => {
-    console.log('Categories loaded:', categories);
-  }, [categories]);
 
   // --- CÁC HÀM TIỆN ÍCH (HELPER) ---
   const getCategoryName = (categoryId) => {
@@ -90,6 +86,18 @@ export function ProductListScreen() {
   const getBrandName = (brandId) => {
     const brand = brands.find(b => b.id == brandId);
     return brand?.name || 'N/A';
+  };
+
+  const getTaxDisplay = (product) => {
+    const matchedTax = (taxRates || []).find((tax) => String(tax.id) === String(product.tax_rate_id));
+    const taxName = product.tax_rate_name || matchedTax?.name || 'N/A';
+    const taxRate = matchedTax?.rate;
+
+    if (taxRate === null || taxRate === undefined || taxRate === '') {
+      return taxName;
+    }
+
+    return `${taxName} (${taxRate}%)`;
   };
 
   // --- DEPENDENT FILTER LOGIC ---
@@ -160,7 +168,6 @@ export function ProductListScreen() {
 
   // --- CASCADE RESET HANDLERS ---
   const handleCategoryChange = (val) => {
-    console.log('handleCategoryChange called with:', val);
     setFilterCategory(val);
     setFilterBrand(null);
     setFilterProduct(null);
@@ -181,8 +188,6 @@ export function ProductListScreen() {
   };
 
   const handleVariantChange = (val) => {
-    console.log('handleVariantChange called with:', val);
-    console.log('variantsData:', variantsData);
     setFilterVariant(val);
   };
 
@@ -338,13 +343,10 @@ export function ProductListScreen() {
 
   // --- DROPDOWN OPTIONS ---
   const categoryOptions = useMemo(() => {
-    console.log('Creating categoryOptions, categories:', categories);
     const options = [
       { value: null, label: 'Tất cả danh mục' },
       ...(categories || []).map((c) => ({ value: String(c.id), label: c.name })),
     ];
-    console.log('CategoryOptions created:', options);
-    console.log('Current filterCategory:', filterCategory);
     return options;
   }, [categories, filterCategory]);
 
@@ -924,7 +926,7 @@ export function ProductListScreen() {
                       {/* Cột 3: Thuế */}
                       <TableCell>
                         <Badge className="bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 border border-amber-200 font-medium" variant="ghost">
-                          {product.tax_rate_name || 'N/A'}
+                          {getTaxDisplay(product)}
                         </Badge>
                       </TableCell>
 

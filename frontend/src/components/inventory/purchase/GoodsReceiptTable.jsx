@@ -59,7 +59,9 @@ export default function GoodsReceiptTable({
   };
 
   const getUnitCostValue = (ri, item) => {
-    const unitCost = Number(ri.unitCost ?? item.unit_price ?? item.unitCost ?? 0);
+    const unitCost = Number(
+      ri.unitCost ?? item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0,
+    );
     if (!Number.isFinite(unitCost)) return 0;
     return unitCost;
   };
@@ -155,7 +157,7 @@ export default function GoodsReceiptTable({
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-slate-800 leading-tight truncate whitespace-nowrap">{item.name}</p>
                       <p className="text-xs text-slate-400 truncate">
-                        {item.sku} • {formatVND(item.unit_price ?? item.unitCost)}
+                        {item.sku} • {formatVND(item.unitCost ?? item.unit_cost ?? item.unit_price)}
                       </p>
                       {item.attributes && Object.keys(item.attributes).length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">

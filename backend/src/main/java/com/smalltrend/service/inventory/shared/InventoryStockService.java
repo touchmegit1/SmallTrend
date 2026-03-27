@@ -45,6 +45,7 @@ public class InventoryStockService {
      * Tự động tính toán quy đổi nếu nhập vào vỏ hộp (packaging unit)
      */
     @Transactional
+    // Nhập stock.
     public void importStock(StockImportRequest request) {
         inventoryStockRequestValidator.validateImportRequest(request);
 
@@ -104,6 +105,7 @@ public class InventoryStockService {
      * Tự động quy đổi qua base unit
      */
     @Transactional
+    // Trừ stock.
     public void deductStock(ProductVariant variant, int quantity, Long orderId, String notes) {
         ProductVariant baseVariant = variant;
         int deductQuantity = quantity;
@@ -158,6 +160,7 @@ public class InventoryStockService {
      * Tự động quy đổi về base unit giống deductStock.
      */
     @Transactional
+    // Hoàn lại from refund.
     public void restockFromRefund(ProductVariant variant, int quantity, Long referenceId, String notes) {
         if (quantity <= 0) {
             throw new RuntimeException("Refund quantity must be greater than 0");
@@ -198,6 +201,7 @@ public class InventoryStockService {
      * Điều chỉnh tồn kho thủ công
      */
     @Transactional
+    // Điều chỉnh stock.
     public void adjustStock(StockAdjustRequest request) {
         inventoryStockRequestValidator.validateAdjustRequest(request);
 

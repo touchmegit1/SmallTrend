@@ -18,6 +18,7 @@ const COLORS = {
 const SHADOW = "0 1px 4px rgba(0,0,0,0.06)";
 const RADIUS = "12px";
 
+// Hiển thị thành phần reportfor cashier.
 export default function ReportforCashier() {
   const [transactions, setTransactions] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -66,29 +67,55 @@ export default function ReportforCashier() {
   });
   const topProducts = Object.entries(productStats).sort((a, b) => b[1].quantity - a[1].quantity).slice(0, 3);
 
-  const hourStats = {};
-  completedTransactions.forEach(t => {
-    if (t.time) {
-      const parts = t.time.split(/[\s,]+/);
-      let hour = 0;
-      if (parts.length > 1) {
-        const timeParts = parts[1].split(':');
-        if (timeParts.length > 0) {
-          hour = parseInt(timeParts[0]);
-        }
-      } else {
-        hour = parseInt(t.time.split(' ')[0].split(':')[0]);
+  // Lấy transaction hour.
+  const getTransactionHour = (timeValue) => {
+    if (!timeValue) return null;
+
+    const timeStr = String(timeValue);
+    const parts = timeStr.split(/[\s,]+/);
+
+    if (parts.length >= 2) {
+      let dateString = parts[0];
+      let timeString = parts[1];
+
+      if (parts[1] && parts[1].includes('/')) {
+        dateString = parts[1];
+        timeString = parts[0];
       }
 
-      // Nhóm vào khung 2 giờ (ví dụ: 0-2, 2-4, 4-6...)
-      const windowStart = Math.floor(hour / 2) * 2;
-      hourStats[windowStart] = (hourStats[windowStart] || 0) + 1;
+      const dateParts = dateString.split('/');
+      if (dateParts.length === 3) {
+        const [day, month, year] = dateParts;
+        const timeParts = timeString.split(':');
+        const hour = parseInt(timeParts[0] || '0', 10);
+
+        if (!Number.isNaN(hour) && hour >= 0 && hour <= 23) {
+          return hour;
+        }
+
+        const parsedDate = new Date(year, month - 1, day, hour, timeParts[1] || '0', timeParts[2] || '0');
+        if (!Number.isNaN(parsedDate.getTime())) return parsedDate.getHours();
+      }
     }
+
+    const fallback = new Date(timeStr);
+    return Number.isNaN(fallback.getTime()) ? null : fallback.getHours();
+  };
+
+  const hourStats = {};
+  completedTransactions.forEach(t => {
+    const hour = getTransactionHour(t.time);
+    if (hour === null) return;
+
+    // Nhóm vào khung 2 giờ (ví dụ: 0-2, 2-4, 4-6...)
+    const windowStart = Math.floor(hour / 2) * 2;
+    hourStats[windowStart] = (hourStats[windowStart] || 0) + 1;
   });
 
   const peakHour = Object.entries(hourStats).sort((a, b) => b[1] - a[1])[0];
   const peakHourText = peakHour ? `${peakHour[0]}:00 - ${parseInt(peakHour[0]) + 2}:00` : "--";
 
+  // Thực hiện show revenue details.
   const showRevenueDetails = () => {
     const totalRevenueSum = transactions.reduce((sum, t) => sum + parseInt(t.total.replace(/[^0-9]/g, '')), 0);
     setModalContent({
@@ -104,6 +131,7 @@ export default function ReportforCashier() {
     setShowModal(true);
   };
 
+  // Thực hiện show order details.
   const showOrderDetails = () => {
     // Lấy tất cả transactions từ localStorage (giống TransactionHistory)
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
@@ -139,6 +167,7 @@ export default function ReportforCashier() {
     setShowModal(true);
   };
 
+  // Thực hiện show product details.
   const showProductDetails = () => {
     const productMap = {};
     let totalQuantity = 0;

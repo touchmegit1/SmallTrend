@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Gift } from "lucide-react";
 
+// Hiển thị thành phần top bar.
 export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filteredProducts, addToCart, addNewOrder, orders, activeOrderId, setActiveOrderId, setShowQRScanner, deleteOrder, onPrintInvoice, onOpenLoyalty, onKeyDown, selectedProductIndex, setShowShortcuts, notifications }) {
   const scrollContainerRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -10,6 +11,7 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
   const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
 
+  // Thực hiện check scroll.
   const checkScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -22,6 +24,7 @@ export default function TopBar({ searchInputRef, searchTerm, setSearchTerm, filt
     checkScroll();
   }, [orders]);
 
+  // Thực hiện scroll.
   const scroll = (direction) => {
     if (scrollContainerRef.current) {
       const scrollAmount = 150;
