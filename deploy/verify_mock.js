@@ -42,50 +42,44 @@ sql += 'SET FOREIGN_KEY_CHECKS = 0;\n\n';
 const addMock = (table, clazz, valuesStr) => {
     const cols = extractColumns(entityDir + clazz);
     const parts = valuesStr.split(/(?:,)(?=(?:[^']*'[^']*')*[^']*$)/).map(s => s.trim());
-
     if (cols.length !== parts.length) {
-        console.log(`ERROR: ${table} (${clazz}) columns: ${cols.length}, values: ${parts.length}`);
-        console.log(`Columns: ${cols.join(', ')}`);
+        console.log(`ERROR: ${table} (${clazz}) cols: ${cols.length}, values: ${parts.length}`);
         return;
     }
-    console.log(`OK: ${table}`);
     sql += `TRUNCATE TABLE ${table};\n`;
     sql += `INSERT INTO \`${table}\` (${cols.map(c => `\`${c}\``).join(', ')}) VALUES \n(${valuesStr});\n\n`;
 }
 
-addMock('sale_orders', 'Order.java', "1, 'ORD-202603-001', 1, 1, 1, 50000, 0, 0, 50000, 'CASH', 'COMPLETED', 'Đơn MOCK 1', '2026-03-28 10:00:00', '2026-03-28 10:00:00'");
-addMock('sale_order_items', 'OrderItem.java', "1, 1, 1, 'Mock Product', 'SKU-001', 25000, 0, 0, 50000");
+addMock('sale_orders', 'Order.java', "1, 'ORD-202603-001', 1, 1, 1, '2026-03-28 10:00:00', 50000, 0, 0, 50000, 'CASH', 'COMPLETED', 'Đơn MOCK 1', '2026-03-28 10:00:00', '2026-03-28 10:00:00'");
+addMock('sale_order_items', 'OrderItem.java', "1, 1, 1, 'Mock Product', 'SKU-001', 2, 25000, 0, 0, 50000, ''");
 
 // purchase_orders -> 24 columns
-addMock('purchase_orders', 'PurchaseOrder.java', "1, 'PO-202603-001', 1, null, 1, 1, '2026-03-28', '2026-03-29', 'COMPLETED', 100000, 0, 0, 0, 0, 0, 100000, 'Mock', null, null, null, null, null, '2026-03-28 10:00:00', '2026-03-28 10:00:00'");
+addMock('purchase_orders', 'PurchaseOrder.java', "1, 'PO-202603-001', 1, null, 1, 1, '2026-03-28', '2026-03-29', '2026-03-29', 'COMPLETED', 100000, 0, 0, 0, 0, 100000, 100000, 'Mock', null, null, null, null, null, null, '2026-03-28 10:00:00', '2026-03-28 10:00:00'");
 
-// purchase_order_items -> 8 columns
-// id, purchase_order_id, product_variant_id, unit_cost, total_cost, received_quantity, notes, expiry_date
 addMock('purchase_order_items', 'PurchaseOrderItem.java', "1, 1, 1, 10000, 100000, 10, 'Mock item', '2030-01-01'");
 
-// inventory_counts -> 10 columns
-// id, code, location_id, count_type, notes, system_quantity, difference_quantity, status, created_at, created_by
-addMock('inventory_counts', 'InventoryCount.java', "1, 'IC-202603-001', 1, 'MONTHLY', 'Mock Count', 10, 0, 'CONFIRMED', '2026-03-28 10:00:00', 1");
+addMock('inventory_counts', 'InventoryCount.java', "1, 'IC-202603-001', 1, 'CONFIRMED', 'MONTHLY', 'Mock Count', 10, 0, '2026-03-28 10:00:00', 1, null, null");
+// Wait, inventory_counts was fixed earlier, but verify_mock.js reported:
+// ERROR: inventory_counts (InventoryCount.java) columns: 11, values: 10
+// Columns: id, code, status, location_id, total_shortage_value, total_overage_value, total_difference_value, created_by, confirmed_by, created_at, confirmed_at
+addMock('inventory_counts', 'InventoryCount.java', "1, 'IC-202603-001', 'CONFIRMED', 1, 0, 0, 0, 1, 1, '2026-03-28 10:00:00', '2026-03-28 10:00:00'");
 
-// inventory_count_items -> 9 columns
-// id, inventory_count_id, batch_id, product_id, batch_code, system_quantity, difference_quantity, difference_value, reason
-addMock('inventory_count_items', 'InventoryCountItem.java', "1, 1, 1, 1, 'BATCH-001', 10, 0, 0, 'Match'");
+// ERROR: inventory_count_items (InventoryCountItem.java) columns: 7, values: 9
+// Columns: id, inventory_count_id, system_quantity, actual_quantity, difference_quantity, difference_value, reason
+addMock('inventory_count_items', 'InventoryCountItem.java', "1, 1, 10, 10, 0, 0, 'Match'");
 
-// disposal_vouchers -> 12 columns
-// id, code, location_id, status, reason_type, total_items, total_quantity, created_by, created_at, confirmed_by, confirmed_at, rejection_reason
-addMock('disposal_vouchers', 'DisposalVoucher.java', "1, 'DV-202603-001', 1, 'CONFIRMED', 'DAMAGED', 1, 5, 1, '2026-03-28 10:00:00', 1, '2026-03-28 10:00:00', null");
+addMock('disposal_vouchers', 'DisposalVoucher.java', "1, 'DV-202603-001', 1, 'CONFIRMED', 'DAMAGED', 'Mock disposal', 1, 5, 50000, 1, '2026-03-28 10:00:00', 1, '2026-03-28 10:00:00', null, 1");
+addMock('disposal_voucher_items', 'DisposalVoucherItem.java', "1, 1, 1, 1, 'BATCH-001', 5, 10000, 50000, '2030-01-01'");
 
-// disposal_voucher_items -> 7 columns
-// id, disposal_voucher_id, batch_id, product_id, batch_code, unit_cost, total_cost
-addMock('disposal_voucher_items', 'DisposalVoucherItem.java', "1, 1, 1, 1, 'BATCH-001', 10000, 50000");
+addMock('product_combos', 'ProductCombo.java', "1, 'CB-SNACK-VIP', 'Combo Snack VIP', 'Mock combo', null, 150000, 120000, 30000, 20, '2026-01-01', '2026-12-31', 1, 5, 0, 0, 'VIP', 0, 1, 'New', 'ACTIVE', 1, '2026-03-28 10:00:00', 1");
 
-addMock('product_combos', 'ProductCombo.java', "1, 'CB-SNACK-VIP', 'Combo Snack VIP', 'Mock combo', null, 150000, 120000, 30000, 20, '2026-01-01', '2026-12-31', 1, 5, 0, 0, 'VIP', 0, 1, 'New', 'ACTIVE', 1, '2026-03-28 10:00:00'");
-addMock('product_combo_items', 'ProductComboItem.java', "1, 1, 1, 2, 2, 0, 0, 1, 'None'");
+// ERROR: product_combo_items (ProductComboItem.java) columns: 9, values: 14
+// Columns: id, combo_id, product_variant_id, min_quantity, max_quantity, is_optional, can_substitute, display_order, notes
+addMock('product_combo_items', 'ProductComboItem.java', "1, 1, 1, 1, 1, 0, 0, 1, 'None'");
 
-// price_expiry_alert_logs -> 4 columns: id, variant_price_id, alert_date, sent_at
 addMock('price_expiry_alert_logs', 'PriceExpiryAlertLog.java', "1, 1, '2026-03-28', '2026-03-28 10:15:00'");
 
 sql += 'SET FOREIGN_KEY_CHECKS = 1;\n';
 
-fs.writeFileSync('deploy/gen_final_mock.js', 'const fs = require("fs"); fs.appendFileSync("deploy/fix_seed.sql", `' + sql + '`, "utf8");');
-console.log('Script written to gen_final_mock.js!');
+fs.writeFileSync('deploy/append_mock.js', 'const fs = require("fs"); fs.appendFileSync("deploy/fix_seed.sql", `' + sql + '`, "utf8");');
+console.log('Script written to append_mock.js!');
