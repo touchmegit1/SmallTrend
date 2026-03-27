@@ -487,7 +487,7 @@ INSERT INTO `purchase_orders` (`id`, `po_number`, `supplier_id`, `contract_id`, 
 (1, 'PO-202603-001', 1, null, 1, 1, '2026-03-28', '2026-03-29', '2026-03-29', 'RECEIVED', 100000, 0, 0, 0, 0, 100000, 100000, 'Mock', null, null, null, null, null, null, '2026-03-28 10:00:00', '2026-03-28 10:00:00');
 
 TRUNCATE TABLE purchase_order_items;
-INSERT INTO `purchase_order_items` (`id`, `purchase_order_id`, `variant_id`, `quantity`, `unit_cost`, `total_cost`, `received_quantity`, `notes`, `expiry_date`) VALUES 
+INSERT INTO `purchase_order_items` (`id`, `purchase_order_id`, `variant_id`, `quantity`, `unit_price`, `total_cost`, `received_quantity`, `notes`, `expiry_date`) VALUES 
 (1, 1, 1, 10, 10000, 100000, 10, 'Mock', '2030-01-01');
 
 TRUNCATE TABLE inventory_counts;
