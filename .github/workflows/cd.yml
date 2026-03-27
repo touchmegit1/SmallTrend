@@ -114,7 +114,7 @@ jobs:
           images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/smalltrend-backend
           tags: |
             type=raw,value=latest
-            type=sha
+            type=sha,format=long
             type=ref,event=tag
 
       - name: Build and push backend image
@@ -133,7 +133,7 @@ jobs:
           images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/smalltrend-frontend
           tags: |
             type=raw,value=latest
-            type=sha
+            type=sha,format=long
             type=ref,event=tag
 
       - name: Build and push frontend image
@@ -159,8 +159,8 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          IMAGE_TAG: ${{ github.sha }}
-          PREVIOUS_IMAGE_TAG: ${{ github.event.before }}
+          IMAGE_TAG: sha-${{ github.sha }}
+          PREVIOUS_IMAGE_TAG: sha-${{ github.event.before }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
           MIGRATION_COMMAND: ${{ secrets.MIGRATION_COMMAND }}
         with:
@@ -170,28 +170,79 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           envs: DEPLOY_PATH,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,IMAGE_TAG,PREVIOUS_IMAGE_TAG,HEALTHCHECK_URL,MIGRATION_COMMAND
           script: |
-            set -e
+            set -eu
             cd "$DEPLOY_PATH"
 
             echo "$DOCKERHUB_TOKEN" | sudo docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
-            export REGISTRY=docker.io
-            export IMAGE_NAMESPACE="$DOCKERHUB_USERNAME"
-            export IMAGE_TAG="$IMAGE_TAG"
+            REGISTRY=docker.io
+            IMAGE_NAMESPACE="$DOCKERHUB_USERNAME"
+            TARGET_TAG="$IMAGE_TAG"
+            FALLBACK_TAG="latest"
 
-            sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml pull
-            sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            image_exists() {
+              sudo docker manifest inspect "$1" > /dev/null 2>&1
+            }
+
+            verify_tag_exists() {
+              tag="$1"
+              image_exists "$REGISTRY/$IMAGE_NAMESPACE/smalltrend-backend:$tag" && \
+                image_exists "$REGISTRY/$IMAGE_NAMESPACE/smalltrend-frontend:$tag"
+            }
+
+            deploy_tag() {
+              tag="$1"
+              echo "Deploying tag: $tag"
+              sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$tag" docker compose -f docker-compose.prod.yml pull
+              sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$tag" docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            }
+
+            if ! verify_tag_exists "$TARGET_TAG"; then
+              echo "Tag $TARGET_TAG not found for both images. Falling back to $FALLBACK_TAG"
+              TARGET_TAG="$FALLBACK_TAG"
+            fi
+
+            deploy_tag "$TARGET_TAG"
 
             if [ -n "$MIGRATION_COMMAND" ]; then
               eval "$MIGRATION_COMMAND"
             fi
 
-            sleep 20
-            if ! curl -fsS "$HEALTHCHECK_URL" > /dev/null; then
-              if [ -n "$PREVIOUS_IMAGE_TAG" ] && [ "$PREVIOUS_IMAGE_TAG" != "0000000000000000000000000000000000000000" ]; then
-                export IMAGE_TAG="$PREVIOUS_IMAGE_TAG"
-                sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml pull
-                sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            MAX_RETRIES=12
+            RETRY_DELAY=10
+            ATTEMPT=1
+            HEALTHY=0
+
+            while [ "$ATTEMPT" -le "$MAX_RETRIES" ]; do
+              if curl -fsS "$HEALTHCHECK_URL" > /dev/null; then
+                HEALTHY=1
+                break
               fi
+              echo "Healthcheck failed (attempt $ATTEMPT/$MAX_RETRIES). Retrying in ${RETRY_DELAY}s..."
+              sleep "$RETRY_DELAY"
+              ATTEMPT=$((ATTEMPT + 1))
+            done
+
+            if [ "$HEALTHY" -ne 1 ]; then
+              echo "Healthcheck failed after deployment. Showing service status and logs..."
+              sudo docker compose -f docker-compose.prod.yml ps
+              sudo docker compose -f docker-compose.prod.yml logs --tail=120 backend frontend || true
+
+              ROLLBACK_TAG=""
+              if [ -n "$PREVIOUS_IMAGE_TAG" ] && [ "$PREVIOUS_IMAGE_TAG" != "sha-0000000000000000000000000000000000000000" ] && verify_tag_exists "$PREVIOUS_IMAGE_TAG"; then
+                ROLLBACK_TAG="$PREVIOUS_IMAGE_TAG"
+              elif verify_tag_exists "$FALLBACK_TAG"; then
+                ROLLBACK_TAG="$FALLBACK_TAG"
+              fi
+
+              if [ -n "$ROLLBACK_TAG" ]; then
+                echo "Rolling back to $ROLLBACK_TAG"
+                deploy_tag "$ROLLBACK_TAG"
+              else
+                echo "No valid rollback tag found. Leaving current state for investigation."
+              fi
+
               exit 1
             fi
+
+            echo "Deployment successful with tag: $TARGET_TAG"
