@@ -103,6 +103,24 @@ public class PurchaseOrderService {
         });
     }
 
+    private void notifyManagersOnPendingApproval(PurchaseOrder order) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
+                NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
+                        .subject("[PO chờ duyệt] " + orderNumber)
+                        .message("Phiếu nhập " + orderNumber + " đã được gửi yêu cầu nhập kho và đang chờ quản lý duyệt.")
+                        .build();
+
+                int recipientCount = inventoryManagerNotificationService.notifyManagers(order, request);
+                log.info("Đã tự động gửi thông báo chờ duyệt cho {} quản lý của PO {}.", recipientCount, orderNumber);
+            } catch (Exception ex) {
+                String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
+                log.warn("Không thể tự động gửi email chờ duyệt cho PO {}: {}", orderNumber, ex.getMessage());
+            }
+        });
+    }
+
     // ─── Generate Next PO Code ───────────────────────────────
     public String generateNextPOCode() {
         int year = LocalDate.now().getYear();
@@ -130,7 +148,8 @@ public class PurchaseOrderService {
         validateDraft(request);
 
         PurchaseOrder order = buildOrderFromRequest(request);
-        if (request.getStatus() != null && "PENDING".equalsIgnoreCase(request.getStatus())) {
+        boolean submitForApproval = request.getStatus() != null && "PENDING".equalsIgnoreCase(request.getStatus());
+        if (submitForApproval) {
             order.setStatus(PurchaseOrderStatus.PENDING);
         } else {
             order.setStatus(PurchaseOrderStatus.DRAFT);
@@ -150,6 +169,10 @@ public class PurchaseOrderService {
 
         if (!itemRequests.isEmpty()) {
             saveOrderItems(savedOrder, itemRequests);
+        }
+
+        if (submitForApproval) {
+            notifyManagersOnPendingApproval(savedOrder);
         }
 
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
@@ -596,6 +619,10 @@ public class PurchaseOrderService {
         PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
         if (!itemRequests.isEmpty()) {
             saveOrderItems(savedOrder, itemRequests);
+        }
+
+        if (submitForApproval) {
+            notifyManagersOnPendingApproval(savedOrder);
         }
 
         return toDetailResponse(purchaseOrderRepository.findById(savedOrder.getId()).orElse(savedOrder));
