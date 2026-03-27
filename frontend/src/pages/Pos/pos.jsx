@@ -278,17 +278,8 @@ export default function POS() {
         alert('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
         window.location.href = '/login';
       } else {
-        // Fallback to mock data if backend is not available
-        console.warn('Backend not available, using mock data');
-        const mockProducts = [
-          { id: 1, name: "Coca Cola 330ml", price: 15000, barcode: "123456", sku: "COCA-330", stock: 50 },
-          { id: 2, name: "Pepsi 330ml", price: 14000, barcode: "123457", sku: "PEPSI-330", stock: 30 },
-          { id: 3, name: "Sting 330ml", price: 12000, barcode: "123458", sku: "STING-330", stock: 25 },
-          { id: 4, name: "Bánh mì sandwich", price: 25000, barcode: "123459", sku: "BANH-MI", stock: 10 },
-          { id: 5, name: "Sữa tươi Vinamilk", price: 28000, barcode: "123460", sku: "SUA-VNM", stock: 20 },
-          { id: 6, name: "Nước suối Lavie", price: 8000, barcode: "123461", sku: "NUOC-LAVIE", stock: 100 }
-        ];
-        setProducts(mockProducts);
+        console.warn('Backend not available, products will be empty');
+        setProducts([]);
         setCombos([]);
       }
     } finally {
