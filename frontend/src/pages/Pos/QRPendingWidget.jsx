@@ -3,6 +3,7 @@ import api from "../../config/axiosConfig";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
+// Hiển thị thành phần qrpending widget.
 export default function QRPendingWidget({ pendingOrder, onComplete, onCancel }) {
   const { amount, paymentCode, orderData, id } = pendingOrder;
   const [status, setStatus] = useState("waiting"); // waiting | success

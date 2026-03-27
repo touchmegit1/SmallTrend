@@ -1,11 +1,13 @@
 import EmptyCart from "./EmptyCart";
 import { useState } from "react";
 
+// Hiển thị thành phần cart.
 export default function Cart({ cart, setCart, combos = [], products = [], addToCart, addComboToCart }) {
   const [editingId, setEditingId] = useState(null);
   const [editingValue, setEditingValue] = useState("");
   const [comboDetail, setComboDetail] = useState(null); // combo object being previewed
 
+  // Cập nhật quantity.
   const updateQuantity = (id, newQty) => {
     if (newQty <= 0) {
       setCart(cart.filter(item => item.id !== id));
@@ -16,10 +18,12 @@ export default function Cart({ cart, setCart, combos = [], products = [], addToC
     }
   };
 
+  // Thực hiện remove item.
   const removeItem = (id) => {
     setCart(cart.filter(item => item.id !== id));
   };
 
+  // Lấy combo suggestions.
   const getComboSuggestions = () => {
     if (!combos.length || !cart.length) return [];
 

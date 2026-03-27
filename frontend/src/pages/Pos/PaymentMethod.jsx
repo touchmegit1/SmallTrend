@@ -1,3 +1,4 @@
+// Hiển thị thành phần payment method.
 export default function PaymentMethod({
   name,
   amount,

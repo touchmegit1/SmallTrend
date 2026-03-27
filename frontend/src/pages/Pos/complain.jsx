@@ -60,6 +60,7 @@ const RELATED_ENTITY_TYPES = [
   { value: 'Product', label: 'Sản phẩm' }
 ];
 
+// Hiển thị thành phần customer complaint system.
 export default function CustomerComplaintSystem() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +99,7 @@ export default function CustomerComplaintSystem() {
   const { toasts, showToast, removeToast } = useToast();
   const isComplaintReadOnlyForManager = hasAnyRole(user, MANAGER_ROLES);
 
+  // Lấy tier.
   const getTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
     let matched = null;
@@ -203,12 +205,14 @@ export default function CustomerComplaintSystem() {
     setCustomerNotFound(false);
   };
 
+  // Mở create.
   const openCreate = () => {
     if (isComplaintReadOnlyForManager) return;
     resetForm();
     setShowModal(true);
   };
 
+  // Mở edit.
   const openEdit = (ticket) => {
     if (isComplaintReadOnlyForManager) return;
     setEditingTicket(ticket);
@@ -348,6 +352,7 @@ export default function CustomerComplaintSystem() {
     }
   };
 
+  // Thực hiện format date.
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('vi-VN', {
@@ -359,6 +364,7 @@ export default function CustomerComplaintSystem() {
     });
   };
 
+  // Hiển thị thành phần status badge.
   const StatusBadge = ({ status }) => {
     const effectiveStatus = status === 'OPEN' ? 'IN_PROGRESS' : status;
     const cfg = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.IN_PROGRESS;
@@ -371,6 +377,7 @@ export default function CustomerComplaintSystem() {
     );
   };
 
+  // Hiển thị thành phần priority badge.
   const PriorityBadge = ({ priority }) => {
     const cfg = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.NORMAL;
     const Icon = cfg.icon;
@@ -731,6 +738,7 @@ export default function CustomerComplaintSystem() {
                         return;
                       }
 
+                      // Thực hiện normalize phone.
                       const normalizePhone = (value) => (value || '').replace(/\s+/g, '');
                       const cleanPhone = normalizePhone(phone);
 

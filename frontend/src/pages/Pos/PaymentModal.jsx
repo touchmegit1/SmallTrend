@@ -8,6 +8,7 @@ import eventService from "../../services/eventService";
 
 const SEPAY_API_TOKEN = "6NBN1CXSYYMKUTRDQE94LCDYOHETW8PQF6OQX0GGOWRSPCJGBIVHL7SADPIWMMAN";
 
+// Hiển thị thành phần qrtransfer modal.
 const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
   const [paymentCode] = useState(() => "DH" + Date.now());
   const [status, setStatus] = useState("waiting"); // waiting | success | error
@@ -66,6 +67,7 @@ const QRTransferModal = ({ amount, onCancel, onSuccess }) => {
 
   // Keyboard shortcuts
   useEffect(() => {
+    // Xử lý key down.
     const handleKeyDown = (e) => {
       e.stopPropagation();
       if (e.key === 'Escape') {
@@ -201,6 +203,7 @@ const getCustomerTier = (spentAmount, tiers) => {
     .find(tier => spentAmount >= Number(tier.minSpending)) || null;
 };
 
+// Thực hiện build updated customer after payment.
 const buildUpdatedCustomerAfterPayment = (selectedCustomer, finalTotal, tiers, usePoints, pointsDiscount) => {
   if (!selectedCustomer || !selectedCustomer.id) return selectedCustomer;
 
@@ -224,6 +227,7 @@ const buildUpdatedCustomerAfterPayment = (selectedCustomer, finalTotal, tiers, u
   };
 };
 
+// Hiển thị thành phần payment modal.
 export default function PaymentModal({ cart, customer, onClose, onComplete, onStartQRPayment, shortcuts }) {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customer);
@@ -266,6 +270,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     return acc;
   }, {});
 
+  // Lấy voucher discount amount.
   const getVoucherDiscountAmount = (voucherItem) => {
     if (!voucherItem) return 0;
     if (voucherItem.couponType === 'PERCENTAGE') {
@@ -277,6 +282,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     return Math.max(0, Number(voucherItem.discountAmount || 0));
   };
 
+  // Lấy voucher campaign id.
   const getVoucherCampaignId = (voucherItem) => {
     const rawId = voucherItem?.campaignId ?? voucherItem?.campaign?.id;
     const parsed = Number(rawId);
@@ -303,6 +309,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     }
   }, [availableVouchers, selectedVoucherId]);
 
+  // Thực hiện select voucher.
   const selectVoucher = (voucherItem) => {
     if (!voucherItem) return;
 
@@ -321,6 +328,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     setSelectedVoucherId(prev => (prev === voucherItem.id ? null : voucherItem.id));
   };
 
+  // Xử lý voucher key down.
   const handleVoucherKeyDown = (e, voucherItem) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -328,6 +336,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     }
   };
 
+  // Xử lý toggle use points.
   const handleToggleUsePoints = (checked) => {
     if (checked && selectedVoucherId != null) {
       setVoucherSelectionError("Chỉ được chọn một hình thức giảm giá: điểm hoặc voucher.");
@@ -341,11 +350,13 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     setUsePoints(checked);
   };
 
+  // Kiểm tra voucher applicable.
   const isVoucherApplicable = (voucherItem) => {
     const minPurchaseAmount = Number(voucherItem?.minPurchaseAmount || 0);
     return minPurchaseAmount <= 0 || subtotal >= minPurchaseAmount;
   };
 
+  // Lấy voucher validation message.
   const getVoucherValidationMessage = (voucherItem) => {
     if (!isVoucherApplicable(voucherItem)) {
       return `Chưa đủ điều kiện: Đơn tối thiểu ${Number(voucherItem.minPurchaseAmount || 0).toLocaleString()}đ`;
@@ -353,6 +364,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     return "";
   };
 
+  // Kiểm tra voucher selected.
   const isVoucherSelected = (voucherId) => selectedVoucherId === voucherId;
 
 
@@ -363,6 +375,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
 
   const standaloneVouchers = availableVouchers.filter(v => getVoucherCampaignId(v) == null);
 
+  // Thực hiện format voucher discount.
   const formatVoucherDiscount = (voucherItem) => {
     if (voucherItem.couponType === 'PERCENTAGE') {
       return `${Number(voucherItem.discountPercent || 0)}%`;
@@ -416,6 +429,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   }, []);
 
   useEffect(() => {
+    // Xử lý key down.
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -533,6 +547,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [focusedField, paymentMethod, cashAmount, finalTotal, suggestedIndex, shortcuts, onClose]);
 
+  // Lấy suggested amounts.
   const getSuggestedAmounts = () => {
     if (!cashAmount) return [];
 

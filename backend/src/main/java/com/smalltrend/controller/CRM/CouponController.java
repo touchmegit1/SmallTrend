@@ -20,11 +20,13 @@ public class CouponController {
     private final CouponService couponService;
 
     @GetMapping
+    // Lấy all coupons.
     public ResponseEntity<List<CouponResponse>> getAllCoupons() {
         return ResponseEntity.ok(couponService.getAllCoupons());
     }
 
     @PostMapping
+    // Tạo coupon.
     public ResponseEntity<?> createCoupon(@RequestBody CreateCouponRequest request) {
         try {
             CouponResponse coupon = couponService.createCoupon(request);
@@ -37,6 +39,7 @@ public class CouponController {
     }
 
     @PutMapping("/{id}")
+    // Cập nhật coupon.
     public ResponseEntity<?> updateCoupon(@PathVariable("id") Integer id, @RequestBody CreateCouponRequest request) {
         try {
             CouponResponse coupon = couponService.updateCoupon(id, request);
@@ -49,12 +52,14 @@ public class CouponController {
     }
 
     @DeleteMapping("/{id}")
+    // Xóa coupon.
     public ResponseEntity<Void> deleteCoupon(@PathVariable("id") Integer id) {
         couponService.deleteCoupon(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/redeem")
+    // Áp dụng coupon.
     public ResponseEntity<?> redeemCoupon(@PathVariable("id") Integer id) {
         try {
             CouponResponse coupon = couponService.redeemCoupon(id);

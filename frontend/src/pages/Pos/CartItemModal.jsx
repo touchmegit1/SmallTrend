@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Plus, Minus } from "lucide-react";
 
+// Hiển thị thành phần cart item modal.
 export default function CartItemModal({ item, products, onClose, onConfirm }) {
     const siblings = item.isCombo ? [] : products.filter(p => p.productId && p.productId === item.productId);
     const displayUnits = item.isCombo ? [] : (siblings.length > 0 ? siblings : [item]);
@@ -31,6 +32,7 @@ export default function CartItemModal({ item, products, onClose, onConfirm }) {
     const [focusedField, setFocusedField] = useState(hasMultipleUnits ? "unit" : "qty");
 
     useEffect(() => {
+        // Xử lý key down.
         const handleKeyDown = (e) => {
             if (e.key === "Escape") {
                 onClose();
@@ -98,6 +100,7 @@ export default function CartItemModal({ item, products, onClose, onConfirm }) {
         }
     }, [focusedField, hasMultipleUnits, selectedProductId]);
 
+    // Xử lý confirm.
     const handleConfirm = () => {
         let newItem = { ...item };
         if (!item.isCombo && selectedProductId !== item.id) {

@@ -18,6 +18,7 @@ const COLORS = {
 const SHADOW = "0 1px 4px rgba(0,0,0,0.06)";
 const RADIUS = "12px";
 
+// Hiển thị thành phần reportfor cashier.
 export default function ReportforCashier() {
   const [transactions, setTransactions] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -66,6 +67,7 @@ export default function ReportforCashier() {
   });
   const topProducts = Object.entries(productStats).sort((a, b) => b[1].quantity - a[1].quantity).slice(0, 3);
 
+  // Lấy transaction hour.
   const getTransactionHour = (timeValue) => {
     if (!timeValue) return null;
 
@@ -113,6 +115,7 @@ export default function ReportforCashier() {
   const peakHour = Object.entries(hourStats).sort((a, b) => b[1] - a[1])[0];
   const peakHourText = peakHour ? `${peakHour[0]}:00 - ${parseInt(peakHour[0]) + 2}:00` : "--";
 
+  // Thực hiện show revenue details.
   const showRevenueDetails = () => {
     const totalRevenueSum = transactions.reduce((sum, t) => sum + parseInt(t.total.replace(/[^0-9]/g, '')), 0);
     setModalContent({
@@ -128,6 +131,7 @@ export default function ReportforCashier() {
     setShowModal(true);
   };
 
+  // Thực hiện show order details.
   const showOrderDetails = () => {
     // Lấy tất cả transactions từ localStorage (giống TransactionHistory)
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
@@ -163,6 +167,7 @@ export default function ReportforCashier() {
     setShowModal(true);
   };
 
+  // Thực hiện show product details.
   const showProductDetails = () => {
     const productMap = {};
     let totalQuantity = 0;

@@ -12,6 +12,7 @@ import api from "../../config/axiosConfig";
 import ticketService from "../../services/ticketService";
 import eventService from "../../services/eventService";
 
+// Hiển thị thành phần pos.
 export default function POS() {
   const searchInputRef = useRef(null);
   const discontinuedModalOpenedAtRef = useRef(0);
@@ -222,6 +223,7 @@ export default function POS() {
   };
 
   useEffect(() => {
+    // Xử lý key press.
     const handleKeyPress = (e) => {
       // Bỏ qua phím tắt nếu đang mở modal (ngoại trừ F9/F10 trong payment modal thì đã xử lý bên trong modal)
       if (showPaymentModal || showInvoice || showShortcuts) return;
@@ -323,6 +325,7 @@ export default function POS() {
 
     if (!hasUnfinishedTransaction) return;
 
+    // Xử lý before unload.
     const handleBeforeUnload = (event) => {
       event.preventDefault();
       event.returnValue = 'Bạn đang có giao dịch chưa hoàn thành.';
@@ -334,6 +337,7 @@ export default function POS() {
   }, [orders, pendingQROrders]);
 
   useEffect(() => {
+    // Thực hiện refresh suspended orders.
     const refreshSuspendedOrders = () => {
       const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       const waitingOrders = transactions.filter((t) => t.status === 'Chờ thanh toán');
@@ -395,6 +399,7 @@ export default function POS() {
     return 0;
   });
 
+  // Đóng discontinued modal.
   const closeDiscontinuedModal = () => {
     setShowDiscontinuedModal(false);
     setTimeout(() => {
@@ -404,29 +409,35 @@ export default function POS() {
     }, 0);
   };
 
+  // Thực hiện show unavailable warning.
   const showUnavailableWarning = (message) => {
     discontinuedModalOpenedAtRef.current = Date.now();
     setDiscontinuedMessage(message);
     setShowDiscontinuedModal(true);
   };
 
+  // Thực hiện show discontinued warning.
   const showDiscontinuedWarning = (itemName) => {
     showUnavailableWarning(`${itemName || 'Sản phẩm này'} đã ngừng bán. Vui lòng chọn sản phẩm khác.`);
   };
 
+  // Lấy positive number.
   const getPositiveNumber = (value) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  // Lấy item price.
   const getItemPrice = (item) => {
     return getPositiveNumber(item?.sellPrice ?? item?.comboPrice ?? item?.price);
   };
 
+  // Lấy item stock.
   const getItemStock = (item) => {
     return Math.max(0, getPositiveNumber(item?.stockQuantity ?? item?.stock));
   };
 
+  // Lấy combo retail total.
   const getComboRetailTotal = (combo) => {
     return (combo?.items || []).reduce((sum, comboItem) => {
       const productInfo = products.find(p => p.id === comboItem.productVariantId);
@@ -435,10 +446,12 @@ export default function POS() {
     }, 0);
   };
 
+  // Lấy combo savings.
   const getComboSavings = (combo) => {
     return getComboRetailTotal(combo) - getPositiveNumber(combo?.comboPrice ?? combo?.price);
   };
 
+  // Lấy max applicable combo count.
   const getMaxApplicableComboCount = (cart, combo) => {
     const comboItems = combo?.items || [];
     if (comboItems.length === 0) return 0;
@@ -456,6 +469,7 @@ export default function POS() {
     return Number.isFinite(maxCount) ? maxCount : 0;
   };
 
+  // Thực hiện auto apply best combos.
   const autoApplyBestCombos = (cart) => {
     let workingCart = [...cart];
 
@@ -508,6 +522,7 @@ export default function POS() {
     return workingCart;
   };
 
+  // Thực hiện validate sellable item.
   const validateSellableItem = (item, itemName = 'Sản phẩm này') => {
     if (isInactiveItem(item)) {
       return `${itemName} đã ngừng bán. Vui lòng chọn sản phẩm khác.`;
@@ -526,6 +541,7 @@ export default function POS() {
     return null;
   };
 
+  // Thực hiện validate sellable combo.
   const validateSellableCombo = (combo) => {
     const comboName = combo?.comboName ? `Combo ${combo.comboName}` : 'Combo này';
 
@@ -564,6 +580,7 @@ export default function POS() {
 
     discontinuedConfirmButtonRef.current?.focus();
 
+    // Xử lý discontinued modal enter.
     const handleDiscontinuedModalEnter = (e) => {
       if (e.key === 'Enter') {
         const elapsed = Date.now() - discontinuedModalOpenedAtRef.current;
@@ -584,16 +601,19 @@ export default function POS() {
     }
   }, [showDiscontinuedModal, showPaymentModal, showInvoice, showShortcuts, activeOrderId]);
 
+  // Kiểm tra inactive status.
   const isInactiveStatus = (status) => {
     if (!status || typeof status !== 'string') return false;
     const normalized = status.toUpperCase();
     return ['INACTIVE', 'DISCONTINUED', 'STOP_SELLING', 'STOPPED', 'NGUNG_BAN'].includes(normalized);
   };
 
+  // Kiểm tra inactive item.
   const isInactiveItem = (item) => {
     return item?.isActive === false || item?.productActive === false || item?.active === false || isInactiveStatus(item?.status);
   };
 
+  // Thêm to cart.
   const addToCart = (product) => {
     const itemError = validateSellableItem(product, product?.name || 'Sản phẩm này');
     if (itemError) {
@@ -675,6 +695,7 @@ export default function POS() {
     }, 100);
   };
 
+  // Thêm combo to cart.
   const addComboToCart = (combo) => {
     const comboError = validateSellableCombo(combo);
     if (comboError) {
@@ -747,6 +768,7 @@ export default function POS() {
     updateCart(currentCart);
   };
 
+  // Cập nhật cart.
   const updateCart = (newCart) => {
     const cartAfterAutoApply = autoApplyBestCombos(newCart);
     const normalizedCart = [];
@@ -833,6 +855,7 @@ export default function POS() {
     }, 100);
   };
 
+  // Cập nhật customer.
   const updateCustomer = (customer) => {
     // Luôn giữ lại spentAmount nếu có khi update khách
     setOrders(orders.map(order =>
@@ -842,12 +865,14 @@ export default function POS() {
 
 
 
+  // Cập nhật use points.
   const updateUsePoints = (usePoints) => {
     setOrders(orders.map(order =>
       order.id === activeOrderId ? { ...order, usePoints } : order
     ));
   };
 
+  // Thêm new order.
   const addNewOrder = () => {
     const newId = Math.max(...orders.map(o => o.id)) + 1;
     const newOrders = [...orders, { id: newId, cart: [], customer: null, usePoints: false }].sort((a, b) => a.id - b.id);
@@ -855,6 +880,7 @@ export default function POS() {
     setActiveOrderId(newId);
   };
 
+  // Xóa order.
   const deleteOrder = (orderId) => {
     if (orders.length > 1) {
       const newOrders = orders.filter(order => order.id !== orderId).sort((a, b) => a.id - b.id);
@@ -1019,6 +1045,7 @@ export default function POS() {
     }
   };
 
+  // Xử lý start qrpayment.
   const handleStartQRPayment = (orderData, amount, paymentCode) => {
     const orderId = `ORDER_${activeOrderId}`;
     const orderDataWithOrderId = { ...orderData, orderId };
@@ -1209,10 +1236,12 @@ export default function POS() {
     setPendingQROrders(prev => prev.filter(o => o.id !== id));
   };
 
+  // Xử lý cancel qrpayment.
   const handleCancelQRPayment = (id) => {
     setPendingQROrders(prev => prev.filter(o => o.id !== id));
   };
 
+  // Xử lý print current invoice.
   const handlePrintCurrentInvoice = () => {
     const currentOrder = activeOrder;
     if (currentOrder.cart.length === 0) {

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Invoice from "./Invoice";
 import api from "../../config/axiosConfig";
 
+// Hiển thị thành phần transaction history.
 function TransactionHistory() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
@@ -24,6 +25,7 @@ function TransactionHistory() {
   const [notificationModal, setNotificationModal] = useState(null);
   const notificationTimerRef = useRef(null);
 
+  // Đóng notification modal.
   const closeNotificationModal = () => {
     setNotificationModal(null);
     if (notificationTimerRef.current) {
@@ -32,6 +34,7 @@ function TransactionHistory() {
     }
   };
 
+  // Thực hiện show notification modal.
   const showNotificationModal = (message, duration = 5000) => {
     setNotificationModal(message);
     if (notificationTimerRef.current) {
@@ -43,6 +46,7 @@ function TransactionHistory() {
   };
 
   useEffect(() => {
+    // Xử lý esc close.
     const handleEscClose = (e) => {
       if (e.key === 'Escape' && notificationModal) {
         closeNotificationModal();
@@ -82,6 +86,7 @@ function TransactionHistory() {
     const items = transaction.cart || transaction.items || [];
     if (items.length === 0) return;
 
+    // Cập nhật transaction sync state.
     const updateTransactionSyncState = (patch) => {
       const updatedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       const index = updatedTransactions.findIndex(t => t.id === transaction.id);
@@ -92,10 +97,12 @@ function TransactionHistory() {
       }
     };
 
+    // Thực hiện mark transaction as saved.
     const markTransactionAsSaved = () => {
       updateTransactionSyncState({ savedToDb: true, purchaseHistorySyncFailed: false });
     };
 
+    // Thực hiện mark transaction as sync failed.
     const markTransactionAsSyncFailed = () => {
       updateTransactionSyncState({ purchaseHistorySyncFailed: true });
     };
@@ -197,6 +204,7 @@ function TransactionHistory() {
     }
   };
 
+  // Thực hiện restore pending order.
   const restorePendingOrder = (transaction) => {
     let pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
     let orders = JSON.parse(localStorage.getItem('posOrders') || '[{ "id": 1, "cart": [], "customer": null, "usePoints": false }]');
@@ -259,6 +267,7 @@ function TransactionHistory() {
     navigate('/pos');
   };
 
+  // Xóa transaction.
   const deleteTransaction = (transactionId) => {
     const updatedTransactions = transactions.filter(t => t.id !== transactionId);
     setTransactions(updatedTransactions);
@@ -276,6 +285,7 @@ function TransactionHistory() {
     setSelectedIds(prev => prev.filter(id => id !== transactionId));
   };
 
+  // Thực hiện bulk delete transactions.
   const bulkDeleteTransactions = () => {
     const updatedTransactions = transactions.filter(t => !selectedIds.includes(t.id));
     setTransactions(updatedTransactions);
@@ -289,6 +299,7 @@ function TransactionHistory() {
     setBulkDeleteConfirm(false);
   };
 
+  // Mở refund modal.
   const openRefundModal = (transaction) => {
     const items = transaction.cart || transaction.items || [];
     const initQtys = {};
@@ -433,6 +444,7 @@ function TransactionHistory() {
     showNotificationModal(refundSuccessMessage);
   };
 
+  // Thực hiện save customer info.
   const saveCustomerInfo = () => {
     if (!editCustomerModal) return;
 
@@ -457,12 +469,14 @@ function TransactionHistory() {
     showNotificationModal('Đã lưu thông tin khách hàng thành công!');
   };
 
+  // Thực hiện toggle select.
   const toggleSelect = (id) => {
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
 
+  // Thực hiện toggle select all.
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredTransactions.length) {
       setSelectedIds([]);
@@ -471,6 +485,7 @@ function TransactionHistory() {
     }
   };
 
+  // Thực hiện parse date time.
   const parseDateTime = (timeStr) => {
     if (!timeStr) return 0;
     const parts = timeStr.split(/[\s,]+/);

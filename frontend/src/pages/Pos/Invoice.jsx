@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 
+// Hiển thị thành phần invoice.
 export default function Invoice({ transaction, onClose, shortcuts }) {
+  // Xử lý print.
   const handlePrint = () => {
     window.print();
   };
@@ -11,6 +13,7 @@ export default function Invoice({ transaction, onClose, shortcuts }) {
   if (!transaction) return null;
 
   const invoiceItems = transaction.items || transaction.cart || [];
+  // Thực hiện parse money.
   const parseMoney = (value) => parseInt((value || 0).toString().replace(/[^0-9]/g, ""), 10) || 0;
   const totalAmount = parseMoney(transaction.total);
   const pointsDiscount = Number(transaction.pointsDiscount || 0);
@@ -18,6 +21,7 @@ export default function Invoice({ transaction, onClose, shortcuts }) {
   const refundedAmount = Number(transaction.refundedAmount || 0);
   const subTotal = totalAmount + pointsDiscount + voucherDiscount + refundedAmount;
   useEffect(() => {
+    // Xử lý key down.
     const handleKeyDown = (e) => {
       if (e.key === printKey) {
         e.preventDefault();

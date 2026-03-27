@@ -39,6 +39,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
   const isPhoneValid = phone.length >= 10 && phone.length <= 11;
   const canRegister = isPhoneValid && !foundCustomer;
 
+  // Lấy customer tier.
   const getCustomerTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
     return [...tiers]
@@ -46,6 +47,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
       .find((tier) => spentAmount >= Number(tier.minSpending)) || null;
   };
 
+  // Thực hiện map customer for select.
   const mapCustomerForSelect = (customer) => {
     const spentAmount = Number(customer?.spentAmount) || 0;
     const tier = getCustomerTier(spentAmount);
@@ -61,6 +63,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
     };
   };
 
+  // Xử lý key down.
   const handleKeyDown = (e, action) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -77,6 +80,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
       return;
     }
 
+    // Thực hiện normalize phone.
     const normalizePhone = (value) => (value || "").replace(/\s+/g, "");
     const cleanPhone = normalizePhone(phone);
 
@@ -124,6 +128,7 @@ const CustomerSearch = forwardRef(({ onSelectCustomer, onNavigateDown }, ref) =>
     }
   };
 
+  // Xử lý open register.
   const handleOpenRegister = () => {
     setShowRegister(true);
   };

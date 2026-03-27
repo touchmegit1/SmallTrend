@@ -22,6 +22,7 @@ public class PurchaseHistoryService {
     private final InventoryStockService inventoryStockService;
 
     @Transactional
+    // Lưu purchase history.
     public void savePurchaseHistory(SavePurchaseHistoryRequest request) {
         List<PurchaseHistory> histories = new ArrayList<>();
 
@@ -58,11 +59,13 @@ public class PurchaseHistoryService {
         }
     }
 
+    // Lấy customer history.
     public List<PurchaseHistory> getCustomerHistory(Long customerId) {
         return purchaseHistoryRepository.findByCustomerId(customerId);
     }
 
     @Transactional
+    // Hoàn purchase items.
     public void refundPurchaseItems(SavePurchaseHistoryRequest request) {
         if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("Refund items are required");
@@ -85,6 +88,7 @@ public class PurchaseHistoryService {
         }
     }
 
+    // Xử lý deduct stock quietly.
     private void deductStockQuietly(ProductVariant variant, PurchaseHistory history) {
         try {
             inventoryStockService.deductStock(variant, history.getQuantity(), history.getId(), "POS_SALE");
