@@ -56,35 +56,6 @@ public class Advertisement {
     @Builder.Default
     private Boolean isActive = true;
 
-    // ─── Hợp đồng ────────────────────────────────────────────────────────────
-
-    @Column(name = "contract_number", length = 100)
-    private String contractNumber;
-
-    @Column(name = "contract_value", precision = 15, scale = 2)
-    private BigDecimal contractValue;
-
-    @Column(name = "contract_start")
-    private LocalDate contractStart;
-
-    @Column(name = "contract_end")
-    private LocalDate contractEnd;
-
-    @Column(name = "payment_terms", length = 500)
-    private String paymentTerms;
-
-    @Column(name = "contact_person", length = 200)
-    private String contactPerson;
-
-    @Column(name = "contact_email", length = 200)
-    private String contactEmail;
-
-    @Column(name = "contact_phone", length = 50)
-    private String contactPhone;
-
-    @Column(name = "notes", columnDefinition = "TEXT")
-    private String notes;
-
     // ─── Timestamps ───────────────────────────────────────────────────────────
 
     @CreationTimestamp

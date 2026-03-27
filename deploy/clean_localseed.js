@@ -13,7 +13,7 @@ const skipTables = [
     'cash_transactions', 'sale_order_histories', 'purchase_order_items', 'purchase_orders',
     'sale_order_items', 'sale_orders', 'stock_movements', 'price_expiry_alert_logs',
     'loyalty_gifts', 'product_combos', 'product_combo_items', 'purchase_history',
-    'salary_configs', 'attendance', 'reports'
+    'salary_configs', 'attendance', 'reports', 'advertisements'
 ];
 
 const COLUMN_MAPS = {
