@@ -23,6 +23,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useFetchSuppliers } from "../../../hooks/useSuppliers";
+import { useFetchBrands } from "../../../hooks/brands";
 import { useAuth } from "../../../context/AuthContext";
 import { canManageProducts } from "../../../utils/roleUtils";
 
@@ -55,6 +56,31 @@ export function SuppliersScreen() {
   const [formData, setFormData] = useState(initialFormData);
   const [toast, setToast] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showBrandsModal, setShowBrandsModal] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+
+  const { brands } = useFetchBrands();
+
+  const brandsOfSelectedSupplier = useMemo(() => {
+    if (!selectedSupplier?.id) return [];
+
+    const filtered = (brands || []).filter((brand) => {
+      const supplierId = brand?.supplier?.id ?? brand?.supplier_id ?? brand?.supplierId;
+      return String(supplierId) === String(selectedSupplier.id);
+    });
+
+    return filtered.sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
+  }, [brands, selectedSupplier]);
+
+  const handleOpenBrandsModal = (supplier) => {
+    setSelectedSupplier(supplier);
+    setShowBrandsModal(true);
+  };
+
+  const handleCloseBrandsModal = () => {
+    setShowBrandsModal(false);
+    setSelectedSupplier(null);
+  };
 
   const {
     suppliers,
@@ -280,7 +306,14 @@ export function SuppliersScreen() {
                             <Building2 className="w-5 h-5 text-blue-600" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-900">{supplier.name}</p>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenBrandsModal(supplier)}
+                              className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left"
+                              title={`Xem thương hiệu của ${supplier.name}`}
+                            >
+                              {supplier.name}
+                            </button>
                             <p className="text-xs text-gray-500">{supplier.contact_person || "Chưa có người liên hệ"}</p>
                           </div>
                         </div>
@@ -345,6 +378,55 @@ export function SuppliersScreen() {
             )}
           </CardContent>
         </Card>
+
+        {showBrandsModal && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+            onClick={handleCloseBrandsModal}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Thương hiệu của nhà cung cấp: {selectedSupplier?.name || 'N/A'}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">Tổng cộng {brandsOfSelectedSupplier.length} thương hiệu</p>
+                <button
+                  type="button"
+                  onClick={handleCloseBrandsModal}
+                  className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-auto">
+                {brandsOfSelectedSupplier.length === 0 ? (
+                  <div className="text-center text-gray-500 py-12">Nhà cung cấp này chưa có thương hiệu nào.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {brandsOfSelectedSupplier.map((brand) => (
+                      <div
+                        key={brand.id}
+                        className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 flex items-center justify-between gap-4"
+                      >
+                        <div>
+                          <div className="font-semibold text-gray-900">{brand.name || 'Thương hiệu chưa có tên'}</div>
+                          {brand.category?.name && (
+                            <div className="text-sm text-gray-500 mt-1">Danh mục: {brand.category.name}</div>
+                          )}
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-700">Brand</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {canEditProducts && deleteTarget && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">

@@ -260,10 +260,13 @@ class PurchaseOrderServiceTest {
                         .build()
         ));
 
-        assertNotNull(purchaseOrderService.receiveGoods(1, req));
+        PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
+        assertNotNull(response);
+        assertEquals("RECEIVED", response.getStatus());
         verify(inventoryStockRepository, atLeastOnce()).save(any());
         verify(stockMovementRepository, atLeastOnce()).save(any());
         verify(inventoryManagerNotificationService, never()).notifyManagers(any(), any());
+        verify(variantPriceService, atLeastOnce()).syncActivePurchasePrice(anyInt(), any());
     }
 
     @Test
@@ -373,9 +376,13 @@ class PurchaseOrderServiceTest {
         PurchaseOrderResponse response = purchaseOrderService.receiveGoods(1, req);
 
         assertEquals("SHORTAGE_PENDING_APPROVAL", response.getStatus());
+        assertEquals(0, response.getSyncedPurchasePriceCount());
+        assertNull(response.getSyncedPurchasePriceAt());
+        assertTrue(response.getSyncedPurchasePriceItems() == null || response.getSyncedPurchasePriceItems().isEmpty());
         verify(inventoryManagerNotificationService, timeout(1000).times(1)).notifyManagers(any(), any());
         verify(inventoryStockRepository, never()).save(any());
         verify(stockMovementRepository, never()).save(any());
+        verify(variantPriceService, never()).syncActivePurchasePrice(anyInt(), any());
     }
 
     @Test
@@ -536,6 +543,7 @@ class PurchaseOrderServiceTest {
         assertEquals("RECEIVED", response.getStatus());
         verify(inventoryStockRepository, atLeastOnce()).save(any());
         verify(stockMovementRepository, atLeastOnce()).save(any());
+        verify(variantPriceService, atLeastOnce()).syncActivePurchasePrice(anyInt(), any());
     }
 
     @Test

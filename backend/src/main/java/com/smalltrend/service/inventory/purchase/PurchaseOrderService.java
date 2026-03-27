@@ -456,14 +456,14 @@ public class PurchaseOrderService {
         List<PurchaseOrderItemRequest> stockItemRequests = (order.getItems() == null ? List.<PurchaseOrderItemRequest>of() : order.getItems().stream()
                 .filter(Objects::nonNull)
                 .map(item -> PurchaseOrderItemRequest.builder()
-                        .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
-                        .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                                ? item.getVariant().getProduct().getId().intValue() : null)
-                        .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0)
-                        .unitCost(item.getUnitCost())
-                        .totalCost(item.getTotalCost())
-                        .expiryDate(item.getExpiryDate())
-                        .build())
+                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                        ? item.getVariant().getProduct().getId().intValue() : null)
+                .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0)
+                .unitCost(item.getUnitCost())
+                .totalCost(item.getTotalCost())
+                .expiryDate(item.getExpiryDate())
+                .build())
                 .filter(req -> req.getQuantity() != null && req.getQuantity() > 0)
                 .toList());
 
@@ -1270,7 +1270,6 @@ public class PurchaseOrderService {
     }
 
     // ─── Validation ──────────────────────────────────────────
-
     private boolean hasResubmissionChanges(PurchaseOrder existingOrder, PurchaseOrderRequest request) {
         if (existingOrder == null || request == null) {
             return false;
@@ -1438,8 +1437,8 @@ public class PurchaseOrderService {
                             ? item.getVariant().getProduct().getName() : "")
                     .imageUrl(item.getVariant() != null
                             ? (item.getVariant().getImageUrl() != null
-                                    ? item.getVariant().getImageUrl()
-                                    : (item.getVariant().getProduct() != null ? item.getVariant().getProduct().getImageUrl() : null))
+                            ? item.getVariant().getImageUrl()
+                            : (item.getVariant().getProduct() != null ? item.getVariant().getProduct().getImageUrl() : null))
                             : null)
                     .attributes(item.getVariant() != null ? item.getVariant().getAttributes() : null)
                     .quantity(item.getQuantity())

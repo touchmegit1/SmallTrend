@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -175,6 +176,21 @@ public class VariantPriceService {
         return mapToResponse(saved);
     }
 
+    @Transactional
+    public VariantPriceResponse updatePriceExpiry(Integer priceId, java.time.LocalDate newDate) {
+        VariantPrice price = variantPriceRepository.findById(priceId)
+                .orElseThrow(() -> new RuntimeException("Price not found with id: " + priceId));
+
+        validateDateRange(price.getEffectiveDate(), newDate);
+        if (newDate != null && newDate.isBefore(LocalDate.now())) {
+            throw new RuntimeException("Ngày hết hiệu lực không được nhỏ hơn ngày hiện tại.");
+        }
+
+        price.setExpiryDate(newDate);
+        VariantPrice saved = variantPriceRepository.save(price);
+        return mapToResponse(saved);
+    }
+
     /**
      * Toggle trạng thái active/inactive cho một bản ghi giá. Nếu kích hoạt một
      * giá, tất cả giá khác của variant sẽ bị INACTIVE.
@@ -189,7 +205,7 @@ public class VariantPriceService {
             price.setStatus(VariantPriceStatus.INACTIVE);
         } else {
             // Activate this price → deactivate all others for the same variant
-            // Preserve the purchase price from the current active price
+            // Keep current active purchase price, only switch selling price
             List<VariantPrice> activePrices = variantPriceRepository.findByVariantIdAndStatus(
                     price.getVariant().getId(), VariantPriceStatus.ACTIVE);
             BigDecimal currentPurchasePrice = null;
@@ -200,7 +216,6 @@ public class VariantPriceService {
                 activePrice.setStatus(VariantPriceStatus.INACTIVE);
                 variantPriceRepository.save(activePrice);
             }
-            // Copy purchase price from old active price to newly activated price
             if (currentPurchasePrice != null) {
                 price.setPurchasePrice(currentPurchasePrice);
             }
@@ -214,14 +229,23 @@ public class VariantPriceService {
         if (saved.getStatus() == VariantPriceStatus.ACTIVE) {
             variant.setSellPrice(saved.getSellingPrice());
         } else {
-            // Need to set to 0 or null if no active price?
-            // Actually, if we deactivate, we should probably find if there's any other active (which there shouldn't be).
-            // Defaulting to 0 for safety when no price is active.
-            variant.setSellPrice(java.math.BigDecimal.ZERO);
+            variant.setSellPrice(BigDecimal.ZERO);
         }
         productVariantRepository.save(variant);
 
         return mapToResponse(saved);
+    }
+
+    @Transactional
+    public void deletePrice(Integer priceId) {
+        VariantPrice price = variantPriceRepository.findById(priceId)
+                .orElseThrow(() -> new RuntimeException("Price not found with id: " + priceId));
+
+        if (price.getStatus() == VariantPriceStatus.ACTIVE) {
+            throw new RuntimeException("Không thể xóa giá đang kích hoạt.");
+        }
+
+        variantPriceRepository.delete(price);
     }
 
     /**
@@ -231,25 +255,50 @@ public class VariantPriceService {
         LocalDate today = LocalDate.now();
         LocalDate targetDate = today.plusDays(daysBeforeExpiry);
 
-        return variantPriceRepository.findByStatusAndExpiryDateWithVariant(VariantPriceStatus.ACTIVE, targetDate)
+        return variantPriceRepository.findByStatusAndExpiryDateRangeWithVariant(
+                        VariantPriceStatus.ACTIVE,
+                        today,
+                        targetDate)
                 .stream()
-                .map(vp -> {
-                    String variantName = "N/A";
-                    if (vp.getVariant() != null && vp.getVariant().getProduct() != null) {
-                        variantName = vp.getVariant().getProduct().getName();
-                    }
-
-                    return PriceExpiryAlertResponse.builder()
-                            .variantPriceId(vp.getId())
-                            .variantId(vp.getVariant() != null ? vp.getVariant().getId() : null)
-                            .variantName(variantName)
-                            .sku(vp.getVariant() != null ? vp.getVariant().getSku() : null)
-                            .activeSellingPrice(vp.getSellingPrice())
-                            .expiryDate(vp.getExpiryDate())
-                            .daysUntilExpiry((int) ChronoUnit.DAYS.between(today, vp.getExpiryDate()))
-                            .build();
-                })
+                .sorted(Comparator.comparing(VariantPrice::getExpiryDate))
+                .map(vp -> PriceExpiryAlertResponse.builder()
+                        .variantPriceId(vp.getId())
+                        .variantId(vp.getVariant() != null ? vp.getVariant().getId() : null)
+                        .variantName(buildVariantDisplayName(vp.getVariant()))
+                        .sku(vp.getVariant() != null ? vp.getVariant().getSku() : null)
+                        .activeSellingPrice(vp.getSellingPrice())
+                        .expiryDate(vp.getExpiryDate())
+                        .daysUntilExpiry((int) ChronoUnit.DAYS.between(today, vp.getExpiryDate()))
+                        .build())
                 .collect(Collectors.toList());
+    }
+
+    private String buildVariantDisplayName(ProductVariant variant) {
+        if (variant == null) {
+            return "N/A";
+        }
+
+        String productName = variant.getProduct() != null && variant.getProduct().getName() != null
+                ? variant.getProduct().getName()
+                : "";
+
+        StringBuilder nameBuilder = new StringBuilder(productName);
+
+        String unitName = variant.getUnit() != null ? variant.getUnit().getName() : "";
+        if (unitName != null && !unitName.trim().isEmpty()) {
+            nameBuilder.append(" ").append(unitName.trim());
+        }
+
+        if (variant.getAttributes() != null && !variant.getAttributes().isEmpty()) {
+            for (String value : variant.getAttributes().values()) {
+                if (value != null && !value.trim().isEmpty()) {
+                    nameBuilder.append(" - ").append(value.trim());
+                }
+            }
+        }
+
+        String finalName = nameBuilder.toString().trim();
+        return finalName.isEmpty() ? "N/A" : finalName;
     }
 
     @Transactional
@@ -267,7 +316,7 @@ public class VariantPriceService {
             variantPriceRepository.save(price);
 
             ProductVariant variant = price.getVariant();
-            variant.setSellPrice(java.math.BigDecimal.ZERO);
+            variant.setSellPrice(BigDecimal.ZERO);
             productVariantRepository.save(variant);
         }
 
