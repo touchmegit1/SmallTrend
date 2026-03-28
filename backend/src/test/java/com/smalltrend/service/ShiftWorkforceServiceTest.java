@@ -13,6 +13,7 @@ import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.PayrollCalculationRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
+import com.smalltrend.service.shift.ShiftWorkforceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

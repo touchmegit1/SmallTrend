@@ -391,6 +391,12 @@ jobs:
               if [ "${VARIANTS_API_COUNT:-0}" = "0" ]; then
                 echo "ERROR: /api/products/variants returned empty response after deployment."
                 echo "Last variants response: $VARIANTS_RESPONSE"
+
+                UNITS_COUNT="$(get_table_count units || echo 0)"
+                ACTIVE_VARIANTS_DB_COUNT="$(compose_cmd exec -T mysql mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM product_variants WHERE is_active = 1;" 2>/dev/null | tr -d '\r' || echo 0)"
+                JOINABLE_VARIANTS_DB_COUNT="$(compose_cmd exec -T mysql mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM product_variants pv LEFT JOIN products p ON p.id = pv.product_id LEFT JOIN units u ON u.id = pv.unit_id WHERE p.id IS NOT NULL AND u.id IS NOT NULL;" 2>/dev/null | tr -d '\r' || echo 0)"
+
+                echo "Diagnostics: units=$UNITS_COUNT, active_variants=$ACTIVE_VARIANTS_DB_COUNT, joinable_variants=$JOINABLE_VARIANTS_DB_COUNT"
                 compose_cmd logs --tail=150 backend || true
                 exit 1
               fi

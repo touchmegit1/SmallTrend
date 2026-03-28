@@ -20,6 +20,7 @@ import com.smalltrend.validation.product.ProductVariantValidator;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,9 +72,15 @@ public class ProductVariantService {
             variants = productVariantRepository.findAll();
         }
 
-        return variants.stream()
+        List<ProductVariantRespone> responses = variants.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+
+        if (!responses.isEmpty()) {
+            return responses;
+        }
+
+        return fallbackVariantSummaries(search, barcode);
     }
 
     public List<ProductVariantRespone> getVariantsByProductId(Integer productId) {
@@ -576,5 +583,112 @@ public class ProductVariantService {
         response.setDescription(entity.getDescription());
         response.setIsActive(entity.isActive());
         return response;
+    }
+
+    private List<ProductVariantRespone> fallbackVariantSummaries(String search, String barcode) {
+        String normalizedSearch = search != null ? search.trim().toLowerCase(Locale.ROOT) : null;
+        String normalizedBarcode = barcode != null ? barcode.trim() : null;
+
+        return productVariantRepository.findVariantSummariesNative().stream()
+                .map(this::mapNativeSummaryToResponse)
+                .filter(item -> {
+                    if (normalizedBarcode != null && !normalizedBarcode.isEmpty()) {
+                        return item.getBarcode() != null && item.getBarcode().contains(normalizedBarcode);
+                    }
+                    if (normalizedSearch != null && !normalizedSearch.isEmpty()) {
+                        String name = item.getName() != null ? item.getName().toLowerCase(Locale.ROOT) : "";
+                        String sku = item.getSku() != null ? item.getSku().toLowerCase(Locale.ROOT) : "";
+                        String barcodeValue = item.getBarcode() != null ? item.getBarcode().toLowerCase(Locale.ROOT) : "";
+                        return name.contains(normalizedSearch)
+                                || sku.contains(normalizedSearch)
+                                || barcodeValue.contains(normalizedSearch);
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private ProductVariantRespone mapNativeSummaryToResponse(Map<String, Object> row) {
+        ProductVariantRespone response = new ProductVariantRespone();
+
+        Integer id = toInteger(row.get("id"));
+        String productName = toStringValue(row.get("productName"));
+        String unitName = toStringValue(row.get("unitName"));
+
+        response.setId(id);
+        response.setSku(toStringValue(row.get("sku")));
+        response.setBarcode(toStringValue(row.get("barcode")));
+        response.setPluCode(toStringValue(row.get("pluCode")));
+        response.setSellPrice(toBigDecimal(row.get("sellPrice")));
+        response.setIsActive(toBoolean(row.get("isActive")));
+        response.setProductActive(toBoolean(row.get("productActive")));
+        response.setImageUrl(toStringValue(row.get("imageUrl")));
+        response.setUnitName(unitName);
+        response.setStockQuantity(Math.max(0, toInteger(row.get("stockQuantity"))));
+
+        String displayName = (productName + " " + unitName).trim();
+        if (displayName.isEmpty()) {
+            displayName = response.getSku() != null && !response.getSku().isBlank()
+                    ? response.getSku()
+                    : "Sản phẩm";
+        }
+        response.setName(displayName);
+
+        return response;
+    }
+
+    private Integer toInteger(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
+    }
+
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal decimal) {
+            return decimal;
+        }
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
+        }
+        try {
+            return new BigDecimal(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private Boolean toBoolean(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value instanceof Number number) {
+            return number.intValue() != 0;
+        }
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        return "1".equals(text)
+                || "true".equalsIgnoreCase(text)
+                || "t".equalsIgnoreCase(text)
+                || "yes".equalsIgnoreCase(text);
+    }
+
+    private String toStringValue(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 }
