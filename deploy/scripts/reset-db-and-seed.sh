@@ -114,6 +114,47 @@ seed_with_backup_files() {
   log "INFO" "Fallback import attempted $imported file(s)"
 }
 
+repair_core_tables() {
+  log "9/10" "Repairing core tables (products/inventory_stock) if still empty"
+
+  local products_sql="$BACKUP_DIR/smalltrend_products.sql"
+  if [ "$(count_table products)" = "0" ] && [ -f "$products_sql" ]; then
+    echo "Attempting targeted products restore from $(basename "$products_sql")"
+    docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SET FOREIGN_KEY_CHECKS=0; TRUNCATE TABLE products;"
+
+    set +e
+    docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql --force --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$products_sql"
+    local rc=$?
+    set -e
+    if [ "$rc" -ne 0 ]; then
+      log "WARN" "Targeted products restore had SQL errors (continued)."
+    fi
+
+    docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SET FOREIGN_KEY_CHECKS=1;"
+  fi
+
+  if [ "$(count_table inventory_stock)" = "0" ]; then
+    echo "inventory_stock is empty; generating baseline stock rows from existing batches"
+    docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "
+        INSERT INTO inventory_stock (variant_id, batch_id, location_id, quantity)
+        SELECT b.variant_id,
+               b.id,
+               (SELECT id FROM locations ORDER BY id LIMIT 1),
+               100
+        FROM product_batches b
+        WHERE b.variant_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM inventory_stock s WHERE s.batch_id = b.id
+          )
+        LIMIT 500;
+      "
+  fi
+}
+
 log "1/10" "Checking required files"
 require_file "$COMPOSE_FILE"
 require_file "$ENV_FILE"
@@ -185,7 +226,9 @@ if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
   seed_with_backup_files
 fi
 
-log "9/10" "Final verification"
+repair_core_tables
+
+log "10/10" "Final verification"
 USERS_COUNT="$(count_table users)"
 PRODUCTS_COUNT="$(count_table products)"
 VARIANTS_COUNT="$(count_table product_variants)"
@@ -197,7 +240,7 @@ if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
   exit 1
 fi
 
-log "10/10" "Done"
+log "DONE" "Seed completed"
 echo "Database reset + seed completed for: $MYSQL_DATABASE"
 echo "Next command:"
 echo "  docker compose -f $COMPOSE_FILE up -d --remove-orphans"
