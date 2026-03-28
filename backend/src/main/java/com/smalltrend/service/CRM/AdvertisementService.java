@@ -67,19 +67,11 @@ public class AdvertisementService {
         List<Advertisement> all = adRepository.findAll();
         long total = all.size();
         long active = all.stream().filter(a -> Boolean.TRUE.equals(a.getIsActive())).count();
-        long expired = all.stream().filter(a ->
-                a.getContractEnd() != null && a.getContractEnd().isBefore(java.time.LocalDate.now())).count();
-        java.math.BigDecimal totalValue = all.stream()
-                .filter(a -> a.getContractValue() != null)
-                .map(Advertisement::getContractValue)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
         return Map.of(
                 "total", total,
                 "active", active,
-                "inactive", total - active,
-                "expired", expired,
-                "totalContractValue", totalValue
+                "inactive", total - active
         );
     }
 
@@ -96,15 +88,6 @@ public class AdvertisementService {
         if (req.getCtaColor() != null) ad.setCtaColor(req.getCtaColor());
         if (req.getBgColor() != null) ad.setBgColor(req.getBgColor());
         if (req.getIsActive() != null) ad.setIsActive(req.getIsActive());
-        if (req.getContractNumber() != null) ad.setContractNumber(req.getContractNumber());
-        if (req.getContractValue() != null) ad.setContractValue(req.getContractValue());
-        if (req.getContractStart() != null) ad.setContractStart(req.getContractStart());
-        if (req.getContractEnd() != null) ad.setContractEnd(req.getContractEnd());
-        if (req.getPaymentTerms() != null) ad.setPaymentTerms(req.getPaymentTerms());
-        if (req.getContactPerson() != null) ad.setContactPerson(req.getContactPerson());
-        if (req.getContactEmail() != null) ad.setContactEmail(req.getContactEmail());
-        if (req.getContactPhone() != null) ad.setContactPhone(req.getContactPhone());
-        if (req.getNotes() != null) ad.setNotes(req.getNotes());
     }
 
     private AdvertisementResponse toResponse(Advertisement ad) {
@@ -120,15 +103,6 @@ public class AdvertisementService {
         r.setCtaColor(ad.getCtaColor());
         r.setBgColor(ad.getBgColor());
         r.setIsActive(ad.getIsActive());
-        r.setContractNumber(ad.getContractNumber());
-        r.setContractValue(ad.getContractValue());
-        r.setContractStart(ad.getContractStart());
-        r.setContractEnd(ad.getContractEnd());
-        r.setPaymentTerms(ad.getPaymentTerms());
-        r.setContactPerson(ad.getContactPerson());
-        r.setContactEmail(ad.getContactEmail());
-        r.setContactPhone(ad.getContactPhone());
-        r.setNotes(ad.getNotes());
         r.setCreatedAt(ad.getCreatedAt());
         r.setUpdatedAt(ad.getUpdatedAt());
         return r;

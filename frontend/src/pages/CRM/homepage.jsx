@@ -175,7 +175,8 @@ function GiftCard({ gift }) {
 
 const getComboImage = (combo) => {
   if (!combo?.imageUrl) return COMBO_PLACEHOLDER;
-  return resolveImageUrl(combo.imageUrl) || COMBO_PLACEHOLDER;
+  if (combo.imageUrl.startsWith("http")) return combo.imageUrl;
+  return `${import.meta.env.PROD ? "" : "http://localhost:8081"}${combo.imageUrl.startsWith("/") ? "" : "/"}${combo.imageUrl}`;
 };
 
 function ComboCard({ combo }) {
