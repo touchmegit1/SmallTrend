@@ -217,17 +217,6 @@ public class InventoryStockService {
     @Transactional
     // Trừ stock.
     public void deductStock(ProductVariant variant, int quantity, Long orderId, String notes) {
-        if (!variant.isBaseUnit()) {
-            var directVariantStocks = inventoryStockRepository.findByVariantId(variant.getId());
-            boolean hasDirectVariantStock = directVariantStocks.stream()
-                    .anyMatch(stock -> stock.getQuantity() != null && stock.getQuantity() > 0);
-
-            if (hasDirectVariantStock) {
-                deductFromStocks(variant, quantity, directVariantStocks, orderId, notes);
-                return;
-            }
-        }
-
         ProductVariant baseVariant = variant;
         int deductQuantity = quantity;
 
@@ -266,6 +255,7 @@ public class InventoryStockService {
             stock.setQuantity(currentQty - qtyToTake);
             InventoryStock savedStock = inventoryStockRepository.save(stock);
             outOfStockNotificationService.handleStockTransition(savedStock, currentQty, savedStock.getQuantity(), "SALE_ORDER");
+            syncConvertedStocksFromBase(stockVariant, stock.getLocation(), stock.getBatch());
 
             recordMovement(stockVariant, stock.getBatch(), stock.getLocation(),
                     StockTransactionType.SALE, -qtyToTake, "SALE_ORDER", orderId, notes);
@@ -287,21 +277,6 @@ public class InventoryStockService {
     public void restockFromRefund(ProductVariant variant, int quantity, Long referenceId, String notes) {
         if (quantity <= 0) {
             throw new RuntimeException("Refund quantity must be greater than 0");
-        }
-
-        if (!variant.isBaseUnit()) {
-            var directVariantStocks = inventoryStockRepository.findByVariantId(variant.getId());
-            if (directVariantStocks != null && !directVariantStocks.isEmpty()) {
-                InventoryStock stock = directVariantStocks.get(0);
-                int oldQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
-                stock.setQuantity(oldQty + quantity);
-                InventoryStock savedStock = inventoryStockRepository.save(stock);
-                outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "REFUND");
-
-                recordMovement(variant, stock.getBatch(), stock.getLocation(),
-                        StockTransactionType.ADJUSTMENT, quantity, "REFUND", referenceId, notes);
-                return;
-            }
         }
 
         ProductVariant baseVariant = variant;
@@ -330,6 +305,7 @@ public class InventoryStockService {
         stock.setQuantity(oldQty + restockQuantity);
         InventoryStock savedStock = inventoryStockRepository.save(stock);
         outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "REFUND");
+        syncConvertedStocksFromBase(baseVariant, stock.getLocation(), stock.getBatch());
 
         recordMovement(baseVariant, stock.getBatch(), stock.getLocation(),
                 StockTransactionType.ADJUSTMENT, restockQuantity, "REFUND", referenceId, notes);
