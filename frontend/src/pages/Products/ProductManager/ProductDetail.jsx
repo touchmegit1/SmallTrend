@@ -53,7 +53,7 @@ function ProductDetail() {
   const [showUnitsManager, setShowUnitsManager] = useState(false); // Trạng thái hiển thị Quản lý Đơn vị
   const [showBarcodeModal, setShowBarcodeModal] = useState(false); // Trạng thái hiển thị modal Barcode
   const [selectedBarcodeVariant, setSelectedBarcodeVariant] = useState(null); // Variant đang chọn để xem barcode
-  
+
   const [, forceUpdate] = useState(0); // Dùng để re-render khi hết 2 phút
 
   const { units, fetchUnits } = useFetchUnits(); // Tải danh sách đơn vị để truyền cho form quy đổi
