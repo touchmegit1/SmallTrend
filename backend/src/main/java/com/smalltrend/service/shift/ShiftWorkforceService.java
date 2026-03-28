@@ -13,7 +13,12 @@ import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.PayrollCalculationRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -33,14 +38,25 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShiftWorkforceService {
+
+    private static final BigDecimal ABSENT_PENALTY_AMOUNT = new BigDecimal("200000");
+    private static final BigDecimal LATE_PENALTY_AMOUNT = new BigDecimal("50000");
 
     private final AttendanceRepository attendanceRepository;
     private final WorkShiftAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
     private final PayrollCalculationRepository payrollCalculationRepository;
+    private final JavaMailSender mailSender;
+
+    @Value("${app.notifications.price-expiry.recipient:admin.smalltrend.swp@gmail.com}")
+    private String adminEmails;
+
+    @Value("${spring.mail.username:}")
+    private String senderEmail;
 
     public List<AttendanceResponse> listAttendance(LocalDate date, LocalDate startDate, LocalDate endDate, Integer userId, String status) {
         LocalDate targetDate = Optional.ofNullable(date).orElse(LocalDate.now());
@@ -262,6 +278,11 @@ public class ShiftWorkforceService {
             Attendance attendance = attendanceMap.get(key(user.getId(), assignment.getShiftDate()));
             String attendanceStatus = resolveAttendanceStatusForPayroll(attendance, assignment, today, now);
 
+            if ("ON_LEAVE".equals(attendanceStatus)) {
+                acc.leaveDays += 1;
+                continue;
+            }
+
             if ("ABSENT".equals(attendanceStatus)) {
                 acc.absentShifts += 1;
                 continue;
@@ -378,6 +399,13 @@ public class ShiftWorkforceService {
             updated += 1;
         }
 
+        // Send email notification to admin
+        try {
+            sendPayrollEmailToAdmin(month, snapshot, updated);
+        } catch (Exception e) {
+            log.error("Failed to send payroll email notification for month {}", month, e);
+        }
+
         return "Đã xác nhận thanh toán lương tháng " + month + " cho " + updated + " nhân viên";
     }
 
@@ -483,15 +511,17 @@ public class ShiftWorkforceService {
         BigDecimal netPay;
         boolean eligibleForMonthlySalary = true;
 
+        // Fixed penalties: absent = 200k, late = 50k
+        BigDecimal absentPenalty = ABSENT_PENALTY_AMOUNT.multiply(BigDecimal.valueOf(acc.absentShifts));
+        BigDecimal latePenalty = LATE_PENALTY_AMOUNT.multiply(BigDecimal.valueOf(acc.lateShifts));
+
         if (salaryProfile.salaryType == SalaryType.HOURLY) {
             regularPay = acc.adjustedRegularHours.max(BigDecimal.ZERO)
                     .multiply(hourlyRate);
             overtimePay = acc.adjustedOvertimeHours.max(BigDecimal.ZERO)
                     .multiply(hourlyRate);
             grossPay = regularPay.add(overtimePay);
-            deductions = BigDecimal.valueOf(acc.absentShifts)
-                    .multiply(hourlyRate)
-                    .multiply(BigDecimal.valueOf(2));
+            deductions = absentPenalty.add(latePenalty);
             netPay = grossPay.subtract(deductions).max(BigDecimal.ZERO);
         } else if (salaryProfile.salaryType == SalaryType.MONTHLY_MIN_SHIFTS) {
             int minRequiredShifts = Optional.ofNullable(salaryProfile.minRequiredShifts).orElse(0);
@@ -500,10 +530,12 @@ public class ShiftWorkforceService {
                     : Math.max(0, acc.workedShifts - acc.lateShifts);
             eligibleForMonthlySalary = eligibleShiftCount >= minRequiredShifts;
             grossPay = eligibleForMonthlySalary ? salaryProfile.baseSalary : BigDecimal.ZERO;
-            netPay = grossPay;
+            deductions = absentPenalty.add(latePenalty);
+            netPay = grossPay.subtract(deductions).max(BigDecimal.ZERO);
         } else {
             grossPay = salaryProfile.baseSalary;
-            netPay = grossPay;
+            deductions = absentPenalty.add(latePenalty);
+            netPay = grossPay.subtract(deductions).max(BigDecimal.ZERO);
         }
 
         String paidKey = key(acc.user.getId(), periodEnd.withDayOfMonth(1));
@@ -521,6 +553,7 @@ public class ShiftWorkforceService {
                 .workedShifts(acc.workedShifts)
                 .lateShifts(acc.lateShifts)
                 .absentShifts(acc.absentShifts)
+                .leaveDays(acc.leaveDays)
                 .workedHours(acc.workedHours.setScale(2, RoundingMode.HALF_UP))
                 .overtimeHours(acc.overtimeHours.setScale(2, RoundingMode.HALF_UP))
                 .hourlyRate(hourlyRate.setScale(2, RoundingMode.HALF_UP))
@@ -699,8 +732,16 @@ public class ShiftWorkforceService {
             WorkShiftAssignment assignment,
             LocalDate today,
             LocalTime now) {
+        // Check if assignment is marked as ON_LEAVE
+        if (assignment != null && "ON_LEAVE".equalsIgnoreCase(assignment.getStatus())) {
+            return "ON_LEAVE";
+        }
+
         if (attendance != null) {
             String normalizedStatus = normalizeStatus(attendance.getStatus());
+            if ("ON_LEAVE".equals(normalizedStatus)) {
+                return "ON_LEAVE";
+            }
             if (!"PENDING".equals(normalizedStatus)) {
                 return normalizedStatus;
             }
@@ -723,8 +764,16 @@ public class ShiftWorkforceService {
             WorkShiftAssignment assignment,
             LocalDate today,
             LocalTime now) {
+        // Check if assignment is marked as ON_LEAVE
+        if (assignment != null && "ON_LEAVE".equalsIgnoreCase(assignment.getStatus())) {
+            return "ON_LEAVE";
+        }
+
         if (attendance != null) {
             String normalizedStatus = normalizeStatus(attendance.getStatus());
+            if ("ON_LEAVE".equals(normalizedStatus)) {
+                return "ON_LEAVE";
+            }
             if (!"PENDING".equals(normalizedStatus)) {
                 return normalizedStatus;
             }
@@ -858,6 +907,7 @@ public class ShiftWorkforceService {
         private int workedShifts;
         private int lateShifts;
         private int absentShifts;
+        private int leaveDays;
         private BigDecimal workedHours = BigDecimal.ZERO;
         private BigDecimal overtimeHours = BigDecimal.ZERO;
         private BigDecimal adjustedRegularHours = BigDecimal.ZERO;
@@ -888,5 +938,109 @@ public class ShiftWorkforceService {
             this.minRequiredShifts = minRequiredShifts;
             this.countLateAsPresent = countLateAsPresent;
         }
+    }
+
+    // ===== Email payroll notification =====
+
+    private void sendPayrollEmailToAdmin(String month, PayrollSummaryResponse snapshot, int paidCount) {
+        if (adminEmails == null || adminEmails.isBlank()) {
+            log.warn("No admin email configured. Skip payroll email.");
+            return;
+        }
+        if (senderEmail == null || senderEmail.isBlank()) {
+            log.warn("No sender email configured (MAIL_USERNAME). Skip payroll email.");
+            return;
+        }
+
+        List<String> recipients = java.util.Arrays.stream(adminEmails.split(","))
+                .map(String::trim)
+                .filter(e -> !e.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (recipients.isEmpty()) {
+            return;
+        }
+
+        String subject = "[SmallTrend] Xác nhận thanh toán lương tháng " + month;
+        String htmlContent = buildPayrollEmailHtml(month, snapshot, paidCount);
+
+        for (String recipient : recipients) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+                helper.setTo(recipient);
+                helper.setFrom(senderEmail);
+                helper.setSubject(subject);
+                helper.setText(htmlContent, true);
+                mailSender.send(message);
+                log.info("Sent payroll notification email to {} for month {}", recipient, month);
+            } catch (Exception e) {
+                log.error("Failed to send payroll email to {}: {}", recipient, e.getMessage());
+            }
+        }
+    }
+
+    private String buildPayrollEmailHtml(String month, PayrollSummaryResponse snapshot, int paidCount) {
+        StringBuilder rows = new StringBuilder();
+        for (PayrollSummaryResponse.Row row : snapshot.getRows()) {
+            BigDecimal absPenalty = ABSENT_PENALTY_AMOUNT.multiply(BigDecimal.valueOf(row.getAbsentShifts()));
+            BigDecimal latPenalty = LATE_PENALTY_AMOUNT.multiply(BigDecimal.valueOf(row.getLateShifts()));
+            rows.append(String.format(
+                    "<tr>"
+                    + "<td style='padding:8px;border:1px solid #ddd;'>%s</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:center;'>%d/%d</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:center;'>%d</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:center;'>%d</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:center;'>%d</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:right;color:#dc2626;'>-%s</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:right;color:#dc2626;'>-%s</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:right;font-weight:bold;'>%s</td>"
+                    + "</tr>",
+                    safe(row.getFullName()),
+                    row.getWorkedShifts(), row.getTotalShifts(),
+                    row.getLateShifts(),
+                    row.getAbsentShifts(),
+                    row.getLeaveDays() != null ? row.getLeaveDays() : 0,
+                    formatVnd(latPenalty),
+                    formatVnd(absPenalty),
+                    formatVnd(row.getNetPay())
+            ));
+        }
+
+        return "<div style='font-family:Arial,sans-serif;max-width:900px;margin:auto;'>"
+                + "<h2 style='color:#1e293b;'>Xác nhận thanh toán lương tháng " + safe(month) + "</h2>"
+                + "<p>Hệ thống đã xác nhận thanh toán lương cho <strong>" + paidCount + "</strong> nhân viên.</p>"
+                + "<p>Tổng lương: <strong>" + formatVnd(snapshot.getTotalPayroll()) + "</strong> | "
+                + "Tổng giờ công: <strong>" + snapshot.getTotalHours() + "h</strong></p>"
+                + "<table style='border-collapse:collapse;width:100%;margin-top:12px;'>"
+                + "<thead><tr style='background:#f1f5f9;'>"
+                + "<th style='padding:8px;border:1px solid #ddd;text-align:left;'>Nhân viên</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Ca làm</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Muộn</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Vắng</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Nghỉ phép</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Phạt muộn</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Phạt vắng</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Thực nhận</th>"
+                + "</tr></thead><tbody>"
+                + rows
+                + "</tbody></table>"
+                + "<p style='margin-top:16px;color:#64748b;font-size:13px;'>Đây là email tự động từ hệ thống SmallTrend.</p>"
+                + "</div>";
+    }
+
+    private String formatVnd(BigDecimal value) {
+        if (value == null) {
+            return "0";
+        }
+        return java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN")).format(value.setScale(0, RoundingMode.HALF_UP)) + "đ";
+    }
+
+    private String safe(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 }

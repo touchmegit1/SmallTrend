@@ -735,9 +735,9 @@ const ShiftManagement = () => {
             )}
 
             {isShiftModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-                    <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-4 overflow-y-auto" onClick={(e) => { if (e.target === e.currentTarget) setIsShiftModalOpen(false); }}>
+                    <div className="w-full max-w-2xl my-4 flex flex-col rounded-2xl bg-white shadow-xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 shrink-0">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">
                                     {editingShift ? 'Cập nhật ca' : 'Tạo ca mới'}
@@ -748,7 +748,7 @@ const ShiftManagement = () => {
                                 <X size={18} />
                             </button>
                         </div>
-                        <form onSubmit={handleShiftSubmit} className="p-6 space-y-4">
+                        <form onSubmit={handleShiftSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-slate-600">Mã ca</label>
@@ -1049,8 +1049,8 @@ const ShiftManagement = () => {
             )}
 
             {isAssignmentModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-                    <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={(e) => { if (e.target === e.currentTarget) setIsAssignmentModalOpen(false); }}>
+                    <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">
@@ -1395,6 +1395,8 @@ const statusPillClass = (status) => {
         case 'CANCELLED':
         case 'ABSENT':
             return 'bg-rose-100 text-rose-700';
+        case 'ON_LEAVE':
+            return 'bg-blue-100 text-blue-700';
         default:
             return 'bg-slate-100 text-slate-700';
     }

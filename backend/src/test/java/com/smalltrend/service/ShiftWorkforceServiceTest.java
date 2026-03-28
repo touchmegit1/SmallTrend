@@ -52,6 +52,9 @@ class ShiftWorkforceServiceTest {
     @Mock
     private PayrollCalculationRepository payrollCalculationRepository;
 
+    @Mock
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
+
     private ShiftWorkforceService shiftWorkforceService;
 
     @BeforeEach
@@ -60,7 +63,8 @@ class ShiftWorkforceServiceTest {
                 attendanceRepository,
                 assignmentRepository,
                 userRepository,
-                payrollCalculationRepository);
+                payrollCalculationRepository,
+                mailSender);
     }
 
     @Test

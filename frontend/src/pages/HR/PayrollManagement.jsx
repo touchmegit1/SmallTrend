@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { shiftService } from '../../services/shiftService';
 import { userService } from '../../services/userService';
-import { Wallet, Users, Clock3, BadgeDollarSign, Settings, Eye, X } from 'lucide-react';
+import { Wallet, Users, Clock3, BadgeDollarSign, Settings, Eye, X, CheckCircle } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -33,6 +33,8 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
         countLateAsPresent: true,
         workingHoursPerMonth: 208,
     });
+    const [payingPayroll, setPayingPayroll] = useState(false);
+    const [payrollMessage, setPayrollMessage] = useState('');
 
     const [filters, setFilters] = useState(() => {
         const now = new Date();
@@ -144,12 +146,29 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                         </h1>
                         <p className="text-sm text-slate-500 mt-1">Tổng hợp lương theo khoảng tháng dựa trên phân ca và dữ liệu chấm công.</p>
                     </div>
+                    {canManageSalary && filters.fromMonth === filters.toMonth && (
+                        <button
+                            type="button"
+                            disabled={payingPayroll || filteredRows.length === 0}
+                            onClick={handleMarkPayrollPaid}
+                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                            <CheckCircle size={16} />
+                            {payingPayroll ? 'Đang xử lý...' : `Thanh toán lương tháng ${filters.fromMonth}`}
+                        </button>
+                    )}
                 </div>
             )}
 
             {error && (
                 <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                     {error}
+                </div>
+            )}
+
+            {payrollMessage && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {payrollMessage}
                 </div>
             )}
 
@@ -227,7 +246,8 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                                 <th className="px-4 py-3">Chế độ lương</th>
                                 <th className="px-4 py-3">Ca làm</th>
                                 <th className="px-4 py-3">Giờ công</th>
-                                <th className="px-4 py-3">OT / Vắng</th>
+                                <th className="px-4 py-3">Muộn / Vắng / Nghỉ phép</th>
+                                <th className="px-4 py-3">Khấu trừ</th>
                                 <th className="px-4 py-3">Đơn giá</th>
                                 <th className="px-4 py-3">Thực nhận</th>
                                 <th className="px-4 py-3">Thao tác</th>
@@ -251,7 +271,17 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">{row.workedShifts}/{row.totalShifts}</td>
                                     <td className="px-4 py-3 whitespace-nowrap">{Number(row.workedHours || 0).toFixed(1)} giờ</td>
-                                    <td className="px-4 py-3 whitespace-nowrap">OT {Number(row.overtimeHours || 0).toFixed(1)}h / Vắng {row.absentShifts}</td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        <div className="flex flex-col gap-0.5">
+                                            {row.lateShifts > 0 && <span className="text-amber-600">Muộn: {row.lateShifts} (-{formatCurrency(row.lateShifts * 50000)})</span>}
+                                            {row.absentShifts > 0 && <span className="text-rose-600">Vắng: {row.absentShifts} (-{formatCurrency(row.absentShifts * 200000)})</span>}
+                                            {(row.leaveDays || 0) > 0 && <span className="text-blue-600">Nghỉ phép: {row.leaveDays}</span>}
+                                            {!row.lateShifts && !row.absentShifts && !(row.leaveDays > 0) && <span className="text-emerald-600">Tốt</span>}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-rose-600 font-medium">
+                                        {Number(row.deductions || 0) > 0 ? `-${formatCurrency(row.deductions)}` : '-'}
+                                    </td>
                                     <td className="px-4 py-3 whitespace-nowrap">{formatCurrency(row.hourlyRate)}</td>
                                     <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{formatCurrency(row.netPay)}</td>
                                     <td className="px-4 py-3 whitespace-nowrap">
@@ -288,8 +318,8 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
             </div>
 
             {salaryModalOpen && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                    <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) closeSalaryModal(); }}>
+                    <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                             <div>
                                 <h3 className="text-lg font-semibold text-slate-900">Cấu hình lương nhân viên</h3>
@@ -429,6 +459,29 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
         });
         setSalaryFormErrors({});
         setSalaryModalOpen(true);
+    }
+
+    async function handleMarkPayrollPaid() {
+        if (!filters.fromMonth) return;
+        const confirmed = window.confirm(
+            `Xác nhận thanh toán lương tháng ${filters.fromMonth} cho ${filteredRows.length} nhân viên?\nHệ thống sẽ gửi email xác nhận đến admin.`
+        );
+        if (!confirmed) return;
+
+        try {
+            setPayingPayroll(true);
+            setPayrollMessage('');
+            setError('');
+            const params = { month: filters.fromMonth };
+            if (filters.userId) params.userId = filters.userId;
+            const result = await shiftService.markPayrollPaid(params);
+            setPayrollMessage(typeof result === 'string' ? result : (result?.message || 'Đã thanh toán lương thành công. Email xác nhận đã được gửi đến admin.'));
+            await loadPayroll();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Không thể thanh toán lương.');
+        } finally {
+            setPayingPayroll(false);
+        }
     }
 
     function closeSalaryModal() {

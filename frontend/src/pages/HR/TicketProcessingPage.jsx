@@ -621,7 +621,7 @@ const TicketProcessingPage = () => {
             )}
 
             {showCreateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowCreateModal(false); }}>
                     <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
@@ -734,7 +734,7 @@ const TicketProcessingPage = () => {
             )}
 
             {showSwapAcceptModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4" onClick={(e) => { if (e.target === e.currentTarget) closeSwapAcceptModal(); }}>
                     <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
@@ -820,7 +820,7 @@ const TicketProcessingPage = () => {
             )}
 
             {showProcessModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowProcessModal(false); }}>
                     <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
