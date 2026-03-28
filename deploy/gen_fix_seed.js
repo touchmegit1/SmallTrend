@@ -17,6 +17,8 @@ const COLUMN_MAPS = {
     "supplier_contracts": "id,contract_number,created_at,currency,delivery_terms,description,end_date,notes,payment_terms,signed_by_company,signed_by_supplier,signed_date,start_date,status,title,total_value,updated_at,supplier_id",
     "tax_rates": "id,is_active,name,rate",
     "price_expiry_alert_logs": "id,alert_date,recipient_email,sent_at,variant_price_id",
+    "product_combos": "id,combo_code,combo_name,combo_price,combo_type,created_at,description,discount_percent,display_order,image_url,is_active,is_featured,max_quantity_per_order,original_price,saved_amount,status,stock_limit,tags,total_sold,updated_at,valid_from,valid_to,created_by",
+    "product_combo_items": "id,can_substitute,display_order,is_optional,max_quantity,min_quantity,notes,quantity,combo_id,product_variant_id",
     "products": "id,created_at,name,image_url,is_active,description,updated_at,brand_id,category_id,tax_rate_id",
     "units": "id,code,default_cost_price,default_sell_price,material_type,name,symbol",
     "unit_conversions": "id,conversion_factor,description,is_active,sell_price,to_unit_id,variant_id",
