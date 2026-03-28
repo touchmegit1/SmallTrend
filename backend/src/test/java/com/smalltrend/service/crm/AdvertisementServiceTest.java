@@ -11,8 +11,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,7 +18,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -106,15 +103,13 @@ class AdvertisementServiceTest {
     }
 
     @Test
-    void getStats_shouldCalculateCountsAndContractValue() {
+    void getStats_shouldCalculateCounts() {
         Advertisement active = Advertisement.builder()
                 .id(1L)
                 .slot("LEFT")
                 .sponsorName("A")
                 .title("Ad A")
                 .isActive(true)
-                .contractValue(new BigDecimal("100000"))
-                .contractEnd(LocalDate.now().minusDays(1))
                 .build();
         Advertisement inactive = Advertisement.builder()
                 .id(2L)
@@ -122,8 +117,6 @@ class AdvertisementServiceTest {
                 .sponsorName("B")
                 .title("Ad B")
                 .isActive(false)
-                .contractValue(new BigDecimal("200000"))
-                .contractEnd(LocalDate.now().plusDays(5))
                 .build();
 
         when(advertisementRepository.findAll()).thenReturn(List.of(active, inactive));
@@ -133,7 +126,5 @@ class AdvertisementServiceTest {
         assertEquals(2L, stats.get("total"));
         assertEquals(1L, stats.get("active"));
         assertEquals(1L, stats.get("inactive"));
-        assertEquals(1L, stats.get("expired"));
-        assertEquals(new BigDecimal("300000"), stats.get("totalContractValue"));
     }
 }
