@@ -8,6 +8,7 @@ COMPOSE_FILE="${COMPOSE_FILE:-$DEPLOY_PATH/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$DEPLOY_PATH/deploy/env/backend.env}"
 SEED_FILE="${SEED_FILE:-$DEPLOY_PATH/backend/src/main/resources/data.sql}"
 BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_PATH/backup_data_value}"
+FIX_SEED_FILE="${FIX_SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
 SEED_LOG_DIR="${SEED_LOG_DIR:-$DEPLOY_PATH/deploy/seed-logs}"
 
 log() {
@@ -114,27 +115,28 @@ seed_with_backup_files() {
   log "INFO" "Fallback import attempted $imported file(s)"
 }
 
-repair_core_tables() {
-  log "9/10" "Repairing core tables (products/inventory_stock) if still empty"
+seed_with_fix_seed() {
+  [ -f "$FIX_SEED_FILE" ] || {
+    log "WARN" "Fix seed file not found: $FIX_SEED_FILE"
+    return 1
+  }
 
-  local products_sql="$BACKUP_DIR/smalltrend_products.sql"
-  if [ "$(count_table products)" = "0" ] && [ -f "$products_sql" ]; then
-    echo "Attempting targeted products restore from $(basename "$products_sql")"
-    docker compose -f "$COMPOSE_FILE" exec -T mysql \
-      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SET FOREIGN_KEY_CHECKS=0; TRUNCATE TABLE products;"
+  log "8/10" "Fallback seed from deploy/fix_seed.sql"
+  set +e
+  docker compose -f "$COMPOSE_FILE" exec -T mysql \
+    mysql --force --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$FIX_SEED_FILE"
+  local rc=$?
+  set -e
 
-    set +e
-    docker compose -f "$COMPOSE_FILE" exec -T mysql \
-      mysql --force --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$products_sql"
-    local rc=$?
-    set -e
-    if [ "$rc" -ne 0 ]; then
-      log "WARN" "Targeted products restore had SQL errors (continued)."
-    fi
-
-    docker compose -f "$COMPOSE_FILE" exec -T mysql \
-      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SET FOREIGN_KEY_CHECKS=1;"
+  if [ "$rc" -ne 0 ]; then
+    log "WARN" "fix_seed.sql finished with SQL errors (continued)."
+  else
+    log "INFO" "fix_seed.sql import completed successfully"
   fi
+}
+
+repair_core_tables() {
+  log "9/10" "Repairing inventory_stock if still empty"
 
   if [ "$(count_table inventory_stock)" = "0" ]; then
     echo "inventory_stock is empty; generating baseline stock rows from existing batches"
@@ -223,7 +225,11 @@ echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, in
 
 if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
   log "WARN" "Critical product tables are empty after data.sql. Running fallback import..."
-  seed_with_backup_files
+  if [ -f "$FIX_SEED_FILE" ]; then
+    seed_with_fix_seed || true
+  else
+    seed_with_backup_files || true
+  fi
 fi
 
 repair_core_tables
