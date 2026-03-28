@@ -234,6 +234,31 @@ jobs:
               eval "$MIGRATION_COMMAND"
             fi
 
+            # Auto-bootstrap seed when DB is empty (prevents blank app after deploy/reset).
+            get_table_count() {
+              table="$1"
+              sudo docker compose -f docker-compose.prod.yml exec -T mysql \
+                mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d '\r'
+            }
+
+            PRODUCTS_COUNT="$(get_table_count products || echo 0)"
+            VARIANTS_COUNT="$(get_table_count product_variants || echo 0)"
+            STOCK_COUNT="$(get_table_count inventory_stock || echo 0)"
+
+            echo "Post-deploy counts: products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
+
+            if [ "${PRODUCTS_COUNT:-0}" = "0" ] || [ "${VARIANTS_COUNT:-0}" = "0" ]; then
+              echo "Detected empty critical tables. Running reset-db-and-seed.sh..."
+              if [ -f "./deploy/scripts/reset-db-and-seed.sh" ]; then
+                sudo chmod +x ./deploy/scripts/reset-db-and-seed.sh
+                sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" bash ./deploy/scripts/reset-db-and-seed.sh
+                # Ensure services are up after seed
+                sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$TARGET_TAG" DB_USERNAME="$DB_USERNAME" DB_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$MYSQL_DATABASE" MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" docker compose -f docker-compose.prod.yml up -d --remove-orphans
+              else
+                echo "Seed script not found: ./deploy/scripts/reset-db-and-seed.sh"
+              fi
+            fi
+
             MAX_RETRIES=12
             RETRY_DELAY=10
             ATTEMPT=1
