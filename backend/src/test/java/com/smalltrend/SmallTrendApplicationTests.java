@@ -10,7 +10,13 @@ import org.springframework.boot.test.context.SpringBootTest;
     "spring.datasource.password=",
     "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.sql.init.mode=never"
+    "spring.sql.init.mode=never",
+    "spring.mail.host=localhost",
+    "spring.mail.port=25",
+    "spring.mail.username=",
+    "spring.mail.password=",
+    "spring.mail.properties.mail.smtp.auth=false",
+    "spring.mail.properties.mail.smtp.starttls.enable=false"
 })
 class SmallTrendApplicationTests {
 
