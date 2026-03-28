@@ -31,6 +31,12 @@ services:
         condition: service_healthy
     env_file:
       - ./deploy/env/backend.env
+    environment:
+      DB_URL: ${DB_URL:-jdbc:mysql://mysql:3306/smalltrend?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8}
+      DB_USERNAME: ${DB_USERNAME:-smalltrend}
+      DB_PASSWORD: ${DB_PASSWORD:-1234}
+      SPRING_JPA_DDL_AUTO: ${SPRING_JPA_DDL_AUTO:-update}
+      SPRING_SQL_INIT_MODE: ${SPRING_SQL_INIT_MODE:-never}
     ports:
       - "8081:8081"
     volumes:

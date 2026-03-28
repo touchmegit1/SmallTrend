@@ -211,13 +211,26 @@ jobs:
             DB_PASSWORD="$(get_env_value DB_PASSWORD)"
             MYSQL_DATABASE="$(get_env_value MYSQL_DATABASE)"
             MYSQL_ROOT_PASSWORD="$(get_env_value MYSQL_ROOT_PASSWORD)"
-            DB_URL="$(get_env_value DB_URL)"
+            DB_URL_FROM_ENV="$(get_env_value DB_URL)"
+            SPRING_SQL_INIT_MODE="$(get_env_value SPRING_SQL_INIT_MODE)"
+            SPRING_JPA_DDL_AUTO="$(get_env_value SPRING_JPA_DDL_AUTO)"
 
             : "${DB_USERNAME:=smalltrend}"
             : "${DB_PASSWORD:=1234}"
             : "${MYSQL_DATABASE:=smalltrend}"
             : "${MYSQL_ROOT_PASSWORD:=root1234}"
-            : "${DB_URL:=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true}"
+            : "${SPRING_SQL_INIT_MODE:=never}"
+            : "${SPRING_JPA_DDL_AUTO:=update}"
+
+            CANONICAL_DB_URL="jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8"
+            DB_URL="$CANONICAL_DB_URL"
+
+            if [ -n "$DB_URL_FROM_ENV" ] && [[ "$DB_URL_FROM_ENV" == *"mysql:3306"* ]] && [[ "$DB_URL_FROM_ENV" == *"/${MYSQL_DATABASE}"* ]]; then
+              DB_URL="$DB_URL_FROM_ENV"
+            elif [ -n "$DB_URL_FROM_ENV" ]; then
+              echo "WARNING: backend.env DB_URL is not container-safe. Overriding with docker-internal DB_URL."
+              echo "backend.env DB_URL=$DB_URL_FROM_ENV"
+            fi
 
             # Prevent false-positive seed checks when backend points to a different DB/schema.
             if [[ "$DB_URL" != *"mysql:3306"* ]]; then
@@ -232,6 +245,21 @@ jobs:
               echo "DB_URL=$DB_URL"
               exit 1
             fi
+
+            compose_cmd() {
+              sudo env \
+                REGISTRY="$REGISTRY" \
+                IMAGE_NAMESPACE="$IMAGE_NAMESPACE" \
+                IMAGE_TAG="$TARGET_TAG" \
+                DB_URL="$DB_URL" \
+                DB_USERNAME="$DB_USERNAME" \
+                DB_PASSWORD="$DB_PASSWORD" \
+                MYSQL_DATABASE="$MYSQL_DATABASE" \
+                MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
+                SPRING_SQL_INIT_MODE="$SPRING_SQL_INIT_MODE" \
+                SPRING_JPA_DDL_AUTO="$SPRING_JPA_DDL_AUTO" \
+                docker compose -f docker-compose.prod.yml "$@"
+            }
 
             echo "$DOCKERHUB_TOKEN" | sudo docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
@@ -253,8 +281,9 @@ jobs:
             deploy_tag() {
               tag="$1"
               echo "Deploying tag: $tag"
-              sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$tag" DB_USERNAME="$DB_USERNAME" DB_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$MYSQL_DATABASE" MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" docker compose -f docker-compose.prod.yml pull
-              sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$tag" DB_USERNAME="$DB_USERNAME" DB_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$MYSQL_DATABASE" MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" docker compose -f docker-compose.prod.yml up -d --remove-orphans
+              TARGET_TAG="$tag"
+              compose_cmd pull
+              compose_cmd up -d --remove-orphans
             }
 
             if ! verify_tag_exists "$TARGET_TAG"; then
@@ -271,13 +300,14 @@ jobs:
             # Auto-bootstrap seed when DB is empty (prevents blank app after deploy/reset).
             get_table_count() {
               table="$1"
-              sudo docker compose -f docker-compose.prod.yml exec -T mysql \
+              compose_cmd exec -T mysql \
                 mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d '\r'
             }
 
             PRODUCTS_COUNT="$(get_table_count products || echo 0)"
             VARIANTS_COUNT="$(get_table_count product_variants || echo 0)"
             STOCK_COUNT="$(get_table_count inventory_stock || echo 0)"
+            SEED_WAS_RUN=0
 
             echo "Post-deploy counts: products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
 
@@ -286,8 +316,9 @@ jobs:
               if [ -f "./deploy/scripts/reset-db-and-seed.sh" ]; then
                 sudo chmod +x ./deploy/scripts/reset-db-and-seed.sh
                 sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" bash ./deploy/scripts/reset-db-and-seed.sh
+                SEED_WAS_RUN=1
                 # Ensure services are up after seed
-                sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$TARGET_TAG" DB_USERNAME="$DB_USERNAME" DB_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$MYSQL_DATABASE" MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" docker compose -f docker-compose.prod.yml up -d --remove-orphans
+                compose_cmd up -d --remove-orphans
               else
                 echo "Seed script not found: ./deploy/scripts/reset-db-and-seed.sh"
               fi
@@ -300,8 +331,38 @@ jobs:
 
             if [ "${PRODUCTS_COUNT_FINAL:-0}" = "0" ] || [ "${VARIANTS_COUNT_FINAL:-0}" = "0" ]; then
               echo "ERROR: Critical tables are still empty after deploy + seed."
-              sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$TARGET_TAG" DB_USERNAME="$DB_USERNAME" DB_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$MYSQL_DATABASE" MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" docker compose -f docker-compose.prod.yml logs --tail=150 mysql backend || true
+              compose_cmd logs --tail=150 mysql backend || true
               exit 1
+            fi
+
+            # Runtime verification for freshly-seeded environments.
+            if [ "$SEED_WAS_RUN" = "1" ]; then
+              LOGIN_URL="http://127.0.0.1:8081/api/auth/login"
+              VARIANTS_URL="http://127.0.0.1:8081/api/products/variants"
+
+              LOGIN_RESPONSE="$(curl -fsS -H "Content-Type: application/json" -d '{"username":"admin","password":"password"}' "$LOGIN_URL" || true)"
+              ACCESS_TOKEN="$(printf '%s' "$LOGIN_RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')"
+
+              if [ -z "$ACCESS_TOKEN" ]; then
+                echo "ERROR: Runtime API verification failed at login step."
+                echo "Login response: $LOGIN_RESPONSE"
+                compose_cmd logs --tail=150 backend || true
+                exit 1
+              fi
+
+              VARIANTS_RESPONSE="$(curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$VARIANTS_URL" || true)"
+              VARIANTS_API_COUNT="$(printf '%s' "$VARIANTS_RESPONSE" | grep -Eo '"id"[[:space:]]*:[[:space:]]*[0-9]+' | wc -l | tr -d ' ')"
+              : "${VARIANTS_API_COUNT:=0}"
+
+              echo "Runtime API variants count: $VARIANTS_API_COUNT"
+
+              if [ "${VARIANTS_API_COUNT:-0}" = "0" ]; then
+                echo "ERROR: /api/products/variants returned empty response after deployment."
+                compose_cmd logs --tail=150 backend || true
+                exit 1
+              fi
+            else
+              echo "Skipping seeded-login API verification because DB was not reset in this deployment."
             fi
 
             MAX_RETRIES=12
@@ -321,8 +382,8 @@ jobs:
 
             if [ "$HEALTHY" -ne 1 ]; then
               echo "Healthcheck failed after deployment. Showing service status and logs..."
-              sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$TARGET_TAG" DB_USERNAME="$DB_USERNAME" DB_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$MYSQL_DATABASE" MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" docker compose -f docker-compose.prod.yml ps
-              sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$TARGET_TAG" DB_USERNAME="$DB_USERNAME" DB_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$MYSQL_DATABASE" MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" docker compose -f docker-compose.prod.yml logs --tail=120 mysql backend frontend || true
+              compose_cmd ps
+              compose_cmd logs --tail=120 mysql backend frontend || true
 
               ROLLBACK_TAG=""
               if [ -n "$PREVIOUS_IMAGE_TAG" ] && [ "$PREVIOUS_IMAGE_TAG" != "sha-0000000000000000000000000000000000000000" ] && verify_tag_exists "$PREVIOUS_IMAGE_TAG"; then
