@@ -936,7 +936,9 @@ export default function POS() {
       change: orderData.change,
       pointsDiscount: orderData.pointsDiscount,
       discount: orderData.discount || 0,
-      notes: orderData.notes
+      notes: orderData.notes,
+      savedToDb: false,
+      purchaseHistorySyncFailed: false
     };
 
     filteredTransactions.unshift(transaction);
@@ -1020,12 +1022,17 @@ export default function POS() {
             items: validItems
           };
           await api.post('/pos/purchase-history', request);
+          transaction.savedToDb = true;
+          transaction.purchaseHistorySyncFailed = false;
+          localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
         }
         await redeemVoucherUsageIfNeeded(orderData.selectedVoucherId);
 
         // Đồng bộ lại danh sách sản phẩm để cập nhật tồn kho
         loadProducts();
       } catch (error) {
+        transaction.purchaseHistorySyncFailed = true;
+        localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
         console.error('Error saving purchase history:', error);
       }
     }
@@ -1127,7 +1134,9 @@ export default function POS() {
       change: orderData.change,
       pointsDiscount: orderData.pointsDiscount,
       discount: orderData.discount || 0,
-      notes: orderData.notes
+      notes: orderData.notes,
+      savedToDb: false,
+      purchaseHistorySyncFailed: false
     };
 
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
@@ -1224,10 +1233,15 @@ export default function POS() {
             items: validItems
           };
           await api.post('/pos/purchase-history', request);
+          transaction.savedToDb = true;
+          transaction.purchaseHistorySyncFailed = false;
+          localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
         }
         await redeemVoucherUsageIfNeeded(orderData.selectedVoucherId);
         loadProducts();
       } catch (error) {
+        transaction.purchaseHistorySyncFailed = true;
+        localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
         console.error('Error saving purchase history:', error);
       }
     }

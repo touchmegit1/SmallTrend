@@ -23,6 +23,9 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
 
+    @Value("${jwt.refresh-expiration:604800000}")
+    private Long refreshExpiration;
+
     private SecretKey getSignKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
@@ -54,17 +57,32 @@ public class JwtUtil {
 
     public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username);
+        claims.put("tokenType", "access");
+        return createToken(claims, username, expiration);
     }
 
-    private String createToken(Map<String, Object> claims, String subject) {
+    public String generateRefreshToken(String username) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("tokenType", "refresh");
+        return createToken(claims, username, refreshExpiration);
+    }
+
+    private String createToken(Map<String, Object> claims, String subject, Long ttlMillis) {
         return Jwts.builder()
                 .claims(claims)
                 .subject(subject)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .expiration(new Date(System.currentTimeMillis() + ttlMillis))
                 .signWith(getSignKey())
                 .compact();
+    }
+
+    public Boolean validateRefreshToken(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        final String tokenType = extractClaim(token, claims -> claims.get("tokenType", String.class));
+        return username.equals(userDetails.getUsername())
+                && "refresh".equalsIgnoreCase(tokenType)
+                && !isTokenExpired(token);
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {

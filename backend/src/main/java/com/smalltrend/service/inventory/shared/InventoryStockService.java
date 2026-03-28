@@ -107,6 +107,17 @@ public class InventoryStockService {
     @Transactional
     // Trừ stock.
     public void deductStock(ProductVariant variant, int quantity, Long orderId, String notes) {
+        if (!variant.isBaseUnit()) {
+            var directVariantStocks = inventoryStockRepository.findByVariantId(variant.getId());
+            boolean hasDirectVariantStock = directVariantStocks.stream()
+                    .anyMatch(stock -> stock.getQuantity() != null && stock.getQuantity() > 0);
+
+            if (hasDirectVariantStock) {
+                deductFromStocks(variant, quantity, directVariantStocks, orderId, notes);
+                return;
+            }
+        }
+
         ProductVariant baseVariant = variant;
         int deductQuantity = quantity;
 
@@ -123,35 +134,37 @@ public class InventoryStockService {
             deductQuantity = quantity * factor;
         }
 
-        // Ưu tiên trừ theo lô cũ (FIFO đơn giản)
-        int remainingToDeduct = deductQuantity;
-        var stocks = inventoryStockRepository.findByVariantId(baseVariant.getId());
+        var baseStocks = inventoryStockRepository.findByVariantId(baseVariant.getId());
+        deductFromStocks(baseVariant, deductQuantity, baseStocks, orderId, notes);
+    }
+
+    private void deductFromStocks(ProductVariant stockVariant, int quantityToDeduct, java.util.List<InventoryStock> stocks,
+            Long orderId, String notes) {
+        int remainingToDeduct = quantityToDeduct;
 
         for (InventoryStock stock : stocks) {
-            if (remainingToDeduct <= 0)
+            if (remainingToDeduct <= 0) {
                 break;
-
-            if (stock.getQuantity() > 0) {
-                int oldQty = stock.getQuantity();
-                int qtyToTake = Math.min(oldQty, remainingToDeduct);
-                stock.setQuantity(oldQty - qtyToTake);
-                InventoryStock savedStock = inventoryStockRepository.save(stock);
-                outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "SALE_ORDER");
-
-                // Ghi nhận biến động cho lô này
-                recordMovement(baseVariant, stock.getBatch(), stock.getLocation(),
-                        StockTransactionType.SALE, -qtyToTake, "SALE_ORDER", orderId, notes);
-
-                remainingToDeduct -= qtyToTake;
             }
+
+            int currentQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+            if (currentQty <= 0) {
+                continue;
+            }
+
+            int qtyToTake = Math.min(currentQty, remainingToDeduct);
+            stock.setQuantity(currentQty - qtyToTake);
+            InventoryStock savedStock = inventoryStockRepository.save(stock);
+            outOfStockNotificationService.handleStockTransition(savedStock, currentQty, savedStock.getQuantity(), "SALE_ORDER");
+
+            recordMovement(stockVariant, stock.getBatch(), stock.getLocation(),
+                    StockTransactionType.SALE, -qtyToTake, "SALE_ORDER", orderId, notes);
+
+            remainingToDeduct -= qtyToTake;
         }
 
         if (remainingToDeduct > 0) {
-            // Vẫn chưa trừ hết (Tồn kho bị âm - Tùy cấu hình hệ thống POS có thể bắn lỗi)
-            // Trong bối cảnh bán lẻ, thường ta ghi log cảnh báo và cho phép bán âm, hoặc
-            // trừ âm vào một location mặc định.
-            // Để an toàn, chúng ta throw exception ở đây trừ khi requirements cho phép âm.
-            throw new RuntimeException("Not enough stock available for variant: " + baseVariant.getSku());
+            throw new RuntimeException("Not enough stock available for variant: " + stockVariant.getSku());
         }
     }
 
@@ -164,6 +177,21 @@ public class InventoryStockService {
     public void restockFromRefund(ProductVariant variant, int quantity, Long referenceId, String notes) {
         if (quantity <= 0) {
             throw new RuntimeException("Refund quantity must be greater than 0");
+        }
+
+        if (!variant.isBaseUnit()) {
+            var directVariantStocks = inventoryStockRepository.findByVariantId(variant.getId());
+            if (directVariantStocks != null && !directVariantStocks.isEmpty()) {
+                InventoryStock stock = directVariantStocks.get(0);
+                int oldQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                stock.setQuantity(oldQty + quantity);
+                InventoryStock savedStock = inventoryStockRepository.save(stock);
+                outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "REFUND");
+
+                recordMovement(variant, stock.getBatch(), stock.getLocation(),
+                        StockTransactionType.ADJUSTMENT, quantity, "REFUND", referenceId, notes);
+                return;
+            }
         }
 
         ProductVariant baseVariant = variant;

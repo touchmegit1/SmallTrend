@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/pr
 import UnitConversionSection from "./UnitConversionSection";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
+import { resolveImageUrl, getApiOrigin } from "../../../utils/inventory";
 
 // Modal Component hiển thị thông tin và cho phép Chỉnh sửa một Variant (Loại sản phẩm)
 // Cho phép update SKU, Barcode, PLU Code, giá bán, hình ảnh...

@@ -5,6 +5,7 @@ import { Input } from "../../../components/product/input";
 import { Label } from "../../../components/product/label";
 import { Textarea } from "../../../components/product/textarea";
 import axios from "../../../config/axiosConfig";
+import { resolveImageUrl } from "../../../utils/inventory";
 
 // Modal Popup dùng chung để sửa thông tin của một Combo đã tồn tại
 // Nhận vào state combo được chọn từ component cha và gọi hàm onSave khi hoàn thành

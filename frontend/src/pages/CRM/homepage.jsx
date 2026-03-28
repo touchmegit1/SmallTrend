@@ -8,6 +8,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { useActiveCampaigns, useDiscountedVariants, useAllVariants } from '../../hooks/useEventData';
+import { resolveImageUrl } from '../../utils/inventory';
 import { useVouchers } from '../../hooks/useVouchers';
 import { useGifts } from '../../hooks/useGifts';
 import { useProductCombos } from '../../hooks/product_combos';

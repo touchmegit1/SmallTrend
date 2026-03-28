@@ -153,9 +153,11 @@ public class UserService implements UserDetailsService {
 
         // Generate JWT token
         String token = jwtUtil.generateToken(savedUser.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(savedUser.getUsername());
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken)
                 .type("Bearer")
                 .userId(savedUser.getId())
                 .username(savedUser.getUsername())
@@ -172,9 +174,36 @@ public class UserService implements UserDetailsService {
                 .map(UserCredential::getUser)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found")));
         String token = jwtUtil.generateToken(username);
+        String refreshToken = jwtUtil.generateRefreshToken(username);
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken)
+                .type("Bearer")
+                .userId(user.getId())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .role(user.getRole() != null ? user.getRole().getName().toUpperCase() : "ROLE_USER")
+                .avatarUrl(user.getAvatarUrl())
+                .build();
+    }
+
+    public AuthResponse refreshToken(String refreshToken) {
+        String username = jwtUtil.extractUsername(refreshToken);
+        UserDetails userDetails = loadUserByUsername(username);
+
+        if (!jwtUtil.validateRefreshToken(refreshToken, userDetails)) {
+            throw new RuntimeException("Refresh token không hợp lệ hoặc đã hết hạn");
+        }
+
+        User user = getCurrentUser(username);
+        String newAccessToken = jwtUtil.generateToken(username);
+        String newRefreshToken = jwtUtil.generateRefreshToken(username);
+
+        return AuthResponse.builder()
+                .token(newAccessToken)
+                .refreshToken(newRefreshToken)
                 .type("Bearer")
                 .userId(user.getId())
                 .username(user.getUsername())

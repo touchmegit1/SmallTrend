@@ -9,6 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import EditComboModal from "./EditComboModal";
 import { useAuth } from "../../../context/AuthContext";
 import { canManageProducts } from "../../../utils/roleUtils";
+import { resolveImageUrl } from "../../../utils/inventory";
 
 import { useProductCombos } from "../../../hooks/product_combos";
 

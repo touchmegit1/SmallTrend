@@ -10,6 +10,7 @@ import EditComboModal from "./EditComboModal";
 import { useProductCombos } from "../../../hooks/product_combos";
 import { useAuth } from "../../../context/AuthContext";
 import { isProductReadOnlyRole } from "../../../utils/rolePermissions";
+import { resolveImageUrl } from "../../../utils/inventory";
 
 const ComboDetail = () => {
   const navigate = useNavigate();

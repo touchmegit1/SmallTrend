@@ -8,6 +8,7 @@ import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchTaxRates } from "../../../hooks/taxRates";
 import api from "../../../config/axiosConfig";
+import { resolveImageUrl } from "../../../utils/inventory";
 
 /**
  * Component Modal sửa Chỉnh Phông Thông tin Gốc của một Sản Phẩm.

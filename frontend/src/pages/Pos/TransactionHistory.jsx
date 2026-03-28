@@ -74,7 +74,7 @@ function TransactionHistory() {
 
       // Lưu tất cả transactions hoàn thành vào database
       for (const transaction of savedTransactions) {
-        if (!transaction.savedToDb && !transaction.purchaseHistorySyncFailed && transaction.status === "Hoàn thành") {
+        if (transaction.savedToDb === false && !transaction.purchaseHistorySyncFailed && transaction.status === "Hoàn thành") {
           await savePurchaseHistory(transaction);
         }
       }
