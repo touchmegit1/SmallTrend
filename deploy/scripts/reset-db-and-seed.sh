@@ -24,8 +24,43 @@ require_file() {
 
 count_table() {
   local table="$1"
-  docker compose -f "$COMPOSE_FILE" exec -T mysql \
-    mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM $table;" | tr -d '\r'
+  local out
+  if out="$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
+    mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d '\r')"; then
+    printf '%s\n' "${out:-0}"
+  else
+    # Table may not exist yet - treat as 0 so fallback logic can continue.
+    printf '0\n'
+  fi
+}
+
+bootstrap_schema() {
+  log "6/10" "Bootstrapping schema via backend (SPRING_JPA_DDL_AUTO=update)"
+
+  # Start backend once with schema auto-update to create missing tables in fresh DB.
+  SPRING_JPA_DDL_AUTO=update SPRING_SQL_INIT_MODE=never \
+    docker compose -f "$COMPOSE_FILE" up -d backend
+
+  local attempts=40
+  local i=1
+  while [ "$i" -le "$attempts" ]; do
+    users_tbl="$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
+      -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$MYSQL_DATABASE' AND table_name='users';" 2>/dev/null | tr -d '\r' || echo 0)"
+
+    if [ "${users_tbl:-0}" = "1" ]; then
+      echo "Schema bootstrap ready (users table exists)."
+      return 0
+    fi
+
+    echo "Waiting schema bootstrap... ($i/$attempts)"
+    sleep 3
+    i=$((i + 1))
+  done
+
+  echo "Schema bootstrap timed out. Backend logs:"
+  docker compose -f "$COMPOSE_FILE" logs --tail=120 backend || true
+  return 1
 }
 
 seed_with_data_sql() {
@@ -133,6 +168,8 @@ SQL_RESET="DROP DATABASE IF EXISTS \`$DB_ESCAPED\`; CREATE DATABASE \`$DB_ESCAPE
 log "5/10" "Dropping and recreating database ($MYSQL_DATABASE)"
 printf "%s\n" "$SQL_RESET" | docker compose -f "$COMPOSE_FILE" exec -T mysql \
   mysql -uroot -p"$MYSQL_ROOT_PASSWORD"
+
+bootstrap_schema
 
 seed_with_data_sql
 
