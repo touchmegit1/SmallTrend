@@ -16,6 +16,7 @@ const COLUMN_MAPS = {
     // Other known good ones
     "supplier_contracts": "id,contract_number,created_at,currency,delivery_terms,description,end_date,notes,payment_terms,signed_by_company,signed_by_supplier,signed_date,start_date,status,title,total_value,updated_at,supplier_id",
     "tax_rates": "id,is_active,name,rate",
+    "price_expiry_alert_logs": "id,alert_date,recipient_email,sent_at,variant_price_id",
     "products": "id,created_at,name,image_url,is_active,description,updated_at,brand_id,category_id,tax_rate_id",
     "units": "id,code,default_cost_price,default_sell_price,material_type,name,symbol",
     "unit_conversions": "id,conversion_factor,description,is_active,sell_price,to_unit_id,variant_id",
