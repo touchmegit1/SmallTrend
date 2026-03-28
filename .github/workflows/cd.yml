@@ -178,9 +178,17 @@ jobs:
             if [ -d .git ]; then
               git config --global --add safe.directory "$DEPLOY_PATH" || true
               sudo git config --system --add safe.directory "$DEPLOY_PATH" || true
-              git fetch origin
-              git checkout main
-              git pull --ff-only origin main
+
+              # Try normal git first; fallback to sudo git when .git is root-owned.
+              if git -C "$DEPLOY_PATH" fetch origin; then
+                git -C "$DEPLOY_PATH" checkout main
+                git -C "$DEPLOY_PATH" pull --ff-only origin main
+              else
+                echo "Normal git fetch failed, retry with sudo git..."
+                sudo git -C "$DEPLOY_PATH" fetch origin
+                sudo git -C "$DEPLOY_PATH" checkout main
+                sudo git -C "$DEPLOY_PATH" pull --ff-only origin main
+              fi
             fi
 
             if [ ! -f "$ENV_FILE" ]; then
