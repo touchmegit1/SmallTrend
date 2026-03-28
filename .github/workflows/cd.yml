@@ -179,16 +179,17 @@ jobs:
               git config --global --add safe.directory "$DEPLOY_PATH" || true
               sudo git config --system --add safe.directory "$DEPLOY_PATH" || true
 
-              # Try normal git first; fallback to sudo git when .git is root-owned.
-              if git -C "$DEPLOY_PATH" fetch origin; then
-                git -C "$DEPLOY_PATH" checkout main
-                git -C "$DEPLOY_PATH" pull --ff-only origin main
-              else
-                echo "Normal git fetch failed, retry with sudo git..."
-                sudo git -C "$DEPLOY_PATH" fetch origin
-                sudo git -C "$DEPLOY_PATH" checkout main
-                sudo git -C "$DEPLOY_PATH" pull --ff-only origin main
+              # Always sync with sudo git to avoid permission issues on root-owned .git.
+              # Preserve local VM edits in a stash, then force working tree to origin/main.
+              if ! sudo git -C "$DEPLOY_PATH" diff --quiet || ! sudo git -C "$DEPLOY_PATH" diff --cached --quiet; then
+                STASH_NAME="auto-deploy-$(date +%s)"
+                echo "Local changes detected on VM. Stashing as: $STASH_NAME"
+                sudo git -C "$DEPLOY_PATH" stash push -u -m "$STASH_NAME" || true
               fi
+
+              sudo git -C "$DEPLOY_PATH" fetch origin
+              sudo git -C "$DEPLOY_PATH" checkout main
+              sudo git -C "$DEPLOY_PATH" reset --hard origin/main
             fi
 
             if [ ! -f "$ENV_FILE" ]; then
