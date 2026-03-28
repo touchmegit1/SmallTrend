@@ -176,6 +176,8 @@ jobs:
 
             # Keep VM source scripts in sync with latest main before running any local script.
             if [ -d .git ]; then
+              git config --global --add safe.directory "$DEPLOY_PATH" || true
+              sudo git config --system --add safe.directory "$DEPLOY_PATH" || true
               git fetch origin
               git checkout main
               git pull --ff-only origin main
