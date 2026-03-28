@@ -179,16 +179,17 @@ jobs:
               git config --global --add safe.directory "$DEPLOY_PATH" || true
               sudo git config --system --add safe.directory "$DEPLOY_PATH" || true
 
-              # Try normal git first; fallback to sudo git when .git is root-owned.
-              if git -C "$DEPLOY_PATH" fetch origin; then
-                git -C "$DEPLOY_PATH" checkout main
-                git -C "$DEPLOY_PATH" pull --ff-only origin main
-              else
-                echo "Normal git fetch failed, retry with sudo git..."
-                sudo git -C "$DEPLOY_PATH" fetch origin
-                sudo git -C "$DEPLOY_PATH" checkout main
-                sudo git -C "$DEPLOY_PATH" pull --ff-only origin main
+              # Always sync with sudo git to avoid permission issues on root-owned .git.
+              # Preserve local VM edits in a stash, then force working tree to origin/main.
+              if ! sudo git -C "$DEPLOY_PATH" diff --quiet || ! sudo git -C "$DEPLOY_PATH" diff --cached --quiet; then
+                STASH_NAME="auto-deploy-$(date +%s)"
+                echo "Local changes detected on VM. Stashing as: $STASH_NAME"
+                sudo git -C "$DEPLOY_PATH" stash push -u -m "$STASH_NAME" || true
               fi
+
+              sudo git -C "$DEPLOY_PATH" fetch origin
+              sudo git -C "$DEPLOY_PATH" checkout main
+              sudo git -C "$DEPLOY_PATH" reset --hard origin/main
             fi
 
             if [ ! -f "$ENV_FILE" ]; then
@@ -210,11 +211,27 @@ jobs:
             DB_PASSWORD="$(get_env_value DB_PASSWORD)"
             MYSQL_DATABASE="$(get_env_value MYSQL_DATABASE)"
             MYSQL_ROOT_PASSWORD="$(get_env_value MYSQL_ROOT_PASSWORD)"
+            DB_URL="$(get_env_value DB_URL)"
 
             : "${DB_USERNAME:=smalltrend}"
             : "${DB_PASSWORD:=1234}"
             : "${MYSQL_DATABASE:=smalltrend}"
             : "${MYSQL_ROOT_PASSWORD:=root1234}"
+            : "${DB_URL:=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true}"
+
+            # Prevent false-positive seed checks when backend points to a different DB/schema.
+            if [[ "$DB_URL" != *"mysql:3306"* ]]; then
+              echo "ERROR: DB_URL must point to mysql service in docker compose (mysql:3306)."
+              echo "Current DB_URL: $DB_URL"
+              exit 1
+            fi
+
+            if [[ "$DB_URL" != *"/${MYSQL_DATABASE}"* ]]; then
+              echo "ERROR: DB_URL database does not match MYSQL_DATABASE."
+              echo "MYSQL_DATABASE=$MYSQL_DATABASE"
+              echo "DB_URL=$DB_URL"
+              exit 1
+            fi
 
             echo "$DOCKERHUB_TOKEN" | sudo docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
@@ -274,6 +291,17 @@ jobs:
               else
                 echo "Seed script not found: ./deploy/scripts/reset-db-and-seed.sh"
               fi
+            fi
+
+            PRODUCTS_COUNT_FINAL="$(get_table_count products || echo 0)"
+            VARIANTS_COUNT_FINAL="$(get_table_count product_variants || echo 0)"
+            STOCK_COUNT_FINAL="$(get_table_count inventory_stock || echo 0)"
+            echo "Post-start final counts: products=$PRODUCTS_COUNT_FINAL, variants=$VARIANTS_COUNT_FINAL, inventory_stock=$STOCK_COUNT_FINAL"
+
+            if [ "${PRODUCTS_COUNT_FINAL:-0}" = "0" ] || [ "${VARIANTS_COUNT_FINAL:-0}" = "0" ]; then
+              echo "ERROR: Critical tables are still empty after deploy + seed."
+              sudo env REGISTRY="$REGISTRY" IMAGE_NAMESPACE="$IMAGE_NAMESPACE" IMAGE_TAG="$TARGET_TAG" DB_USERNAME="$DB_USERNAME" DB_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$MYSQL_DATABASE" MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" docker compose -f docker-compose.prod.yml logs --tail=150 mysql backend || true
+              exit 1
             fi
 
             MAX_RETRIES=12

@@ -8,6 +8,7 @@ COMPOSE_FILE="${COMPOSE_FILE:-$DEPLOY_PATH/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$DEPLOY_PATH/deploy/env/backend.env}"
 SEED_FILE="${SEED_FILE:-$DEPLOY_PATH/backend/src/main/resources/data.sql}"
 BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_PATH/backup_data_value}"
+FIX_SEED_FILE="${FIX_SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
 SEED_LOG_DIR="${SEED_LOG_DIR:-$DEPLOY_PATH/deploy/seed-logs}"
 
 log() {
@@ -24,8 +25,43 @@ require_file() {
 
 count_table() {
   local table="$1"
-  docker compose -f "$COMPOSE_FILE" exec -T mysql \
-    mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM $table;" | tr -d '\r'
+  local out
+  if out="$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
+    mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d '\r')"; then
+    printf '%s\n' "${out:-0}"
+  else
+    # Table may not exist yet - treat as 0 so fallback logic can continue.
+    printf '0\n'
+  fi
+}
+
+bootstrap_schema() {
+  log "6/10" "Bootstrapping schema via backend (SPRING_JPA_DDL_AUTO=update)"
+
+  # Start backend once with schema auto-update to create missing tables in fresh DB.
+  SPRING_JPA_DDL_AUTO=update SPRING_SQL_INIT_MODE=never \
+    docker compose -f "$COMPOSE_FILE" up -d backend
+
+  local attempts=40
+  local i=1
+  while [ "$i" -le "$attempts" ]; do
+    users_tbl="$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
+      -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$MYSQL_DATABASE' AND table_name='users';" 2>/dev/null | tr -d '\r' || echo 0)"
+
+    if [ "${users_tbl:-0}" = "1" ]; then
+      echo "Schema bootstrap ready (users table exists)."
+      return 0
+    fi
+
+    echo "Waiting schema bootstrap... ($i/$attempts)"
+    sleep 3
+    i=$((i + 1))
+  done
+
+  echo "Schema bootstrap timed out. Backend logs:"
+  docker compose -f "$COMPOSE_FILE" logs --tail=120 backend || true
+  return 1
 }
 
 seed_with_data_sql() {
@@ -77,6 +113,48 @@ seed_with_backup_files() {
     mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SET FOREIGN_KEY_CHECKS=1;"
 
   log "INFO" "Fallback import attempted $imported file(s)"
+}
+
+seed_with_fix_seed() {
+  [ -f "$FIX_SEED_FILE" ] || {
+    log "WARN" "Fix seed file not found: $FIX_SEED_FILE"
+    return 1
+  }
+
+  log "8/10" "Fallback seed from deploy/fix_seed.sql"
+  set +e
+  docker compose -f "$COMPOSE_FILE" exec -T mysql \
+    mysql --force --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$FIX_SEED_FILE"
+  local rc=$?
+  set -e
+
+  if [ "$rc" -ne 0 ]; then
+    log "WARN" "fix_seed.sql finished with SQL errors (continued)."
+  else
+    log "INFO" "fix_seed.sql import completed successfully"
+  fi
+}
+
+repair_core_tables() {
+  log "9/10" "Repairing inventory_stock if still empty"
+
+  if [ "$(count_table inventory_stock)" = "0" ]; then
+    echo "inventory_stock is empty; generating baseline stock rows from existing batches"
+    docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "
+        INSERT INTO inventory_stock (variant_id, batch_id, location_id, quantity)
+        SELECT b.variant_id,
+               b.id,
+               (SELECT id FROM locations ORDER BY id LIMIT 1),
+               100
+        FROM product_batches b
+        WHERE b.variant_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM inventory_stock s WHERE s.batch_id = b.id
+          )
+        LIMIT 500;
+      "
+  fi
 }
 
 log "1/10" "Checking required files"
@@ -134,6 +212,8 @@ log "5/10" "Dropping and recreating database ($MYSQL_DATABASE)"
 printf "%s\n" "$SQL_RESET" | docker compose -f "$COMPOSE_FILE" exec -T mysql \
   mysql -uroot -p"$MYSQL_ROOT_PASSWORD"
 
+bootstrap_schema
+
 seed_with_data_sql
 
 log "7/10" "Verifying critical table counts after data.sql"
@@ -145,10 +225,16 @@ echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, in
 
 if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
   log "WARN" "Critical product tables are empty after data.sql. Running fallback import..."
-  seed_with_backup_files
+  if [ -f "$FIX_SEED_FILE" ]; then
+    seed_with_fix_seed || true
+  else
+    seed_with_backup_files || true
+  fi
 fi
 
-log "9/10" "Final verification"
+repair_core_tables
+
+log "10/10" "Final verification"
 USERS_COUNT="$(count_table users)"
 PRODUCTS_COUNT="$(count_table products)"
 VARIANTS_COUNT="$(count_table product_variants)"
@@ -160,7 +246,7 @@ if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
   exit 1
 fi
 
-log "10/10" "Done"
+log "DONE" "Seed completed"
 echo "Database reset + seed completed for: $MYSQL_DATABASE"
 echo "Next command:"
 echo "  docker compose -f $COMPOSE_FILE up -d --remove-orphans"
