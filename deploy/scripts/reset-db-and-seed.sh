@@ -46,6 +46,21 @@ scalar_query() {
   fi
 }
 
+seed_tables_from_file() {
+  local source_file="$1"
+  awk '
+    {
+      if (match($0, /^[[:space:]]*(TRUNCATE TABLE|INSERT INTO|ALTER TABLE)[[:space:]]+`?([A-Za-z0-9_]+)`?/, m)) {
+        table = m[2]
+        if (!(table in seen)) {
+          seen[table] = 1
+          print table
+        }
+      }
+    }
+  ' "$source_file"
+}
+
 bootstrap_schema() {
   log "6/10" "Bootstrapping schema via backend (SPRING_JPA_DDL_AUTO=update)"
 
@@ -53,25 +68,64 @@ bootstrap_schema() {
   SPRING_JPA_DDL_AUTO=update SPRING_SQL_INIT_MODE=never \
     docker compose -f "$COMPOSE_FILE" up -d backend
 
-  local attempts=40
+  local schema_seed_file="$SEED_FILE"
+  case "$SEED_STRATEGY" in
+    data-only|data-first)
+      schema_seed_file="$LEGACY_SEED_FILE"
+      ;;
+  esac
+
+  mapfile -t required_tables < <(seed_tables_from_file "$schema_seed_file")
+  if [ "${#required_tables[@]}" -eq 0 ]; then
+    echo "Warning: cannot derive required tables from $schema_seed_file, fallback to users table readiness check."
+    required_tables=("users")
+  fi
+
+  local required_count="${#required_tables[@]}"
+  local in_list
+  in_list="$(printf "'%s'," "${required_tables[@]}")"
+  in_list="${in_list%,}"
+
+  local attempts=80
   local i=1
+  local users_tbl
+  local ready_count
   while [ "$i" -le "$attempts" ]; do
     users_tbl="$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
       mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
       -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$MYSQL_DATABASE' AND table_name='users';" 2>/dev/null | tr -d '\r' || echo 0)"
 
-    if [ "${users_tbl:-0}" = "1" ]; then
-      echo "Schema bootstrap ready (users table exists)."
+    ready_count="$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
+      -e "SELECT COUNT(DISTINCT table_name) FROM information_schema.tables WHERE table_schema='$MYSQL_DATABASE' AND table_name IN ($in_list);" 2>/dev/null | tr -d '\r' || echo 0)"
+
+    if [ "${ready_count:-0}" = "$required_count" ]; then
+      echo "Schema bootstrap ready ($ready_count/$required_count seed tables exist)."
       return 0
     fi
 
-    echo "Waiting schema bootstrap... ($i/$attempts)"
+    echo "Waiting schema bootstrap... ($i/$attempts) users=${users_tbl:-0}, seed_tables=${ready_count:-0}/$required_count"
     sleep 3
     i=$((i + 1))
   done
 
+  local missing=()
+  local tbl
+  for tbl in "${required_tables[@]}"; do
+    local exists
+    exists="$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
+      mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
+      -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$MYSQL_DATABASE' AND table_name='$tbl';" 2>/dev/null | tr -d '\r' || echo 0)"
+    if [ "${exists:-0}" != "1" ]; then
+      missing+=("$tbl")
+    fi
+  done
+
   echo "Schema bootstrap timed out. Backend logs:"
   docker compose -f "$COMPOSE_FILE" logs --tail=120 backend || true
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "Missing tables after bootstrap: ${missing[*]}"
+  fi
   return 1
 }
 
