@@ -1,5 +1,6 @@
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 const SPRING_API =
-  import.meta.env.VITE_INVENTORY_API_BASE_URL || "http://localhost:8081/api/inventory";
+  import.meta.env.VITE_INVENTORY_API_BASE_URL || `${API_BASE}/inventory`;
 
 // ─── Helper: get auth token ──────────────────────────────
 function getAuthHeaders() {

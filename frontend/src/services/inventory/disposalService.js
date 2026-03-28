@@ -1,4 +1,6 @@
-const SPRING_API = "http://localhost:8081/api/inventory/disposal-vouchers";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+const SPRING_API =
+  import.meta.env.VITE_INVENTORY_DISPOSAL_API_BASE_URL || `${API_BASE}/inventory/disposal-vouchers`;
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token");

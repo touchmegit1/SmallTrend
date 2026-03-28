@@ -43,8 +43,9 @@ export function resolveInventoryImageUrl(imageUrl) {
     return imageUrl;
   }
 
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
   const inventoryApiBase =
-    import.meta.env.VITE_INVENTORY_API_BASE_URL || "http://localhost:8081/api/inventory";
+    import.meta.env.VITE_INVENTORY_API_BASE_URL || `${apiBase}/inventory`;
   const apiOrigin = inventoryApiBase.replace(/\/api\/inventory\/?$/, "");
   return `${apiOrigin}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
 }
