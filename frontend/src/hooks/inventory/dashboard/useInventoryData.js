@@ -34,6 +34,21 @@ export function useInventoryDashboard() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
+
+  const buildVariantLabel = useCallback((item) => {
+    const attrs = item.attributes && typeof item.attributes === "object"
+      ? Object.entries(item.attributes)
+          .map(([, value]) => String(value || "").trim())
+          .filter(Boolean)
+      : [];
+
+    if (attrs.length === 0) {
+      return item.name;
+    }
+
+    const suffix = attrs.join(" · ");
+    return item.name?.includes(" - ") ? item.name : `${item.name} - ${suffix}`;
+  }, []);
   const [batchTab, setBatchTab] = useState("all"); // all | expired | expiring | safe
 
   // ─── Fetch ─────────────────────────────────────────────────
@@ -83,6 +98,7 @@ export function useInventoryDashboard() {
       const inventoryValue = (p.stock_quantity || 0) * (p.purchase_price || 0);
       return {
         ...p,
+        name: buildVariantLabel(p),
         stockStatus,
         categoryName: category?.name || "—",
         brandName: brand?.name || "—",
@@ -90,7 +106,7 @@ export function useInventoryDashboard() {
         inventoryValue,
       };
     });
-  }, [products, categories, brands, batches]);
+  }, [products, categories, brands, batches, buildVariantLabel]);
 
   // ─── Enriched Batches ──────────────────────────────────────
   const enrichedBatches = useMemo(() => {

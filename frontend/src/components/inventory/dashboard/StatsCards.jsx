@@ -102,8 +102,8 @@ function ProductsModal({ products, onClose }) {
 
   return (
     <Modal
-      title="Danh sách sản phẩm"
-      subtitle={`${products.length} sản phẩm đang quản lý trong kho`}
+      title="Danh sách biến thể"
+      subtitle={`${products.length} biến thể đang quản lý trong kho`}
       icon={Package}
       iconBg="bg-blue-50"
       iconColor="text-blue-600"
@@ -119,7 +119,7 @@ function ProductsModal({ products, onClose }) {
       <div className="space-y-2">
         {filtered.length === 0 && (
           <p className="text-center text-sm text-slate-400 py-8">
-            Không tìm thấy sản phẩm nào
+            Không tìm thấy biến thể nào
           </p>
         )}
         {filtered.map((p) => {
@@ -163,7 +163,7 @@ function InventoryValueModal({ products, totalValue, onClose }) {
 
   return (
     <Modal
-      title="Giá trị tồn kho theo sản phẩm"
+      title="Giá trị tồn kho theo biến thể"
       subtitle={`Tổng: ${formatCurrency(totalValue)} · Sắp xếp theo giá trị cao nhất`}
       icon={DollarSign}
       iconBg="bg-emerald-50"
@@ -486,8 +486,8 @@ export default function StatsCards({
     {
       id: "products",
       icon: Package,
-      label: "Tổng sản phẩm",
-      value: `${formatNumber(stats.productCount)} loại`,
+      label: "Tổng biến thể",
+      value: `${formatNumber(stats.productCount)} biến thể`,
       subtitle: `${formatNumber(stats.totalStockUnits)} đơn vị tồn kho`,
       iconBg: "bg-blue-50",
       iconColor: "text-blue-600",

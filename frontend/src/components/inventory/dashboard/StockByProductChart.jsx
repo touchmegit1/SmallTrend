@@ -131,7 +131,7 @@ function StockPanel({
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
         <p className="text-xs text-slate-400">Đơn vị: số lượng tồn kho</p>
-        <p className="text-xs text-slate-400">{data.length} sản phẩm</p>
+        <p className="text-xs text-slate-400">{data.length} biến thể</p>
       </div>
     </div>
   );
@@ -167,11 +167,11 @@ function StockByProductChart({ products }) {
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 size={20} className="text-indigo-600" />
           <h2 className="text-lg font-semibold text-slate-900">
-            Tồn kho theo sản phẩm
+            Tồn kho theo biến thể
           </h2>
         </div>
         <p className="text-sm text-slate-500 text-center py-8">
-          Không có dữ liệu sản phẩm
+          Không có dữ liệu biến thể
         </p>
       </div>
     );
@@ -182,25 +182,25 @@ function StockByProductChart({ products }) {
       {/* Biểu đồ 1: Tồn kho cao */}
       <StockPanel
         title="Tồn kho cao"
-        subtitle={`Top ${highStock.length} sản phẩm tồn kho dồi dào nhất`}
+        subtitle={`Top ${highStock.length} biến thể tồn kho dồi dào nhất`}
         icon={TrendingUp}
         iconGradient="linear-gradient(135deg, #6366f1, #8b5cf6)"
         data={highStock}
         colors={HIGH_COLORS}
         maxStock={maxHigh}
-        emptyMsg="Không có sản phẩm tồn kho cao"
+        emptyMsg="Không có biến thể tồn kho cao"
       />
 
       {/* Biểu đồ 2: Tồn kho thấp */}
       <StockPanel
         title="Tồn kho thấp"
-        subtitle={`Top ${lowStock.length} sản phẩm cần nhập hàng sớm`}
+        subtitle={`Top ${lowStock.length} biến thể cần nhập hàng sớm`}
         icon={TrendingDown}
         iconGradient="linear-gradient(135deg, #ef4444, #f97316)"
         data={lowStock}
         colors={LOW_COLORS}
         maxStock={maxLow}
-        emptyMsg="Không có sản phẩm cần cảnh báo tồn kho"
+        emptyMsg="Không có biến thể cần cảnh báo tồn kho"
       />
     </div>
   );
