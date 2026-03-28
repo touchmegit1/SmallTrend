@@ -93,13 +93,13 @@ const Sidebar = ({ collapsed, onToggleSidebar }) => {
       { label: "Lịch làm việc chung", path: "/hr/schedule" },
       { label: "Phân ca làm việc", path: "/hr/shifts" },
       { label: "Trung tâm ticket", path: "/hr/ticket-processing" },
-      { label: "Tổng hợp cá nhân & lương", path: "/hr/my-payroll" },
+      { label: "Lương của tôi", path: "/hr/my-payroll" },
     ]
     : [
       { label: "Lịch làm việc chung", path: "/hr/schedule" },
       { label: "Trung tâm ticket", path: "/hr/ticket-processing" },
       { label: "Chấm công", path: "/hr/my-attendance" },
-      { label: "Tổng hợp cá nhân & lương", path: "/hr/my-payroll" },
+      { label: "Lương của tôi", path: "/hr/my-payroll" },
     ];
 
   const navItems = showBusinessMenu

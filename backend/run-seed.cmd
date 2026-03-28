@@ -92,6 +92,7 @@ call :query_scalar "SELECT COUNT(*) FROM product_variants;" VARIANTS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM inventory_stock;" STOCK_COUNT
 call :query_scalar "SELECT COUNT(*) FROM sale_orders;" SALE_ORDERS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM sale_order_items;" SALE_ORDER_ITEMS_COUNT
+call :query_scalar "SELECT COUNT(*) FROM sale_order_histories;" SALE_ORDER_HISTORIES_COUNT
 call :query_scalar "SELECT COUNT(*) FROM tickets;" TICKETS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM loyalty_gifts;" LOYALTY_GIFTS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM product_variants pv LEFT JOIN products p ON p.id = pv.product_id LEFT JOIN units u ON u.id = pv.unit_id WHERE p.id IS NOT NULL AND u.id IS NOT NULL;" JOINABLE_VARIANTS_COUNT
@@ -105,6 +106,7 @@ if not defined VARIANTS_COUNT set "VARIANTS_COUNT=0"
 if not defined STOCK_COUNT set "STOCK_COUNT=0"
 if not defined SALE_ORDERS_COUNT set "SALE_ORDERS_COUNT=0"
 if not defined SALE_ORDER_ITEMS_COUNT set "SALE_ORDER_ITEMS_COUNT=0"
+if not defined SALE_ORDER_HISTORIES_COUNT set "SALE_ORDER_HISTORIES_COUNT=0"
 if not defined TICKETS_COUNT set "TICKETS_COUNT=0"
 if not defined LOYALTY_GIFTS_COUNT set "LOYALTY_GIFTS_COUNT=0"
 if not defined JOINABLE_VARIANTS_COUNT set "JOINABLE_VARIANTS_COUNT=0"
@@ -114,7 +116,7 @@ if not defined STOCKED_VARIANTS_COUNT set "STOCKED_VARIANTS_COUNT=0"
 
 echo [INFO] Seed verification counts:
 echo        users=%USERS_COUNT%, products=%PRODUCTS_COUNT%, variants=%VARIANTS_COUNT%, inventory_stock=%STOCK_COUNT%
-echo        sale_orders=%SALE_ORDERS_COUNT%, sale_order_items=%SALE_ORDER_ITEMS_COUNT%, tickets=%TICKETS_COUNT%, loyalty_gifts=%LOYALTY_GIFTS_COUNT%
+echo        sale_orders=%SALE_ORDERS_COUNT%, sale_order_items=%SALE_ORDER_ITEMS_COUNT%, sale_order_histories=%SALE_ORDER_HISTORIES_COUNT%, tickets=%TICKETS_COUNT%, loyalty_gifts=%LOYALTY_GIFTS_COUNT%
 echo        joinable_variants=%JOINABLE_VARIANTS_COUNT%, orphan_product_refs=%ORPHAN_PRODUCT_REFS%, orphan_unit_refs=%ORPHAN_UNIT_REFS%, stocked_variants=%STOCKED_VARIANTS_COUNT%
 
 if "%USERS_COUNT%"=="0" goto :seed_invalid
@@ -123,6 +125,7 @@ if "%VARIANTS_COUNT%"=="0" goto :seed_invalid
 if "%STOCK_COUNT%"=="0" goto :seed_invalid
 if "%SALE_ORDERS_COUNT%"=="0" goto :seed_invalid
 if "%SALE_ORDER_ITEMS_COUNT%"=="0" goto :seed_invalid
+if "%SALE_ORDER_HISTORIES_COUNT%"=="0" goto :seed_invalid
 if "%TICKETS_COUNT%"=="0" goto :seed_invalid
 if "%LOYALTY_GIFTS_COUNT%"=="0" goto :seed_invalid
 if "%JOINABLE_VARIANTS_COUNT%"=="0" goto :seed_invalid
