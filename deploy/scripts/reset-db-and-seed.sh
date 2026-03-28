@@ -11,7 +11,7 @@ BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_PATH/backup_data_value}"
 FIX_SEED_FILE="${FIX_SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
 SEED_LOG_DIR="${SEED_LOG_DIR:-$DEPLOY_PATH/deploy/seed-logs}"
 ENABLE_LEGACY_FALLBACK="${ENABLE_LEGACY_FALLBACK:-false}"
-SEED_STRATEGY="${SEED_STRATEGY:-fix-first}"
+SEED_STRATEGY="${SEED_STRATEGY:-data-only}"
 
 log() {
   printf "[%s] %s\n" "$1" "$2"
@@ -33,6 +33,17 @@ count_table() {
     printf '%s\n' "${out:-0}"
   else
     # Table may not exist yet - treat as 0 so fallback logic can continue.
+    printf '0\n'
+  fi
+}
+
+scalar_query() {
+  local sql="$1"
+  local out
+  if out="$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
+    mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$sql" 2>/dev/null | tr -d '\r')"; then
+    printf '%s\n' "${out:-0}"
+  else
     printf '0\n'
   fi
 }
@@ -96,6 +107,14 @@ verify_core_counts() {
   VARIANTS_COUNT="$(count_table product_variants)"
   STOCK_COUNT="$(count_table inventory_stock)"
   echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
+}
+
+verify_core_integrity() {
+  JOINABLE_VARIANTS_COUNT="$(scalar_query "SELECT COUNT(*) FROM product_variants pv LEFT JOIN products p ON p.id = pv.product_id LEFT JOIN units u ON u.id = pv.unit_id WHERE p.id IS NOT NULL AND u.id IS NOT NULL;")"
+  ORPHAN_PRODUCT_REFS="$(scalar_query "SELECT COUNT(*) FROM product_variants pv LEFT JOIN products p ON p.id = pv.product_id WHERE p.id IS NULL;")"
+  ORPHAN_UNIT_REFS="$(scalar_query "SELECT COUNT(*) FROM product_variants pv LEFT JOIN units u ON u.id = pv.unit_id WHERE u.id IS NULL;")"
+  STOCKED_VARIANTS_COUNT="$(scalar_query "SELECT COUNT(DISTINCT variant_id) FROM inventory_stock WHERE COALESCE(quantity, 0) > 0;")"
+  echo "joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
 }
 
 seed_with_backup_files() {
@@ -257,6 +276,7 @@ esac
 
 log "7/10" "Verifying critical table counts after primary seed"
 verify_core_counts
+verify_core_integrity
 
 if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
   if [ "$SEED_STRATEGY" = "data-first" ] && [ "$ENABLE_LEGACY_FALLBACK" = "true" ]; then
@@ -276,9 +296,20 @@ repair_core_tables
 
 log "10/10" "Final verification"
 verify_core_counts
+verify_core_integrity
 
 if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
   log "ERROR" "Seed finished but critical tables are still empty. Check logs in $SEED_LOG_DIR and backup SQL files."
+  exit 1
+fi
+
+if [ "$JOINABLE_VARIANTS_COUNT" = "0" ] || [ "$ORPHAN_PRODUCT_REFS" != "0" ] || [ "$ORPHAN_UNIT_REFS" != "0" ]; then
+  log "ERROR" "Seed finished but variant relations are inconsistent (product/unit joins broken)."
+  exit 1
+fi
+
+if [ "$STOCK_COUNT" != "0" ] && [ "$STOCKED_VARIANTS_COUNT" = "0" ]; then
+  log "ERROR" "Seed finished but inventory_stock has no positive quantities mapped to variants."
   exit 1
 fi
 
