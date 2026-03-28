@@ -100,10 +100,10 @@ File docker-compose.prod.yml dùng image:
 - docker.io/<IMAGE_NAMESPACE>/smalltrend-frontend:<IMAGE_TAG>
 
 ## Lưu ý quan trọng về seed
-Đã chuẩn hóa nhiều đoạn INSERT trong backend/src/main/resources/data.sql theo kiểu có danh sách cột để tránh lỗi lệch thứ tự cột giữa các máy.
+Seed mặc định hiện tại dùng `deploy/fix_seed.sql` (được generate từ `backend/src/main/resources/data.sql` để map đúng cột cho các bảng dễ lệch schema).
 Nếu gặp lỗi seed sau khi pull code mới:
-1. Xóa và tạo lại DB nhỏ gọn
-2. Chạy lại run-seed.cmd
+1. Regenerate file seed chuẩn: `node deploy/gen_fix_seed.js`
+2. Chạy lại `backend/run-seed.cmd` (script sẽ tự verify các bảng trọng yếu như products, variants, tickets, loyalty_gifts, sale_orders)
 
 ## Tài liệu bổ sung
 - PRODUCTION_SETUP_STEPS.md
