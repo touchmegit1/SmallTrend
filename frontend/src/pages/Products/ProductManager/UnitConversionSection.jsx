@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Edit, Trash2, X, Save, CheckCircle, Barcode, Tag } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Save, CheckCircle, Barcode, Tag, Printer, Power, Package, AlertTriangle } from 'lucide-react';
 import Button from '../../../components/product/button';
 import { Input } from '../../../components/product/input';
 import { Label } from '../../../components/product/label';
@@ -7,7 +7,19 @@ import { Badge } from '../../../components/product/badge';
 import ConfirmDialog from '../../../components/common/ConfirmDialog';
 import api from '../../../config/axiosConfig';
 
-export default function UnitConversionSection({ variant, units, onSuccess }) {
+export default function UnitConversionSection({
+    variant,
+    units,
+    conversionVariants = [],
+    canManageProduct = false,
+    parentProductActive = true,
+    onPrintBarcode,
+    onToggleStatus,
+    onEditVariant,
+    onDeleteVariant,
+    isWithin2Minutes,
+    onSuccess,
+}) {
     const [conversions, setConversions] = useState(variant.unit_conversions || []);
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -205,30 +217,152 @@ export default function UnitConversionSection({ variant, units, onSuccess }) {
 
             {/* Danh sách quy đổi hiện có */}
             {conversions.length > 0 && !isAdding && !editingId && (
-                <div className="space-y-2 mb-2">
-                    {conversions.map(conv => (
-                        <div key={conv.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                            <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-gray-800 text-sm">
-                                        {conv.conversionFactor} {variant.unit_name || 'Gốc'} = 1 {conv.toUnitName}
-                                    </span>
-                                    {!conv.isActive && <Badge variant="destructive" className="text-[10px] px-1.5 bg-red-100 text-red-700 border-red-200">Ngừng kích hoạt</Badge>}
+                <div className="space-y-3 mb-2">
+                    {conversions.map(conv => {
+                        const mapped = conversionVariants.find(item => item.conversion?.id === conv.id);
+                        const conversionVariant = mapped?.variant;
+
+                        return (
+                            <div key={conv.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                                <div className="flex justify-between items-start gap-3">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-semibold text-gray-800 text-sm">
+                                                {conv.conversionFactor} {variant.unit_name || 'Gốc'} = 1 {conv.toUnitName}
+                                            </span>
+                                            {!conv.isActive && <Badge variant="destructive" className="text-[10px] px-1.5 bg-red-100 text-red-700 border-red-200">Ngừng kích hoạt</Badge>}
+                                            {conversionVariant?.is_active ? (
+                                                <Badge variant="outline" className="text-[10px] px-1.5 bg-green-50 border-green-200 text-green-700">Biến thể đang hoạt động</Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="text-[10px] px-1.5 bg-gray-100 border-gray-200 text-gray-500">Biến thể đang tắt</Badge>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                                            {conv.description && <span>Mô tả: {conv.description}</span>}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button size="sm" variant="ghost" onClick={() => handleEdit(conv)} className="h-10 w-10 p-0 text-blue-600 hover:bg-blue-50 rounded-lg" title="Sửa quy đổi">
+                                            <Edit className="w-[18px] h-[18px]" />
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(conv.id)} className="h-10 w-10 p-0 text-red-500 hover:bg-red-50 rounded-lg" title="Xóa quy đổi">
+                                            <Trash2 className="w-[18px] h-[18px]" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3 text-xs text-gray-500">
-                                    {conv.description && <span>Mô tả: {conv.description}</span>}
-                                </div>
+
+                                {conversionVariant ? (
+                                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-8 gap-3 text-xs">
+                                            <div className="md:col-span-2 flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                                                    {conversionVariant.image_url ? (
+                                                        <img
+                                                            src={conversionVariant.image_url.startsWith('http') ? conversionVariant.image_url : `${import.meta.env.PROD ? "" : "http://localhost:8081"}${conversionVariant.image_url.startsWith('/') ? '' : '/'}${conversionVariant.image_url}`}
+                                                            alt={conversionVariant.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <Package className="w-4 h-4 text-gray-300" />
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-semibold text-gray-900 truncate">{conversionVariant.name || 'Biến thể quy đổi'}</p>
+                                                    <p className="text-[11px] text-gray-500">{conversionVariant.unit_name || conv.toUnitName}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="md:col-span-2">
+                                                <p className="text-gray-400 mb-1">Mã SKU</p>
+                                                <p className="font-mono text-[11px] bg-white border border-gray-200 rounded px-2 py-1 break-all">{conversionVariant.sku || '—'}</p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-gray-400 mb-1">Barcode</p>
+                                                <p className="font-mono text-[11px] break-all">{conversionVariant.barcode || '—'}</p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-gray-400 mb-1">Giá bán</p>
+                                                <p className="font-bold text-emerald-600">{(conversionVariant.sell_price ?? 0).toLocaleString('vi-VN')} ₫</p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-gray-400 mb-1">Tồn kho</p>
+                                                <p className="font-bold text-indigo-700">{conversionVariant.stock_quantity || 0}</p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-gray-400 mb-1">Trạng thái</p>
+                                                <p className={conversionVariant.is_active ? 'font-semibold text-green-700' : 'font-semibold text-red-600'}>
+                                                    {conversionVariant.is_active ? 'Hoạt động' : 'Ngừng'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {conversionVariant.attributes && Object.keys(conversionVariant.attributes).length > 0 && (
+                                            <div className="mt-3 flex flex-wrap gap-1">
+                                                {Object.entries(conversionVariant.attributes).map(([key, val]) => (
+                                                    <Badge key={`${conv.id}-${key}`} variant="outline" className="text-[10px] bg-white border-indigo-200 text-indigo-700 px-1.5 py-0.5">
+                                                        {key}: {val}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {canManageProduct && (
+                                            <div className="mt-3 flex items-center justify-end gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    title="Xem/In mã vạch"
+                                                    onClick={() => onPrintBarcode && onPrintBarcode(conversionVariant)}
+                                                    className="h-11 w-11 p-0 rounded-lg border border-gray-200 bg-white text-slate-700 hover:bg-slate-100"
+                                                >
+                                                    <Printer className="w-5 h-5" />
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    title={conversionVariant.is_active ? 'Dừng xuất nhập' : (parentProductActive === false ? 'Vui lòng mở khoá SP Gốc trước' : 'Kích hoạt trở lại')}
+                                                    onClick={() => onToggleStatus && onToggleStatus(conversionVariant)}
+                                                    disabled={!conversionVariant.is_active && parentProductActive === false}
+                                                    className={`h-11 w-11 p-0 rounded-lg border border-gray-200 bg-white hover:bg-amber-50 ${conversionVariant.is_active ? 'text-amber-600' : 'text-gray-400'}`}
+                                                >
+                                                    <Power className="w-5 h-5" />
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    title="Sửa biến thể quy đổi"
+                                                    onClick={() => onEditVariant && onEditVariant(conversionVariant)}
+                                                    className="h-11 w-11 p-0 rounded-lg border border-gray-200 bg-white text-blue-600 hover:bg-blue-50"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </Button>
+                                                {isWithin2Minutes?.(conversionVariant.created_at) && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        title="Xoá biến thể quy đổi (trong 2 phút)"
+                                                        onClick={() => onDeleteVariant && onDeleteVariant(conversionVariant)}
+                                                        className="h-11 w-11 p-0 rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-50"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                        <AlertTriangle className="w-4 h-4" />
+                                        <span>Chưa đồng bộ được biến thể quy đổi tương ứng. Vui lòng tải lại dữ liệu.</span>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex items-center gap-1">
-                                <Button size="sm" variant="ghost" onClick={() => handleEdit(conv)} className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 rounded-lg">
-                                    <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(conv.id)} className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 rounded-lg">
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
