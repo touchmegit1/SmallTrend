@@ -172,14 +172,27 @@ jobs:
           script: |
             set -eu
             cd "$DEPLOY_PATH"
+            ENV_FILE="./deploy/env/backend.env"
 
-            if [ ! -f "./deploy/env/backend.env" ]; then
-              echo "Missing required file: ./deploy/env/backend.env"
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "Missing required file: $ENV_FILE"
               exit 1
             fi
 
+            # Load backend env even when file is owned by root (e.g. mode 600).
             set -a
-            . ./deploy/env/backend.env
+            TMP_ENV="$(mktemp)"
+            if [ -r "$ENV_FILE" ]; then
+              cat "$ENV_FILE" > "$TMP_ENV"
+            else
+              echo "No read permission for $ENV_FILE, loading via sudo..."
+              sudo cat "$ENV_FILE" > "$TMP_ENV"
+            fi
+
+            # Normalize potential CRLF and source variables
+            sed -i 's/\r$//' "$TMP_ENV"
+            . "$TMP_ENV"
+            rm -f "$TMP_ENV"
             set +a
 
             : "${DB_USERNAME:=smalltrend}"
