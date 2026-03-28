@@ -326,6 +326,7 @@ export const getDashboardProducts = async () => {
     brand_id: p.brandId,
     brand_name: p.brandName,
     attributes: p.attributes || null,
+    unit: p.unit || "",
   }));
 };
 

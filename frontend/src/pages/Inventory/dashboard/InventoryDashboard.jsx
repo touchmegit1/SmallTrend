@@ -75,7 +75,7 @@ function InventoryDashboard() {
             Tổng quan kho hàng
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Quản lý tồn kho, lô hàng & cảnh báo hạn sử dụng
+            Quản lý tồn kho theo biến thể, lô hàng & cảnh báo hạn sử dụng
           </p>
         </div>
         <div className="flex items-center gap-2">
