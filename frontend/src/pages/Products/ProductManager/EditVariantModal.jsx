@@ -204,19 +204,6 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       return false;
     }
 
-    const costPrice = formData.cost_price !== "" ? Number(formData.cost_price) : null;
-    const sellPrice = formData.sell_price !== "" ? Number(formData.sell_price) : null;
-
-    if (sellPrice === null || Number.isNaN(sellPrice) || sellPrice < 0) {
-      setErrorMsg("Giá bán phải là số hợp lệ và không âm.");
-      return false;
-    }
-
-    if (costPrice !== null && !Number.isNaN(costPrice) && sellPrice < costPrice) {
-      setErrorMsg("Giá bán không được bé hơn giá nhập.");
-      return false;
-    }
-
     return true;
   };
 
@@ -458,11 +445,10 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
                     min="0"
                     name="sell_price"
                     value={formData.sell_price}
-                    onChange={handleChange}
-                    required
-                    className="border border-gray-300 rounded-lg"
+                    disabled
+                    className="bg-gray-100 text-gray-500 border border-gray-200 rounded-lg"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Giá bán không được bé hơn giá nhập.</p>
+                  <p className="text-xs text-gray-500 mt-1">Giá bán chỉ chỉnh ở trang Thiết lập giá.</p>
                 </div>
               </div>
 
@@ -632,8 +618,8 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
             </CardContent>
           </Card>
 
-          {/* Unit Conversions - Inline Management */}
-          {variant && (
+          {/* Unit Conversions - chỉ hiển thị cho biến thể đơn vị gốc */}
+          {variant?.is_base_unit && (
             <Card className="border border-gray-300 rounded-lg bg-white mt-4">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Quy đổi đơn vị</CardTitle>
