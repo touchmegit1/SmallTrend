@@ -7,6 +7,7 @@ import com.smalltrend.entity.*;
 import com.smalltrend.entity.enums.PurchaseOrderStatus;
 import com.smalltrend.repository.*;
 import com.smalltrend.service.inventory.shared.InventoryManagerNotificationService;
+import com.smalltrend.service.inventory.shared.InventoryStockService;
 import com.smalltrend.service.products.VariantPriceService;
 
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class PurchaseOrderService {
     private final UnitConversionRepository unitConversionRepository;
     private final VariantPriceService variantPriceService;
     private final InventoryManagerNotificationService inventoryManagerNotificationService;
+    private final InventoryStockService inventoryStockService;
 
     // ═══════════════════════════════════════════════════════════
     // Public API
@@ -963,6 +965,7 @@ public class PurchaseOrderService {
                     .quantity(finalQty)
                     .build();
             inventoryStockRepository.save(stock);
+            inventoryStockService.syncConvertedStocksFromBase(baseVariant, targetLocation, batch);
 
             StockMovement movement = StockMovement.builder()
                     .variant(baseVariant)

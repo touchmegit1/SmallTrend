@@ -19,6 +19,10 @@ import com.smalltrend.validation.inventory.stock.InventoryStockRequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -95,9 +99,115 @@ public class InventoryStockService {
         InventoryStock savedStock = inventoryStockRepository.save(stock);
         outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "IMPORT_STOCK");
 
+        syncConvertedStocksFromBase(baseVariant, location, batch);
+
         // Ghi lại lịch sử
         recordMovement(baseVariant, batch, location, StockTransactionType.IMPORT, actualQuantity, "IMPORT", null,
                 request.getNotes());
+    }
+
+    public void syncConvertedStocksFromBase(ProductVariant baseVariant, Location location, ProductBatch baseBatch) {
+        if (baseVariant == null || baseVariant.getId() == null || !baseVariant.isBaseUnit() || location == null
+                || location.getId() == null) {
+            return;
+        }
+
+        List<UnitConversion> conversions = unitConversionRepository.findByVariantId(baseVariant.getId());
+        if (conversions == null || conversions.isEmpty()) {
+            return;
+        }
+
+        int baseStockAtLocation = inventoryStockRepository.findByVariantId(baseVariant.getId())
+                .stream()
+                .filter(stock -> stock.getLocation() != null
+                && stock.getLocation().getId() != null
+                && stock.getLocation().getId().equals(location.getId()))
+                .mapToInt(stock -> stock.getQuantity() != null ? stock.getQuantity() : 0)
+                .sum();
+
+        for (UnitConversion conversion : conversions) {
+            if (conversion == null
+                    || conversion.getToUnit() == null
+                    || conversion.getToUnit().getId() == null
+                    || conversion.getConversionFactor() == null
+                    || conversion.getConversionFactor().intValue() <= 0) {
+                continue;
+            }
+
+            ProductVariant convertedVariant = findConvertedVariant(baseVariant, conversion.getToUnit().getId());
+            if (convertedVariant == null || convertedVariant.getId() == null) {
+                continue;
+            }
+
+            int convertedQty = baseStockAtLocation / conversion.getConversionFactor().intValue();
+            ProductBatch convertedBatch = resolveConvertedBatch(convertedVariant, baseBatch);
+
+            InventoryStock convertedStock = inventoryStockRepository
+                    .findByVariantIdAndBatchIdAndLocationId(convertedVariant.getId(), convertedBatch.getId(), location.getId())
+                    .orElseGet(() -> InventoryStock.builder()
+                    .variant(convertedVariant)
+                    .batch(convertedBatch)
+                    .location(location)
+                    .quantity(0)
+                    .build());
+
+            int oldQty = convertedStock.getQuantity() != null ? convertedStock.getQuantity() : 0;
+            convertedStock.setQuantity(convertedQty);
+            InventoryStock savedConvertedStock = inventoryStockRepository.save(convertedStock);
+            outOfStockNotificationService.handleStockTransition(
+                    savedConvertedStock,
+                    oldQty,
+                    savedConvertedStock.getQuantity(),
+                    "CONVERSION_SYNC"
+            );
+        }
+    }
+
+    private ProductVariant findConvertedVariant(ProductVariant baseVariant, Integer toUnitId) {
+        if (baseVariant == null || baseVariant.getProduct() == null || baseVariant.getProduct().getId() == null || toUnitId == null) {
+            return null;
+        }
+
+        return productVariantRepository.findByProductIdAndUnitId(baseVariant.getProduct().getId(), toUnitId)
+                .stream()
+                .filter(candidate -> candidate != null
+                && candidate.getId() != null
+                && !candidate.getId().equals(baseVariant.getId())
+                && hasSameAttributes(baseVariant, candidate))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private ProductBatch resolveConvertedBatch(ProductVariant convertedVariant, ProductBatch baseBatch) {
+        List<ProductBatch> existingBatches = productBatchRepository.findByVariantId(convertedVariant.getId());
+
+        if (baseBatch != null && baseBatch.getBatchNumber() != null) {
+            ProductBatch matchedBatch = existingBatches.stream()
+                    .filter(batch -> batch != null && baseBatch.getBatchNumber().equals(batch.getBatchNumber()))
+                    .findFirst()
+                    .orElse(null);
+            if (matchedBatch != null) {
+                return matchedBatch;
+            }
+        }
+
+        if (existingBatches != null && !existingBatches.isEmpty()) {
+            return existingBatches.get(0);
+        }
+
+        return productBatchRepository.save(ProductBatch.builder()
+                .variant(convertedVariant)
+                .batchNumber(baseBatch != null ? baseBatch.getBatchNumber() : null)
+                .mfgDate(baseBatch != null && baseBatch.getMfgDate() != null ? baseBatch.getMfgDate() : LocalDate.now())
+                .expiryDate(baseBatch != null && baseBatch.getExpiryDate() != null ? baseBatch.getExpiryDate() : LocalDate.now().plusYears(1))
+                .costPrice(baseBatch != null ? baseBatch.getCostPrice() : null)
+                .build());
+    }
+
+    private boolean hasSameAttributes(ProductVariant left, ProductVariant right) {
+        Map<String, String> leftAttrs = left != null && left.getAttributes() != null ? left.getAttributes() : Collections.emptyMap();
+        Map<String, String> rightAttrs = right != null && right.getAttributes() != null ? right.getAttributes() : Collections.emptyMap();
+        return leftAttrs.equals(rightAttrs);
     }
 
     /**
