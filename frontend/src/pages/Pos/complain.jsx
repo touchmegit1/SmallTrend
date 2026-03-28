@@ -4,7 +4,6 @@ import {
   Plus,
   Search,
   Filter,
-  AlertTriangle,
   Clock,
   CheckCircle2,
   XCircle,
@@ -28,6 +27,7 @@ import { useCustomerTiers } from '../../hooks/useCustomerTiers';
 import { useAuth } from '../../context/AuthContext';
 import { MANAGER_ROLES, CASHIER_ROLES, hasAnyRole } from '../../utils/rolePermissions';
 import { useToast, ToastContainer } from '../../hooks/useToast';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const PAGE_SIZE = 5;
 
@@ -1157,36 +1157,18 @@ export default function CustomerComplaintSystem() {
         </div>
       )}
 
+      <ConfirmModal
+        isOpen={!!showDeleteConfirm}
+        title="Xác nhận xóa"
+        message={showDeleteConfirm ? `Bạn có chắc muốn xóa khiếu nại ${showDeleteConfirm.ticketCode}?` : ''}
+        confirmText="Xóa"
+        cancelText="Hủy"
+        variant="danger"
+        onCancel={() => setShowDeleteConfirm(null)}
+        onConfirm={() => showDeleteConfirm && handleDelete(showDeleteConfirm.id)}
+      />
+
       {/* Delete Confirmation */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white w-[400px] rounded-2xl shadow-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="text-red-600" size={20} />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Xác nhận xóa</h4>
-                <p className="text-sm text-gray-500">Bạn có chắc muốn xóa khiếu nại <b>{showDeleteConfirm.ticketCode}</b>?</p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={() => handleDelete(showDeleteConfirm.id)}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Xóa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
