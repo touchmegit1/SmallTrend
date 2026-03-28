@@ -28,6 +28,7 @@ const COLUMN_MAPS = {
     "cash_registers": "id,created_at,max_cash_limit,device_id,current_cash,notes,location,total_card_today,total_cash_today,opening_balance,register_code,register_name,register_type,session_start_time,status,store_name,total_sales_today,total_transactions_today,variance,expected_balance,updated_at,last_transaction_time,current_operator_id",
     "sale_orders": "id,created_at,discount_amount,notes,order_code,order_date,payment_method,status,subtotal,tax_amount,total_amount,updated_at,cash_register_id,cashier_id,customer_id",
     "sale_order_items": "id,line_discount_amount,line_tax_amount,line_total_amount,notes,product_name,quantity,sku,unit_price,sale_order_id,product_variant_id",
+    "sale_order_histories": "id,action_type,change_notes,changed_at,from_status,to_status,changed_by_user_id,sale_order_id",
     "user_credentials": "id,password_hash,username,user_id",
     "purchase_order_items": "id,expiry_date,notes,quantity,received_quantity,total_cost,unit_price,variant_id,purchase_order_id"
 };

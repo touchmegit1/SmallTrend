@@ -162,9 +162,10 @@ verify_core_counts() {
   STOCK_COUNT="$(count_table inventory_stock)"
   SALE_ORDERS_COUNT="$(count_table sale_orders)"
   SALE_ORDER_ITEMS_COUNT="$(count_table sale_order_items)"
+  SALE_ORDER_HISTORIES_COUNT="$(count_table sale_order_histories)"
   TICKETS_COUNT="$(count_table tickets)"
   LOYALTY_GIFTS_COUNT="$(count_table loyalty_gifts)"
-  echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT, sale_orders=$SALE_ORDERS_COUNT, sale_order_items=$SALE_ORDER_ITEMS_COUNT, tickets=$TICKETS_COUNT, loyalty_gifts=$LOYALTY_GIFTS_COUNT"
+  echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT, sale_orders=$SALE_ORDERS_COUNT, sale_order_items=$SALE_ORDER_ITEMS_COUNT, sale_order_histories=$SALE_ORDER_HISTORIES_COUNT, tickets=$TICKETS_COUNT, loyalty_gifts=$LOYALTY_GIFTS_COUNT"
 }
 
 verify_core_integrity() {
@@ -292,7 +293,7 @@ log "10/10" "Final verification"
 verify_core_counts
 verify_core_integrity
 
-if [ "$USERS_COUNT" = "0" ] || [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ] || [ "$STOCK_COUNT" = "0" ] || [ "$SALE_ORDERS_COUNT" = "0" ] || [ "$SALE_ORDER_ITEMS_COUNT" = "0" ] || [ "$TICKETS_COUNT" = "0" ] || [ "$LOYALTY_GIFTS_COUNT" = "0" ]; then
+if [ "$USERS_COUNT" = "0" ] || [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ] || [ "$STOCK_COUNT" = "0" ] || [ "$SALE_ORDERS_COUNT" = "0" ] || [ "$SALE_ORDER_ITEMS_COUNT" = "0" ] || [ "$SALE_ORDER_HISTORIES_COUNT" = "0" ] || [ "$TICKETS_COUNT" = "0" ] || [ "$LOYALTY_GIFTS_COUNT" = "0" ]; then
   log "ERROR" "Seed finished but one or more critical tables are empty."
   exit 1
 fi
