@@ -627,7 +627,7 @@ const ShiftManagement = () => {
                                 </div>
                                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-500">
                                     <div>Type: {shift.shiftType || 'REGULAR'}</div>
-                                    <div>Staff: {shift.minimumStaffRequired ?? '-'} / {shift.maximumStaffAllowed ?? '-'}</div>
+                                    <div>Staff: {shift.minimumStaffRequired ?? '-'} - {shift.maximumStaffAllowed ?? '-'}</div>
                                     <div>Break: {formatTime(shift.breakStartTime)} - {formatTime(shift.breakEndTime)}</div>
                                     <div>Approval: {shift.requiresApproval ? 'Yes' : 'No'}</div>
                                     <div className="col-span-2">Hiệu lực: {formatDate(shift.effectiveFrom)} - {formatDate(shift.effectiveTo)}</div>
