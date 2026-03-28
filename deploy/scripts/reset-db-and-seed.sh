@@ -11,6 +11,7 @@ BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_PATH/backup_data_value}"
 FIX_SEED_FILE="${FIX_SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
 SEED_LOG_DIR="${SEED_LOG_DIR:-$DEPLOY_PATH/deploy/seed-logs}"
 ENABLE_LEGACY_FALLBACK="${ENABLE_LEGACY_FALLBACK:-false}"
+SEED_STRATEGY="${SEED_STRATEGY:-fix-first}"
 
 log() {
   printf "[%s] %s\n" "$1" "$2"
@@ -87,6 +88,14 @@ seed_with_data_sql() {
     tail -n 30 "$err_log" || true
     return 1
   fi
+}
+
+verify_core_counts() {
+  USERS_COUNT="$(count_table users)"
+  PRODUCTS_COUNT="$(count_table products)"
+  VARIANTS_COUNT="$(count_table product_variants)"
+  STOCK_COUNT="$(count_table inventory_stock)"
+  echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
 }
 
 seed_with_backup_files() {
@@ -221,17 +230,36 @@ printf "%s\n" "$SQL_RESET" | docker compose -f "$COMPOSE_FILE" exec -T mysql \
 
 bootstrap_schema
 
-seed_with_data_sql
+log "6/10" "Running seed strategy: $SEED_STRATEGY"
+case "$SEED_STRATEGY" in
+  fix-only)
+    seed_with_fix_seed
+    ;;
+  fix-first)
+    if [ -f "$FIX_SEED_FILE" ]; then
+      seed_with_fix_seed
+    else
+      log "WARN" "fix_seed.sql not found, fallback to data.sql"
+      seed_with_data_sql
+    fi
+    ;;
+  data-only)
+    seed_with_data_sql
+    ;;
+  data-first)
+    seed_with_data_sql
+    ;;
+  *)
+    log "ERROR" "Invalid SEED_STRATEGY=$SEED_STRATEGY (allowed: fix-only|fix-first|data-only|data-first)"
+    exit 1
+    ;;
+esac
 
-log "7/10" "Verifying critical table counts after data.sql"
-USERS_COUNT="$(count_table users)"
-PRODUCTS_COUNT="$(count_table products)"
-VARIANTS_COUNT="$(count_table product_variants)"
-STOCK_COUNT="$(count_table inventory_stock)"
-echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
+log "7/10" "Verifying critical table counts after primary seed"
+verify_core_counts
 
 if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
-  if [ "$ENABLE_LEGACY_FALLBACK" = "true" ]; then
+  if [ "$SEED_STRATEGY" = "data-first" ] && [ "$ENABLE_LEGACY_FALLBACK" = "true" ]; then
     log "WARN" "Critical product tables are empty after data.sql. Running legacy fallback import..."
     if [ -f "$FIX_SEED_FILE" ]; then
       seed_with_fix_seed || true
@@ -247,11 +275,7 @@ fi
 repair_core_tables
 
 log "10/10" "Final verification"
-USERS_COUNT="$(count_table users)"
-PRODUCTS_COUNT="$(count_table products)"
-VARIANTS_COUNT="$(count_table product_variants)"
-STOCK_COUNT="$(count_table inventory_stock)"
-echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
+verify_core_counts
 
 if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
   log "ERROR" "Seed finished but critical tables are still empty. Check logs in $SEED_LOG_DIR and backup SQL files."
