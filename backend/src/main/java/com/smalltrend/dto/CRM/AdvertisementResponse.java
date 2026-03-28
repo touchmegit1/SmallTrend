@@ -18,16 +18,6 @@ public class AdvertisementResponse {
     private String ctaColor;
     private String bgColor;
     private Boolean isActive;
-    // Contract fields
-    private String contractNumber;
-    private BigDecimal contractValue;
-    private LocalDate contractStart;
-    private LocalDate contractEnd;
-    private String paymentTerms;
-    private String contactPerson;
-    private String contactEmail;
-    private String contactPhone;
-    private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

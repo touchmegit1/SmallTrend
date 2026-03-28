@@ -179,6 +179,21 @@ public class InventoryStockService {
             throw new RuntimeException("Refund quantity must be greater than 0");
         }
 
+        if (!variant.isBaseUnit()) {
+            var directVariantStocks = inventoryStockRepository.findByVariantId(variant.getId());
+            if (directVariantStocks != null && !directVariantStocks.isEmpty()) {
+                InventoryStock stock = directVariantStocks.get(0);
+                int oldQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                stock.setQuantity(oldQty + quantity);
+                InventoryStock savedStock = inventoryStockRepository.save(stock);
+                outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "REFUND");
+
+                recordMovement(variant, stock.getBatch(), stock.getLocation(),
+                        StockTransactionType.ADJUSTMENT, quantity, "REFUND", referenceId, notes);
+                return;
+            }
+        }
+
         ProductVariant baseVariant = variant;
         int restockQuantity = quantity;
 
