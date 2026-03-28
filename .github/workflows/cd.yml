@@ -287,8 +287,9 @@ jobs:
             }
 
             if ! verify_tag_exists "$TARGET_TAG"; then
-              echo "Tag $TARGET_TAG not found for both images. Falling back to $FALLBACK_TAG"
-              TARGET_TAG="$FALLBACK_TAG"
+              echo "ERROR: Required image tag $TARGET_TAG not found for backend/frontend."
+              echo "Refusing to deploy fallback tag to avoid artifact drift."
+              exit 1
             fi
 
             deploy_tag "$TARGET_TAG"
@@ -304,18 +305,47 @@ jobs:
                 mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d '\r'
             }
 
+            get_scalar_value() {
+              sql="$1"
+              compose_cmd exec -T mysql \
+                mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$sql" 2>/dev/null | tr -d '\r'
+            }
+
+            refresh_integrity_metrics() {
+              JOINABLE_VARIANTS_COUNT="$(get_scalar_value "SELECT COUNT(*) FROM product_variants pv LEFT JOIN products p ON p.id = pv.product_id LEFT JOIN units u ON u.id = pv.unit_id WHERE p.id IS NOT NULL AND u.id IS NOT NULL;" || echo 0)"
+              ORPHAN_PRODUCT_REFS="$(get_scalar_value "SELECT COUNT(*) FROM product_variants pv LEFT JOIN products p ON p.id = pv.product_id WHERE p.id IS NULL;" || echo 0)"
+              ORPHAN_UNIT_REFS="$(get_scalar_value "SELECT COUNT(*) FROM product_variants pv LEFT JOIN units u ON u.id = pv.unit_id WHERE u.id IS NULL;" || echo 0)"
+              STOCKED_VARIANTS_COUNT="$(get_scalar_value "SELECT COUNT(DISTINCT variant_id) FROM inventory_stock WHERE COALESCE(quantity, 0) > 0;" || echo 0)"
+            }
+
+            is_integrity_bad() {
+              stock_count="$1"
+              if [ "${JOINABLE_VARIANTS_COUNT:-0}" = "0" ]; then
+                return 0
+              fi
+              if [ "${ORPHAN_PRODUCT_REFS:-0}" != "0" ] || [ "${ORPHAN_UNIT_REFS:-0}" != "0" ]; then
+                return 0
+              fi
+              if [ "${stock_count:-0}" != "0" ] && [ "${STOCKED_VARIANTS_COUNT:-0}" = "0" ]; then
+                return 0
+              fi
+              return 1
+            }
+
             PRODUCTS_COUNT="$(get_table_count products || echo 0)"
             VARIANTS_COUNT="$(get_table_count product_variants || echo 0)"
             STOCK_COUNT="$(get_table_count inventory_stock || echo 0)"
+            refresh_integrity_metrics
             SEED_WAS_RUN=0
 
             echo "Post-deploy counts: products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
+            echo "Post-deploy integrity: joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
 
-            if [ "${PRODUCTS_COUNT:-0}" = "0" ] || [ "${VARIANTS_COUNT:-0}" = "0" ]; then
-              echo "Detected empty critical tables. Running reset-db-and-seed.sh..."
+            if [ "${PRODUCTS_COUNT:-0}" = "0" ] || [ "${VARIANTS_COUNT:-0}" = "0" ] || is_integrity_bad "$STOCK_COUNT"; then
+              echo "Detected empty or inconsistent critical product data. Running reset-db-and-seed.sh..."
               if [ -f "./deploy/scripts/reset-db-and-seed.sh" ]; then
                 sudo chmod +x ./deploy/scripts/reset-db-and-seed.sh
-                sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" bash ./deploy/scripts/reset-db-and-seed.sh
+                sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" SEED_STRATEGY="data-only" ENABLE_LEGACY_FALLBACK="false" bash ./deploy/scripts/reset-db-and-seed.sh
                 SEED_WAS_RUN=1
                 # Ensure services are up after seed
                 compose_cmd up -d --remove-orphans
@@ -327,10 +357,13 @@ jobs:
             PRODUCTS_COUNT_FINAL="$(get_table_count products || echo 0)"
             VARIANTS_COUNT_FINAL="$(get_table_count product_variants || echo 0)"
             STOCK_COUNT_FINAL="$(get_table_count inventory_stock || echo 0)"
+            refresh_integrity_metrics
             echo "Post-start final counts: products=$PRODUCTS_COUNT_FINAL, variants=$VARIANTS_COUNT_FINAL, inventory_stock=$STOCK_COUNT_FINAL"
+            echo "Post-start final integrity: joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
 
-            if [ "${PRODUCTS_COUNT_FINAL:-0}" = "0" ] || [ "${VARIANTS_COUNT_FINAL:-0}" = "0" ]; then
-              echo "ERROR: Critical tables are still empty after deploy + seed."
+            if [ "${PRODUCTS_COUNT_FINAL:-0}" = "0" ] || [ "${VARIANTS_COUNT_FINAL:-0}" = "0" ] || is_integrity_bad "$STOCK_COUNT_FINAL"; then
+              echo "ERROR: Critical product data is still inconsistent after deploy + seed."
+              echo "Diagnostics: products=$PRODUCTS_COUNT_FINAL, variants=$VARIANTS_COUNT_FINAL, stock=$STOCK_COUNT_FINAL, joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
               compose_cmd logs --tail=150 mysql backend || true
               exit 1
             fi
