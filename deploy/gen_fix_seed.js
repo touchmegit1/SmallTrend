@@ -7,11 +7,11 @@ const COLUMN_MAPS = {
     "tickets": "id,updated_at,description,priority,related_entity_id,related_entity_type,resolution,resolved_at,status,ticket_code,ticket_type,title,created_at,created_by_user_id,resolved_by_user_id,assigned_to_user_id",
     "purchase_orders": "id,po_number,supplier_id,contract_id,location_id,created_by,order_date,expected_delivery_date,actual_delivery_date,status,subtotal,discount_amount,tax_percent,tax_amount,total_amount,shipping_fee,paid_amount,notes,manager_decision,manager_decision_note,manager_decided_at,rejection_reason,shortage_reason,shortage_submitted_at,created_at,updated_at",
     "shift_handovers": "id,cash_amount,attachment_url,expected_cash,cash_breakdown,confirmed,confirmed_at,created_at,dispute_reason,equipment_status,actual_cash,handover_code,handover_time,important_notes,inventory_notes,issues_reported,low_stock_items,status,total_customers,total_refunds,total_sales,total_transactions,updated_at,variance,cash_register_id,from_user_id,to_user_id,shift_id",
-    // Ignore payroll_calculations mapping to let it fail or be mapped perfectly. Let's not map it, so it keeps old values mapping (which might fail, but --force will continue).
-    // Ignore shift_swap_requests, inventory_counts, disposal_vouchers, disposal_voucher_items to let them use default or we fix them.
+    // Ignore payroll_calculations mapping to keep original positional insert for now.
     "inventory_counts": "id,code,confirmed_at,created_by,created_at,location_id,notes,rejection_reason,status,total_difference_value,total_overage_value,total_shortage_value,confirmed_by",
-    "disposal_vouchers": "id,code,confirmed_at,created_at,notes,rejection_reason,reason_type,status,confirmed_by,created_by,location_id,total_items,total_quantity,total_value",
-    "disposal_voucher_items": "id,batch_code,expiry_date,quantity,total_cost,unit_cost,batch_id,product_id,disposal_voucher_id",
+    // Values in data.sql follow legacy export order; keep this mapping aligned to avoid column/value mismatch.
+    "disposal_vouchers": "id,code,confirmed_at,created_at,notes,reason_type,rejection_reason,status,confirmed_by,total_items,total_value,version,total_quantity,created_by,location_id",
+    "disposal_voucher_items": "id,batch_code,expiry_date,quantity,total_cost,unit_cost,batch_id,disposal_voucher_id,product_id",
 
     // Other known good ones
     "supplier_contracts": "id,contract_number,created_at,currency,delivery_terms,description,end_date,notes,payment_terms,signed_by_company,signed_by_supplier,signed_date,start_date,status,title,total_value,updated_at,supplier_id",
@@ -29,7 +29,7 @@ const COLUMN_MAPS = {
     "purchase_order_items": "id,expiry_date,notes,quantity,received_quantity,total_cost,unit_price,variant_id,purchase_order_id"
 };
 
-const src = fs.readFileSync('backend/src/main/resources/data.sql', 'utf8');
+const src = fs.readFileSync('backend/src/main/resources/data.sql', 'utf8').replace(/^\uFEFF/, '');
 let out = "SET FOREIGN_KEY_CHECKS = 0;\n" + src;
 
 let fixed = 0;

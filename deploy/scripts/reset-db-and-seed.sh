@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 # Reset (drop + create) database and seed again on Azure VM.
-# Robust mode: continues through SQL errors, then verifies critical tables.
+# Strict mode: fail fast on SQL errors, then verify critical domains.
 set -euo pipefail
 
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/smalltrend}"
 COMPOSE_FILE="${COMPOSE_FILE:-$DEPLOY_PATH/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$DEPLOY_PATH/deploy/env/backend.env}"
-SEED_FILE="${SEED_FILE:-$DEPLOY_PATH/backend/src/main/resources/data.sql}"
-BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_PATH/backup_data_value}"
-FIX_SEED_FILE="${FIX_SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
+SEED_FILE="${SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
+LEGACY_SEED_FILE="${LEGACY_SEED_FILE:-$DEPLOY_PATH/backend/src/main/resources/data.sql}"
 SEED_LOG_DIR="${SEED_LOG_DIR:-$DEPLOY_PATH/deploy/seed-logs}"
-ENABLE_LEGACY_FALLBACK="${ENABLE_LEGACY_FALLBACK:-false}"
-SEED_STRATEGY="${SEED_STRATEGY:-fix-first}"
+SEED_STRATEGY="${SEED_STRATEGY:-fix-only}"
 
 log() {
   printf "[%s] %s\n" "$1" "$2"
@@ -81,24 +79,26 @@ seed_with_data_sql() {
   mkdir -p "$SEED_LOG_DIR"
   local err_log="$SEED_LOG_DIR/data_sql_errors_$(date +%Y%m%d_%H%M%S).log"
 
-  log "6/10" "Seeding from data.sql with --force (won't stop at first SQL error)"
-  set +e
-  docker compose -f "$COMPOSE_FILE" exec -T mysql \
-    mysql --force --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$SEED_FILE" 2>"$err_log"
-  local rc=$?
-  set -e
+  if grep -q "DỮ LIỆU BÙ ĐẮP CHO CÁC BẢNG BỊ LỖI SCHEMA TRANSACTIONS" "$LEGACY_SEED_FILE"; then
+    log "ERROR" "Legacy mock patch marker detected in data.sql. Refusing to seed."
+    return 1
+  fi
 
-  if [ "$rc" -ne 0 ]; then
-    log "WARN" "data.sql finished with errors (continued). See: $err_log"
-  else
-    log "INFO" "data.sql import completed successfully"
+  log "6/10" "Seeding from data.sql (strict mode)"
+  if ! docker compose -f "$COMPOSE_FILE" exec -T mysql \
+    mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$LEGACY_SEED_FILE" 2>"$err_log"; then
+    log "ERROR" "data.sql import failed. See: $err_log"
+    tail -n 60 "$err_log" || true
+    return 1
   fi
 
   if grep -q "^ERROR " "$err_log" 2>/dev/null; then
-    log "ERROR" "data.sql has SQL errors. Fix schema mismatch instead of using legacy fallback."
+    log "ERROR" "data.sql contains SQL errors. See: $err_log"
     tail -n 30 "$err_log" || true
     return 1
   fi
+
+  log "INFO" "data.sql import completed successfully"
 }
 
 verify_core_counts() {
@@ -106,7 +106,11 @@ verify_core_counts() {
   PRODUCTS_COUNT="$(count_table products)"
   VARIANTS_COUNT="$(count_table product_variants)"
   STOCK_COUNT="$(count_table inventory_stock)"
-  echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
+  SALE_ORDERS_COUNT="$(count_table sale_orders)"
+  SALE_ORDER_ITEMS_COUNT="$(count_table sale_order_items)"
+  TICKETS_COUNT="$(count_table tickets)"
+  LOYALTY_GIFTS_COUNT="$(count_table loyalty_gifts)"
+  echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT, sale_orders=$SALE_ORDERS_COUNT, sale_order_items=$SALE_ORDER_ITEMS_COUNT, tickets=$TICKETS_COUNT, loyalty_gifts=$LOYALTY_GIFTS_COUNT"
 }
 
 verify_core_integrity() {
@@ -117,85 +121,48 @@ verify_core_integrity() {
   echo "joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
 }
 
-seed_with_backup_files() {
-  [ -d "$BACKUP_DIR" ] || {
-    log "WARN" "Backup directory not found: $BACKUP_DIR"
-    return 1
-  }
-
-  log "8/10" "Fallback seed from backup_data_value/*.sql"
-
-  # Disable FK checks to avoid order dependency across split files.
-  docker compose -f "$COMPOSE_FILE" exec -T mysql \
-    mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SET FOREIGN_KEY_CHECKS=0;"
-
-  local imported=0
-  for f in "$BACKUP_DIR"/smalltrend_*.sql; do
-    [ -f "$f" ] || continue
-    echo "Importing $(basename "$f")"
-    set +e
-    docker compose -f "$COMPOSE_FILE" exec -T mysql \
-      mysql --force --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$f"
-    local rc=$?
-    set -e
-    if [ "$rc" -ne 0 ]; then
-      log "WARN" "Import had errors: $(basename "$f") (continued)"
-    fi
-    imported=$((imported + 1))
-  done
-
-  docker compose -f "$COMPOSE_FILE" exec -T mysql \
-    mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SET FOREIGN_KEY_CHECKS=1;"
-
-  log "INFO" "Fallback import attempted $imported file(s)"
-}
-
 seed_with_fix_seed() {
-  [ -f "$FIX_SEED_FILE" ] || {
-    log "WARN" "Fix seed file not found: $FIX_SEED_FILE"
+  mkdir -p "$SEED_LOG_DIR"
+  local err_log="$SEED_LOG_DIR/fix_seed_errors_$(date +%Y%m%d_%H%M%S).log"
+
+  [ -f "$SEED_FILE" ] || {
+    log "WARN" "Fix seed file not found: $SEED_FILE"
     return 1
   }
 
-  log "8/10" "Fallback seed from deploy/fix_seed.sql"
-  set +e
-  docker compose -f "$COMPOSE_FILE" exec -T mysql \
-    mysql --force --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$FIX_SEED_FILE"
-  local rc=$?
-  set -e
-
-  if [ "$rc" -ne 0 ]; then
-    log "WARN" "fix_seed.sql finished with SQL errors (continued)."
-  else
-    log "INFO" "fix_seed.sql import completed successfully"
+  if grep -q "DỮ LIỆU BÙ ĐẮP CHO CÁC BẢNG BỊ LỖI SCHEMA TRANSACTIONS" "$SEED_FILE"; then
+    log "ERROR" "Legacy mock patch marker detected in fix_seed.sql. Refusing to seed."
+    return 1
   fi
-}
 
-repair_core_tables() {
-  log "9/10" "Repairing inventory_stock if still empty"
-
-  if [ "$(count_table inventory_stock)" = "0" ]; then
-    echo "inventory_stock is empty; generating baseline stock rows from existing batches"
-    docker compose -f "$COMPOSE_FILE" exec -T mysql \
-      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "
-        INSERT INTO inventory_stock (variant_id, batch_id, location_id, quantity)
-        SELECT b.variant_id,
-               b.id,
-               (SELECT id FROM locations ORDER BY id LIMIT 1),
-               100
-        FROM product_batches b
-        WHERE b.variant_id IS NOT NULL
-          AND NOT EXISTS (
-            SELECT 1 FROM inventory_stock s WHERE s.batch_id = b.id
-          )
-        LIMIT 500;
-      "
+  log "8/10" "Seeding from deploy/fix_seed.sql (strict mode)"
+  if ! docker compose -f "$COMPOSE_FILE" exec -T mysql \
+    mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$SEED_FILE" 2>"$err_log"; then
+    log "ERROR" "fix_seed.sql import failed. See: $err_log"
+    tail -n 60 "$err_log" || true
+    return 1
   fi
+
+  if grep -q "^ERROR " "$err_log" 2>/dev/null; then
+    log "ERROR" "fix_seed.sql contains SQL errors. See: $err_log"
+    tail -n 30 "$err_log" || true
+    return 1
+  fi
+
+  log "INFO" "fix_seed.sql import completed successfully"
 }
 
 log "1/10" "Checking required files"
 require_file "$COMPOSE_FILE"
 require_file "$ENV_FILE"
-require_file "$SEED_FILE"
+case "$SEED_STRATEGY" in
+  data-only|data-first)
+    require_file "$LEGACY_SEED_FILE"
+    ;;
+  *)
+    require_file "$SEED_FILE"
+    ;;
+esac
 
 cd "$DEPLOY_PATH"
 
@@ -251,25 +218,14 @@ bootstrap_schema
 
 log "6/10" "Running seed strategy: $SEED_STRATEGY"
 case "$SEED_STRATEGY" in
-  fix-only)
+  fix-only|fix-first)
     seed_with_fix_seed
     ;;
-  fix-first)
-    if [ -f "$FIX_SEED_FILE" ]; then
-      seed_with_fix_seed
-    else
-      log "WARN" "fix_seed.sql not found, fallback to data.sql"
-      seed_with_data_sql
-    fi
-    ;;
-  data-only)
-    seed_with_data_sql
-    ;;
-  data-first)
+  data-only|data-first)
     seed_with_data_sql
     ;;
   *)
-    log "ERROR" "Invalid SEED_STRATEGY=$SEED_STRATEGY (allowed: fix-only|fix-first|data-only|data-first)"
+    log "ERROR" "Invalid SEED_STRATEGY=$SEED_STRATEGY (allowed: fix-only|data-only)"
     exit 1
     ;;
 esac
@@ -278,28 +234,12 @@ log "7/10" "Verifying critical table counts after primary seed"
 verify_core_counts
 verify_core_integrity
 
-if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
-  if [ "$SEED_STRATEGY" = "data-first" ] && [ "$ENABLE_LEGACY_FALLBACK" = "true" ]; then
-    log "WARN" "Critical product tables are empty after data.sql. Running legacy fallback import..."
-    if [ -f "$FIX_SEED_FILE" ]; then
-      seed_with_fix_seed || true
-    else
-      seed_with_backup_files || true
-    fi
-  else
-    log "ERROR" "Critical product tables are empty after data.sql. Legacy fallback is disabled (ENABLE_LEGACY_FALLBACK=false)."
-    exit 1
-  fi
-fi
-
-repair_core_tables
-
 log "10/10" "Final verification"
 verify_core_counts
 verify_core_integrity
 
-if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
-  log "ERROR" "Seed finished but critical tables are still empty. Check logs in $SEED_LOG_DIR and backup SQL files."
+if [ "$USERS_COUNT" = "0" ] || [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ] || [ "$STOCK_COUNT" = "0" ] || [ "$SALE_ORDERS_COUNT" = "0" ] || [ "$SALE_ORDER_ITEMS_COUNT" = "0" ] || [ "$TICKETS_COUNT" = "0" ] || [ "$LOYALTY_GIFTS_COUNT" = "0" ]; then
+  log "ERROR" "Seed finished but one or more critical tables are empty."
   exit 1
 fi
 
@@ -308,7 +248,7 @@ if [ "$JOINABLE_VARIANTS_COUNT" = "0" ] || [ "$ORPHAN_PRODUCT_REFS" != "0" ] || 
   exit 1
 fi
 
-if [ "$STOCK_COUNT" != "0" ] && [ "$STOCKED_VARIANTS_COUNT" = "0" ]; then
+if [ "$STOCKED_VARIANTS_COUNT" = "0" ]; then
   log "ERROR" "Seed finished but inventory_stock has no positive quantities mapped to variants."
   exit 1
 fi

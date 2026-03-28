@@ -5,7 +5,8 @@ set -euo pipefail
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/smalltrend}"
 COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml"
 ENV_FILE="$DEPLOY_PATH/deploy/env/backend.env"
-SEED_FILE="$DEPLOY_PATH/backend/src/main/resources/data.sql"
+SEED_FILE="${SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
+LEGACY_SEED_FILE="${LEGACY_SEED_FILE:-$DEPLOY_PATH/backend/src/main/resources/data.sql}"
 
 log() {
   printf "[%s] %s\n" "$1" "$2"
@@ -22,7 +23,15 @@ require_file() {
 log "1/7" "Checking required files"
 require_file "$COMPOSE_FILE"
 require_file "$ENV_FILE"
+if [ ! -f "$SEED_FILE" ]; then
+  SEED_FILE="$LEGACY_SEED_FILE"
+fi
 require_file "$SEED_FILE"
+
+if grep -q "DỮ LIỆU BÙ ĐẮP CHO CÁC BẢNG BỊ LỖI SCHEMA TRANSACTIONS" "$SEED_FILE"; then
+  echo "Seed file contains legacy mock patch block and cannot be used: $SEED_FILE"
+  exit 1
+fi
 
 cd "$DEPLOY_PATH"
 
@@ -71,7 +80,7 @@ log "5/7" "Ensuring database exists"
 docker compose -f "$COMPOSE_FILE" exec -T mysql sh -lc \
   'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS $MYSQL_DATABASE CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"'
 
-log "6/7" "Seeding database from data.sql"
+log "6/7" "Seeding database from $SEED_FILE"
 docker compose -f "$COMPOSE_FILE" exec -T mysql sh -lc \
   'mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < "$SEED_FILE"
 

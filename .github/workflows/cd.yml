@@ -335,17 +335,21 @@ jobs:
             PRODUCTS_COUNT="$(get_table_count products || echo 0)"
             VARIANTS_COUNT="$(get_table_count product_variants || echo 0)"
             STOCK_COUNT="$(get_table_count inventory_stock || echo 0)"
+            SALE_ORDERS_COUNT="$(get_table_count sale_orders || echo 0)"
+            SALE_ORDER_ITEMS_COUNT="$(get_table_count sale_order_items || echo 0)"
+            TICKETS_COUNT="$(get_table_count tickets || echo 0)"
+            LOYALTY_GIFTS_COUNT="$(get_table_count loyalty_gifts || echo 0)"
             refresh_integrity_metrics
             SEED_WAS_RUN=0
 
-            echo "Post-deploy counts: products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
+            echo "Post-deploy counts: products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT, sale_orders=$SALE_ORDERS_COUNT, sale_order_items=$SALE_ORDER_ITEMS_COUNT, tickets=$TICKETS_COUNT, loyalty_gifts=$LOYALTY_GIFTS_COUNT"
             echo "Post-deploy integrity: joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
 
-            if [ "${PRODUCTS_COUNT:-0}" = "0" ] || [ "${VARIANTS_COUNT:-0}" = "0" ] || is_integrity_bad "$STOCK_COUNT"; then
+            if [ "${PRODUCTS_COUNT:-0}" = "0" ] || [ "${VARIANTS_COUNT:-0}" = "0" ] || [ "${STOCK_COUNT:-0}" = "0" ] || [ "${SALE_ORDERS_COUNT:-0}" = "0" ] || [ "${SALE_ORDER_ITEMS_COUNT:-0}" = "0" ] || [ "${TICKETS_COUNT:-0}" = "0" ] || [ "${LOYALTY_GIFTS_COUNT:-0}" = "0" ] || is_integrity_bad "$STOCK_COUNT"; then
               echo "Detected empty or inconsistent critical product data. Running reset-db-and-seed.sh..."
               if [ -f "./deploy/scripts/reset-db-and-seed.sh" ]; then
                 sudo chmod +x ./deploy/scripts/reset-db-and-seed.sh
-                sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" SEED_STRATEGY="fix-first" ENABLE_LEGACY_FALLBACK="false" bash ./deploy/scripts/reset-db-and-seed.sh
+                sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" SEED_STRATEGY="fix-only" bash ./deploy/scripts/reset-db-and-seed.sh
                 SEED_WAS_RUN=1
                 # Ensure services are up after seed
                 compose_cmd up -d --remove-orphans
@@ -357,13 +361,17 @@ jobs:
             PRODUCTS_COUNT_FINAL="$(get_table_count products || echo 0)"
             VARIANTS_COUNT_FINAL="$(get_table_count product_variants || echo 0)"
             STOCK_COUNT_FINAL="$(get_table_count inventory_stock || echo 0)"
+            SALE_ORDERS_COUNT_FINAL="$(get_table_count sale_orders || echo 0)"
+            SALE_ORDER_ITEMS_COUNT_FINAL="$(get_table_count sale_order_items || echo 0)"
+            TICKETS_COUNT_FINAL="$(get_table_count tickets || echo 0)"
+            LOYALTY_GIFTS_COUNT_FINAL="$(get_table_count loyalty_gifts || echo 0)"
             refresh_integrity_metrics
-            echo "Post-start final counts: products=$PRODUCTS_COUNT_FINAL, variants=$VARIANTS_COUNT_FINAL, inventory_stock=$STOCK_COUNT_FINAL"
+            echo "Post-start final counts: products=$PRODUCTS_COUNT_FINAL, variants=$VARIANTS_COUNT_FINAL, inventory_stock=$STOCK_COUNT_FINAL, sale_orders=$SALE_ORDERS_COUNT_FINAL, sale_order_items=$SALE_ORDER_ITEMS_COUNT_FINAL, tickets=$TICKETS_COUNT_FINAL, loyalty_gifts=$LOYALTY_GIFTS_COUNT_FINAL"
             echo "Post-start final integrity: joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
 
-            if [ "${PRODUCTS_COUNT_FINAL:-0}" = "0" ] || [ "${VARIANTS_COUNT_FINAL:-0}" = "0" ] || is_integrity_bad "$STOCK_COUNT_FINAL"; then
-              echo "ERROR: Critical product data is still inconsistent after deploy + seed."
-              echo "Diagnostics: products=$PRODUCTS_COUNT_FINAL, variants=$VARIANTS_COUNT_FINAL, stock=$STOCK_COUNT_FINAL, joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
+            if [ "${PRODUCTS_COUNT_FINAL:-0}" = "0" ] || [ "${VARIANTS_COUNT_FINAL:-0}" = "0" ] || [ "${STOCK_COUNT_FINAL:-0}" = "0" ] || [ "${SALE_ORDERS_COUNT_FINAL:-0}" = "0" ] || [ "${SALE_ORDER_ITEMS_COUNT_FINAL:-0}" = "0" ] || [ "${TICKETS_COUNT_FINAL:-0}" = "0" ] || [ "${LOYALTY_GIFTS_COUNT_FINAL:-0}" = "0" ] || is_integrity_bad "$STOCK_COUNT_FINAL"; then
+              echo "ERROR: Critical seed data is still inconsistent after deploy + seed."
+              echo "Diagnostics: products=$PRODUCTS_COUNT_FINAL, variants=$VARIANTS_COUNT_FINAL, stock=$STOCK_COUNT_FINAL, sale_orders=$SALE_ORDERS_COUNT_FINAL, sale_order_items=$SALE_ORDER_ITEMS_COUNT_FINAL, tickets=$TICKETS_COUNT_FINAL, loyalty_gifts=$LOYALTY_GIFTS_COUNT_FINAL, joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
               compose_cmd logs --tail=150 mysql backend || true
               exit 1
             fi
