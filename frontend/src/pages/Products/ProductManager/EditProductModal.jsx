@@ -8,6 +8,7 @@ import { useFetchCategories } from "../../../hooks/categories";
 import { useFetchBrands } from "../../../hooks/brands";
 import { useFetchTaxRates } from "../../../hooks/taxRates";
 import api from "../../../config/axiosConfig";
+import { resolveImageUrl } from "../../../utils/inventory";
 
 /**
  * Component Modal sửa Chỉnh Phông Thông tin Gốc của một Sản Phẩm.
@@ -275,7 +276,7 @@ export function EditProductModal({ product, isOpen, onClose, onSave }) {
                   <div className="relative flex-1 rounded-2xl overflow-hidden group border border-gray-100 shadow-sm">
                     {/* Hỗ trợ String xử lý đường dẫn Image Config nếu là Link hệ thống Local từ BaseURL backend hay Link Full Http CDN */}
                     <img
-                      src={imagePreview.startsWith('blob:') || imagePreview.startsWith('http') ? imagePreview : `http://localhost:8081${imagePreview.startsWith('/') ? '' : '/'}${imagePreview}`}
+                      src={resolveImageUrl(imagePreview) || ''}
                       alt="Product Master Visual"
                       className="w-full h-full object-contain rounded-2xl bg-white"
                       style={{ minHeight: '280px' }}

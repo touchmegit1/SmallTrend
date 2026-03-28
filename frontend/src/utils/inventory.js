@@ -37,6 +37,29 @@ export function formatNumber(value) {
   return value.toLocaleString("vi-VN");
 }
 
+/**
+ * Lấy origin của server backend từ VITE_API_BASE_URL
+ * Ví dụ: VITE_API_BASE_URL=/api → origin=""
+ * Ví dụ: VITE_API_BASE_URL=http://localhost:8081/api → origin="http://localhost:8081"
+ */
+export function getApiOrigin() {
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+  return apiBase.replace(/\/api\/?$/, "");
+}
+
+/**
+ * Resolve image URL cho tất cả loại ảnh (sản phẩm, combo, v.v.)
+ * Hỗ trợ: full URLs, relative paths, blob URLs
+ */
+export function resolveImageUrl(imageUrl) {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("blob:")) {
+    return imageUrl;
+  }
+  const apiOrigin = getApiOrigin();
+  return `${apiOrigin}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
+}
+
 export function resolveInventoryImageUrl(imageUrl) {
   if (!imageUrl) return null;
   if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {

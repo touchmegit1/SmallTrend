@@ -8,6 +8,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { useActiveCampaigns, useDiscountedVariants, useAllVariants } from '../../hooks/useEventData';
+import { resolveImageUrl } from '../../utils/inventory';
 import { useVouchers } from '../../hooks/useVouchers';
 import { useGifts } from '../../hooks/useGifts';
 import { useProductCombos } from '../../hooks/product_combos';
@@ -174,8 +175,7 @@ function GiftCard({ gift }) {
 
 const getComboImage = (combo) => {
   if (!combo?.imageUrl) return COMBO_PLACEHOLDER;
-  if (combo.imageUrl.startsWith("http")) return combo.imageUrl;
-  return `http://localhost:8081${combo.imageUrl.startsWith("/") ? "" : "/"}${combo.imageUrl}`;
+  return resolveImageUrl(combo.imageUrl) || COMBO_PLACEHOLDER;
 };
 
 function ComboCard({ combo }) {

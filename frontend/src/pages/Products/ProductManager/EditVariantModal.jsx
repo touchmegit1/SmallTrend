@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/pr
 import UnitConversionSection from "./UnitConversionSection";
 import { useFetchUnits } from "../../../hooks/product_variants";
 import api from "../../../config/axiosConfig";
+import { resolveImageUrl, getApiOrigin } from "../../../utils/inventory";
 
 // Modal Component hiển thị thông tin và cho phép Chỉnh sửa một Variant (Loại sản phẩm)
 // Cho phép update SKU, Barcode, PLU Code, giá bán, hình ảnh...
@@ -51,13 +52,7 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
             : (variant.is_active ?? true),
       });
       setImageFile(null);
-      setImagePreview(
-        variant.image_url
-          ? variant.image_url.startsWith("http")
-            ? variant.image_url
-            : `http://localhost:8081${variant.image_url.startsWith("/") ? "" : "/"}${variant.image_url}`
-          : null,
-      );
+      setImagePreview(resolveImageUrl(variant.image_url) || null);
       setErrorMsg("");
 
       const attrsObj = variant.attributes || {};
@@ -232,8 +227,8 @@ export function EditVariantModal({ variant, parentProduct, isOpen, onClose, onSa
       let imageUrl = null;
       if (imageFile) {
         imageUrl = await uploadImage();
-        // Return full path without localhost URL to save on DB
-        if (imageUrl) imageUrl = imageUrl.replace("http://localhost:8081", "");
+        // Return full path without server origin to save on DB
+        if (imageUrl) imageUrl = imageUrl.replace(getApiOrigin(), "");
       } else if (imagePreview) {
         // Keep the old image
         imageUrl = variant.image_url;

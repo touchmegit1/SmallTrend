@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /**
  * Service for AI Chat operations
@@ -17,7 +17,7 @@ const aiChatService = {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.post(
-                `${API_BASE_URL}/api/ai/chat`,
+                `${API_BASE_URL}/ai/chat`,
                 {
                     query,
                     sessionId,
@@ -45,7 +45,7 @@ const aiChatService = {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.get(
-                `${API_BASE_URL}/api/ai/stats`,
+                `${API_BASE_URL}/ai/stats`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -67,7 +67,7 @@ const aiChatService = {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.get(
-                `${API_BASE_URL}/api/ai/health`,
+                `${API_BASE_URL}/ai/health`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`

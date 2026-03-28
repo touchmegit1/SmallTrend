@@ -9,6 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import EditComboModal from "./EditComboModal";
 import { useAuth } from "../../../context/AuthContext";
 import { canManageProducts } from "../../../utils/roleUtils";
+import { resolveImageUrl } from "../../../utils/inventory";
 
 import { useProductCombos } from "../../../hooks/product_combos";
 
@@ -259,7 +260,7 @@ const ComboManage = () => {
                           <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center shadow-sm overflow-hidden">
                             {combo.imageUrl ? (
                               <img
-                                src={combo.imageUrl.startsWith('http') ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith('/') ? '' : '/'}${combo.imageUrl}`}
+                                src={resolveImageUrl(combo.imageUrl) || ''}
                                 alt={combo.comboName}
                                 className="w-full h-full object-cover"
                               />

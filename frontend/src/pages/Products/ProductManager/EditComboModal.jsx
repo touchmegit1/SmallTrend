@@ -5,6 +5,7 @@ import { Input } from "../../../components/product/input";
 import { Label } from "../../../components/product/label";
 import { Textarea } from "../../../components/product/textarea";
 import axios from "../../../config/axiosConfig";
+import { resolveImageUrl } from "../../../utils/inventory";
 
 // Modal Popup dùng chung để sửa thông tin của một Combo đã tồn tại
 // Nhận vào state combo được chọn từ component cha và gọi hàm onSave khi hoàn thành
@@ -735,7 +736,7 @@ const EditComboModal = ({ combo, combos = [], isOpen, onClose, onSave }) => {
               {imagePreview ? (
                 <div className="relative flex-1 rounded-2xl overflow-hidden group border border-gray-100 shadow-sm">
                   <img
-                    src={imagePreview.startsWith('blob:') || imagePreview.startsWith('http') ? imagePreview : `http://localhost:8081${imagePreview.startsWith('/') ? '' : '/'}${imagePreview}`}
+                    src={resolveImageUrl(imagePreview) || ''}
                     alt="Combo Visual"
                     className="w-full h-full object-contain rounded-2xl bg-white"
                   />

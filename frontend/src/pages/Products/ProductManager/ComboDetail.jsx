@@ -10,6 +10,7 @@ import EditComboModal from "./EditComboModal";
 import { useProductCombos } from "../../../hooks/product_combos";
 import { useAuth } from "../../../context/AuthContext";
 import { isProductReadOnlyRole } from "../../../utils/rolePermissions";
+import { resolveImageUrl } from "../../../utils/inventory";
 
 const ComboDetail = () => {
   const navigate = useNavigate();
@@ -138,7 +139,7 @@ const ComboDetail = () => {
               <div className="aspect-[4/3] bg-white rounded-lg flex items-center justify-center overflow-hidden">
                 {combo.imageUrl ? (
                   <img
-                    src={combo.imageUrl.startsWith("http") ? combo.imageUrl : `http://localhost:8081${combo.imageUrl.startsWith("/") ? "" : "/"}${combo.imageUrl}`}
+                    src={resolveImageUrl(combo.imageUrl) || ''}
                     alt={combo.comboName}
                     className="w-full h-full object-contain"
                   />

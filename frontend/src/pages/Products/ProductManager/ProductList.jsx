@@ -32,7 +32,7 @@ export function ProductListScreen() {
 
   // Chuẩn hoá domain backend để khi ảnh chỉ là path tương đối
   // thì vẫn render đúng trên giao diện.
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api';
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
 
   // Hàm dùng chung: đổi imageUrl thành URL đầy đủ để hiển thị ảnh sản phẩm.
   const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, '');
