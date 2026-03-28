@@ -680,15 +680,27 @@ function ProductDetail() {
                               >
                                 <Edit className="w-[18px] h-[18px]" />
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                title={expandedVariantId === variant.id ? "Thu gọn quy đổi" : "Cấu hình quy đổi đơn vị"}
-                                onClick={() => setExpandedVariantId(expandedVariantId === variant.id ? null : variant.id)}
-                                className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all focus:ring-0 ${expandedVariantId === variant.id ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'hover:bg-indigo-50 text-indigo-600'}`}
-                              >
-                                <Box className="w-[18px] h-[18px]" />
-                              </Button>
+                              {variant.is_base_unit ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  title={expandedVariantId === variant.id ? "Thu gọn quy đổi" : "Cấu hình quy đổi đơn vị"}
+                                  onClick={() => setExpandedVariantId(expandedVariantId === variant.id ? null : variant.id)}
+                                  className={`h-10 w-10 p-0 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all focus:ring-0 ${expandedVariantId === variant.id ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                                >
+                                  <Box className="w-[18px] h-[18px]" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled
+                                  title="Biến thể quy đổi không được phép tạo thêm quy đổi"
+                                  className="h-10 w-10 p-0 rounded-xl border border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50"
+                                >
+                                  <Box className="w-[18px] h-[18px]" />
+                                </Button>
+                              )}
                               {isWithin2Minutes(variant.created_at) && (
                                 <Button
                                   size="sm"
@@ -706,7 +718,7 @@ function ProductDetail() {
                       </TableCell>
                     </TableRow>
                     {/* Dòng hiển thị quy đổi đơn vị khi expand */}
-                    {canManageProduct && expandedVariantId === variant.id && (
+                    {canManageProduct && variant.is_base_unit && expandedVariantId === variant.id && (
                       <TableRow className="bg-gray-50/30">
                         <TableCell colSpan={10} className="p-0">
                           <div className="px-6 py-4 animate-in slide-in-from-top-2 duration-200 border-b border-gray-100">

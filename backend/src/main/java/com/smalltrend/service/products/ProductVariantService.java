@@ -458,6 +458,22 @@ public class ProductVariantService {
         response.setImageUrl(variant.getImageUrl());
         response.setSellPrice(variant.getSellPrice());
         response.setIsActive(variant.isActive());
+
+        boolean isConversionDerivedVariant = false;
+        if (product != null && product.getId() != null && variant.getUnit() != null && variant.getUnit().getId() != null) {
+            List<UnitConversion> conversionsToThisUnit = unitConversionRepository.findByProductIdAndToUnitId(
+                    product.getId(),
+                    variant.getUnit().getId());
+
+            isConversionDerivedVariant = conversionsToThisUnit.stream()
+                    .filter(conversion -> conversion != null
+                    && conversion.getVariant() != null
+                    && conversion.getVariant().getId() != null
+                    && !conversion.getVariant().getId().equals(variant.getId()))
+                    .anyMatch(conversion -> hasSameAttributes(conversion.getVariant(), variant));
+        }
+
+        response.setIsBaseUnit(!isConversionDerivedVariant);
         response.setProductActive(product != null ? product.getIsActive() : null);
         response.setAttributes(variant.getAttributes());
         response.setCreatedAt(variant.getCreatedAt());

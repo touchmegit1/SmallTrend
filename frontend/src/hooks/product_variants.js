@@ -27,6 +27,7 @@ export const useFetchVariants = (productId) => {
         stock_quantity: v.stockQuantity,
         image_url: v.imageUrl,
         is_active: v.isActive,
+        is_base_unit: v.isBaseUnit,
         created_at: v.createdAt,
         attributes: v.attributes,
         unit_conversions: v.unitConversions || [],

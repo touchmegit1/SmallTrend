@@ -20,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,6 +60,24 @@ public class UnitConversionService {
                 .orElseThrow(() -> new RuntimeException(
                 "Không tìm thấy biến thể với ID: " + variantId));
 
+        Integer productId = baseVariant.getProduct() != null ? baseVariant.getProduct().getId() : null;
+        Integer unitId = baseVariant.getUnit() != null ? baseVariant.getUnit().getId() : null;
+
+        if (productId != null && unitId != null) {
+            List<UnitConversion> conversionsToThisUnit = unitConversionRepository.findByProductIdAndToUnitId(productId, unitId);
+            boolean isConversionDerivedVariant = conversionsToThisUnit.stream()
+                    .filter(conversion -> conversion != null
+                    && conversion.getVariant() != null
+                    && conversion.getVariant().getId() != null
+                    && !conversion.getVariant().getId().equals(baseVariant.getId()))
+                    .anyMatch(conversion -> hasSameAttributes(conversion.getVariant(), baseVariant));
+
+            if (isConversionDerivedVariant) {
+                throw new RuntimeException("Chỉ biến thể đơn vị gốc mới được phép thêm quy đổi đơn vị.");
+            }
+        }
+
+
         Unit toUnit = unitRepository.findById(request.getToUnitId())
                 .orElseThrow(() -> new RuntimeException(
                 "Không tìm thấy đơn vị với ID: " + request.getToUnitId()));
@@ -94,7 +114,6 @@ public class UnitConversionService {
                 .unit(toUnit)
                 .sellPrice(request.getSellPrice())
                 .isActive(baseVariant.isActive())
-                .imageUrl(baseVariant.getImageUrl()) // Kế thừa ảnh từ variant gốc
                 .attributes(baseVariant.getAttributes() != null
                         ? new java.util.HashMap<>(baseVariant.getAttributes())
                         : new java.util.HashMap<>())
@@ -211,5 +230,11 @@ public class UnitConversionService {
         response.setDescription(entity.getDescription());
         response.setIsActive(entity.isActive());
         return response;
+    }
+
+    private boolean hasSameAttributes(ProductVariant left, ProductVariant right) {
+        Map<String, String> leftAttrs = left != null && left.getAttributes() != null ? left.getAttributes() : Collections.emptyMap();
+        Map<String, String> rightAttrs = right != null && right.getAttributes() != null ? right.getAttributes() : Collections.emptyMap();
+        return leftAttrs.equals(rightAttrs);
     }
 }
