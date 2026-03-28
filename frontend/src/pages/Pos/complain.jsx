@@ -20,16 +20,13 @@ import {
   UserCircle,
   Loader2,
   AlertCircle,
-  CircleDot,
-  ArrowUpCircle,
-  ArrowDownCircle,
   Crown
 } from 'lucide-react';
 import ticketService from '../../services/ticketService';
 import customerService from '../../services/customerService';
 import { useCustomerTiers } from '../../hooks/useCustomerTiers';
 import { useAuth } from '../../context/AuthContext';
-import { MANAGER_ROLES, hasAnyRole } from '../../utils/rolePermissions';
+import { MANAGER_ROLES, CASHIER_ROLES, hasAnyRole } from '../../utils/rolePermissions';
 import { useToast, ToastContainer } from '../../hooks/useToast';
 
 const PAGE_SIZE = 5;
@@ -38,13 +35,6 @@ const STATUS_CONFIG = {
   IN_PROGRESS: { label: 'Đang xử lý', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
   RESOLVED: { label: 'Đã giải quyết', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
   CLOSED: { label: 'Đã đóng', color: 'bg-gray-100 text-gray-600', icon: XCircle }
-};
-
-const PRIORITY_CONFIG = {
-  LOW: { label: 'Thấp', color: 'bg-gray-100 text-gray-600', icon: ArrowDownCircle },
-  NORMAL: { label: 'Bình thường', color: 'bg-blue-100 text-blue-700', icon: CircleDot },
-  HIGH: { label: 'Cao', color: 'bg-orange-100 text-orange-700', icon: ArrowUpCircle },
-  URGENT: { label: 'Khẩn cấp', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
 };
 
 const TYPE_CONFIG = {
@@ -68,7 +58,6 @@ export default function CustomerComplaintSystem() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
-  const [filterPriority, setFilterPriority] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
 
   // Modal states
@@ -97,7 +86,9 @@ export default function CustomerComplaintSystem() {
   const { tiers } = useCustomerTiers();
   const { user } = useAuth();
   const { toasts, showToast, removeToast } = useToast();
-  const isComplaintReadOnlyForManager = hasAnyRole(user, MANAGER_ROLES);
+  const canEditComplaint = hasAnyRole(user, [...MANAGER_ROLES, ...CASHIER_ROLES]);
+  const canDeleteComplaint = hasAnyRole(user, MANAGER_ROLES);
+  const canCreateComplaint = hasAnyRole(user, [...MANAGER_ROLES, ...CASHIER_ROLES]);
 
   // Lấy tier.
   const getTier = (spentAmount) => {
@@ -115,7 +106,6 @@ export default function CustomerComplaintSystem() {
     ticketType: 'REFUND',
     title: '',
     description: '',
-    priority: 'NORMAL',
     relatedEntityType: '',
     relatedEntityId: 1,
     assignedToUserId: '',
@@ -147,7 +137,6 @@ export default function CustomerComplaintSystem() {
   // Lọc và tìm kiếm.
   const filtered = tickets.filter(t => {
     if (filterStatus !== 'ALL' && t.status !== filterStatus) return false;
-    if (filterPriority !== 'ALL' && t.priority !== filterPriority) return false;
     if (filterType !== 'ALL' && t.ticketType !== filterType) return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -160,14 +149,7 @@ export default function CustomerComplaintSystem() {
     return true;
   });
 
-  // Sắp xếp theo mức ưu tiên (URGENT > HIGH > NORMAL > LOW), sau đó theo mới nhất.
-  const priorityOrder = { URGENT: 4, HIGH: 3, NORMAL: 2, LOW: 1 };
-  filtered.sort((a, b) => {
-    const pA = priorityOrder[a.priority] || 0;
-    const pB = priorityOrder[b.priority] || 0;
-    if (pA !== pB) return pB - pA; // Higher priority first
-    return new Date(b.createdAt) - new Date(a.createdAt); // Then newest first
-  });
+  filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -184,7 +166,6 @@ export default function CustomerComplaintSystem() {
       ticketType: 'REFUND',
       title: '',
       description: '',
-      priority: 'NORMAL',
       relatedEntityType: '',
       relatedEntityId: 1,
       assignedToUserId: '',
@@ -207,14 +188,14 @@ export default function CustomerComplaintSystem() {
 
   // Mở create.
   const openCreate = () => {
-    if (isComplaintReadOnlyForManager) return;
+    if (!canCreateComplaint) return;
     resetForm();
     setShowModal(true);
   };
 
   // Mở edit.
   const openEdit = (ticket) => {
-    if (isComplaintReadOnlyForManager) return;
+    if (!canEditComplaint) return;
     setEditingTicket(ticket);
 
     // Tách thông tin khách hàng từ mô tả.
@@ -236,7 +217,6 @@ export default function CustomerComplaintSystem() {
       ticketType: ticket.ticketType || 'ORDER',
       title: ticket.title || '',
       description: cleanDesc,
-      priority: ticket.priority || 'NORMAL',
       relatedEntityType: ticket.relatedEntityType || '',
       relatedEntityId: ticket.relatedEntityId || '',
       assignedToUserId: ticket.assignedToUserId || '',
@@ -259,7 +239,8 @@ export default function CustomerComplaintSystem() {
 
   // Xử lý handleSave.
   const handleSave = async () => {
-    if (isComplaintReadOnlyForManager) return;
+    if (editingTicket && !canEditComplaint) return;
+    if (!editingTicket && !canCreateComplaint) return;
     try {
       if (customerPhone && !/^\d{10,11}$/.test(customerPhone.trim())) {
         showToast('Số điện thoại hợp lệ phải từ 10 đến 11 số (chỉ chứa chữ số).', 'warning');
@@ -298,7 +279,6 @@ export default function CustomerComplaintSystem() {
         await ticketService.updateTicket(editingTicket.id, {
           title: form.title,
           description: desc,
-          priority: form.priority,
           status: form.status,
           assignedToUserId: currentUserId,
           resolution: form.resolution,
@@ -316,7 +296,6 @@ export default function CustomerComplaintSystem() {
           ticketType: form.ticketType,
           title: form.title,
           description: desc,
-          priority: form.priority,
           status: 'IN_PROGRESS',
           relatedEntityType: form.relatedEntityType || null,
           relatedEntityId: form.relatedEntityId ? Number(form.relatedEntityId) : null,
@@ -343,7 +322,7 @@ export default function CustomerComplaintSystem() {
 
   // Xử lý handleDelete.
   const handleDelete = async (id) => {
-    if (isComplaintReadOnlyForManager) return;
+    if (!canDeleteComplaint) return;
     try {
       await ticketService.deleteTicket(id);
       setShowDeleteConfirm(null);
@@ -379,17 +358,6 @@ export default function CustomerComplaintSystem() {
     );
   };
 
-  // Hiển thị thành phần priority badge.
-  const PriorityBadge = ({ priority }) => {
-    const cfg = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.NORMAL;
-    const Icon = cfg.icon;
-    return (
-      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
-        <Icon size={13} />
-        {cfg.label}
-      </span>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -404,7 +372,7 @@ export default function CustomerComplaintSystem() {
               Quản lý và xử lý các phản hồi từ khách hàng
             </p>
           </div>
-          {!isComplaintReadOnlyForManager && (
+          {canCreateComplaint && (
             <button
               onClick={openCreate}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
@@ -489,16 +457,6 @@ export default function CustomerComplaintSystem() {
                 ))}
               </select>
               <select
-                value={filterPriority}
-                onChange={e => { setFilterPriority(e.target.value); setPage(1); }}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="ALL">Tất cả ưu tiên</option>
-                {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
-                  <option key={key} value={key}>{cfg.label}</option>
-                ))}
-              </select>
-              <select
                 value={filterType}
                 onChange={e => { setFilterType(e.target.value); setPage(1); }}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -540,7 +498,6 @@ export default function CustomerComplaintSystem() {
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Khách hàng</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Loại</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Tiêu đề</th>
-                      <th className="text-left px-5 py-3 font-semibold text-gray-600">Ưu tiên</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Trạng thái</th>
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Ngày tạo đơn</th>
                       <th className="text-center px-5 py-3 font-semibold text-gray-600">Hành động</th>
@@ -583,9 +540,6 @@ export default function CustomerComplaintSystem() {
                           )}
                         </td>
                         <td className="px-5 py-4">
-                          <PriorityBadge priority={ticket.priority} />
-                        </td>
-                        <td className="px-5 py-4">
                           <StatusBadge status={ticket.status} />
                         </td>
                         <td className="px-5 py-4 text-gray-500 text-xs whitespace-nowrap">
@@ -600,23 +554,23 @@ export default function CustomerComplaintSystem() {
                             >
                               <Eye size={16} />
                             </button>
-                            {!isComplaintReadOnlyForManager && (
-                              <>
-                                <button
-                                  onClick={() => openEdit(ticket)}
-                                  className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                                  title="Chỉnh sửa"
-                                >
-                                  <Pencil size={16} />
-                                </button>
-                                <button
-                                  onClick={() => setShowDeleteConfirm(ticket)}
-                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                  title="Xóa"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </>
+                            {canEditComplaint && (
+                              <button
+                                onClick={() => openEdit(ticket)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                title="Chỉnh sửa"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                            )}
+                            {canDeleteComplaint && (
+                              <button
+                                onClick={() => setShowDeleteConfirm(ticket)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Xóa"
+                              >
+                                <Trash2 size={16} />
+                              </button>
                             )}
                           </div>
                         </td>
@@ -836,35 +790,20 @@ export default function CustomerComplaintSystem() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {editingTicket && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mức ưu tiên</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
                   <select
-                    value={form.priority}
-                    onChange={e => setForm({ ...form, priority: e.target.value })}
+                    value={form.status}
+                    onChange={e => setForm({ ...form, status: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
+                    {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
                       <option key={key} value={key}>{cfg.label}</option>
                     ))}
                   </select>
                 </div>
-
-                {editingTicket && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-                    <select
-                      value={form.status}
-                      onChange={e => setForm({ ...form, status: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                        <option key={key} value={key}>{cfg.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Assignee section */}
               {/* Assignee section */}
@@ -1099,7 +1038,6 @@ export default function CustomerComplaintSystem() {
                   {detailTicket.ticketCode}
                 </span>
                 <StatusBadge status={detailTicket.status} />
-                <PriorityBadge priority={detailTicket.priority} />
               </div>
 
               <div>
@@ -1199,7 +1137,7 @@ export default function CustomerComplaintSystem() {
               </div>
 
               <div className="flex gap-2 pt-2">
-                {!isComplaintReadOnlyForManager && (
+                {canEditComplaint && (
                   <button
                     onClick={() => { setDetailTicket(null); openEdit(detailTicket); }}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
