@@ -340,24 +340,57 @@ jobs:
               LOGIN_URL="http://127.0.0.1:8081/api/auth/login"
               VARIANTS_URL="http://127.0.0.1:8081/api/products/variants"
 
-              LOGIN_RESPONSE="$(curl -fsS -H "Content-Type: application/json" -d '{"username":"admin","password":"password"}' "$LOGIN_URL" || true)"
-              ACCESS_TOKEN="$(printf '%s' "$LOGIN_RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')"
+              VERIFY_LOGIN_MAX_RETRIES=24
+              VERIFY_LOGIN_RETRY_DELAY=5
+              VERIFY_LOGIN_ATTEMPT=1
+              LOGIN_RESPONSE=""
+              ACCESS_TOKEN=""
+
+              while [ "$VERIFY_LOGIN_ATTEMPT" -le "$VERIFY_LOGIN_MAX_RETRIES" ]; do
+                LOGIN_RESPONSE="$(curl -fsS --max-time 10 -H "Content-Type: application/json" -d '{"username":"admin","password":"password"}' "$LOGIN_URL" || true)"
+                ACCESS_TOKEN="$(printf '%s' "$LOGIN_RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')"
+
+                if [ -n "$ACCESS_TOKEN" ]; then
+                  break
+                fi
+
+                echo "Login API not ready (attempt $VERIFY_LOGIN_ATTEMPT/$VERIFY_LOGIN_MAX_RETRIES). Retrying in ${VERIFY_LOGIN_RETRY_DELAY}s..."
+                sleep "$VERIFY_LOGIN_RETRY_DELAY"
+                VERIFY_LOGIN_ATTEMPT=$((VERIFY_LOGIN_ATTEMPT + 1))
+              done
 
               if [ -z "$ACCESS_TOKEN" ]; then
-                echo "ERROR: Runtime API verification failed at login step."
-                echo "Login response: $LOGIN_RESPONSE"
+                echo "ERROR: Runtime API verification failed at login step after retries."
+                echo "Last login response: $LOGIN_RESPONSE"
                 compose_cmd logs --tail=150 backend || true
                 exit 1
               fi
 
-              VARIANTS_RESPONSE="$(curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$VARIANTS_URL" || true)"
-              VARIANTS_API_COUNT="$(printf '%s' "$VARIANTS_RESPONSE" | grep -Eo '"id"[[:space:]]*:[[:space:]]*[0-9]+' | wc -l | tr -d ' ')"
-              : "${VARIANTS_API_COUNT:=0}"
+              VERIFY_VARIANTS_MAX_RETRIES=12
+              VERIFY_VARIANTS_RETRY_DELAY=5
+              VERIFY_VARIANTS_ATTEMPT=1
+              VARIANTS_RESPONSE=""
+              VARIANTS_API_COUNT=0
+
+              while [ "$VERIFY_VARIANTS_ATTEMPT" -le "$VERIFY_VARIANTS_MAX_RETRIES" ]; do
+                VARIANTS_RESPONSE="$(curl -fsS --max-time 10 -H "Authorization: Bearer $ACCESS_TOKEN" "$VARIANTS_URL" || true)"
+                VARIANTS_API_COUNT="$(printf '%s' "$VARIANTS_RESPONSE" | grep -Eo '"id"[[:space:]]*:[[:space:]]*[0-9]+' | wc -l | tr -d ' ')"
+                : "${VARIANTS_API_COUNT:=0}"
+
+                if [ "${VARIANTS_API_COUNT:-0}" != "0" ]; then
+                  break
+                fi
+
+                echo "Variants API empty/not ready (attempt $VERIFY_VARIANTS_ATTEMPT/$VERIFY_VARIANTS_MAX_RETRIES). Retrying in ${VERIFY_VARIANTS_RETRY_DELAY}s..."
+                sleep "$VERIFY_VARIANTS_RETRY_DELAY"
+                VERIFY_VARIANTS_ATTEMPT=$((VERIFY_VARIANTS_ATTEMPT + 1))
+              done
 
               echo "Runtime API variants count: $VARIANTS_API_COUNT"
 
               if [ "${VARIANTS_API_COUNT:-0}" = "0" ]; then
                 echo "ERROR: /api/products/variants returned empty response after deployment."
+                echo "Last variants response: $VARIANTS_RESPONSE"
                 compose_cmd logs --tail=150 backend || true
                 exit 1
               fi
