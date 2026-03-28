@@ -3,6 +3,7 @@ package com.smalltrend.controller;
 import com.smalltrend.dto.auth.AuthRequest;
 import com.smalltrend.dto.auth.AuthResponse;
 import com.smalltrend.dto.auth.ForgotPasswordOtpRequest;
+import com.smalltrend.dto.auth.RefreshTokenRequest;
 import com.smalltrend.dto.auth.ResetPasswordOtpRequest;
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.entity.User;
@@ -100,6 +101,18 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Logout error: {}", e.getMessage(), e);
             return ResponseEntity.ok(new MessageResponse("Đăng xuất thành công"));
+        }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        try {
+            AuthResponse response = userService.refreshToken(request.getRefreshToken());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.warn("Refresh token failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new MessageResponse("Refresh token không hợp lệ hoặc đã hết hạn"));
         }
     }
 

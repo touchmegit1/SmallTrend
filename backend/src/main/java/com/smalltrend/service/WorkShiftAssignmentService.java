@@ -15,8 +15,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +45,8 @@ public class WorkShiftAssignmentService {
                 request.getShiftDate())) {
             throw new RuntimeException("Assignment already exists for this shift and date");
         }
+
+        ensureNoOverlappingAssignment(user.getId(), request.getShiftDate(), shift, Set.of());
 
         WorkShiftAssignment assignment = WorkShiftAssignment.builder()
                 .workShift(shift)
@@ -75,6 +80,8 @@ public class WorkShiftAssignmentService {
                 && assignment.getShiftDate().equals(request.getShiftDate()))) {
             throw new RuntimeException("Assignment already exists for this shift and date");
         }
+
+        ensureNoOverlappingAssignment(user.getId(), request.getShiftDate(), shift, Set.of(assignment.getId()));
 
         assignment.setWorkShift(shift);
         assignment.setUser(user);
@@ -182,6 +189,17 @@ public class WorkShiftAssignmentService {
             User requesterUser = requesterAssignment.getUser();
             User targetUser = targetAssignment.getUser();
 
+            ensureNoOverlappingAssignment(
+                    targetUser.getId(),
+                    requesterAssignment.getShiftDate(),
+                    requesterAssignment.getWorkShift(),
+                    setOfIds(targetAssignment.getId(), requesterAssignment.getId()));
+            ensureNoOverlappingAssignment(
+                    requesterUser.getId(),
+                    targetAssignment.getShiftDate(),
+                    targetAssignment.getWorkShift(),
+                    setOfIds(requesterAssignment.getId(), targetAssignment.getId()));
+
             requesterAssignment.setUser(targetUser);
             targetAssignment.setUser(requesterUser);
             requesterAssignment.setStatus("ASSIGNED");
@@ -201,6 +219,11 @@ public class WorkShiftAssignmentService {
                     targetAssignment.getWorkShift());
         } else {
             User requesterUser = requesterAssignment.getUser();
+            ensureNoOverlappingAssignment(
+                    accepterUser.getId(),
+                    requesterAssignment.getShiftDate(),
+                    requesterAssignment.getWorkShift(),
+                    Set.of(requesterAssignment.getId()));
             requesterAssignment.setUser(accepterUser);
             requesterAssignment.setStatus("ASSIGNED");
             reassignPendingAttendanceIfNeeded(
@@ -293,6 +316,87 @@ public class WorkShiftAssignmentService {
         if (effectiveTo != null && shiftDate.isAfter(effectiveTo)) {
             throw new RuntimeException("Ca làm đã hết hiệu lực theo thời gian cấu hình");
         }
+    }
+
+    private void ensureNoOverlappingAssignment(
+            Integer userId,
+            LocalDate shiftDate,
+            WorkShift candidateShift,
+            Set<Integer> excludedAssignmentIds) {
+        if (userId == null || shiftDate == null || candidateShift == null) {
+            return;
+        }
+
+        List<WorkShiftAssignment> sameDayAssignments = assignmentRepository
+                .findByUserIdAndShiftDateAndDeletedFalse(userId, shiftDate);
+
+        for (WorkShiftAssignment existing : sameDayAssignments) {
+            if (existing == null || existing.getId() == null) {
+                continue;
+            }
+
+            if (excludedAssignmentIds.contains(existing.getId())) {
+                continue;
+            }
+
+            WorkShift existingShift = existing.getWorkShift();
+            if (existingShift == null) {
+                continue;
+            }
+
+            if (hasShiftOverlap(candidateShift, existingShift)) {
+                throw new RuntimeException(
+                        "Không thể phân ca bị overlap: ca mới bắt đầu trước khi ca còn lại kết thúc");
+            }
+        }
+    }
+
+    private boolean hasShiftOverlap(WorkShift candidateShift, WorkShift existingShift) {
+        LocalTime candidateStart = candidateShift.getStartTime();
+        LocalTime candidateEnd = candidateShift.getEndTime();
+        LocalTime existingStart = existingShift.getStartTime();
+        LocalTime existingEnd = existingShift.getEndTime();
+
+        if (candidateStart == null || candidateEnd == null || existingStart == null || existingEnd == null) {
+            return false;
+        }
+
+        long dayMinutes = 24 * 60;
+        long cStart = candidateStart.toSecondOfDay() / 60;
+        long cEnd = candidateEnd.toSecondOfDay() / 60;
+        long eStart = existingStart.toSecondOfDay() / 60;
+        long eEnd = existingEnd.toSecondOfDay() / 60;
+
+        if (cEnd <= cStart) {
+            cEnd += dayMinutes;
+        }
+
+        if (eEnd <= eStart) {
+            eEnd += dayMinutes;
+        }
+
+        return rangesOverlap(cStart, cEnd, eStart, eEnd)
+                || rangesOverlap(cStart, cEnd, eStart + dayMinutes, eEnd + dayMinutes)
+                || rangesOverlap(cStart + dayMinutes, cEnd + dayMinutes, eStart, eEnd);
+    }
+
+    private boolean rangesOverlap(long startA, long endA, long startB, long endB) {
+        return startA < endB && startB < endA;
+    }
+
+    private Set<Integer> setOfIds(Integer... ids) {
+        Set<Integer> values = new HashSet<>();
+        if (ids == null) {
+            return values;
+        }
+
+        for (Integer id : ids) {
+            if (id != null) {
+                values.add(id);
+            }
+        }
+
+        return values;
     }
 
     private ShiftAssignmentResponse toResponse(WorkShiftAssignment assignment) {

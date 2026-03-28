@@ -19,5 +19,7 @@ public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAs
 
     List<WorkShiftAssignment> findByUserIdAndShiftDateBetweenAndDeletedFalse(Integer userId, LocalDate startDate, LocalDate endDate);
 
+    List<WorkShiftAssignment> findByUserIdAndShiftDateAndDeletedFalse(Integer userId, LocalDate shiftDate);
+
     boolean existsByUserIdAndWorkShiftIdAndShiftDateAndDeletedFalse(Integer userId, Integer workShiftId, LocalDate shiftDate);
 }

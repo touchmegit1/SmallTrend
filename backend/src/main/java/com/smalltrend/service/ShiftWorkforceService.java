@@ -77,7 +77,7 @@ public class ShiftWorkforceService {
             LocalDate shiftDate = assignment.getShiftDate();
 
             Attendance attendance = attendanceMap.get(key(user.getId(), shiftDate));
-            String attendanceStatus = resolveAttendanceStatus(attendance, assignment, today, now);
+            String attendanceStatus = resolveAttendanceStatusForMonitoring(attendance, assignment, today, now);
 
             if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) {
                 if (!attendanceStatus.equalsIgnoreCase(status.trim())) {
@@ -129,13 +129,20 @@ public class ShiftWorkforceService {
         attendance.setDate(request.getDate());
         attendance.setTimeIn(request.getTimeIn());
         attendance.setTimeOut(request.getTimeOut());
-        attendance.setStatus(normalizeStatus(request.getStatus()));
 
         WorkShiftAssignment assignment = assignmentRepository
                 .findByUserIdAndShiftDateBetweenAndDeletedFalse(user.getId(), request.getDate(), request.getDate())
                 .stream()
                 .findFirst()
                 .orElse(null);
+
+        validateAttendanceTimeline(request.getTimeIn(), request.getTimeOut(), assignment);
+
+        attendance.setStatus(resolveAttendanceStatusForUpsert(request.getStatus(), request.getTimeIn(), request.getTimeOut(), assignment));
+
+        if (request.getTimeOut() != null && !shouldMarkAssignmentCompleted(attendance)) {
+            attendance.setStatus("PRESENT");
+        }
 
         if (assignment != null && assignment.getWorkShift() != null) {
             WorkShift shift = assignment.getWorkShift();
@@ -253,7 +260,7 @@ public class ShiftWorkforceService {
             acc.totalShifts += 1;
 
             Attendance attendance = attendanceMap.get(key(user.getId(), assignment.getShiftDate()));
-            String attendanceStatus = resolveAttendanceStatus(attendance, assignment, today, now);
+            String attendanceStatus = resolveAttendanceStatusForPayroll(attendance, assignment, today, now);
 
             if ("ABSENT".equals(attendanceStatus)) {
                 acc.absentShifts += 1;
@@ -688,7 +695,7 @@ public class ShiftWorkforceService {
         return "PRESENT".equals(normalized) || "LATE".equals(normalized);
     }
 
-    private String resolveAttendanceStatus(Attendance attendance,
+    private String resolveAttendanceStatusForPayroll(Attendance attendance,
             WorkShiftAssignment assignment,
             LocalDate today,
             LocalTime now) {
@@ -710,6 +717,114 @@ public class ShiftWorkforceService {
         }
 
         return "PENDING";
+    }
+
+    private String resolveAttendanceStatusForMonitoring(Attendance attendance,
+            WorkShiftAssignment assignment,
+            LocalDate today,
+            LocalTime now) {
+        if (attendance != null) {
+            String normalizedStatus = normalizeStatus(attendance.getStatus());
+            if (!"PENDING".equals(normalizedStatus)) {
+                return normalizedStatus;
+            }
+
+            if (attendance.getTimeIn() != null && attendance.getTimeOut() == null
+                    && hasShiftEnded(assignment, today, now)) {
+                return "MISSING_CLOCK_OUT";
+            }
+
+            if (hasShiftEndedWithoutCheckIn(attendance.getTimeIn(), assignment, today, now)) {
+                return "ABSENT";
+            }
+
+            return "PENDING";
+        }
+
+        if (hasShiftEndedWithoutCheckIn(null, assignment, today, now)) {
+            return "ABSENT";
+        }
+
+        return "PENDING";
+    }
+
+    private String resolveAttendanceStatusForUpsert(String requestedStatus,
+            LocalTime timeIn,
+            LocalTime timeOut,
+            WorkShiftAssignment assignment) {
+        if (requestedStatus != null && !requestedStatus.isBlank()) {
+            return normalizeStatus(requestedStatus);
+        }
+
+        if (timeIn == null) {
+            return "PENDING";
+        }
+
+        if (timeOut == null) {
+            return "PENDING";
+        }
+
+        WorkShift shift = assignment != null ? assignment.getWorkShift() : null;
+        if (shift == null || shift.getStartTime() == null) {
+            return "PRESENT";
+        }
+
+        LocalTime graceCutoff = shift.getStartTime().plusMinutes(Optional.ofNullable(shift.getGracePeroidMinutes()).orElse(0));
+        if (timeIn.isAfter(graceCutoff)) {
+            return "LATE";
+        }
+
+        return "PRESENT";
+    }
+
+    private void validateAttendanceTimeline(LocalTime timeIn,
+            LocalTime timeOut,
+            WorkShiftAssignment assignment) {
+        if (timeOut != null && timeIn == null) {
+            throw new RuntimeException("Không thể rời ca khi chưa chấm công vào ca");
+        }
+
+        if (timeIn != null && timeOut != null && timeOut.equals(timeIn)) {
+            throw new RuntimeException("Giờ vào ca và rời ca không được trùng nhau");
+        }
+
+        if (timeIn == null || timeOut == null || assignment == null || assignment.getWorkShift() == null) {
+            return;
+        }
+
+        WorkShift shift = assignment.getWorkShift();
+        LocalTime shiftStart = shift.getStartTime();
+        LocalTime shiftEnd = shift.getEndTime();
+
+        if (shiftStart == null || shiftEnd == null) {
+            return;
+        }
+
+        boolean overnight = !shiftEnd.isAfter(shiftStart);
+        if (!overnight && timeOut.isBefore(timeIn)) {
+            throw new RuntimeException("Giờ rời ca không hợp lệ: phải sau giờ vào ca");
+        }
+    }
+
+    private boolean hasShiftEnded(WorkShiftAssignment assignment,
+            LocalDate today,
+            LocalTime now) {
+        if (assignment == null || assignment.getShiftDate() == null || assignment.getWorkShift() == null) {
+            return false;
+        }
+
+        WorkShift shift = assignment.getWorkShift();
+        if (shift.getEndTime() == null) {
+            return false;
+        }
+
+        LocalDateTime shiftEndDateTime = LocalDateTime.of(assignment.getShiftDate(), shift.getEndTime());
+        if (shift.getStartTime() != null && !shift.getEndTime().isAfter(shift.getStartTime())) {
+            shiftEndDateTime = shiftEndDateTime.plusDays(1);
+        }
+
+        LocalDateTime nowDateTime = LocalDateTime.of(today, now);
+        return !nowDateTime.isBefore(shiftEndDateTime);
     }
 
     private boolean hasShiftEndedWithoutCheckIn(LocalTime checkIn,

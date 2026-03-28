@@ -343,6 +343,68 @@ class ShiftWorkforceServiceTest {
         assertEquals("Ca snapshot", response.getShiftName());
     }
 
+    @Test
+    void listAttendance_shouldMarkMissingClockOut_whenShiftEndedAndNoTimeOut() {
+        LocalDate shiftDate = LocalDate.now().minusDays(1);
+        User user = buildUser(30, "Missing ClockOut User");
+        WorkShift shift = WorkShift.builder()
+                .id(301)
+                .shiftName("Ca hành chính")
+                .startTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(17, 0))
+                .build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(302)
+                .user(user)
+                .workShift(shift)
+                .shiftDate(shiftDate)
+                .build();
+        Attendance attendance = Attendance.builder()
+                .id(303)
+                .user(user)
+                .date(shiftDate)
+                .timeIn(LocalTime.of(8, 10))
+                .timeOut(null)
+                .status("PENDING")
+                .build();
+
+        when(assignmentRepository.findByShiftDateBetweenAndDeletedFalse(shiftDate, shiftDate))
+                .thenReturn(List.of(assignment));
+        when(attendanceRepository.findByDateBetween(shiftDate, shiftDate)).thenReturn(List.of(attendance));
+
+        List<AttendanceResponse> rows = shiftWorkforceService.listAttendance(
+                shiftDate,
+                shiftDate,
+                shiftDate,
+                null,
+                "ALL");
+
+        assertEquals(1, rows.size());
+        assertEquals("MISSING_CLOCK_OUT", rows.get(0).getStatus());
+    }
+
+    @Test
+    void upsertAttendance_shouldThrow_whenTimeOutWithoutTimeIn() {
+        LocalDate date = LocalDate.of(2026, 3, 10);
+        User user = buildUser(31, "Clockout Without Checkin");
+
+        AttendanceUpsertRequest request = AttendanceUpsertRequest.builder()
+                .userId(31)
+                .date(date)
+                .timeOut(LocalTime.of(17, 0))
+                .build();
+
+        when(userRepository.findById(31)).thenReturn(Optional.of(user));
+        when(attendanceRepository.findByUserIdAndDate(31, date)).thenReturn(Optional.empty());
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(31, date, date))
+                .thenReturn(List.of());
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> shiftWorkforceService.upsertAttendance(request));
+
+        assertEquals("Không thể rời ca khi chưa chấm công vào ca", ex.getMessage());
+    }
+
     private User buildUser(Integer id, String fullName) {
         return User.builder()
                 .id(id)
