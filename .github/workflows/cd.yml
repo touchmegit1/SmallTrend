@@ -179,21 +179,20 @@ jobs:
               exit 1
             fi
 
-            # Load backend env even when file is owned by root (e.g. mode 600).
-            set -a
-            TMP_ENV="$(mktemp)"
-            if [ -r "$ENV_FILE" ]; then
-              cat "$ENV_FILE" > "$TMP_ENV"
-            else
+            if [ ! -r "$ENV_FILE" ]; then
               echo "No read permission for $ENV_FILE, loading via sudo..."
-              sudo cat "$ENV_FILE" > "$TMP_ENV"
             fi
 
-            # Normalize potential CRLF and source variables
-            sed -i 's/\r$//' "$TMP_ENV"
-            . "$TMP_ENV"
-            rm -f "$TMP_ENV"
-            set +a
+            # Read only required keys from backend.env (safe, no shell execution).
+            get_env_value() {
+              key="$1"
+              sudo sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1 | tr -d '\r'
+            }
+
+            DB_USERNAME="$(get_env_value DB_USERNAME)"
+            DB_PASSWORD="$(get_env_value DB_PASSWORD)"
+            MYSQL_DATABASE="$(get_env_value MYSQL_DATABASE)"
+            MYSQL_ROOT_PASSWORD="$(get_env_value MYSQL_ROOT_PASSWORD)"
 
             : "${DB_USERNAME:=smalltrend}"
             : "${DB_PASSWORD:=1234}"

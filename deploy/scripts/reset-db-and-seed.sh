@@ -26,11 +26,14 @@ require_file "$SEED_FILE"
 
 cd "$DEPLOY_PATH"
 
-log "2/7" "Loading backend environment"
-set -a
-# shellcheck disable=SC1090
-. "$ENV_FILE"
-set +a
+log "2/7" "Reading required DB variables from backend.env"
+get_env_value() {
+  local key="$1"
+  sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1 | tr -d '\r'
+}
+
+MYSQL_DATABASE="$(get_env_value MYSQL_DATABASE)"
+MYSQL_ROOT_PASSWORD="$(get_env_value MYSQL_ROOT_PASSWORD)"
 
 : "${MYSQL_DATABASE:=smalltrend}"
 : "${MYSQL_ROOT_PASSWORD:=root1234}"
