@@ -94,7 +94,9 @@ call :query_scalar "SELECT COUNT(*) FROM sale_orders;" SALE_ORDERS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM sale_order_items;" SALE_ORDER_ITEMS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM sale_order_histories;" SALE_ORDER_HISTORIES_COUNT
 call :query_scalar "SELECT COUNT(*) FROM tickets;" TICKETS_COUNT
+call :query_scalar "SELECT COUNT(*) FROM tickets WHERE ticket_type = 'SHIFT_CHANGE';" SHIFT_CHANGE_TICKETS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM loyalty_gifts;" LOYALTY_GIFTS_COUNT
+call :query_scalar "SELECT COUNT(*) FROM advertisements WHERE is_active = 1;" ACTIVE_ADVERTISEMENTS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM product_variants pv LEFT JOIN products p ON p.id = pv.product_id LEFT JOIN units u ON u.id = pv.unit_id WHERE p.id IS NOT NULL AND u.id IS NOT NULL;" JOINABLE_VARIANTS_COUNT
 call :query_scalar "SELECT COUNT(*) FROM product_variants pv LEFT JOIN products p ON p.id = pv.product_id WHERE p.id IS NULL;" ORPHAN_PRODUCT_REFS
 call :query_scalar "SELECT COUNT(*) FROM product_variants pv LEFT JOIN units u ON u.id = pv.unit_id WHERE u.id IS NULL;" ORPHAN_UNIT_REFS
@@ -108,7 +110,9 @@ if not defined SALE_ORDERS_COUNT set "SALE_ORDERS_COUNT=0"
 if not defined SALE_ORDER_ITEMS_COUNT set "SALE_ORDER_ITEMS_COUNT=0"
 if not defined SALE_ORDER_HISTORIES_COUNT set "SALE_ORDER_HISTORIES_COUNT=0"
 if not defined TICKETS_COUNT set "TICKETS_COUNT=0"
+if not defined SHIFT_CHANGE_TICKETS_COUNT set "SHIFT_CHANGE_TICKETS_COUNT=0"
 if not defined LOYALTY_GIFTS_COUNT set "LOYALTY_GIFTS_COUNT=0"
+if not defined ACTIVE_ADVERTISEMENTS_COUNT set "ACTIVE_ADVERTISEMENTS_COUNT=0"
 if not defined JOINABLE_VARIANTS_COUNT set "JOINABLE_VARIANTS_COUNT=0"
 if not defined ORPHAN_PRODUCT_REFS set "ORPHAN_PRODUCT_REFS=0"
 if not defined ORPHAN_UNIT_REFS set "ORPHAN_UNIT_REFS=0"
@@ -117,6 +121,7 @@ if not defined STOCKED_VARIANTS_COUNT set "STOCKED_VARIANTS_COUNT=0"
 echo [INFO] Seed verification counts:
 echo        users=%USERS_COUNT%, products=%PRODUCTS_COUNT%, variants=%VARIANTS_COUNT%, inventory_stock=%STOCK_COUNT%
 echo        sale_orders=%SALE_ORDERS_COUNT%, sale_order_items=%SALE_ORDER_ITEMS_COUNT%, sale_order_histories=%SALE_ORDER_HISTORIES_COUNT%, tickets=%TICKETS_COUNT%, loyalty_gifts=%LOYALTY_GIFTS_COUNT%
+echo        shift_change_tickets=%SHIFT_CHANGE_TICKETS_COUNT%, active_advertisements=%ACTIVE_ADVERTISEMENTS_COUNT%
 echo        joinable_variants=%JOINABLE_VARIANTS_COUNT%, orphan_product_refs=%ORPHAN_PRODUCT_REFS%, orphan_unit_refs=%ORPHAN_UNIT_REFS%, stocked_variants=%STOCKED_VARIANTS_COUNT%
 
 if "%USERS_COUNT%"=="0" goto :seed_invalid
@@ -127,7 +132,9 @@ if "%SALE_ORDERS_COUNT%"=="0" goto :seed_invalid
 if "%SALE_ORDER_ITEMS_COUNT%"=="0" goto :seed_invalid
 if "%SALE_ORDER_HISTORIES_COUNT%"=="0" goto :seed_invalid
 if "%TICKETS_COUNT%"=="0" goto :seed_invalid
+if "%SHIFT_CHANGE_TICKETS_COUNT%"=="0" goto :seed_invalid
 if "%LOYALTY_GIFTS_COUNT%"=="0" goto :seed_invalid
+if "%ACTIVE_ADVERTISEMENTS_COUNT%"=="0" goto :seed_invalid
 if "%JOINABLE_VARIANTS_COUNT%"=="0" goto :seed_invalid
 if not "%ORPHAN_PRODUCT_REFS%"=="0" goto :seed_invalid
 if not "%ORPHAN_UNIT_REFS%"=="0" goto :seed_invalid
