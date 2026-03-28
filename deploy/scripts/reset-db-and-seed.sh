@@ -11,7 +11,7 @@ BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_PATH/backup_data_value}"
 FIX_SEED_FILE="${FIX_SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
 SEED_LOG_DIR="${SEED_LOG_DIR:-$DEPLOY_PATH/deploy/seed-logs}"
 ENABLE_LEGACY_FALLBACK="${ENABLE_LEGACY_FALLBACK:-false}"
-SEED_STRATEGY="${SEED_STRATEGY:-data-only}"
+SEED_STRATEGY="${SEED_STRATEGY:-fix-first}"
 
 log() {
   printf "[%s] %s\n" "$1" "$2"

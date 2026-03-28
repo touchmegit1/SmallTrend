@@ -345,7 +345,7 @@ jobs:
               echo "Detected empty or inconsistent critical product data. Running reset-db-and-seed.sh..."
               if [ -f "./deploy/scripts/reset-db-and-seed.sh" ]; then
                 sudo chmod +x ./deploy/scripts/reset-db-and-seed.sh
-                sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" SEED_STRATEGY="data-only" ENABLE_LEGACY_FALLBACK="false" bash ./deploy/scripts/reset-db-and-seed.sh
+                sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" SEED_STRATEGY="fix-first" ENABLE_LEGACY_FALLBACK="false" bash ./deploy/scripts/reset-db-and-seed.sh
                 SEED_WAS_RUN=1
                 # Ensure services are up after seed
                 compose_cmd up -d --remove-orphans
