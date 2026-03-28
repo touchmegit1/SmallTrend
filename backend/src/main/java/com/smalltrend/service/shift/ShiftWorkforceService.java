@@ -1,4 +1,4 @@
-package com.smalltrend.service;
+package com.smalltrend.service.shift;
 
 import com.smalltrend.dto.shift.AttendanceResponse;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;

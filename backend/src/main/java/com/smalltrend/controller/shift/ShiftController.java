@@ -1,4 +1,4 @@
-package com.smalltrend.controller;
+package com.smalltrend.controller.shift;
 
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.shift.AttendanceResponse;
@@ -9,9 +9,9 @@ import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
 import com.smalltrend.dto.shift.WorkShiftRequest;
 import com.smalltrend.dto.shift.WorkShiftResponse;
-import com.smalltrend.service.ShiftWorkforceService;
-import com.smalltrend.service.WorkShiftAssignmentService;
-import com.smalltrend.service.WorkShiftService;
+import com.smalltrend.service.shift.ShiftWorkforceService;
+import com.smalltrend.service.shift.WorkShiftAssignmentService;
+import com.smalltrend.service.shift.WorkShiftService;
 import com.smalltrend.validation.ShiftValidator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

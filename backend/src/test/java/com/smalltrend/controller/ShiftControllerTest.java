@@ -1,5 +1,6 @@
 package com.smalltrend.controller;
 
+import com.smalltrend.controller.shift.ShiftController;
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.shift.AttendanceResponse;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
@@ -9,9 +10,9 @@ import com.smalltrend.dto.shift.ShiftAssignmentResponse;
 import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
 import com.smalltrend.dto.shift.WorkShiftRequest;
 import com.smalltrend.dto.shift.WorkShiftResponse;
-import com.smalltrend.service.ShiftWorkforceService;
-import com.smalltrend.service.WorkShiftAssignmentService;
-import com.smalltrend.service.WorkShiftService;
+import com.smalltrend.service.shift.ShiftWorkforceService;
+import com.smalltrend.service.shift.WorkShiftAssignmentService;
+import com.smalltrend.service.shift.WorkShiftService;
 import com.smalltrend.validation.ShiftValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
