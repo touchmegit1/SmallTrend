@@ -10,6 +10,7 @@ SEED_FILE="${SEED_FILE:-$DEPLOY_PATH/backend/src/main/resources/data.sql}"
 BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_PATH/backup_data_value}"
 FIX_SEED_FILE="${FIX_SEED_FILE:-$DEPLOY_PATH/deploy/fix_seed.sql}"
 SEED_LOG_DIR="${SEED_LOG_DIR:-$DEPLOY_PATH/deploy/seed-logs}"
+ENABLE_LEGACY_FALLBACK="${ENABLE_LEGACY_FALLBACK:-false}"
 
 log() {
   printf "[%s] %s\n" "$1" "$2"
@@ -79,6 +80,12 @@ seed_with_data_sql() {
     log "WARN" "data.sql finished with errors (continued). See: $err_log"
   else
     log "INFO" "data.sql import completed successfully"
+  fi
+
+  if grep -q "^ERROR " "$err_log" 2>/dev/null; then
+    log "ERROR" "data.sql has SQL errors. Fix schema mismatch instead of using legacy fallback."
+    tail -n 30 "$err_log" || true
+    return 1
   fi
 }
 
@@ -224,11 +231,16 @@ STOCK_COUNT="$(count_table inventory_stock)"
 echo "users=$USERS_COUNT, products=$PRODUCTS_COUNT, variants=$VARIANTS_COUNT, inventory_stock=$STOCK_COUNT"
 
 if [ "$PRODUCTS_COUNT" = "0" ] || [ "$VARIANTS_COUNT" = "0" ]; then
-  log "WARN" "Critical product tables are empty after data.sql. Running fallback import..."
-  if [ -f "$FIX_SEED_FILE" ]; then
-    seed_with_fix_seed || true
+  if [ "$ENABLE_LEGACY_FALLBACK" = "true" ]; then
+    log "WARN" "Critical product tables are empty after data.sql. Running legacy fallback import..."
+    if [ -f "$FIX_SEED_FILE" ]; then
+      seed_with_fix_seed || true
+    else
+      seed_with_backup_files || true
+    fi
   else
-    seed_with_backup_files || true
+    log "ERROR" "Critical product tables are empty after data.sql. Legacy fallback is disabled (ENABLE_LEGACY_FALLBACK=false)."
+    exit 1
   fi
 fi
 

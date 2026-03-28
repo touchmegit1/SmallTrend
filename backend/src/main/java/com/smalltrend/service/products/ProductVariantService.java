@@ -490,7 +490,8 @@ public class ProductVariantService {
                 .mapToInt(stock -> stock.getQuantity() != null ? stock.getQuantity() : 0)
                 .sum();
 
-        if (stockQty == 0 && product != null && product.getId() != null && variant.getUnit() != null && variant.getUnit().getId() != null) {
+        if (isConversionDerivedVariant && product != null && product.getId() != null
+                && variant.getUnit() != null && variant.getUnit().getId() != null) {
             List<UnitConversion> conversions = unitConversionRepository.findByProductIdAndToUnitId(
                     product.getId(),
                     variant.getUnit().getId());
