@@ -241,6 +241,7 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
+  const [suggestionBaseAmount, setSuggestionBaseAmount] = useState("");
   const [focusedField, setFocusedField] = useState("customerSearch");
   const [suggestedIndex, setSuggestedIndex] = useState(-1);
   const [tiers, setTiers] = useState([]); // Danh sách hạng thành viên
@@ -562,13 +563,13 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
 
   // Lấy suggested amounts.
   const getSuggestedAmounts = () => {
-    if (!cashAmount) return [];
+    if (!suggestionBaseAmount) return [];
 
-    const cleanCashAmount = cashAmount.replace(/[^0-9]/g, '');
-    const num = parseInt(cleanCashAmount, 10);
+    const cleanBaseAmount = suggestionBaseAmount.replace(/[^0-9]/g, '');
+    const num = parseInt(cleanBaseAmount, 10);
     if (isNaN(num) || num <= 0) return [];
 
-    const digitCount = cleanCashAmount.length;
+    const digitCount = cleanBaseAmount.length;
     const startPower = Math.max(0, 4 - digitCount);
 
     return [
@@ -1251,7 +1252,11 @@ export default function PaymentModal({ cart, customer, onClose, onComplete, onSt
                   type="number"
                   placeholder="Nhập số tiền"
                   value={cashAmount}
-                  onChange={(e) => setCashAmount(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCashAmount(value);
+                    setSuggestionBaseAmount(value);
+                  }}
                   onFocus={() => setFocusedField("cashAmount")}
                   style={{
                     width: "100%",
