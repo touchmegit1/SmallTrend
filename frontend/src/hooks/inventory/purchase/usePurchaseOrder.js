@@ -415,8 +415,8 @@ export function usePurchaseOrder(initialId = null) {
     const afterDiscount = Math.max(0, subtotal - discount);
     const taxPercent = toNumber(order.tax_percent);
     const shippingFee = toNumber(order.shipping_fee);
-    const taxAmount = Math.round((afterDiscount * taxPercent) / 100);
-    const total = Math.round(afterDiscount + taxAmount + shippingFee);
+    const taxAmount = Math.round((((afterDiscount * taxPercent) / 100) + Number.EPSILON) * 100) / 100;
+    const total = Math.round((afterDiscount + taxAmount + shippingFee + Number.EPSILON) * 100) / 100;
 
     return {
       subtotal,
@@ -762,6 +762,7 @@ export function usePurchaseOrder(initialId = null) {
           shortageReason: hasShortage ? String(order.notes ?? "").trim() : null,
           supplierId: order.supplier_id,
           locationId: order.location_id,
+          discountAmount: toNumber(order.discount),
           taxPercent: toNumber(order.tax_percent),
           shippingFee: toNumber(order.shipping_fee),
           paidAmount: toNumber(order.paid_amount),
@@ -840,6 +841,7 @@ export function usePurchaseOrder(initialId = null) {
       items,
       products,
       order.notes,
+      order.discount,
       order.supplier_id,
       order.location_id,
       order.tax_percent,
