@@ -2,6 +2,7 @@ package com.smalltrend.controller.shift;
 
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.shift.AttendanceResponse;
+import com.smalltrend.dto.shift.AttendanceClockRequest;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
 import com.smalltrend.dto.shift.PayrollSummaryResponse;
 import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
@@ -191,6 +192,32 @@ public class ShiftController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> upsertAttendance(@RequestBody AttendanceUpsertRequest request) {
         AttendanceResponse response = workforceService.upsertAttendance(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/clock-in")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> clockIn(@RequestBody AttendanceClockRequest request) {
+        AttendanceUpsertRequest upsertRequest = AttendanceUpsertRequest.builder()
+                .userId(request.getUserId())
+                .date(request.getDate())
+                .timeIn(request.getClockTime())
+                .status("PRESENT")
+                .build();
+        AttendanceResponse response = workforceService.clockIn(upsertRequest);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/clock-out")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> clockOut(@RequestBody AttendanceClockRequest request) {
+        AttendanceUpsertRequest upsertRequest = AttendanceUpsertRequest.builder()
+                .userId(request.getUserId())
+                .date(request.getDate())
+                .timeOut(request.getClockTime())
+                .status("PRESENT")
+                .build();
+        AttendanceResponse response = workforceService.clockOut(upsertRequest);
         return ResponseEntity.ok(response);
     }
 
