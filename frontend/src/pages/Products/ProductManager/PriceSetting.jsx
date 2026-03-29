@@ -211,7 +211,6 @@ const PriceSetting = () => {
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
     // ─── Selection ───────────────────────────
-    const [selectedIds, setSelectedIds] = useState([]);
 
     // ─── Modals ──────────────────────────────
     const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
@@ -468,22 +467,6 @@ const PriceSetting = () => {
             setTimeout(() => setErrorMsg(""), 4000);
         }
     };
-
-    // ═══════════════════════════════════════════
-    // SELECTION
-    // ═══════════════════════════════════════════
-    const handleToggleSelect = useCallback((id) => {
-        setSelectedIds((prev) =>
-            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-        );
-    }, []);
-
-    const handleToggleSelectAll = useCallback(() => {
-        setSelectedIds((prev) =>
-            prev.length === paginatedVariants.length ? [] : paginatedVariants.map((v) => v.id)
-        );
-    }, [paginatedVariants]);
-
 
     // ═══════════════════════════════════════════
     // RENDER
@@ -744,9 +727,6 @@ const PriceSetting = () => {
                     variants={paginatedVariants}
                     loading={loading}
                     readOnly={!canEditProducts}
-                    selectedIds={selectedIds}
-                    onToggleSelect={handleToggleSelect}
-                    onToggleSelectAll={handleToggleSelectAll}
                     sortConfig={sortConfig}
                     onSort={handleSort}
                     onCreatePriceModalOpen={canEditProducts ? (v) => setCreatePriceVariant(v) : undefined}

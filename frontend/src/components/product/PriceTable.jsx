@@ -60,10 +60,6 @@ export default function PriceTable({
     onCancelEdit,
     onSavePrice,
     onEditPriceChange,
-    // Selection
-    selectedIds,
-    onToggleSelect,
-    onToggleSelectAll,
     // Sort
     sortConfig,
     onSort,
@@ -79,9 +75,6 @@ export default function PriceTable({
         const tzOffset = now.getTimezoneOffset() * 60000;
         return new Date(now.getTime() - tzOffset).toISOString().split("T")[0];
     }, []);
-
-    const allSelected = variants.length > 0 && selectedIds.length === variants.length;
-    const someSelected = selectedIds.length > 0 && !allSelected;
 
     const getSortIcon = (key) => {
         if (sortConfig?.key !== key) return <ArrowUpDown className="w-3.5 h-3.5 text-gray-300" />;
@@ -109,16 +102,6 @@ export default function PriceTable({
                 <table className="w-full text-left">
                     <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 border-b-2 border-gray-200">
                         <tr>
-                            <th className="px-2 py-2.5 w-8 text-center">
-                                <input
-                                    type="checkbox"
-                                    checked={allSelected}
-                                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
-                                    onChange={onToggleSelectAll}
-                                    disabled={readOnly}
-                                    className="w-3.5 h-3.5 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
-                                />
-                            </th>
                             <SortHeader label="Sản phẩm" sortKey="name" />
                             <SortHeader label="SKU" sortKey="sku" className="w-[80px]" />
                             <SortHeader label="Giá nhập" sortKey="costPrice" align="right" className="w-[85px]" />
@@ -141,7 +124,7 @@ export default function PriceTable({
                     <tbody className="divide-y divide-gray-100/80">
                         {loading ? (
                             <tr>
-                                <td colSpan="9" className="px-6 py-16 text-center text-gray-500">
+                                <td colSpan="8" className="px-6 py-16 text-center text-gray-500">
                                     <div className="flex flex-col items-center gap-3">
                                         <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-gray-200 border-t-blue-600" />
                                         <span className="text-sm font-medium">Đang tải dữ liệu...</span>
@@ -161,7 +144,6 @@ export default function PriceTable({
                         ) : (
                             variants.map((variant) => {
                                 const isEditing = editingId === variant.id;
-                                const isSelected = selectedIds.includes(variant.id);
                                 const costPrice = Number(variant.costPrice) || 0;
                                 const taxRate = Number(variant.activeTaxPercent) || Number(variant.taxRate) || 0;
                                 const sellPrice = Number(variant.activeSellingPrice) || Number(variant.sellPrice) || 0;
@@ -179,24 +161,11 @@ export default function PriceTable({
                                     <tr
                                         id={`variant-row-${variant.id}`}
                                         key={variant.id}
-                                        className={`transition-colors group ${isSelected
-                                            ? "bg-blue-50/60"
-                                            : hasNegativeProfit
-                                                ? "bg-red-50/30 hover:bg-red-50/50"
-                                                : "hover:bg-blue-50/20"
+                                        className={`transition-colors group ${hasNegativeProfit
+                                            ? "bg-red-50/30 hover:bg-red-50/50"
+                                            : "hover:bg-blue-50/20"
                                             } ${focusedVariantId === variant.id ? "ring-2 ring-blue-400" : ""}`}
                                     >
-                                        {/* Checkbox */}
-                                        <td className="px-2 py-2 text-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={isSelected}
-                                                onChange={() => onToggleSelect(variant.id)}
-                                                disabled={readOnly}
-                                                className="w-3.5 h-3.5 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
-                                            />
-                                        </td>
-
                                         {/* Product */}
                                         <td className="px-2 py-2">
                                             <div className="flex items-center gap-2">
