@@ -239,6 +239,7 @@ public class ShiftController {
         int present = (int) attendanceRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
         int late = (int) attendanceRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
         int absent = (int) attendanceRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+        int onLeave = (int) attendanceRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus())).count();
 
         if (total == 0) {
             YearMonth startMonth = fromMonth != null && !fromMonth.isBlank()
@@ -258,6 +259,7 @@ public class ShiftController {
                 present = (int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
                 late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
                 absent = (int) monthlyRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+                onLeave = (int) monthlyRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus())).count();
             }
         }
 
@@ -275,7 +277,8 @@ public class ShiftController {
                         "total", total,
                         "present", present,
                         "late", late,
-                        "absent", absent),
+                        "absent", absent,
+                        "onLeave", onLeave),
                 "payroll", java.util.Map.of(
                         "staffCount", payroll.getStaffCount(),
                         "totalHours", payroll.getTotalHours(),
