@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/userService';
 import { shiftService } from '../../services/shiftService';
 import CustomSelect from '../../components/common/CustomSelect';
+import { RequiredLegend, RequiredMark } from '../../components/common/RequiredFieldLegend';
 
 const defaultSalaryForm = {
     salaryType: 'MONTHLY',
@@ -307,6 +308,7 @@ const EmployeeDetailPage = () => {
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">Cap nhat cau hinh luong</h2>
                                 <p className="text-xs text-slate-500">Chi admin duoc phep cap nhat va phai tat toan luong cu truoc.</p>
+                                <RequiredLegend className="mt-1" />
                             </div>
                             <button
                                 type="button"
@@ -323,7 +325,7 @@ const EmployeeDetailPage = () => {
                             )}
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Che do luong <span className="text-rose-500">*</span></label>
+                                <label className="text-xs font-medium text-slate-600">Che do luong <RequiredMark type="frontendAndBackend" /></label>
                                 <CustomSelect
                                     value={salaryForm.salaryType}
                                     onChange={(value) => setSalaryForm((prev) => ({ ...prev, salaryType: value }))}
@@ -337,7 +339,7 @@ const EmployeeDetailPage = () => {
 
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Luong co ban (VND) <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Luong co ban (VND) <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="number"
                                         value={salaryForm.baseSalary}
@@ -347,7 +349,7 @@ const EmployeeDetailPage = () => {
                                     {salaryErrors.baseSalary && <p className="text-xs text-rose-600">{salaryErrors.baseSalary}</p>}
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Don gia gio (VND) <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Don gia gio (VND) <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="number"
                                         value={salaryForm.hourlyRate}
@@ -360,7 +362,7 @@ const EmployeeDetailPage = () => {
 
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">So ca toi thieu/ thang <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">So ca toi thieu/ thang <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="number"
                                         value={salaryForm.minRequiredShifts}
@@ -370,7 +372,7 @@ const EmployeeDetailPage = () => {
                                     {salaryErrors.minRequiredShifts && <p className="text-xs text-rose-600">{salaryErrors.minRequiredShifts}</p>}
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Gio chuan/ thang <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Gio chuan/ thang <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="number"
                                         value={salaryForm.workingHoursPerMonth}

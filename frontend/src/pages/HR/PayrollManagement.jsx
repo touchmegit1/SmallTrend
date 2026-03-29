@@ -3,6 +3,7 @@ import { shiftService } from '../../services/shiftService';
 import { userService } from '../../services/userService';
 import { Wallet, Users, Clock3, BadgeDollarSign, Settings, Eye, X, CheckCircle } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
+import { RequiredLegend, RequiredMark } from '../../components/common/RequiredFieldLegend';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -324,6 +325,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                             <div>
                                 <h3 className="text-lg font-semibold text-slate-900">Cấu hình lương nhân viên</h3>
                                 <p className="text-sm text-slate-500 mt-1">{selectedEmployee?.fullName || ''}</p>
+                                <RequiredLegend className="mt-1" />
                             </div>
                             <button
                                 type="button"
@@ -336,7 +338,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
 
                         <div className="p-5 space-y-4">
                             <div>
-                                <label className="text-sm font-medium text-slate-700">Chế độ lương <span className="text-rose-500">*</span></label>
+                                <label className="text-sm font-medium text-slate-700">Chế độ lương <RequiredMark type="frontendAndBackend" /></label>
                                 <div className="mt-1">
                                     <CustomSelect
                                         value={salaryForm.salaryType}
@@ -353,7 +355,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Lương cơ bản (VND) <span className="text-rose-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700">Lương cơ bản (VND) <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="number"
                                         value={salaryForm.baseSalary}
@@ -365,7 +367,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                                     {salaryFormErrors.baseSalary && <p className="mt-1 text-xs text-rose-600">{salaryFormErrors.baseSalary}</p>}
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Đơn giá giờ (VND) <span className="text-rose-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700">Đơn giá giờ (VND) <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="number"
                                         value={salaryForm.hourlyRate}
@@ -380,7 +382,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Số ca tối thiểu/tháng <span className="text-rose-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700">Số ca tối thiểu/tháng <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="number"
                                         value={salaryForm.minRequiredShifts}
@@ -392,7 +394,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
                                     {salaryFormErrors.minRequiredShifts && <p className="mt-1 text-xs text-rose-600">{salaryFormErrors.minRequiredShifts}</p>}
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700">Giờ chuẩn/tháng <span className="text-rose-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700">Giờ chuẩn/tháng <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="number"
                                         value={salaryForm.workingHoursPerMonth}
