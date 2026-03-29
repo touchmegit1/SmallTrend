@@ -408,7 +408,7 @@ class ShiftControllerTest {
 
     @Test
     void markPayrollAsPaid_shouldReturnMessageResponse() {
-        when(workforceService.markPayrollAsPaid("2026-03", null)).thenReturn("Đã xác nhận thanh toán lương tháng 2026-03 cho 3 nhân viên");
+        when(workforceService.markPayrollAsPaid("2026-03", null, null)).thenReturn("Đã xác nhận thanh toán lương tháng 2026-03 cho 3 nhân viên");
 
         ResponseEntity<?> response = shiftController.markPayrollAsPaid("2026-03", null);
 

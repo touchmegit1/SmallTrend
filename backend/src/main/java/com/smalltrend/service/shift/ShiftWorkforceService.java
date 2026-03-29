@@ -1,4 +1,4 @@
-package com.smalltrend.service.shift;
+﻿package com.smalltrend.service.shift;
 
 import com.smalltrend.dto.shift.AttendanceResponse;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
@@ -343,7 +343,7 @@ public class ShiftWorkforceService {
                 .build();
     }
 
-    public String markPayrollAsPaid(String month, Integer userId) {
+    public String markPayrollAsPaid(String month, Integer userId, String callerEmail) {
         if (month == null || month.isBlank()) {
             throw new RuntimeException("Month is required");
         }
@@ -401,7 +401,7 @@ public class ShiftWorkforceService {
 
         // Send email notification to admin
         try {
-            sendPayrollEmailToAdmin(month, snapshot, updated);
+            sendPayrollEmailToAdmin(month, snapshot, updated, callerEmail);
         } catch (Exception e) {
             log.error("Failed to send payroll email notification for month {}", month, e);
         }
@@ -942,19 +942,19 @@ public class ShiftWorkforceService {
 
     // ===== Email payroll notification =====
 
-    private void sendPayrollEmailToAdmin(String month, PayrollSummaryResponse snapshot, int paidCount) {
-        if (adminEmails == null || adminEmails.isBlank()) {
-            log.warn("No admin email configured. Skip payroll email.");
-            return;
-        }
+    private void sendPayrollEmailToAdmin(String month, PayrollSummaryResponse snapshot, int paidCount, String callerEmail) {
+        // adminEmails is optional - callerEmail is the primary recipient
         if (senderEmail == null || senderEmail.isBlank()) {
             log.warn("No sender email configured (MAIL_USERNAME). Skip payroll email.");
             return;
         }
 
-        List<String> recipients = java.util.Arrays.stream(adminEmails.split(","))
-                .map(String::trim)
-                .filter(e -> !e.isBlank())
+        // Query all active MANAGER users from DB
+        List<String> recipients = userRepository.findByRole_NameInAndActiveTrueAndStatusIgnoreCase(
+                List.of("MANAGER", "ROLE_MANAGER"), "ACTIVE")
+                .stream()
+                .map(com.smalltrend.entity.User::getEmail)
+                .filter(e -> e != null && !e.isBlank())
                 .distinct()
                 .collect(Collectors.toList());
 

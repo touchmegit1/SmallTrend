@@ -26,6 +26,9 @@ import java.util.List;
 import java.math.BigDecimal;
 import java.util.Map;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 @RestController
 @RequestMapping("/api/shifts")
 @RequiredArgsConstructor
@@ -209,7 +212,13 @@ public class ShiftController {
     public ResponseEntity<?> markPayrollAsPaid(
             @RequestParam("month") String month,
             @RequestParam(value = "userId", required = false) Integer userId) {
-        String message = workforceService.markPayrollAsPaid(month, userId);
+        // Lấy email người đang đăng nhập để gửi mail xác nhận
+        String callerEmail = null;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.smalltrend.entity.User caller) {
+            callerEmail = caller.getEmail();
+        }
+        String message = workforceService.markPayrollAsPaid(month, userId, callerEmail);
         return ResponseEntity.ok(new MessageResponse(message));
     }
 
