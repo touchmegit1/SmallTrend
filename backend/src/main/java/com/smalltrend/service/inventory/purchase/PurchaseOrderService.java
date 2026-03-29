@@ -274,6 +274,9 @@ public class PurchaseOrderService {
         BigDecimal effectivePaidAmount = receiptRequest.getPaidAmount() != null
                 ? receiptRequest.getPaidAmount()
                 : (order.getPaidAmount() != null ? order.getPaidAmount() : BigDecimal.ZERO);
+        BigDecimal effectiveDiscountAmount = receiptRequest.getDiscountAmount() != null
+                ? receiptRequest.getDiscountAmount()
+                : (order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO);
 
         if (effectiveSupplierId == null) {
             throw new RuntimeException("Nhà cung cấp là bắt buộc khi xác nhận nhập kho.");
@@ -289,6 +292,9 @@ public class PurchaseOrderService {
         }
         if (effectivePaidAmount.compareTo(BigDecimal.ZERO) < 0) {
             throw new RuntimeException("Số tiền đã thanh toán không được âm.");
+        }
+        if (effectiveDiscountAmount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Giảm giá không được âm.");
         }
 
         boolean hasShortage = false;
@@ -411,17 +417,20 @@ public class PurchaseOrderService {
                     return unitCost.multiply(orderedEquivalentQty);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal discountAmount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal discountAmount = effectiveDiscountAmount;
         BigDecimal afterDiscount = subtotal.subtract(discountAmount);
         if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) {
             afterDiscount = BigDecimal.ZERO;
         }
         BigDecimal taxPercent = effectiveTaxPercent;
-        BigDecimal taxAmount = afterDiscount.multiply(taxPercent).divide(BigDecimal.valueOf(100));
+        BigDecimal taxAmount = afterDiscount.multiply(taxPercent)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         BigDecimal shippingFee = effectiveShippingFee;
-        BigDecimal totalAmount = afterDiscount.add(taxAmount).add(shippingFee);
+        BigDecimal totalAmount = afterDiscount.add(taxAmount).add(shippingFee)
+                .setScale(2, RoundingMode.HALF_UP);
 
         order.setSubtotal(subtotal);
+        order.setDiscountAmount(discountAmount);
         order.setTaxPercent(taxPercent);
         order.setTaxAmount(taxAmount);
         order.setShippingFee(shippingFee);
@@ -1159,10 +1168,17 @@ public class PurchaseOrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal calculateTaxAmount(BigDecimal subtotal, BigDecimal taxPercent) {
+    private BigDecimal calculateTaxAmount(BigDecimal subtotal, BigDecimal discountAmount, BigDecimal taxPercent) {
         BigDecimal safeSubtotal = subtotal != null ? subtotal : BigDecimal.ZERO;
+        BigDecimal safeDiscountAmount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
         BigDecimal safeTaxPercent = taxPercent != null ? taxPercent : BigDecimal.ZERO;
-        return safeSubtotal.multiply(safeTaxPercent).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        BigDecimal afterDiscount = safeSubtotal.subtract(safeDiscountAmount);
+        if (afterDiscount.compareTo(BigDecimal.ZERO) < 0) {
+            afterDiscount = BigDecimal.ZERO;
+        }
+
+        return afterDiscount.multiply(safeTaxPercent).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal calculateTotalAmount(
@@ -1293,7 +1309,7 @@ public class PurchaseOrderService {
 
         if (shouldUseReceivedFinancials(order)) {
             subtotal = calculateReceivedSubtotal(order);
-            taxAmount = calculateTaxAmount(subtotal, order.getTaxPercent());
+            taxAmount = calculateTaxAmount(subtotal, order.getDiscountAmount(), order.getTaxPercent());
             totalAmount = calculateTotalAmount(
                     subtotal,
                     order.getDiscountAmount(),
