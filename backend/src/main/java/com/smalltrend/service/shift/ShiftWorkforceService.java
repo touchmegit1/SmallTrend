@@ -196,6 +196,49 @@ public class ShiftWorkforceService {
                 .build();
     }
 
+    public AttendanceResponse clockIn(AttendanceUpsertRequest request) {
+        if (request.getUserId() == null || request.getUserId() <= 0) {
+            throw new RuntimeException("User is required");
+        }
+
+        LocalDate targetDate = Optional.ofNullable(request.getDate()).orElse(LocalDate.now());
+        LocalTime targetClockInTime = Optional.ofNullable(request.getTimeIn()).orElse(LocalTime.now().withSecond(0).withNano(0));
+
+        Attendance existing = attendanceRepository.findByUserIdAndDate(request.getUserId(), targetDate).orElse(null);
+
+        AttendanceUpsertRequest upsert = AttendanceUpsertRequest.builder()
+                .userId(request.getUserId())
+                .date(targetDate)
+                .timeIn(existing != null && existing.getTimeIn() != null ? existing.getTimeIn() : targetClockInTime)
+                .timeOut(null)
+                .status("PRESENT")
+                .build();
+
+        return upsertAttendance(upsert);
+    }
+
+    public AttendanceResponse clockOut(AttendanceUpsertRequest request) {
+        if (request.getUserId() == null || request.getUserId() <= 0) {
+            throw new RuntimeException("User is required");
+        }
+
+        LocalDate targetDate = Optional.ofNullable(request.getDate()).orElse(LocalDate.now());
+        LocalTime targetClockOutTime = Optional.ofNullable(request.getTimeOut()).orElse(LocalTime.now().withSecond(0).withNano(0));
+
+        Attendance existing = attendanceRepository.findByUserIdAndDate(request.getUserId(), targetDate).orElse(null);
+        LocalTime timeIn = existing != null && existing.getTimeIn() != null ? existing.getTimeIn() : targetClockOutTime;
+
+        AttendanceUpsertRequest upsert = AttendanceUpsertRequest.builder()
+                .userId(request.getUserId())
+                .date(targetDate)
+                .timeIn(timeIn)
+                .timeOut(targetClockOutTime)
+                .status("PRESENT")
+                .build();
+
+        return upsertAttendance(upsert);
+    }
+
     public PayrollSummaryResponse buildPayrollSummary(String month,
             String fromMonth,
             String toMonth,
@@ -941,7 +984,6 @@ public class ShiftWorkforceService {
     }
 
     // ===== Email payroll notification =====
-
     private void sendPayrollEmailToAdmin(String month, PayrollSummaryResponse snapshot, int paidCount, String callerEmail) {
         // adminEmails is optional - callerEmail is the primary recipient
         if (senderEmail == null || senderEmail.isBlank()) {
@@ -1078,18 +1120,18 @@ public class ShiftWorkforceService {
 
             rows.append(String.format(
                     "<tr>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;'>%s</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;'>%s</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;'>%s</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;color:#dc2626;'>-%s</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;'>%s</td>"
-                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%s</td>"
-                            + "</tr>",
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;'>%s</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;'>%s</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;'>%s</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;color:#dc2626;'>-%s</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;'>%s</td>"
+                    + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%s</td>"
+                    + "</tr>",
                     safe(row.getFullName()),
                     rowTotalShifts,
                     rowWorkedShifts,
