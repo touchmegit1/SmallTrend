@@ -963,7 +963,7 @@ public class ShiftWorkforceService {
         }
 
         String subject = "[SmallTrend] Xác nhận thanh toán lương tháng " + month;
-        String htmlContent = buildPayrollEmailHtml(month, snapshot, paidCount);
+        String htmlContent = buildPayrollDashboardEmailHtml(month, snapshot, paidCount);
 
         for (String recipient : recipients) {
             try {
@@ -1042,5 +1042,148 @@ public class ShiftWorkforceService {
             return "";
         }
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private String buildPayrollDashboardEmailHtml(String month, PayrollSummaryResponse snapshot, int paidCount) {
+        int totalShifts = 0;
+        int workedShifts = 0;
+        int lateShifts = 0;
+        int absentShifts = 0;
+        int leaveDays = 0;
+        int flaggedEmployees = 0;
+        BigDecimal totalGrossPay = BigDecimal.ZERO;
+        BigDecimal totalDeductions = BigDecimal.ZERO;
+        StringBuilder rows = new StringBuilder();
+
+        for (PayrollSummaryResponse.Row row : snapshot.getRows()) {
+            int rowTotalShifts = defaultInt(row.getTotalShifts());
+            int rowWorkedShifts = defaultInt(row.getWorkedShifts());
+            int rowLateShifts = defaultInt(row.getLateShifts());
+            int rowAbsentShifts = defaultInt(row.getAbsentShifts());
+            int rowLeaveDays = defaultInt(row.getLeaveDays());
+            BigDecimal rowGrossPay = defaultAmount(row.getGrossPay());
+            BigDecimal rowDeductions = defaultAmount(row.getDeductions());
+            BigDecimal rowNetPay = defaultAmount(row.getNetPay());
+
+            totalShifts += rowTotalShifts;
+            workedShifts += rowWorkedShifts;
+            lateShifts += rowLateShifts;
+            absentShifts += rowAbsentShifts;
+            leaveDays += rowLeaveDays;
+            totalGrossPay = totalGrossPay.add(rowGrossPay);
+            totalDeductions = totalDeductions.add(rowDeductions);
+            if (Boolean.TRUE.equals(row.getAttendanceFlag())) {
+                flaggedEmployees += 1;
+            }
+
+            rows.append(String.format(
+                    "<tr>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;'>%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;'>%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;'>%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;color:#dc2626;'>-%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;'>%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%s</td>"
+                            + "</tr>",
+                    safe(row.getFullName()),
+                    rowTotalShifts,
+                    rowWorkedShifts,
+                    rowLateShifts,
+                    rowAbsentShifts,
+                    rowLeaveDays,
+                    formatHours(row.getWorkedHours()),
+                    formatVnd(rowGrossPay),
+                    formatVnd(rowDeductions),
+                    formatVnd(rowNetPay),
+                    Boolean.TRUE.equals(row.getAttendanceFlag()) ? "Can xu ly" : "On dinh"
+            ));
+        }
+
+        return "<div style='font-family:Arial,sans-serif;max-width:980px;margin:auto;color:#0f172a;'>"
+                + "<div style='padding:24px;border:1px solid #e2e8f0;border-radius:18px;background:#f8fafc;'>"
+                + "<h2 style='margin:0;color:#0f172a;'>Bao cao thanh toan luong thang " + safe(month) + "</h2>"
+                + "<p style='margin:10px 0 0;color:#475569;'>He thong da xac nhan thanh toan luong cho <strong>" + paidCount + "</strong> nhan vien. Email nay tong hop day du dashboard cham cong, phan loai ca va bang luong chi tiet cua toan bo nhan su.</p>"
+                + "</div>"
+                + "<div style='margin-top:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;'>"
+                + buildSummaryCard("Nhan vien da thanh toan", String.valueOf(paidCount), "#dbeafe", "#1d4ed8")
+                + buildSummaryCard("Tong luong thuc nhan", formatVnd(snapshot.getTotalPayroll()), "#dcfce7", "#15803d")
+                + buildSummaryCard("Tong gio cong", formatHours(snapshot.getTotalHours()), "#ede9fe", "#6d28d9")
+                + buildSummaryCard("Tong ca trong thang", String.valueOf(totalShifts), "#e2e8f0", "#334155")
+                + buildSummaryCard("Ca da lam", String.valueOf(workedShifts), "#dcfce7", "#15803d")
+                + buildSummaryCard("Nhan vien can luu y", String.valueOf(flaggedEmployees), "#fee2e2", "#b91c1c")
+                + "</div>"
+                + "<div style='margin-top:18px;padding:18px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;'>"
+                + "<h3 style='margin:0 0 12px;color:#0f172a;'>Tong hop dashboard cham cong</h3>"
+                + "<table style='border-collapse:collapse;width:100%;'>"
+                + "<thead><tr style='background:#f8fafc;'>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Chi so</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>So luong</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Ghi chu</th>"
+                + "</tr></thead><tbody>"
+                + buildMetricRow("Ca da lam", workedShifts, "Ca co check-in/check-out hop le")
+                + buildMetricRow("Di muon", lateShifts, "Phat 50.000d / lan")
+                + buildMetricRow("Vang khong phep", absentShifts, "Phat 200.000d / ca")
+                + buildMetricRow("Nghi phep", leaveDays, "Tach rieng voi vang")
+                + buildMetricRow("Tong khau tru", formatVnd(totalDeductions), "Tong phat va tru luong")
+                + buildMetricRow("Tong luong gross", formatVnd(totalGrossPay), "Tong luong truoc khau tru")
+                + "</tbody></table>"
+                + "</div>"
+                + "<div style='margin-top:18px;padding:18px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;'>"
+                + "<h3 style='margin:0 0 12px;color:#0f172a;'>Bang luong chi tiet tung nhan vien</h3>"
+                + "<table style='border-collapse:collapse;width:100%;margin-top:12px;'>"
+                + "<thead><tr style='background:#f1f5f9;'>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;text-align:left;'>Nhan vien</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Tong ca</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Ca da lam</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Muon</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Vang</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Nghi phep</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Gio cong</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Luong gross</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Khau tru</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Thuc nhan</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Canh bao</th>"
+                + "</tr></thead><tbody>"
+                + rows
+                + "</tbody></table>"
+                + "</div>"
+                + "<p style='margin-top:16px;color:#64748b;font-size:13px;'>Day la email tu dong tu he thong SmallTrend. Du lieu da gom bang luong, dashboard cham cong va phan loai ca cua toan bo nhan vien trong thang.</p>"
+                + "</div>";
+    }
+
+    private String formatHours(BigDecimal value) {
+        return defaultAmount(value).setScale(1, RoundingMode.HALF_UP).toPlainString() + "h";
+    }
+
+    private int defaultInt(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private BigDecimal defaultAmount(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private String buildSummaryCard(String label, String value, String background, String color) {
+        return "<div style='padding:14px 16px;border-radius:14px;background:" + background + ";'>"
+                + "<div style='font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:.04em;'>" + safe(label) + "</div>"
+                + "<div style='margin-top:6px;font-size:24px;font-weight:700;color:" + color + ";'>" + safe(value) + "</div>"
+                + "</div>";
+    }
+
+    private String buildMetricRow(String label, int value, String note) {
+        return buildMetricRow(label, String.valueOf(value), note);
+    }
+
+    private String buildMetricRow(String label, String value, String note) {
+        return "<tr>"
+                + "<td style='padding:10px;border:1px solid #e2e8f0;'>" + safe(label) + "</td>"
+                + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;font-weight:700;'>" + safe(value) + "</td>"
+                + "<td style='padding:10px;border:1px solid #e2e8f0;color:#475569;'>" + safe(note) + "</td>"
+                + "</tr>";
     }
 }
