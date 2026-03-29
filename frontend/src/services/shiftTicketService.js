@@ -16,6 +16,7 @@ export const shiftTicketService = {
             title,
             description: swapData.reason,
             priority: swapData.priority || 'HIGH',
+            status: 'OPEN',
             relatedEntityType: 'SHIFT_SWAP',
             relatedEntityId: swapData.relatedEntityId || swapData.requesterAssignmentId || null,
             assignedToUserId: swapData.assignedToUserId,
