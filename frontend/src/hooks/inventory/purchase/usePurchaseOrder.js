@@ -204,38 +204,6 @@ const mapOrderStateFromResponse = (existingOrder, products) => {
   };
 };
 
-const mergeImportedItems = (prevItems, importedList) => {
-  const newItems = [...prevItems];
-  importedList.forEach((importedInfo) => {
-    const existingIndex = newItems.findIndex(
-      (i) => i.variant_id === importedInfo.product.id,
-    );
-    const importQty = Number(importedInfo.quantity) || 1;
-    const importUnitPrice = Number(importedInfo.unit_price);
-    const hasImportUnitPrice =
-      Number.isFinite(importUnitPrice) && importUnitPrice >= 0;
-
-    if (existingIndex >= 0) {
-      const item = newItems[existingIndex];
-      newItems[existingIndex] = {
-        ...item,
-        quantity: item.quantity + importQty,
-        ...(hasImportUnitPrice ? { unit_price: importUnitPrice } : {}),
-      };
-      return;
-    }
-
-    const newItem = createOrderItem(importedInfo.product);
-    newItem.quantity = importQty;
-    if (hasImportUnitPrice) {
-      newItem.unit_price = importUnitPrice;
-    }
-    newItems.push(newItem);
-  });
-
-  return newItems;
-};
-
 const addOrIncreaseProduct = (prevItems, product) => {
   const existing = prevItems.find((i) => i.variant_id === product.id);
   if (existing) {
@@ -562,10 +530,6 @@ export function usePurchaseOrder(initialId = null) {
 
   const addProduct = useCallback((product) => {
     setItems((prev) => addOrIncreaseProduct(prev, product));
-  }, []);
-
-  const importProducts = useCallback((importedList) => {
-    setItems((prev) => mergeImportedItems(prev, importedList));
   }, []);
 
   const removeItem = useCallback((_key) => {
@@ -1110,7 +1074,6 @@ export function usePurchaseOrder(initialId = null) {
     clearSupplier,
     updateOrder,
     addProduct,
-    importProducts,
     removeItem,
     updateItem,
     receiptItems,

@@ -40,7 +40,6 @@ function CreatePurchaseOrder() {
     setSupplierQuery,
     updateOrder,
     addProduct,
-    importProducts,
     removeItem,
     updateItem,
     receiptItems,
@@ -302,7 +301,6 @@ function CreatePurchaseOrder() {
                   products={products}
                   suggestedProducts={lowStockSuggestions}
                   onAddProduct={addProduct}
-                  onImportProducts={importProducts}
                 />
               )}
 
