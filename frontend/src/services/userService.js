@@ -34,6 +34,10 @@ export const userService = {
     const res = await api.put(`/users/${id}`, payload);
     return res.data;
   },
+  async updateRole(id, roleId) {
+    const res = await api.patch(`/users/${id}/role`, { roleId });
+    return res.data;
+  },
   async updateStatus(id, status) {
     const res = await api.patch(`/users/${id}/status`, { status });
     return res.data;
