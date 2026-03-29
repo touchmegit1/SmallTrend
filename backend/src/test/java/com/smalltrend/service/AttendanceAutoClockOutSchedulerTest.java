@@ -10,7 +10,6 @@ import com.smalltrend.service.shift.AttendanceAutoClockOutScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -19,8 +18,6 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -43,7 +40,7 @@ class AttendanceAutoClockOutSchedulerTest {
     }
 
     @Test
-    void autoClockOut_shouldSetTimeOutAndPresent_whenShiftEndedAndNoTimeOut() {
+    void autoClockOut_shouldOnlyMonitor_whenShiftEndedAndNoTimeOut() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
         User user = User.builder().id(1).fullName("Test User").build();
 
@@ -76,26 +73,14 @@ class AttendanceAutoClockOutSchedulerTest {
                 .thenReturn(List.of(assignment));
         when(attendanceRepository.findByUserIdAndDate(1, yesterday))
                 .thenReturn(Optional.of(attendance));
-        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(assignmentRepository.save(any(WorkShiftAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
-
         scheduler.autoClockOutMissingCheckouts();
 
-        ArgumentCaptor<Attendance> attendanceCaptor = ArgumentCaptor.forClass(Attendance.class);
-        verify(attendanceRepository).save(attendanceCaptor.capture());
-        Attendance saved = attendanceCaptor.getValue();
-
-        assertNotNull(saved.getTimeOut());
-        assertEquals(LocalTime.of(17, 0), saved.getTimeOut());
-        assertEquals("PRESENT", saved.getStatus());
-
-        ArgumentCaptor<WorkShiftAssignment> assignmentCaptor = ArgumentCaptor.forClass(WorkShiftAssignment.class);
-        verify(assignmentRepository).save(assignmentCaptor.capture());
-        assertEquals("COMPLETED", assignmentCaptor.getValue().getStatus());
+        verify(attendanceRepository, never()).save(any());
+        verify(assignmentRepository, never()).save(any());
     }
 
     @Test
-    void autoClockOut_shouldMarkLate_whenCheckInAfterGracePeriod() {
+    void autoClockOut_shouldNotAutoMarkLate_whenCheckInAfterGracePeriod() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
         User user = User.builder().id(2).fullName("Late User").build();
 
@@ -128,15 +113,10 @@ class AttendanceAutoClockOutSchedulerTest {
                 .thenReturn(List.of(assignment));
         when(attendanceRepository.findByUserIdAndDate(2, yesterday))
                 .thenReturn(Optional.of(attendance));
-        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(assignmentRepository.save(any(WorkShiftAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
-
         scheduler.autoClockOutMissingCheckouts();
 
-        ArgumentCaptor<Attendance> captor = ArgumentCaptor.forClass(Attendance.class);
-        verify(attendanceRepository).save(captor.capture());
-        assertEquals("LATE", captor.getValue().getStatus());
-        assertEquals(LocalTime.of(22, 0), captor.getValue().getTimeOut());
+        verify(attendanceRepository, never()).save(any());
+        verify(assignmentRepository, never()).save(any());
     }
 
     @Test

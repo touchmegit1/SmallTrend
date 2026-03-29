@@ -225,6 +225,16 @@ public class ShiftWorkforceService {
         LocalDate targetDate = Optional.ofNullable(request.getDate()).orElse(LocalDate.now());
         LocalTime targetClockOutTime = Optional.ofNullable(request.getTimeOut()).orElse(LocalTime.now().withSecond(0).withNano(0));
 
+        WorkShiftAssignment assignment = assignmentRepository
+                .findByUserIdAndShiftDateBetweenAndDeletedFalse(request.getUserId(), targetDate, targetDate)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm để chấm công ra"));
+
+        if (!hasShiftEnded(assignment, LocalDate.now(), LocalTime.now())) {
+            throw new RuntimeException("Chưa hết ca, chưa thể chấm công ra");
+        }
+
         Attendance existing = attendanceRepository.findByUserIdAndDate(request.getUserId(), targetDate).orElse(null);
         LocalTime timeIn = existing != null && existing.getTimeIn() != null ? existing.getTimeIn() : targetClockOutTime;
 
@@ -895,6 +905,19 @@ public class ShiftWorkforceService {
         boolean overnight = !shiftEnd.isAfter(shiftStart);
         if (!overnight && timeOut.isBefore(timeIn)) {
             throw new RuntimeException("Giờ rời ca không hợp lệ: phải sau giờ vào ca");
+        }
+
+        if (!overnight && timeOut.isBefore(shiftEnd)) {
+            throw new RuntimeException("Chưa hết ca, chưa thể chấm công ra");
+        }
+
+        if (overnight) {
+            if (timeOut.isAfter(timeIn)) {
+                throw new RuntimeException("Giờ rời ca không hợp lệ cho ca qua đêm");
+            }
+            if (timeOut.isBefore(shiftEnd)) {
+                throw new RuntimeException("Chưa hết ca, chưa thể chấm công ra");
+            }
         }
     }
 
