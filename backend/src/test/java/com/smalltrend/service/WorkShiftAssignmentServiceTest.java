@@ -2,6 +2,7 @@ package com.smalltrend.service;
 
 import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
+import com.smalltrend.entity.Attendance;
 import com.smalltrend.entity.User;
 import com.smalltrend.entity.WorkShift;
 import com.smalltrend.entity.WorkShiftAssignment;
@@ -17,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +26,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -152,5 +156,98 @@ class WorkShiftAssignmentServiceTest {
         assertNotNull(response);
         assertEquals(9999, response.getId());
         verify(assignmentRepository).save(any(WorkShiftAssignment.class));
+    }
+
+    @Test
+    void deleteAssignment_shouldThrow_whenAttendanceAlreadyHasCheckin() {
+        LocalDate shiftDate = LocalDate.of(2026, 3, 20);
+        User user = User.builder().id(55).build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(555)
+                .user(user)
+                .shiftDate(shiftDate)
+                .status("ASSIGNED")
+                .createdAt(LocalDateTime.now().minusMinutes(20))
+                .deleted(false)
+                .build();
+        Attendance attendance = Attendance.builder()
+                .id(777)
+                .user(user)
+                .date(shiftDate)
+                .timeIn(LocalTime.of(8, 5))
+                .status("PENDING")
+                .build();
+
+        when(assignmentRepository.findById(555)).thenReturn(Optional.of(assignment));
+        when(attendanceRepository.findByUserIdAndDate(55, shiftDate)).thenReturn(Optional.of(attendance));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.deleteAssignment(555));
+        assertEquals("Không thể xóa ca đã có dữ liệu chấm công", ex.getMessage());
+        verify(assignmentRepository, never()).save(any(WorkShiftAssignment.class));
+    }
+
+    @Test
+    void deleteAssignment_shouldSoftDelete_whenNoAttendanceData() {
+        LocalDate shiftDate = LocalDate.of(2026, 3, 21);
+        User user = User.builder().id(56).build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(556)
+                .user(user)
+                .shiftDate(shiftDate)
+                .status("ASSIGNED")
+                .createdAt(LocalDateTime.now().minusMinutes(20))
+                .deleted(false)
+                .build();
+
+        when(assignmentRepository.findById(556)).thenReturn(Optional.of(assignment));
+        when(attendanceRepository.findByUserIdAndDate(56, shiftDate)).thenReturn(Optional.empty());
+
+        service.deleteAssignment(556);
+
+        assertTrue(assignment.isDeleted());
+        verify(assignmentRepository).save(assignment);
+    }
+
+    @Test
+    void deleteAssignment_shouldThrow_whenStatusChangedAndNotRecent() {
+        LocalDate shiftDate = LocalDate.of(2026, 3, 22);
+        User user = User.builder().id(57).build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(557)
+                .user(user)
+                .shiftDate(shiftDate)
+                .status("IN_PROGRESS")
+                .createdAt(LocalDateTime.now().minusMinutes(30))
+                .deleted(false)
+                .build();
+
+        when(assignmentRepository.findById(557)).thenReturn(Optional.of(assignment));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.deleteAssignment(557));
+
+        assertEquals("Không thể xóa ca đã chuyển trạng thái", ex.getMessage());
+        verify(assignmentRepository, never()).save(any(WorkShiftAssignment.class));
+    }
+
+    @Test
+    void deleteAssignment_shouldAllow_whenRecentlyAssignedWithin10Minutes() {
+        LocalDate shiftDate = LocalDate.of(2026, 3, 23);
+        User user = User.builder().id(58).build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(558)
+                .user(user)
+                .shiftDate(shiftDate)
+                .status("IN_PROGRESS")
+                .createdAt(LocalDateTime.now().minusMinutes(5))
+                .deleted(false)
+                .build();
+
+        when(assignmentRepository.findById(558)).thenReturn(Optional.of(assignment));
+        when(attendanceRepository.findByUserIdAndDate(58, shiftDate)).thenReturn(Optional.empty());
+
+        service.deleteAssignment(558);
+
+        assertTrue(assignment.isDeleted());
+        verify(assignmentRepository).save(assignment);
     }
 }

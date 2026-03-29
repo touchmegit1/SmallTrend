@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
@@ -122,8 +123,40 @@ public class WorkShiftAssignmentService {
     public void deleteAssignment(Integer id) {
         WorkShiftAssignment assignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        if (!isRecentlyAssigned(assignment)) {
+            String assignmentStatus = Optional.ofNullable(assignment.getStatus()).orElse("").trim().toUpperCase();
+            boolean isUnchangedAssignment = assignmentStatus.isBlank() || "ASSIGNED".equals(assignmentStatus);
+            if (!isUnchangedAssignment) {
+                throw new RuntimeException("Không thể xóa ca đã chuyển trạng thái");
+            }
+        }
+
+        Optional<Attendance> attendanceOpt = attendanceRepository.findByUserIdAndDate(
+                assignment.getUser().getId(),
+                assignment.getShiftDate());
+
+        if (attendanceOpt.isPresent()) {
+            Attendance attendance = attendanceOpt.get();
+            String status = Optional.ofNullable(attendance.getStatus()).orElse("").trim().toUpperCase();
+            boolean hasCheckinData = attendance.getTimeIn() != null || attendance.getTimeOut() != null;
+            boolean hasStatusProgress = !status.isBlank() && !"PENDING".equals(status);
+
+            if (hasCheckinData || hasStatusProgress) {
+                throw new RuntimeException("Không thể xóa ca đã có dữ liệu chấm công");
+            }
+        }
+
         assignment.setDeleted(true);
         assignmentRepository.save(assignment);
+    }
+
+    private boolean isRecentlyAssigned(WorkShiftAssignment assignment) {
+        LocalDateTime createdAt = assignment.getCreatedAt();
+        if (createdAt == null) {
+            return false;
+        }
+        return !createdAt.plusMinutes(10).isBefore(LocalDateTime.now());
     }
 
     public String executeSwap(ShiftSwapExecuteRequest request) {
