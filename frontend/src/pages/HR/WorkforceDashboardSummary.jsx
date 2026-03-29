@@ -20,7 +20,7 @@ const WorkforceDashboardSummary = ({ filters: controlledFilters, onFiltersChange
     const filters = controlledFilters || localFilters;
     const setFilters = onFiltersChange || setLocalFilters;
     const [dashboard, setDashboard] = useState({
-        attendance: { total: 0, present: 0, late: 0, absent: 0 },
+        attendance: { total: 0, present: 0, late: 0, absent: 0, onLeave: 0 },
         payroll: { staffCount: 0, totalHours: 0, totalPayroll: 0, month: '' },
         paymentStatus: {
             month: '',
@@ -72,6 +72,7 @@ const WorkforceDashboardSummary = ({ filters: controlledFilters, onFiltersChange
                     present: Number(data?.attendance?.present || 0),
                     late: Number(data?.attendance?.late || 0),
                     absent: Number(data?.attendance?.absent || 0),
+                    onLeave: Number(data?.attendance?.onLeave || 0),
                 },
                 payroll: {
                     staffCount: Number(data?.payroll?.staffCount || 0),
@@ -94,7 +95,7 @@ const WorkforceDashboardSummary = ({ filters: controlledFilters, onFiltersChange
         } catch (err) {
             setError(err.response?.data?.message || 'Không thể tải dashboard nhân sự');
             setDashboard({
-                attendance: { total: 0, present: 0, late: 0, absent: 0 },
+                attendance: { total: 0, present: 0, late: 0, absent: 0, onLeave: 0 },
                 payroll: { staffCount: 0, totalHours: 0, totalPayroll: 0, month: '' },
                 paymentStatus: {
                     month: '',
@@ -205,11 +206,12 @@ const WorkforceDashboardSummary = ({ filters: controlledFilters, onFiltersChange
                 <div className="text-sm text-slate-500">Đang tải dashboard nhân sự...</div>
             ) : (
                 <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         <StatCard title="Tổng ca" value={dashboard.attendance.total} icon={CalendarDays} />
                         <StatCard title="Có mặt" value={dashboard.attendance.present} icon={Users} />
                         <StatCard title="Đi muộn" value={dashboard.attendance.late} icon={Clock3} />
-                        <StatCard title="Vắng" value={dashboard.attendance.absent} icon={TriangleAlert} />
+                        <StatCard title="Vắng (không phép)" value={dashboard.attendance.absent} icon={TriangleAlert} />
+                        <StatCard title="Nghỉ phép" value={dashboard.attendance.onLeave} icon={CalendarDays} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <StatCard title="Nhân viên" value={dashboard.payroll.staffCount} icon={Users} />

@@ -15,12 +15,14 @@ import com.smalltrend.service.shift.WorkShiftAssignmentService;
 import com.smalltrend.service.shift.WorkShiftService;
 import com.smalltrend.validation.ShiftValidator;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -58,7 +60,13 @@ class ShiftControllerTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.clearContext();
         shiftController = new ShiftController(workShiftService, assignmentService, workforceService, validator);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -408,7 +416,7 @@ class ShiftControllerTest {
 
     @Test
     void markPayrollAsPaid_shouldReturnMessageResponse() {
-        when(workforceService.markPayrollAsPaid("2026-03", null)).thenReturn("Đã xác nhận thanh toán lương tháng 2026-03 cho 3 nhân viên");
+        when(workforceService.markPayrollAsPaid("2026-03", null, null)).thenReturn("Đã xác nhận thanh toán lương tháng 2026-03 cho 3 nhân viên");
 
         ResponseEntity<?> response = shiftController.markPayrollAsPaid("2026-03", null);
 

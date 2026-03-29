@@ -52,6 +52,9 @@ class ShiftWorkforceServiceTest {
     @Mock
     private PayrollCalculationRepository payrollCalculationRepository;
 
+    @Mock
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
+
     private ShiftWorkforceService shiftWorkforceService;
 
     @BeforeEach
@@ -60,7 +63,8 @@ class ShiftWorkforceServiceTest {
                 attendanceRepository,
                 assignmentRepository,
                 userRepository,
-                payrollCalculationRepository);
+                payrollCalculationRepository,
+                mailSender);
     }
 
     @Test
@@ -219,7 +223,7 @@ class ShiftWorkforceServiceTest {
         when(payrollCalculationRepository.findByUserIdAndPayPeriodStartAndPayPeriodEnd(user.getId(), periodStart, periodEnd))
                 .thenReturn(Optional.empty());
 
-        String result = shiftWorkforceService.markPayrollAsPaid("2026-03", null);
+        String result = shiftWorkforceService.markPayrollAsPaid("2026-03", null, null);
 
         assertTrue(result.contains("1 nhân viên"));
 
@@ -239,7 +243,7 @@ class ShiftWorkforceServiceTest {
 
         when(assignmentRepository.findByShiftDateBetweenAndDeletedFalse(periodStart, periodEnd)).thenReturn(List.of());
 
-        String result = shiftWorkforceService.markPayrollAsPaid("2026-03", null);
+        String result = shiftWorkforceService.markPayrollAsPaid("2026-03", null, null);
 
         assertTrue(result.contains("Không có dữ liệu phân ca"));
         verify(payrollCalculationRepository, never()).save(any());

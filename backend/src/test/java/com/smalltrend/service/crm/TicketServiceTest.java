@@ -7,7 +7,6 @@ import com.smalltrend.entity.Attendance;
 import com.smalltrend.entity.InventoryStock;
 import com.smalltrend.entity.Product;
 import com.smalltrend.entity.ProductVariant;
-import com.smalltrend.entity.Role;
 import com.smalltrend.entity.Ticket;
 import com.smalltrend.entity.Unit;
 import com.smalltrend.entity.User;
@@ -17,14 +16,15 @@ import com.smalltrend.entity.enums.TicketPriority;
 import com.smalltrend.entity.enums.TicketStatus;
 import com.smalltrend.entity.enums.TicketType;
 import com.smalltrend.repository.AttendanceRepository;
-import com.smalltrend.repository.InventoryStockRepository;
 import com.smalltrend.repository.ProductVariantRepository;
 import com.smalltrend.repository.TicketRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
 import com.smalltrend.service.CRM.TicketService;
+import com.smalltrend.service.inventory.shared.InventoryStockService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -37,8 +37,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,7 +49,7 @@ class TicketServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private InventoryStockRepository inventoryStockRepository;
+    private InventoryStockService inventoryStockService;
     @Mock
     private ProductVariantRepository productVariantRepository;
     @Mock
@@ -178,7 +178,8 @@ class TicketServiceTest {
         InventoryStock stockB = InventoryStock.builder().id(2).variant(variant).quantity(7).build();
         variant.setInventoryStocks(List.of(stockA, stockB));
 
-        when(productVariantRepository.findBySkuContainingIgnoreCase("SKU")).thenReturn(List.of(variant));
+        when(productVariantRepository.findBySkuContainingIgnoreCaseOrProduct_NameContainingIgnoreCase("SKU", "SKU"))
+                .thenReturn(List.of(variant));
 
         List<java.util.Map<String, Object>> result = ticketService.lookupVariantBySku("SKU");
 
@@ -216,6 +217,104 @@ class TicketServiceTest {
         assertEquals("HIGH", response.getPriority());
         assertEquals(3, response.getAssignedToUserId());
         assertNotNull(response.getResolvedAt());
+    }
+
+    @Test
+    void updateTicket_shouldSetAssignmentOnLeave_whenResolvingShiftCancelTicket() {
+        User employee = User.builder().id(10).fullName("Employee").build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(50)
+                .user(employee)
+                .shiftDate(LocalDate.now().plusDays(1))
+                .status("ASSIGNED")
+                .build();
+
+        Ticket ticket = Ticket.builder()
+                .id(20L)
+                .ticketCode("TCK-SHF-001")
+                .ticketType(TicketType.SHIFT_CHANGE)
+                .title("Yeu cau nghi ca: 2026-05-01")
+                .relatedEntityType("SHIFT_ASSIGNMENT")
+                .relatedEntityId(50L)
+                .status(TicketStatus.OPEN)
+                .priority(TicketPriority.NORMAL)
+                .build();
+
+        UpdateTicketRequest request = new UpdateTicketRequest();
+        request.setStatus("RESOLVED");
+        request.setResolution("Approved leave");
+
+        when(ticketRepository.findById(20L)).thenReturn(Optional.of(ticket));
+        when(workShiftAssignmentRepository.findByIdAndDeletedFalse(50)).thenReturn(Optional.of(assignment));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ticketService.updateTicket(20L, request);
+
+        ArgumentCaptor<WorkShiftAssignment> captor = ArgumentCaptor.forClass(WorkShiftAssignment.class);
+        verify(workShiftAssignmentRepository).save(captor.capture());
+        assertEquals("ON_LEAVE", captor.getValue().getStatus());
+    }
+
+    @Test
+    void updateTicket_shouldSetAssignmentOnLeave_whenRelatedTypeIsShiftCancel() {
+        User employee = User.builder().id(11).fullName("Employee2").build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(51)
+                .user(employee)
+                .shiftDate(LocalDate.now().plusDays(2))
+                .status("ASSIGNED")
+                .build();
+
+        Ticket ticket = Ticket.builder()
+                .id(21L)
+                .ticketCode("TCK-SHF-002")
+                .ticketType(TicketType.SHIFT_CHANGE)
+                .title("Xin nghi phep")
+                .relatedEntityType("SHIFT_CANCEL")
+                .relatedEntityId(51L)
+                .status(TicketStatus.IN_PROGRESS)
+                .priority(TicketPriority.HIGH)
+                .build();
+
+        UpdateTicketRequest request = new UpdateTicketRequest();
+        request.setStatus("RESOLVED");
+        request.setResolution("Leave approved");
+
+        when(ticketRepository.findById(21L)).thenReturn(Optional.of(ticket));
+        when(workShiftAssignmentRepository.findByIdAndDeletedFalse(51)).thenReturn(Optional.of(assignment));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ticketService.updateTicket(21L, request);
+
+        ArgumentCaptor<WorkShiftAssignment> captor = ArgumentCaptor.forClass(WorkShiftAssignment.class);
+        verify(workShiftAssignmentRepository).save(captor.capture());
+        assertEquals("ON_LEAVE", captor.getValue().getStatus());
+    }
+
+    @Test
+    void updateTicket_shouldNotSetOnLeave_whenTicketIsSwapType() {
+        Ticket ticket = Ticket.builder()
+                .id(22L)
+                .ticketCode("TCK-SHF-003")
+                .ticketType(TicketType.SHIFT_CHANGE)
+                .title("Yeu cau doi ca")
+                .relatedEntityType("SHIFT_SWAP")
+                .relatedEntityId(52L)
+                .status(TicketStatus.OPEN)
+                .priority(TicketPriority.NORMAL)
+                .build();
+
+        UpdateTicketRequest request = new UpdateTicketRequest();
+        request.setStatus("RESOLVED");
+        request.setResolution("Swap done");
+
+        when(ticketRepository.findById(22L)).thenReturn(Optional.of(ticket));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ticketService.updateTicket(22L, request);
+
+        // Should NOT call workShiftAssignmentRepository.save for ON_LEAVE
+        verify(workShiftAssignmentRepository, org.mockito.Mockito.never()).save(any());
     }
 
     @Test

@@ -13,7 +13,12 @@ import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.PayrollCalculationRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -33,14 +38,25 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShiftWorkforceService {
+
+    private static final BigDecimal ABSENT_PENALTY_AMOUNT = new BigDecimal("200000");
+    private static final BigDecimal LATE_PENALTY_AMOUNT = new BigDecimal("50000");
 
     private final AttendanceRepository attendanceRepository;
     private final WorkShiftAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
     private final PayrollCalculationRepository payrollCalculationRepository;
+    private final JavaMailSender mailSender;
+
+    @Value("${app.notifications.price-expiry.recipient:admin.smalltrend.swp@gmail.com}")
+    private String adminEmails;
+
+    @Value("${spring.mail.username:}")
+    private String senderEmail;
 
     public List<AttendanceResponse> listAttendance(LocalDate date, LocalDate startDate, LocalDate endDate, Integer userId, String status) {
         LocalDate targetDate = Optional.ofNullable(date).orElse(LocalDate.now());
@@ -262,6 +278,11 @@ public class ShiftWorkforceService {
             Attendance attendance = attendanceMap.get(key(user.getId(), assignment.getShiftDate()));
             String attendanceStatus = resolveAttendanceStatusForPayroll(attendance, assignment, today, now);
 
+            if ("ON_LEAVE".equals(attendanceStatus)) {
+                acc.leaveDays += 1;
+                continue;
+            }
+
             if ("ABSENT".equals(attendanceStatus)) {
                 acc.absentShifts += 1;
                 continue;
@@ -322,7 +343,7 @@ public class ShiftWorkforceService {
                 .build();
     }
 
-    public String markPayrollAsPaid(String month, Integer userId) {
+    public String markPayrollAsPaid(String month, Integer userId, String callerEmail) {
         if (month == null || month.isBlank()) {
             throw new RuntimeException("Month is required");
         }
@@ -376,6 +397,13 @@ public class ShiftWorkforceService {
 
             payrollCalculationRepository.save(calculation);
             updated += 1;
+        }
+
+        // Send email notification to admin
+        try {
+            sendPayrollEmailToAdmin(month, snapshot, updated, callerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send payroll email notification for month {}", month, e);
         }
 
         return "Đã xác nhận thanh toán lương tháng " + month + " cho " + updated + " nhân viên";
@@ -483,15 +511,17 @@ public class ShiftWorkforceService {
         BigDecimal netPay;
         boolean eligibleForMonthlySalary = true;
 
+        // Fixed penalties: absent = 200k, late = 50k
+        BigDecimal absentPenalty = ABSENT_PENALTY_AMOUNT.multiply(BigDecimal.valueOf(acc.absentShifts));
+        BigDecimal latePenalty = LATE_PENALTY_AMOUNT.multiply(BigDecimal.valueOf(acc.lateShifts));
+
         if (salaryProfile.salaryType == SalaryType.HOURLY) {
             regularPay = acc.adjustedRegularHours.max(BigDecimal.ZERO)
                     .multiply(hourlyRate);
             overtimePay = acc.adjustedOvertimeHours.max(BigDecimal.ZERO)
                     .multiply(hourlyRate);
             grossPay = regularPay.add(overtimePay);
-            deductions = BigDecimal.valueOf(acc.absentShifts)
-                    .multiply(hourlyRate)
-                    .multiply(BigDecimal.valueOf(2));
+            deductions = absentPenalty.add(latePenalty);
             netPay = grossPay.subtract(deductions).max(BigDecimal.ZERO);
         } else if (salaryProfile.salaryType == SalaryType.MONTHLY_MIN_SHIFTS) {
             int minRequiredShifts = Optional.ofNullable(salaryProfile.minRequiredShifts).orElse(0);
@@ -500,10 +530,12 @@ public class ShiftWorkforceService {
                     : Math.max(0, acc.workedShifts - acc.lateShifts);
             eligibleForMonthlySalary = eligibleShiftCount >= minRequiredShifts;
             grossPay = eligibleForMonthlySalary ? salaryProfile.baseSalary : BigDecimal.ZERO;
-            netPay = grossPay;
+            deductions = absentPenalty.add(latePenalty);
+            netPay = grossPay.subtract(deductions).max(BigDecimal.ZERO);
         } else {
             grossPay = salaryProfile.baseSalary;
-            netPay = grossPay;
+            deductions = absentPenalty.add(latePenalty);
+            netPay = grossPay.subtract(deductions).max(BigDecimal.ZERO);
         }
 
         String paidKey = key(acc.user.getId(), periodEnd.withDayOfMonth(1));
@@ -521,6 +553,7 @@ public class ShiftWorkforceService {
                 .workedShifts(acc.workedShifts)
                 .lateShifts(acc.lateShifts)
                 .absentShifts(acc.absentShifts)
+                .leaveDays(acc.leaveDays)
                 .workedHours(acc.workedHours.setScale(2, RoundingMode.HALF_UP))
                 .overtimeHours(acc.overtimeHours.setScale(2, RoundingMode.HALF_UP))
                 .hourlyRate(hourlyRate.setScale(2, RoundingMode.HALF_UP))
@@ -699,8 +732,16 @@ public class ShiftWorkforceService {
             WorkShiftAssignment assignment,
             LocalDate today,
             LocalTime now) {
+        // Check if assignment is marked as ON_LEAVE
+        if (assignment != null && "ON_LEAVE".equalsIgnoreCase(assignment.getStatus())) {
+            return "ON_LEAVE";
+        }
+
         if (attendance != null) {
             String normalizedStatus = normalizeStatus(attendance.getStatus());
+            if ("ON_LEAVE".equals(normalizedStatus)) {
+                return "ON_LEAVE";
+            }
             if (!"PENDING".equals(normalizedStatus)) {
                 return normalizedStatus;
             }
@@ -723,8 +764,16 @@ public class ShiftWorkforceService {
             WorkShiftAssignment assignment,
             LocalDate today,
             LocalTime now) {
+        // Check if assignment is marked as ON_LEAVE
+        if (assignment != null && "ON_LEAVE".equalsIgnoreCase(assignment.getStatus())) {
+            return "ON_LEAVE";
+        }
+
         if (attendance != null) {
             String normalizedStatus = normalizeStatus(attendance.getStatus());
+            if ("ON_LEAVE".equals(normalizedStatus)) {
+                return "ON_LEAVE";
+            }
             if (!"PENDING".equals(normalizedStatus)) {
                 return normalizedStatus;
             }
@@ -858,6 +907,7 @@ public class ShiftWorkforceService {
         private int workedShifts;
         private int lateShifts;
         private int absentShifts;
+        private int leaveDays;
         private BigDecimal workedHours = BigDecimal.ZERO;
         private BigDecimal overtimeHours = BigDecimal.ZERO;
         private BigDecimal adjustedRegularHours = BigDecimal.ZERO;
@@ -888,5 +938,252 @@ public class ShiftWorkforceService {
             this.minRequiredShifts = minRequiredShifts;
             this.countLateAsPresent = countLateAsPresent;
         }
+    }
+
+    // ===== Email payroll notification =====
+
+    private void sendPayrollEmailToAdmin(String month, PayrollSummaryResponse snapshot, int paidCount, String callerEmail) {
+        // adminEmails is optional - callerEmail is the primary recipient
+        if (senderEmail == null || senderEmail.isBlank()) {
+            log.warn("No sender email configured (MAIL_USERNAME). Skip payroll email.");
+            return;
+        }
+
+        // Query all active MANAGER users from DB
+        List<String> recipients = userRepository.findByRole_NameInAndActiveTrueAndStatusIgnoreCase(
+                List.of("MANAGER", "ROLE_MANAGER"), "ACTIVE")
+                .stream()
+                .map(com.smalltrend.entity.User::getEmail)
+                .filter(e -> e != null && !e.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (recipients.isEmpty()) {
+            return;
+        }
+
+        String subject = "[SmallTrend] Xác nhận thanh toán lương tháng " + month;
+        String htmlContent = buildPayrollDashboardEmailHtml(month, snapshot, paidCount);
+
+        for (String recipient : recipients) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+                helper.setTo(recipient);
+                helper.setFrom(senderEmail);
+                helper.setSubject(subject);
+                helper.setText(htmlContent, true);
+                mailSender.send(message);
+                log.info("Sent payroll notification email to {} for month {}", recipient, month);
+            } catch (Exception e) {
+                log.error("Failed to send payroll email to {}: {}", recipient, e.getMessage());
+            }
+        }
+    }
+
+    private String buildPayrollEmailHtml(String month, PayrollSummaryResponse snapshot, int paidCount) {
+        StringBuilder rows = new StringBuilder();
+        for (PayrollSummaryResponse.Row row : snapshot.getRows()) {
+            BigDecimal absPenalty = ABSENT_PENALTY_AMOUNT.multiply(BigDecimal.valueOf(row.getAbsentShifts()));
+            BigDecimal latPenalty = LATE_PENALTY_AMOUNT.multiply(BigDecimal.valueOf(row.getLateShifts()));
+            rows.append(String.format(
+                    "<tr>"
+                    + "<td style='padding:8px;border:1px solid #ddd;'>%s</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:center;'>%d/%d</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:center;'>%d</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:center;'>%d</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:center;'>%d</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:right;color:#dc2626;'>-%s</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:right;color:#dc2626;'>-%s</td>"
+                    + "<td style='padding:8px;border:1px solid #ddd;text-align:right;font-weight:bold;'>%s</td>"
+                    + "</tr>",
+                    safe(row.getFullName()),
+                    row.getWorkedShifts(), row.getTotalShifts(),
+                    row.getLateShifts(),
+                    row.getAbsentShifts(),
+                    row.getLeaveDays() != null ? row.getLeaveDays() : 0,
+                    formatVnd(latPenalty),
+                    formatVnd(absPenalty),
+                    formatVnd(row.getNetPay())
+            ));
+        }
+
+        return "<div style='font-family:Arial,sans-serif;max-width:900px;margin:auto;'>"
+                + "<h2 style='color:#1e293b;'>Xác nhận thanh toán lương tháng " + safe(month) + "</h2>"
+                + "<p>Hệ thống đã xác nhận thanh toán lương cho <strong>" + paidCount + "</strong> nhân viên.</p>"
+                + "<p>Tổng lương: <strong>" + formatVnd(snapshot.getTotalPayroll()) + "</strong> | "
+                + "Tổng giờ công: <strong>" + snapshot.getTotalHours() + "h</strong></p>"
+                + "<table style='border-collapse:collapse;width:100%;margin-top:12px;'>"
+                + "<thead><tr style='background:#f1f5f9;'>"
+                + "<th style='padding:8px;border:1px solid #ddd;text-align:left;'>Nhân viên</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Ca làm</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Muộn</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Vắng</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Nghỉ phép</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Phạt muộn</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Phạt vắng</th>"
+                + "<th style='padding:8px;border:1px solid #ddd;'>Thực nhận</th>"
+                + "</tr></thead><tbody>"
+                + rows
+                + "</tbody></table>"
+                + "<p style='margin-top:16px;color:#64748b;font-size:13px;'>Đây là email tự động từ hệ thống SmallTrend.</p>"
+                + "</div>";
+    }
+
+    private String formatVnd(BigDecimal value) {
+        if (value == null) {
+            return "0";
+        }
+        return java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN")).format(value.setScale(0, RoundingMode.HALF_UP)) + "đ";
+    }
+
+    private String safe(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private String buildPayrollDashboardEmailHtml(String month, PayrollSummaryResponse snapshot, int paidCount) {
+        int totalShifts = 0;
+        int workedShifts = 0;
+        int lateShifts = 0;
+        int absentShifts = 0;
+        int leaveDays = 0;
+        int flaggedEmployees = 0;
+        BigDecimal totalGrossPay = BigDecimal.ZERO;
+        BigDecimal totalDeductions = BigDecimal.ZERO;
+        StringBuilder rows = new StringBuilder();
+
+        for (PayrollSummaryResponse.Row row : snapshot.getRows()) {
+            int rowTotalShifts = defaultInt(row.getTotalShifts());
+            int rowWorkedShifts = defaultInt(row.getWorkedShifts());
+            int rowLateShifts = defaultInt(row.getLateShifts());
+            int rowAbsentShifts = defaultInt(row.getAbsentShifts());
+            int rowLeaveDays = defaultInt(row.getLeaveDays());
+            BigDecimal rowGrossPay = defaultAmount(row.getGrossPay());
+            BigDecimal rowDeductions = defaultAmount(row.getDeductions());
+            BigDecimal rowNetPay = defaultAmount(row.getNetPay());
+
+            totalShifts += rowTotalShifts;
+            workedShifts += rowWorkedShifts;
+            lateShifts += rowLateShifts;
+            absentShifts += rowAbsentShifts;
+            leaveDays += rowLeaveDays;
+            totalGrossPay = totalGrossPay.add(rowGrossPay);
+            totalDeductions = totalDeductions.add(rowDeductions);
+            if (Boolean.TRUE.equals(row.getAttendanceFlag())) {
+                flaggedEmployees += 1;
+            }
+
+            rows.append(String.format(
+                    "<tr>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;'>%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%d</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;'>%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;'>%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;color:#dc2626;'>-%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;'>%s</td>"
+                            + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;'>%s</td>"
+                            + "</tr>",
+                    safe(row.getFullName()),
+                    rowTotalShifts,
+                    rowWorkedShifts,
+                    rowLateShifts,
+                    rowAbsentShifts,
+                    rowLeaveDays,
+                    formatHours(row.getWorkedHours()),
+                    formatVnd(rowGrossPay),
+                    formatVnd(rowDeductions),
+                    formatVnd(rowNetPay),
+                    Boolean.TRUE.equals(row.getAttendanceFlag()) ? "Can xu ly" : "On dinh"
+            ));
+        }
+
+        return "<div style='font-family:Arial,sans-serif;max-width:980px;margin:auto;color:#0f172a;'>"
+                + "<div style='padding:24px;border:1px solid #e2e8f0;border-radius:18px;background:#f8fafc;'>"
+                + "<h2 style='margin:0;color:#0f172a;'>Bao cao thanh toan luong thang " + safe(month) + "</h2>"
+                + "<p style='margin:10px 0 0;color:#475569;'>He thong da xac nhan thanh toan luong cho <strong>" + paidCount + "</strong> nhan vien. Email nay tong hop day du dashboard cham cong, phan loai ca va bang luong chi tiet cua toan bo nhan su.</p>"
+                + "</div>"
+                + "<div style='margin-top:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;'>"
+                + buildSummaryCard("Nhan vien da thanh toan", String.valueOf(paidCount), "#dbeafe", "#1d4ed8")
+                + buildSummaryCard("Tong luong thuc nhan", formatVnd(snapshot.getTotalPayroll()), "#dcfce7", "#15803d")
+                + buildSummaryCard("Tong gio cong", formatHours(snapshot.getTotalHours()), "#ede9fe", "#6d28d9")
+                + buildSummaryCard("Tong ca trong thang", String.valueOf(totalShifts), "#e2e8f0", "#334155")
+                + buildSummaryCard("Ca da lam", String.valueOf(workedShifts), "#dcfce7", "#15803d")
+                + buildSummaryCard("Nhan vien can luu y", String.valueOf(flaggedEmployees), "#fee2e2", "#b91c1c")
+                + "</div>"
+                + "<div style='margin-top:18px;padding:18px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;'>"
+                + "<h3 style='margin:0 0 12px;color:#0f172a;'>Tong hop dashboard cham cong</h3>"
+                + "<table style='border-collapse:collapse;width:100%;'>"
+                + "<thead><tr style='background:#f8fafc;'>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Chi so</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>So luong</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Ghi chu</th>"
+                + "</tr></thead><tbody>"
+                + buildMetricRow("Ca da lam", workedShifts, "Ca co check-in/check-out hop le")
+                + buildMetricRow("Di muon", lateShifts, "Phat 50.000d / lan")
+                + buildMetricRow("Vang khong phep", absentShifts, "Phat 200.000d / ca")
+                + buildMetricRow("Nghi phep", leaveDays, "Tach rieng voi vang")
+                + buildMetricRow("Tong khau tru", formatVnd(totalDeductions), "Tong phat va tru luong")
+                + buildMetricRow("Tong luong gross", formatVnd(totalGrossPay), "Tong luong truoc khau tru")
+                + "</tbody></table>"
+                + "</div>"
+                + "<div style='margin-top:18px;padding:18px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;'>"
+                + "<h3 style='margin:0 0 12px;color:#0f172a;'>Bang luong chi tiet tung nhan vien</h3>"
+                + "<table style='border-collapse:collapse;width:100%;margin-top:12px;'>"
+                + "<thead><tr style='background:#f1f5f9;'>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;text-align:left;'>Nhan vien</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Tong ca</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Ca da lam</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Muon</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Vang</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Nghi phep</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Gio cong</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Luong gross</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Khau tru</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Thuc nhan</th>"
+                + "<th style='padding:10px;border:1px solid #e2e8f0;'>Canh bao</th>"
+                + "</tr></thead><tbody>"
+                + rows
+                + "</tbody></table>"
+                + "</div>"
+                + "<p style='margin-top:16px;color:#64748b;font-size:13px;'>Day la email tu dong tu he thong SmallTrend. Du lieu da gom bang luong, dashboard cham cong va phan loai ca cua toan bo nhan vien trong thang.</p>"
+                + "</div>";
+    }
+
+    private String formatHours(BigDecimal value) {
+        return defaultAmount(value).setScale(1, RoundingMode.HALF_UP).toPlainString() + "h";
+    }
+
+    private int defaultInt(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private BigDecimal defaultAmount(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private String buildSummaryCard(String label, String value, String background, String color) {
+        return "<div style='padding:14px 16px;border-radius:14px;background:" + background + ";'>"
+                + "<div style='font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:.04em;'>" + safe(label) + "</div>"
+                + "<div style='margin-top:6px;font-size:24px;font-weight:700;color:" + color + ";'>" + safe(value) + "</div>"
+                + "</div>";
+    }
+
+    private String buildMetricRow(String label, int value, String note) {
+        return buildMetricRow(label, String.valueOf(value), note);
+    }
+
+    private String buildMetricRow(String label, String value, String note) {
+        return "<tr>"
+                + "<td style='padding:10px;border:1px solid #e2e8f0;'>" + safe(label) + "</td>"
+                + "<td style='padding:10px;border:1px solid #e2e8f0;text-align:center;font-weight:700;'>" + safe(value) + "</td>"
+                + "<td style='padding:10px;border:1px solid #e2e8f0;color:#475569;'>" + safe(note) + "</td>"
+                + "</tr>";
     }
 }

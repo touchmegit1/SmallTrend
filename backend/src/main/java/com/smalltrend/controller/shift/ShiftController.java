@@ -26,6 +26,9 @@ import java.util.List;
 import java.math.BigDecimal;
 import java.util.Map;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 @RestController
 @RequestMapping("/api/shifts")
 @RequiredArgsConstructor
@@ -209,7 +212,13 @@ public class ShiftController {
     public ResponseEntity<?> markPayrollAsPaid(
             @RequestParam("month") String month,
             @RequestParam(value = "userId", required = false) Integer userId) {
-        String message = workforceService.markPayrollAsPaid(month, userId);
+        // Lấy email người đang đăng nhập để gửi mail xác nhận
+        String callerEmail = null;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.smalltrend.entity.User caller) {
+            callerEmail = caller.getEmail();
+        }
+        String message = workforceService.markPayrollAsPaid(month, userId, callerEmail);
         return ResponseEntity.ok(new MessageResponse(message));
     }
 
@@ -230,6 +239,7 @@ public class ShiftController {
         int present = (int) attendanceRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
         int late = (int) attendanceRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
         int absent = (int) attendanceRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+        int onLeave = (int) attendanceRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus())).count();
 
         if (total == 0) {
             YearMonth startMonth = fromMonth != null && !fromMonth.isBlank()
@@ -249,6 +259,7 @@ public class ShiftController {
                 present = (int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
                 late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
                 absent = (int) monthlyRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+                onLeave = (int) monthlyRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus())).count();
             }
         }
 
@@ -266,7 +277,8 @@ public class ShiftController {
                         "total", total,
                         "present", present,
                         "late", late,
-                        "absent", absent),
+                        "absent", absent,
+                        "onLeave", onLeave),
                 "payroll", java.util.Map.of(
                         "staffCount", payroll.getStaffCount(),
                         "totalHours", payroll.getTotalHours(),
