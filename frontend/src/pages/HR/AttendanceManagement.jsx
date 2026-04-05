@@ -325,9 +325,9 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
                             </div>
                             <div className="col-span-2">
                                 {record.policyWarningMessage ? (
-                                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                                    <div className={`rounded-md border px-2 py-1 text-xs ${policyWarningClass(record.policyWarningCode)}`}>
                                         <p className="font-medium">{record.policyWarningMessage}</p>
-                                        {record.policySummary && <p className="mt-0.5 text-[11px] text-amber-700">{record.policySummary}</p>}
+                                        {record.policySummary && <p className="mt-0.5 text-[11px] opacity-80">{record.policySummary}</p>}
                                     </div>
                                 ) : (
                                     <span className="text-xs text-slate-400">Không có</span>
@@ -424,6 +424,28 @@ const isOvernightShift = (start, end) => {
     }
 
     return endText <= startText;
+};
+
+const policyWarningClass = (code) => {
+    const normalized = String(code || '').toUpperCase();
+
+    if (!normalized) {
+        return 'border-slate-200 bg-slate-50 text-slate-700';
+    }
+
+    if (normalized === 'CLOCK_OUT_BEFORE_CLOCK_IN'
+        || normalized === 'TIME_OUT_WITHOUT_TIME_IN'
+        || normalized === 'CHECK_IN_AFTER_SHIFT_END') {
+        return 'border-rose-200 bg-rose-50 text-rose-800';
+    }
+
+    if (normalized === 'EARLY_CLOCK_IN_OUT_OF_WINDOW'
+        || normalized === 'LATE_CLOCK_OUT_OUT_OF_WINDOW'
+        || normalized === 'CLOCK_OUT_BEFORE_SHIFT_END') {
+        return 'border-amber-200 bg-amber-50 text-amber-800';
+    }
+
+    return 'border-blue-200 bg-blue-50 text-blue-800';
 };
 
 const validateAttendanceFilters = (filters) => {
