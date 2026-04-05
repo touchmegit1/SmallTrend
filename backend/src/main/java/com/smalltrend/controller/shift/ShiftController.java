@@ -277,9 +277,11 @@ public class ShiftController {
 
         int total = attendanceRows.size();
         int present = (int) attendanceRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
+                
                 .count();
         int late = (int) attendanceRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
-        int absent = (int) attendanceRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+        int absent = (int) attendanceRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).co
+                unt();
         int onLeave = (int) attendanceRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus()))
                 .count();
 
@@ -298,9 +300,23 @@ public class ShiftController {
 
             if (!monthlyRows.isEmpty()) {
                 total = monthlyRows.size();
-                present = (int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
+                present = (
+                        int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
                         .count();
-                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
+                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIg
+                        noreCase(item.getStatus())).count();
+                        int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
+                        .count();
+                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIg
+                        noreCase(item.getStatus())).count();
+                        int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
+                        .count();
+                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIg
+                        noreCase(item.getStatus())).count();
+                        int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
+                        .count();
+                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIg
+                        noreCase(item.getStatus())).count();
                 absent = (int) monthlyRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
                 onLeave = (int) monthlyRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus()))
                         .count();

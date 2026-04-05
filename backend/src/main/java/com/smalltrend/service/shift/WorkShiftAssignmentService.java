@@ -77,8 +77,8 @@ public class WorkShiftAssignmentService {
                 request.getUserId(),
                 request.getShiftDate())
                 && !(assignment.getWorkShift().getId().equals(request.getWorkShiftId())
-                        && assignment.getUser().getId().equals(request.getUserId())
-                        && assignment.getShiftDate().equals(request.getShiftDate()))) {
+                                && assignment.getUser().getId().equals(request.getUserId())
+                                && assignment.getShiftDate().equals(request.getShiftDate()))) {
             throw new RuntimeException("Assignment already exists for this shift and date");
         }
 
@@ -105,6 +105,7 @@ public class WorkShiftAssignmentService {
         List<WorkShiftAssignment> assignments;
         if (userId != null) {
             assignments = assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, startDate,
+                   
                     endDate);
         } else {
             assignments = assignmentRepository.findByShiftDateBetweenAndDeletedFalse(startDate, endDate);
@@ -165,7 +166,8 @@ public class WorkShiftAssignmentService {
             throw new RuntimeException("Thiếu thông tin ca của người yêu cầu");
         }
 
-        WorkShiftAssignment requesterAssignment = assignmentRepository
+        WorkShiftAssignment requesterAssignment = assignmentRepositor
+                y
                 .findByIdAndDeletedFalse(request.getRequesterAssignmentId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người yêu cầu"));
 
@@ -389,7 +391,8 @@ public class WorkShiftAssignmentService {
                 continue;
             }
 
-            if (rangesOverlap(candidateInterval.startMinute(), candidateInterval.endMinute(),
+            if (rangesOverlap(candidateInterval.startMinute(), candidateInterv
+                   al.endMinute(),
                     existingInterval.startMinute(), existingInterval.endMinute())) {
                 throw new RuntimeException(
                         "Không thể phân ca bị overlap với ca "
@@ -453,18 +456,35 @@ public class WorkShiftAssignmentService {
                 .id(assignment.getId())
                 .shiftDate(assignment.getShiftDate())
                 .status(assignment.getStatus())
-                .notes(assignment.getNotes())
-                .createdAt(assignment.getCreatedAt())
-                .updatedAt(assignment.getUpdatedAt())
-                .shift(shift == null ? null
-                        : ShiftAssignmentResponse.ShiftSummary.builder()
-                                .id(shift.getId())
-                                .shiftCode(shift.getShiftCode())
-                                .shiftName(shift.getShiftName())
-                                .startTime(shift.getStartTime())
-                                .endTime(shift.getEndTime())
-                                .build())
-                .user(user == null ? null
+                .notes(assignment.getNotes(
+                       ))
+                .created        At(assignment.getCreatedAt())
+                .updated        At(assignment.getUpdatedAt())
+                .shift(s        hift == null ? null
+                                : ShiftAssignmentResponse.ShiftSummary.builder()
+                                        .id(shift.getId())
+                                        .shiftCode(shift.getShiftCode())
+                                .shiftNam
+                       e(shift.getShiftName())
+                                        .startTime(shift.getStartTime())
+                                        .endTime(shift.getEndTime())
+                                        .build())
+                .user(us        er == null ? null
+                       e(shift.getShiftName())
+                                        .startTime(shift.getStartTime())
+                                        .endTime(shift.getEndTime())
+                                        .build())
+                .user(us        er == null ? null
+                       e(shift.getShiftName())
+                                        .startTime(shift.getStartTime())
+                                        .endTime(shift.getEndTime())
+                                        .build())
+                .user(us        er == null ? null
+                       e(shift.getShiftName())
+                                        .startTime(shift.getStartTime())
+                                        .endTime(shift.getEndTime())
+                                        .build())
+                .user(us        er == null ? null
                         : ShiftAssignmentResponse.UserSummary.builder()
                                 .id(user.getId())
                                 .fullName(user.getFullName())

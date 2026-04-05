@@ -1051,7 +1051,8 @@ public class ShiftWorkforceService {
             return attendance;
         }
 
-        if (attendance.getTimeIn() == null && "PENDING".equals(normalizedStatus) && hasShiftEndedWithoutCheckIn(null, assignment, today, now)
+        if (attendance.getTimeIn() == null && "PENDING".equals(normalizedStatus)
+                && hasShiftEndedWithoutCheckIn(null, assignment, today, now)
                 && !"ABSENT".equals(normalizedStatus)) {
             attendance.setStatus("ABSENT");
             Attendance persisted = attendanceRepository.save(attendance);
@@ -1079,11 +1080,13 @@ public class ShiftWorkforceService {
             LocalTime timeOut,
             WorkShiftAssignment assignment) {
         if (timeOut != null && timeIn == null) {
-            throwPolicyViolation("TIME_OUT_WITHOUT_TIME_IN", "Không thể rời ca khi chưa chấm công vào ca", assignment, timeIn, timeOut);
+            throwPolicyViolation("TIME_OUT_WITHOUT_TIME_IN", "Không thể rời ca khi chưa chấm công vào ca", assignment,
+                    timeIn, timeOut);
         }
 
         if (timeIn != null && timeOut != null && timeOut.equals(timeIn)) {
-            throwPolicyViolation("CLOCK_IN_EQUALS_CLOCK_OUT", "Giờ vào ca và rời ca không được trùng nhau", assignment, timeIn, timeOut);
+            throwPolicyViolation("CLOCK_IN_EQUALS_CLOCK_OUT", "Giờ vào ca và rời ca không được trùng nhau", assignment,
+                    timeIn, timeOut);
         }
 
         if (timeIn == null || timeOut == null || assignment == null || assignment.getWorkShift() == null) {
@@ -1121,23 +1124,28 @@ public class ShiftWorkforceService {
         LocalDateTime latestCheckOut = schedule.endDateTime().plusMinutes(lateClockOutMinutes);
 
         if (checkInDateTime.isBefore(earliestCheckIn)) {
-            throwPolicyViolation("EARLY_CLOCK_IN_OUT_OF_WINDOW", "Giờ vào ca sớm hơn mức cho phép của ca", assignment, timeIn, timeOut);
+            throwPolicyViolation("EARLY_CLOCK_IN_OUT_OF_WINDOW", "Giờ vào ca sớm hơn mức cho phép của ca", assignment,
+                    timeIn, timeOut);
         }
 
         if (checkInDateTime.isAfter(schedule.endDateTime())) {
-            throwPolicyViolation("CHECK_IN_AFTER_SHIFT_END", "Giờ vào ca không hợp lệ: đã qua thời gian kết thúc ca", assignment, timeIn, timeOut);
+            throwPolicyViolation("CHECK_IN_AFTER_SHIFT_END", "Giờ vào ca không hợp lệ: đã qua thời gian kết thúc ca",
+                    assignment, timeIn, timeOut);
         }
 
         if (checkOutDateTime.isAfter(latestCheckOut)) {
-            throwPolicyViolation("LATE_CLOCK_OUT_OUT_OF_WINDOW", "Giờ rời ca muộn hơn mức cho phép của ca", assignment, timeIn, timeOut);
+            throwPolicyViolation("LATE_CLOCK_OUT_OUT_OF_WINDOW", "Giờ rời ca muộn hơn mức cho phép của ca", assignment,
+                    timeIn, timeOut);
         }
 
         if (checkOutDateTime.isBefore(schedule.endDateTime())) {
-            throwPolicyViolation("CLOCK_OUT_BEFORE_SHIFT_END", "Chưa hết ca, chưa thể chấm công ra", assignment, timeIn, timeOut);
+            throwPolicyViolation("CLOCK_OUT_BEFORE_SHIFT_END", "Chưa hết ca, chưa thể chấm công ra", assignment, timeIn,
+                    timeOut);
         }
 
         if (checkOutDateTime.isBefore(checkInDateTime)) {
-            throwPolicyViolation("CLOCK_OUT_BEFORE_CLOCK_IN", "Giờ rời ca không hợp lệ: phải sau giờ vào ca", assignment, timeIn, timeOut);
+            throwPolicyViolation("CLOCK_OUT_BEFORE_CLOCK_IN", "Giờ rời ca không hợp lệ: phải sau giờ vào ca",
+                    assignment, timeIn, timeOut);
         }
     }
 
@@ -1154,8 +1162,11 @@ public class ShiftWorkforceService {
 
             String details = "code=" + code
                     + ", shiftDate=" + (assignment != null ? assignment.getShiftDate() : null)
-                    + ", shiftId=" + (assignment != null && assignment.getWorkShift() != null ? assignment.getWorkShift().getId() : null)
-                    + ", userId=" + (assignment != null && assignment.getUser() != null ? assignment.getUser().getId() : null)
+                    + ", shiftId="
+                    + (assignment != null && assignment.getWorkShift() != null ? assignment.getWorkShift().getId()
+                            : null)
+                    + ", userId="
+                    + (assignment != null && assignment.getUser() != null ? assignment.getUser().getId() : null)
                     + ", timeIn=" + timeIn
                     + ", timeOut=" + timeOut
                     + ", message=" + message;

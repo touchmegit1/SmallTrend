@@ -432,8 +432,10 @@ class ShiftWorkforceServiceTest {
                 when(attendanceRepository.findByUserIdAndDate(22, date)).thenReturn(Optional.empty());
                 when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(22, date, date))
                                 .thenReturn(List.of(assignment));
-                when(attendanceRepository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
-                when(assignmentRepository.save(any(WorkShiftAssignment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+                when(attendanceRepository.save(any(Attendance.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+                when(assignmentRepository.save(any(WorkShiftAssignment.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
 
                 AttendanceResponse response = shiftWorkforceService.upsertAttendance(request);
 
@@ -537,16 +539,16 @@ class ShiftWorkforceServiceTest {
 
                 assertEquals("Giờ vào ca sớm hơn mức cho phép của ca", ex.getMessage());
                 verify(auditLogService).recordEvent(
-                        eq("anonymous"),
-                        eq("ATTENDANCE_POLICY_VIOLATION"),
-                        eq("ATTENDANCE"),
-                        eq(341),
-                        eq("DENIED"),
-                        eq(null),
-                        eq(null),
-                        eq("WEB"),
-                        org.mockito.ArgumentMatchers.contains("EARLY_CLOCK_IN_OUT_OF_WINDOW"),
-                        eq(null));
+                                eq("anonymous"),
+                                eq("ATTENDANCE_POLICY_VIOLATION"),
+                                eq("ATTENDANCE"),
+                                eq(341),
+                                eq("DENIED"),
+                                eq(null),
+                                eq(null),
+                                eq("WEB"),
+                                org.mockito.ArgumentMatchers.contains("EARLY_CLOCK_IN_OUT_OF_WINDOW"),
+                                eq(null));
         }
 
         @Test
