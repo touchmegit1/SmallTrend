@@ -360,10 +360,15 @@ public class WorkShiftAssignmentService {
             return;
         }
 
-        List<WorkShiftAssignment> sameDayAssignments = assignmentRepository
-                .findByUserIdAndShiftDateAndDeletedFalse(userId, shiftDate);
+        List<WorkShiftAssignment> nearbyAssignments = assignmentRepository
+                .findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, shiftDate.minusDays(1), shiftDate.plusDays(1));
 
-        for (WorkShiftAssignment existing : sameDayAssignments) {
+        ShiftInterval candidateInterval = toInterval(candidateShift, shiftDate);
+        if (candidateInterval == null) {
+            return;
+        }
+
+        for (WorkShiftAssignment existing : nearbyAssignments) {
             if (existing == null || existing.getId() == null) {
                 continue;
             }
@@ -377,44 +382,49 @@ public class WorkShiftAssignmentService {
                 continue;
             }
 
-            if (hasShiftOverlap(candidateShift, existingShift)) {
+            ShiftInterval existingInterval = toInterval(existingShift, existing.getShiftDate());
+            if (existingInterval == null) {
+                continue;
+            }
+
+            if (rangesOverlap(candidateInterval.startMinute(), candidateInterval.endMinute(), existingInterval.startMinute(), existingInterval.endMinute())) {
                 throw new RuntimeException(
-                        "Không thể phân ca bị overlap: ca mới bắt đầu trước khi ca còn lại kết thúc");
+                        "Không thể phân ca bị overlap với ca "
+                                + Optional.ofNullable(existingShift.getShiftName()).orElse("đã có")
+                                + " ngày " + existing.getShiftDate());
             }
         }
     }
 
-    private boolean hasShiftOverlap(WorkShift candidateShift, WorkShift existingShift) {
-        LocalTime candidateStart = candidateShift.getStartTime();
-        LocalTime candidateEnd = candidateShift.getEndTime();
-        LocalTime existingStart = existingShift.getStartTime();
-        LocalTime existingEnd = existingShift.getEndTime();
+    private ShiftInterval toInterval(WorkShift shift, LocalDate shiftDate) {
+        if (shift == null || shiftDate == null) {
+            return null;
+        }
 
-        if (candidateStart == null || candidateEnd == null || existingStart == null || existingEnd == null) {
-            return false;
+        LocalTime start = shift.getStartTime();
+        LocalTime end = shift.getEndTime();
+
+        if (start == null || end == null) {
+            return null;
         }
 
         long dayMinutes = 24 * 60;
-        long cStart = candidateStart.toSecondOfDay() / 60;
-        long cEnd = candidateEnd.toSecondOfDay() / 60;
-        long eStart = existingStart.toSecondOfDay() / 60;
-        long eEnd = existingEnd.toSecondOfDay() / 60;
+        long dayOffset = shiftDate.toEpochDay() * dayMinutes;
+        long startMinute = dayOffset + (start.toSecondOfDay() / 60);
+        long endMinute = dayOffset + (end.toSecondOfDay() / 60);
 
-        if (cEnd <= cStart) {
-            cEnd += dayMinutes;
+        if (endMinute <= startMinute) {
+            endMinute += dayMinutes;
         }
 
-        if (eEnd <= eStart) {
-            eEnd += dayMinutes;
-        }
-
-        return rangesOverlap(cStart, cEnd, eStart, eEnd)
-                || rangesOverlap(cStart, cEnd, eStart + dayMinutes, eEnd + dayMinutes)
-                || rangesOverlap(cStart + dayMinutes, cEnd + dayMinutes, eStart, eEnd);
+        return new ShiftInterval(startMinute, endMinute);
     }
 
     private boolean rangesOverlap(long startA, long endA, long startB, long endB) {
         return startA < endB && startB < endA;
+    }
+
+    private record ShiftInterval(long startMinute, long endMinute) {
     }
 
     private Set<Integer> setOfIds(Integer... ids) {

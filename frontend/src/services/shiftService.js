@@ -68,6 +68,10 @@ export const shiftService = {
         const res = await api.get('/shifts/attendance', { params });
         return res.data;
     },
+    async getAttendancePolicyPreview(params = {}) {
+        const res = await api.get('/shifts/attendance/policy-preview', { params });
+        return res.data;
+    },
     async upsertAttendance(payload) {
         const res = await api.post('/shifts/attendance', payload);
         return res.data;

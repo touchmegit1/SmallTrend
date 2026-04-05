@@ -95,12 +95,60 @@ class WorkShiftAssignmentServiceTest {
         when(userRepository.findById(10)).thenReturn(Optional.of(user));
         when(assignmentRepository.existsByWorkShiftIdAndUserIdAndShiftDateAndDeletedFalse(101, 10, shiftDate))
                 .thenReturn(false);
-        when(assignmentRepository.findByUserIdAndShiftDateAndDeletedFalse(10, shiftDate))
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(10, shiftDate.minusDays(1), shiftDate.plusDays(1)))
                 .thenReturn(List.of(existing));
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.createAssignment(request));
 
-        assertEquals("Không thể phân ca bị overlap: ca mới bắt đầu trước khi ca còn lại kết thúc", ex.getMessage());
+        assertTrue(ex.getMessage().contains("Không thể phân ca bị overlap"));
+    }
+
+    @Test
+    void createAssignment_shouldReject_whenOvernightShiftOverlapsNextDayAssignment() {
+        LocalDate shiftDate = LocalDate.of(2026, 3, 20);
+        User user = User.builder().id(12).build();
+
+        WorkShift overnightShift = WorkShift.builder()
+                .id(301)
+                .status("ACTIVE")
+                .shiftName("Ca dem")
+                .startTime(LocalTime.of(22, 0))
+                .endTime(LocalTime.of(6, 0))
+                .build();
+
+        WorkShift earlyMorningShift = WorkShift.builder()
+                .id(302)
+                .status("ACTIVE")
+                .shiftName("Ca sang")
+                .startTime(LocalTime.of(5, 0))
+                .endTime(LocalTime.of(13, 0))
+                .build();
+
+        WorkShiftAssignment nextDayExisting = WorkShiftAssignment.builder()
+                .id(3001)
+                .user(user)
+                .workShift(earlyMorningShift)
+                .shiftDate(shiftDate.plusDays(1))
+                .deleted(false)
+                .build();
+
+        ShiftAssignmentRequest request = ShiftAssignmentRequest.builder()
+                .workShiftId(301)
+                .userId(12)
+                .shiftDate(shiftDate)
+                .notes("overnight overlap")
+                .build();
+
+        when(workShiftRepository.findById(301)).thenReturn(Optional.of(overnightShift));
+        when(userRepository.findById(12)).thenReturn(Optional.of(user));
+        when(assignmentRepository.existsByWorkShiftIdAndUserIdAndShiftDateAndDeletedFalse(301, 12, shiftDate))
+                .thenReturn(false);
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(12, shiftDate.minusDays(1), shiftDate.plusDays(1)))
+                .thenReturn(List.of(nextDayExisting));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.createAssignment(request));
+
+        assertTrue(ex.getMessage().contains("Không thể phân ca bị overlap"));
     }
 
     @Test
@@ -142,7 +190,7 @@ class WorkShiftAssignmentServiceTest {
         when(userRepository.findById(11)).thenReturn(Optional.of(user));
         when(assignmentRepository.existsByWorkShiftIdAndUserIdAndShiftDateAndDeletedFalse(201, 11, shiftDate))
                 .thenReturn(false);
-        when(assignmentRepository.findByUserIdAndShiftDateAndDeletedFalse(11, shiftDate))
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(11, shiftDate.minusDays(1), shiftDate.plusDays(1)))
                 .thenReturn(List.of(existing));
         when(assignmentRepository.save(any(WorkShiftAssignment.class)))
                 .thenAnswer(invocation -> {

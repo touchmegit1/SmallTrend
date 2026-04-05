@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -81,6 +82,27 @@ class ShiftValidatorTest {
 
         assertTrue(errors.contains("Effective from date is required for temporary shift"));
         assertTrue(errors.contains("Effective to date is required for temporary shift"));
+    }
+
+    @Test
+    void validateShift_shouldValidateCoefficientAndMinutesRange() {
+        WorkShiftRequest request = WorkShiftRequest.builder()
+                .shiftCode("SHIFT-CHECK")
+                .shiftName("Ca test")
+                .startTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(16, 0))
+                .overtimeMultiplier(new BigDecimal("0.5"))
+                .nightShiftBonus(new BigDecimal("-1"))
+                .weekendBonus(new BigDecimal("500"))
+                .gracePeriodMinutes(-1)
+                .build();
+
+        List<String> errors = validator.validateShift(request);
+
+        assertTrue(errors.contains("Overtime multiplier must be between 1.00 and 5.00"));
+        assertTrue(errors.contains("Night shift bonus must be between 0 and 300.00"));
+        assertTrue(errors.contains("Weekend bonus must be between 0 and 300.00"));
+        assertTrue(errors.contains("Grace period minutes must be 0 or greater"));
     }
 
     @Test

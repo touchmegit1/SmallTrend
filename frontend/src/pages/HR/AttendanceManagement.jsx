@@ -90,6 +90,9 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
                 checkOut: item.timeOut ? item.timeOut.slice(0, 5) : '',
                 note: item.notes || '',
                 shiftTime: `${formatTime(item.shiftStartTime)} - ${formatTime(item.shiftEndTime)}`,
+                policyWarningMessage: item.policyWarningMessage || '',
+                policyWarningCode: item.policyWarningCode || '',
+                policySummary: item.policySummary || '',
             })) : []);
             setError('');
         } catch (err) {
@@ -130,7 +133,24 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
                 ...patch,
             };
 
-            await shiftService.upsertAttendance({
+            if (record.shiftId && record.date) {
+                const preview = await shiftService.getAttendancePolicyPreview({
+                    shiftId: record.shiftId,
+                    shiftDate: record.date,
+                    timeIn: next.checkIn || undefined,
+                    timeOut: next.checkOut || undefined,
+                });
+
+                const violationMessages = Array.isArray(preview?.violationMessages) ? preview.violationMessages : [];
+                if (violationMessages.length > 0) {
+                    const violation = violationMessages[0];
+                    setRowErrors((prev) => ({ ...prev, [record.key]: violation }));
+                    setError(violation);
+                    return;
+                }
+            }
+
+            const updated = await shiftService.upsertAttendance({
                 userId: record.userId,
                 date: record.date,
                 timeIn: next.checkIn || null,
@@ -138,7 +158,17 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
                 status: next.status,
             });
 
-            setRecords((prev) => prev.map((item) => item.key === record.key ? next : item));
+            const hydrated = {
+                ...next,
+                status: updated?.status || next.status,
+                checkIn: updated?.timeIn ? String(updated.timeIn).slice(0, 5) : (next.checkIn || ''),
+                checkOut: updated?.timeOut ? String(updated.timeOut).slice(0, 5) : (next.checkOut || ''),
+                policyWarningMessage: updated?.policyWarningMessage || '',
+                policyWarningCode: updated?.policyWarningCode || '',
+                policySummary: updated?.policySummary || next.policySummary || '',
+            };
+
+            setRecords((prev) => prev.map((item) => item.key === record.key ? hydrated : item));
         } catch (err) {
             setError(err.response?.data?.message || 'Không thể cập nhật chấm công');
         }
@@ -261,8 +291,9 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
                         <div className="col-span-2">Nhân viên</div>
                         <div className="col-span-2">Ca làm</div>
                         <div className="col-span-2">Giờ vào/ra</div>
-                        <div className="col-span-2">Trạng thái</div>
-                        <div className="col-span-2">Ghi chú</div>
+                        <div className="col-span-1">Trạng thái</div>
+                        <div className="col-span-2">Cảnh báo policy</div>
+                        <div className="col-span-1">Ghi chú</div>
                     </div>
 
                     {records.map((record) => (
@@ -287,12 +318,22 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
                                     className={`w-full rounded-md border px-2 py-1 text-xs ${rowErrors[record.key] ? 'border-rose-400' : 'border-slate-200'}`}
                                 />
                             </div>
-                            <div className="col-span-2">
+                            <div className="col-span-1">
                                 <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ${attendanceStatusClass(record.status)}`}>
                                     {formatAttendanceStatus(record.status)}
                                 </span>
                             </div>
                             <div className="col-span-2">
+                                {record.policyWarningMessage ? (
+                                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                                        <p className="font-medium">{record.policyWarningMessage}</p>
+                                        {record.policySummary && <p className="mt-0.5 text-[11px] text-amber-700">{record.policySummary}</p>}
+                                    </div>
+                                ) : (
+                                    <span className="text-xs text-slate-400">Không có</span>
+                                )}
+                            </div>
+                            <div className="col-span-1">
                                 <input
                                     value={record.note}
                                     onChange={(event) => updateAttendance(record, { note: event.target.value })}
@@ -366,12 +407,23 @@ const attendanceStatusClass = (status) => {
 const validateAttendancePatch = (record, patch) => {
     const nextCheckIn = patch.checkIn !== undefined ? patch.checkIn : record.checkIn;
     const nextCheckOut = patch.checkOut !== undefined ? patch.checkOut : record.checkOut;
+    const overnightShift = isOvernightShift(record.shiftStartTime, record.shiftEndTime);
 
-    if (nextCheckIn && nextCheckOut && nextCheckOut <= nextCheckIn) {
+    if (!overnightShift && nextCheckIn && nextCheckOut && nextCheckOut <= nextCheckIn) {
         return 'Giờ ra phải sau giờ vào.';
     }
 
     return '';
+};
+
+const isOvernightShift = (start, end) => {
+    const startText = formatTime(start);
+    const endText = formatTime(end);
+    if (startText === '--:--' || endText === '--:--') {
+        return false;
+    }
+
+    return endText <= startText;
 };
 
 const validateAttendanceFilters = (filters) => {

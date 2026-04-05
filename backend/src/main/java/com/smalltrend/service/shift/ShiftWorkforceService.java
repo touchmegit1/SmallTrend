@@ -3,6 +3,7 @@ package com.smalltrend.service.shift;
 import com.smalltrend.dto.shift.AttendanceResponse;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
 import com.smalltrend.dto.shift.PayrollSummaryResponse;
+import com.smalltrend.dto.shift.ShiftPolicyPreviewResponse;
 import com.smalltrend.entity.Attendance;
 import com.smalltrend.entity.PayrollCalculation;
 import com.smalltrend.entity.User;
@@ -13,6 +14,7 @@ import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.PayrollCalculationRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
+import com.smalltrend.repository.WorkShiftRepository;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +50,7 @@ public class ShiftWorkforceService {
 
     private final AttendanceRepository attendanceRepository;
     private final WorkShiftAssignmentRepository assignmentRepository;
+    private final WorkShiftRepository workShiftRepository;
     private final UserRepository userRepository;
     private final PayrollCalculationRepository payrollCalculationRepository;
     private final JavaMailSender mailSender;
@@ -94,6 +97,9 @@ public class ShiftWorkforceService {
 
             Attendance attendance = attendanceMap.get(key(user.getId(), shiftDate));
             String attendanceStatus = resolveAttendanceStatusForMonitoring(attendance, assignment, today, now);
+                PolicyWarning policyWarning = resolvePolicyWarning(assignment,
+                    attendance != null ? attendance.getTimeIn() : null,
+                    attendance != null ? attendance.getTimeOut() : null);
 
             if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) {
                 if (!attendanceStatus.equalsIgnoreCase(status.trim())) {
@@ -114,6 +120,9 @@ public class ShiftWorkforceService {
                     .shiftName(shift != null ? shift.getShiftName() : null)
                     .shiftStartTime(shift != null ? shift.getStartTime() : null)
                     .shiftEndTime(shift != null ? shift.getEndTime() : null)
+                    .policyWarningCode(policyWarning.code())
+                    .policyWarningMessage(policyWarning.message())
+                    .policySummary(policySummary(assignment))
                     .notes(assignment.getNotes())
                     .build());
         }
@@ -178,6 +187,7 @@ public class ShiftWorkforceService {
         }
 
         WorkShift shift = assignment != null ? assignment.getWorkShift() : null;
+        PolicyWarning policyWarning = resolvePolicyWarning(assignment, saved.getTimeIn(), saved.getTimeOut());
 
         return AttendanceResponse.builder()
                 .id(saved.getId())
@@ -192,7 +202,104 @@ public class ShiftWorkforceService {
                 .shiftName(shift != null ? shift.getShiftName() : null)
                 .shiftStartTime(shift != null ? shift.getStartTime() : null)
                 .shiftEndTime(shift != null ? shift.getEndTime() : null)
+                .policyWarningCode(policyWarning.code())
+                .policyWarningMessage(policyWarning.message())
+                .policySummary(policySummary(assignment))
                 .notes(assignment != null ? assignment.getNotes() : null)
+                .build();
+    }
+
+    public ShiftPolicyPreviewResponse previewShiftPolicy(Integer shiftId,
+            LocalDate shiftDate,
+            LocalTime timeIn,
+            LocalTime timeOut) {
+        if (shiftId == null || shiftId <= 0) {
+            throw new RuntimeException("Shift is required");
+        }
+
+        if (shiftDate == null) {
+            throw new RuntimeException("Shift date is required");
+        }
+
+        WorkShift shift = workShiftRepository.findById(shiftId)
+                .orElseThrow(() -> new RuntimeException("Shift not found"));
+
+        WorkShiftAssignment pseudoAssignment = WorkShiftAssignment.builder()
+                .workShift(shift)
+                .shiftDate(shiftDate)
+                .build();
+
+        ShiftSchedule schedule = buildShiftSchedule(pseudoAssignment);
+        if (schedule == null) {
+            throw new RuntimeException("Shift time is not configured");
+        }
+
+        int earlyClockInMinutes = isEnabled(shift.getAllowEarlyClockIn())
+                ? Math.max(Optional.ofNullable(shift.getEarlyClockInMinutes()).orElse(0), 0)
+                : 0;
+        int lateClockOutMinutes = isEnabled(shift.getAllowLateClockOut())
+                ? Math.max(Optional.ofNullable(shift.getLateClockOutMinutes()).orElse(0), 0)
+                : 0;
+        int graceMinutes = Math.max(Optional.ofNullable(shift.getGracePeroidMinutes()).orElse(0), 0);
+
+        LocalDateTime earliestCheckIn = schedule.startDateTime().minusMinutes(earlyClockInMinutes);
+        LocalDateTime latestCheckOut = schedule.endDateTime().plusMinutes(lateClockOutMinutes);
+        LocalDateTime graceCutoff = schedule.startDateTime().plusMinutes(graceMinutes);
+
+        LocalDateTime checkInDateTime = toShiftDateTime(schedule, timeIn, false);
+        LocalDateTime checkOutDateTime = toShiftDateTime(schedule, timeOut, true);
+
+        List<String> violationCodes = new ArrayList<>();
+        List<String> violationMessages = new ArrayList<>();
+
+        if (timeOut != null && timeIn == null) {
+            violationCodes.add("TIME_OUT_WITHOUT_TIME_IN");
+            violationMessages.add("Không thể rời ca khi chưa chấm công vào ca");
+        }
+
+        if (timeIn != null && checkInDateTime != null && checkInDateTime.isBefore(earliestCheckIn)) {
+            violationCodes.add("EARLY_CLOCK_IN_OUT_OF_WINDOW");
+            violationMessages.add("Giờ vào ca sớm hơn mức cho phép của ca");
+        }
+
+        if (timeIn != null && checkInDateTime != null && checkInDateTime.isAfter(schedule.endDateTime())) {
+            violationCodes.add("CHECK_IN_AFTER_SHIFT_END");
+            violationMessages.add("Giờ vào ca không hợp lệ: đã qua thời gian kết thúc ca");
+        }
+
+        if (timeOut != null && checkOutDateTime != null && checkOutDateTime.isAfter(latestCheckOut)) {
+            violationCodes.add("LATE_CLOCK_OUT_OUT_OF_WINDOW");
+            violationMessages.add("Giờ rời ca muộn hơn mức cho phép của ca");
+        }
+
+        if (timeOut != null && checkOutDateTime != null && checkOutDateTime.isBefore(schedule.endDateTime())) {
+            violationCodes.add("CLOCK_OUT_BEFORE_SHIFT_END");
+            violationMessages.add("Chưa hết ca, chưa thể chấm công ra");
+        }
+
+        if (timeIn != null && timeOut != null && checkInDateTime != null && checkOutDateTime != null && checkOutDateTime.isBefore(checkInDateTime)) {
+            violationCodes.add("CLOCK_OUT_BEFORE_CLOCK_IN");
+            violationMessages.add("Giờ rời ca không hợp lệ: phải sau giờ vào ca");
+        }
+
+        return ShiftPolicyPreviewResponse.builder()
+                .shiftId(shift.getId())
+                .shiftName(shift.getShiftName())
+                .shiftDate(shiftDate)
+                .expectedStart(shift.getStartTime())
+                .expectedEnd(shift.getEndTime())
+                .graceCutoff(graceCutoff.toLocalTime())
+                .allowedCheckInFrom(earliestCheckIn.toLocalTime())
+                .allowedCheckOutUntil(latestCheckOut.toLocalTime())
+                .isLate(timeIn != null && checkInDateTime != null && checkInDateTime.isAfter(graceCutoff))
+                .canCheckIn(violationCodes.stream().noneMatch(code -> code.startsWith("EARLY_") || "CHECK_IN_AFTER_SHIFT_END".equals(code)))
+                .canCheckOut(violationCodes.stream().noneMatch(code -> code.startsWith("LATE_CLOCK_OUT")
+                        || "CLOCK_OUT_BEFORE_SHIFT_END".equals(code)
+                        || "CLOCK_OUT_BEFORE_CLOCK_IN".equals(code)
+                        || "TIME_OUT_WITHOUT_TIME_IN".equals(code)))
+                .violationCodes(violationCodes)
+                .violationMessages(violationMessages)
+                .policySummary(policySummary(pseudoAssignment))
                 .build();
     }
 
@@ -871,8 +978,7 @@ public class ShiftWorkforceService {
             return "PRESENT";
         }
 
-        LocalTime graceCutoff = shift.getStartTime().plusMinutes(Optional.ofNullable(shift.getGracePeroidMinutes()).orElse(0));
-        if (timeIn.isAfter(graceCutoff)) {
+        if (isLateCheckIn(timeIn, assignment)) {
             return "LATE";
         }
 
@@ -902,23 +1008,170 @@ public class ShiftWorkforceService {
             return;
         }
 
-        boolean overnight = !shiftEnd.isAfter(shiftStart);
-        if (!overnight && timeOut.isBefore(timeIn)) {
-            throw new RuntimeException("Giờ rời ca không hợp lệ: phải sau giờ vào ca");
+        ShiftSchedule schedule = buildShiftSchedule(assignment);
+        if (schedule == null) {
+            return;
         }
 
-        if (!overnight && timeOut.isBefore(shiftEnd)) {
+        LocalDateTime checkInDateTime = toShiftDateTime(schedule, timeIn, false);
+        LocalDateTime checkOutDateTime = toShiftDateTime(schedule, timeOut, true);
+
+        if (checkInDateTime == null || checkOutDateTime == null) {
+            return;
+        }
+
+        int earlyClockInMinutes = isEnabled(shift.getAllowEarlyClockIn())
+                ? Math.max(Optional.ofNullable(shift.getEarlyClockInMinutes()).orElse(0), 0)
+                : 0;
+        int lateClockOutMinutes = isEnabled(shift.getAllowLateClockOut())
+                ? Math.max(Optional.ofNullable(shift.getLateClockOutMinutes()).orElse(0), 0)
+                : 0;
+
+        LocalDateTime earliestCheckIn = schedule.startDateTime().minusMinutes(earlyClockInMinutes);
+        LocalDateTime latestCheckOut = schedule.endDateTime().plusMinutes(lateClockOutMinutes);
+
+        if (checkInDateTime.isBefore(earliestCheckIn)) {
+            throw new RuntimeException("Giờ vào ca sớm hơn mức cho phép của ca");
+        }
+
+        if (checkInDateTime.isAfter(schedule.endDateTime())) {
+            throw new RuntimeException("Giờ vào ca không hợp lệ: đã qua thời gian kết thúc ca");
+        }
+
+        if (checkOutDateTime.isAfter(latestCheckOut)) {
+            throw new RuntimeException("Giờ rời ca muộn hơn mức cho phép của ca");
+        }
+
+        if (checkOutDateTime.isBefore(schedule.endDateTime())) {
             throw new RuntimeException("Chưa hết ca, chưa thể chấm công ra");
         }
 
-        if (overnight) {
-            if (timeOut.isAfter(timeIn)) {
-                throw new RuntimeException("Giờ rời ca không hợp lệ cho ca qua đêm");
+        if (checkOutDateTime.isBefore(checkInDateTime)) {
+            throw new RuntimeException("Giờ rời ca không hợp lệ: phải sau giờ vào ca");
+        }
+    }
+
+    private boolean isLateCheckIn(LocalTime timeIn, WorkShiftAssignment assignment) {
+        if (timeIn == null || assignment == null || assignment.getWorkShift() == null) {
+            return false;
+        }
+
+        ShiftSchedule schedule = buildShiftSchedule(assignment);
+        if (schedule == null) {
+            return false;
+        }
+
+        LocalDateTime checkInDateTime = toShiftDateTime(schedule, timeIn, false);
+        if (checkInDateTime == null) {
+            return false;
+        }
+
+        int graceMinutes = Math.max(Optional.ofNullable(assignment.getWorkShift().getGracePeroidMinutes()).orElse(0), 0);
+        LocalDateTime graceCutoff = schedule.startDateTime().plusMinutes(graceMinutes);
+        return checkInDateTime.isAfter(graceCutoff);
+    }
+
+    private ShiftSchedule buildShiftSchedule(WorkShiftAssignment assignment) {
+        if (assignment == null || assignment.getShiftDate() == null || assignment.getWorkShift() == null) {
+            return null;
+        }
+
+        WorkShift shift = assignment.getWorkShift();
+        if (shift.getStartTime() == null || shift.getEndTime() == null) {
+            return null;
+        }
+
+        LocalDateTime startDateTime = LocalDateTime.of(assignment.getShiftDate(), shift.getStartTime());
+        LocalDateTime endDateTime = LocalDateTime.of(assignment.getShiftDate(), shift.getEndTime());
+
+        if (!shift.getEndTime().isAfter(shift.getStartTime())) {
+            endDateTime = endDateTime.plusDays(1);
+        }
+
+        return new ShiftSchedule(startDateTime, endDateTime);
+    }
+
+    private LocalDateTime toShiftDateTime(ShiftSchedule schedule, LocalTime time, boolean preferAfterStart) {
+        if (schedule == null || time == null) {
+            return null;
+        }
+
+        LocalDateTime sameDay = LocalDateTime.of(schedule.startDateTime().toLocalDate(), time);
+        LocalDateTime nextDay = sameDay.plusDays(1);
+
+        if (schedule.endDateTime().toLocalDate().isAfter(schedule.startDateTime().toLocalDate())) {
+            if (sameDay.isBefore(schedule.startDateTime())) {
+                return nextDay;
             }
-            if (timeOut.isBefore(shiftEnd)) {
-                throw new RuntimeException("Chưa hết ca, chưa thể chấm công ra");
+
+            if (preferAfterStart && sameDay.isBefore(schedule.startDateTime())) {
+                return nextDay;
             }
         }
+
+        return sameDay;
+    }
+
+    private boolean isEnabled(Boolean value) {
+        return Boolean.TRUE.equals(value);
+    }
+
+    private PolicyWarning resolvePolicyWarning(WorkShiftAssignment assignment, LocalTime timeIn, LocalTime timeOut) {
+        if (assignment == null || assignment.getWorkShift() == null) {
+            return new PolicyWarning(null, null);
+        }
+
+        ShiftSchedule schedule = buildShiftSchedule(assignment);
+        if (schedule == null) {
+            return new PolicyWarning(null, null);
+        }
+
+        WorkShift shift = assignment.getWorkShift();
+        int earlyClockInMinutes = isEnabled(shift.getAllowEarlyClockIn())
+                ? Math.max(Optional.ofNullable(shift.getEarlyClockInMinutes()).orElse(0), 0)
+                : 0;
+        int lateClockOutMinutes = isEnabled(shift.getAllowLateClockOut())
+                ? Math.max(Optional.ofNullable(shift.getLateClockOutMinutes()).orElse(0), 0)
+                : 0;
+
+        LocalDateTime earliestCheckIn = schedule.startDateTime().minusMinutes(earlyClockInMinutes);
+        LocalDateTime latestCheckOut = schedule.endDateTime().plusMinutes(lateClockOutMinutes);
+
+        LocalDateTime checkInDateTime = toShiftDateTime(schedule, timeIn, false);
+        LocalDateTime checkOutDateTime = toShiftDateTime(schedule, timeOut, true);
+
+        if (timeIn != null && checkInDateTime != null && checkInDateTime.isBefore(earliestCheckIn)) {
+            return new PolicyWarning("EARLY_CLOCK_IN_OUT_OF_WINDOW", "Vào ca sớm hơn mức cho phép");
+        }
+
+        if (timeOut != null && checkOutDateTime != null && checkOutDateTime.isAfter(latestCheckOut)) {
+            return new PolicyWarning("LATE_CLOCK_OUT_OUT_OF_WINDOW", "Rời ca muộn hơn mức cho phép");
+        }
+
+        return new PolicyWarning(null, null);
+    }
+
+    private String policySummary(WorkShiftAssignment assignment) {
+        if (assignment == null || assignment.getWorkShift() == null) {
+            return null;
+        }
+
+        WorkShift shift = assignment.getWorkShift();
+        int earlyClockInMinutes = isEnabled(shift.getAllowEarlyClockIn())
+                ? Math.max(Optional.ofNullable(shift.getEarlyClockInMinutes()).orElse(0), 0)
+                : 0;
+        int lateClockOutMinutes = isEnabled(shift.getAllowLateClockOut())
+                ? Math.max(Optional.ofNullable(shift.getLateClockOutMinutes()).orElse(0), 0)
+                : 0;
+        int graceMinutes = Math.max(Optional.ofNullable(shift.getGracePeroidMinutes()).orElse(0), 0);
+
+        return "Grace " + graceMinutes + "p | Vao som " + earlyClockInMinutes + "p | Ra muon " + lateClockOutMinutes + "p";
+    }
+
+    private record ShiftSchedule(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    }
+
+    private record PolicyWarning(String code, String message) {
     }
 
     private boolean hasShiftEnded(WorkShiftAssignment assignment,

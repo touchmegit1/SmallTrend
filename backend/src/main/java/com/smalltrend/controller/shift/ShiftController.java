@@ -5,6 +5,7 @@ import com.smalltrend.dto.shift.AttendanceResponse;
 import com.smalltrend.dto.shift.AttendanceClockRequest;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
 import com.smalltrend.dto.shift.PayrollSummaryResponse;
+import com.smalltrend.dto.shift.ShiftPolicyPreviewResponse;
 import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
@@ -22,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.math.BigDecimal;
@@ -192,6 +194,17 @@ public class ShiftController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> upsertAttendance(@RequestBody AttendanceUpsertRequest request) {
         AttendanceResponse response = workforceService.upsertAttendance(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/attendance/policy-preview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> previewAttendancePolicy(
+            @RequestParam("shiftId") Integer shiftId,
+            @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
+            @RequestParam(value = "timeIn", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime timeIn,
+            @RequestParam(value = "timeOut", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime timeOut) {
+        ShiftPolicyPreviewResponse response = workforceService.previewShiftPolicy(shiftId, shiftDate, timeIn, timeOut);
         return ResponseEntity.ok(response);
     }
 

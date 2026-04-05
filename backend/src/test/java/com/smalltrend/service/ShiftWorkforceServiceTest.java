@@ -13,6 +13,7 @@ import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.PayrollCalculationRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
+import com.smalltrend.repository.WorkShiftRepository;
 import com.smalltrend.service.shift.ShiftWorkforceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,9 @@ class ShiftWorkforceServiceTest {
     @Mock
     private WorkShiftAssignmentRepository assignmentRepository;
 
+        @Mock
+        private WorkShiftRepository workShiftRepository;
+
     @Mock
     private UserRepository userRepository;
 
@@ -62,9 +66,37 @@ class ShiftWorkforceServiceTest {
         shiftWorkforceService = new ShiftWorkforceService(
                 attendanceRepository,
                 assignmentRepository,
+                workShiftRepository,
                 userRepository,
                 payrollCalculationRepository,
                 mailSender);
+    }
+
+    @Test
+    void previewShiftPolicy_shouldReturnViolation_whenClockOutAfterAllowedWindow() {
+        LocalDate shiftDate = LocalDate.of(2026, 3, 15);
+        WorkShift shift = WorkShift.builder()
+                .id(990)
+                .shiftName("Policy Preview Shift")
+                .startTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(17, 0))
+                .allowEarlyClockIn(true)
+                .earlyClockInMinutes(15)
+                .allowLateClockOut(true)
+                .lateClockOutMinutes(10)
+                .gracePeroidMinutes(5)
+                .build();
+
+        when(workShiftRepository.findById(990)).thenReturn(Optional.of(shift));
+
+        var preview = shiftWorkforceService.previewShiftPolicy(
+                990,
+                shiftDate,
+                LocalTime.of(8, 3),
+                LocalTime.of(17, 30));
+
+        assertTrue(preview.getViolationCodes().contains("LATE_CLOCK_OUT_OUT_OF_WINDOW"));
+        assertEquals(false, preview.getCanCheckOut());
     }
 
     @Test
@@ -411,6 +443,118 @@ class ShiftWorkforceServiceTest {
     }
 
     @Test
+    void upsertAttendance_shouldThrow_whenClockInEarlierThanAllowedWindow() {
+        LocalDate date = LocalDate.of(2026, 3, 12);
+        User user = buildUser(34, "Too Early ClockIn User");
+        WorkShift shift = WorkShift.builder()
+                .id(340)
+                .shiftName("Ca tiêu chuẩn")
+                .startTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(17, 0))
+                .allowEarlyClockIn(false)
+                .build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(341)
+                .user(user)
+                .workShift(shift)
+                .shiftDate(date)
+                .build();
+
+        AttendanceUpsertRequest request = AttendanceUpsertRequest.builder()
+                .userId(34)
+                .date(date)
+                .timeIn(LocalTime.of(7, 30))
+                .timeOut(LocalTime.of(17, 0))
+                .build();
+
+        when(userRepository.findById(34)).thenReturn(Optional.of(user));
+        when(attendanceRepository.findByUserIdAndDate(34, date)).thenReturn(Optional.empty());
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(34, date, date))
+                .thenReturn(List.of(assignment));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> shiftWorkforceService.upsertAttendance(request));
+
+        assertEquals("Giờ vào ca sớm hơn mức cho phép của ca", ex.getMessage());
+    }
+
+    @Test
+    void upsertAttendance_shouldThrow_whenClockOutLaterThanAllowedWindow() {
+        LocalDate date = LocalDate.of(2026, 3, 13);
+        User user = buildUser(35, "Too Late ClockOut User");
+        WorkShift shift = WorkShift.builder()
+                .id(350)
+                .shiftName("Ca giới hạn giờ ra")
+                .startTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(17, 0))
+                .allowLateClockOut(true)
+                .lateClockOutMinutes(15)
+                .build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(351)
+                .user(user)
+                .workShift(shift)
+                .shiftDate(date)
+                .build();
+
+        AttendanceUpsertRequest request = AttendanceUpsertRequest.builder()
+                .userId(35)
+                .date(date)
+                .timeIn(LocalTime.of(8, 0))
+                .timeOut(LocalTime.of(17, 30))
+                .build();
+
+        when(userRepository.findById(35)).thenReturn(Optional.of(user));
+        when(attendanceRepository.findByUserIdAndDate(35, date)).thenReturn(Optional.empty());
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(35, date, date))
+                .thenReturn(List.of(assignment));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> shiftWorkforceService.upsertAttendance(request));
+
+        assertEquals("Giờ rời ca muộn hơn mức cho phép của ca", ex.getMessage());
+    }
+
+    @Test
+    void upsertAttendance_shouldMarkLate_forOvernightShiftAfterMidnightCheckIn() {
+        LocalDate date = LocalDate.of(2026, 3, 14);
+        User user = buildUser(36, "Overnight Late User");
+        WorkShift shift = WorkShift.builder()
+                .id(360)
+                .shiftName("Ca đêm")
+                .startTime(LocalTime.of(22, 0))
+                .endTime(LocalTime.of(6, 0))
+                .gracePeroidMinutes(10)
+                .allowLateClockOut(true)
+                .lateClockOutMinutes(60)
+                .build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(361)
+                .user(user)
+                .workShift(shift)
+                .shiftDate(date)
+                .build();
+
+        AttendanceUpsertRequest request = AttendanceUpsertRequest.builder()
+                .userId(36)
+                .date(date)
+                .timeIn(LocalTime.of(0, 20))
+                .timeOut(LocalTime.of(6, 0))
+                .build();
+
+        when(userRepository.findById(36)).thenReturn(Optional.of(user));
+        when(attendanceRepository.findByUserIdAndDate(36, date)).thenReturn(Optional.empty());
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(36, date, date))
+                .thenReturn(List.of(assignment));
+        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(assignmentRepository.save(any(WorkShiftAssignment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AttendanceResponse response = shiftWorkforceService.upsertAttendance(request);
+
+        assertEquals("LATE", response.getStatus());
+    }
+
+    @Test
     void clockOut_shouldThrow_whenShiftNotEnded() {
         LocalDate shiftDate = LocalDate.now().plusDays(1);
         User user = buildUser(32, "Future Shift User");
@@ -451,6 +595,8 @@ class ShiftWorkforceServiceTest {
                 .shiftName("Ca đã kết thúc")
                 .startTime(LocalTime.of(8, 0))
                 .endTime(LocalTime.of(17, 0))
+                .allowLateClockOut(true)
+                .lateClockOutMinutes(30)
                 .build();
         WorkShiftAssignment assignment = WorkShiftAssignment.builder()
                 .id(331)

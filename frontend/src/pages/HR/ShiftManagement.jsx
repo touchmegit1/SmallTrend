@@ -128,6 +128,9 @@ const ShiftManagement = () => {
     const [editingAssignment, setEditingAssignment] = useState(null);
     const [assignmentForm, setAssignmentForm] = useState(defaultAssignmentForm);
     const [assignmentFormErrors, setAssignmentFormErrors] = useState({});
+    const [assignmentOverlapWarning, setAssignmentOverlapWarning] = useState('');
+    const [assignmentOverlapConflict, setAssignmentOverlapConflict] = useState(false);
+    const [checkingAssignmentOverlap, setCheckingAssignmentOverlap] = useState(false);
 
     const [assignmentFilters, setAssignmentFilters] = useState({ userId: '', shiftId: '' });
     const [processingTicket, setProcessingTicket] = useState(null);
@@ -135,6 +138,11 @@ const ShiftManagement = () => {
     const shiftDurationPreview = useMemo(
         () => calculateShiftDurationPreview(shiftForm.startTime, shiftForm.endTime, shiftForm.breakStartTime, shiftForm.breakEndTime),
         [shiftForm.startTime, shiftForm.endTime, shiftForm.breakStartTime, shiftForm.breakEndTime]
+    );
+
+    const shiftCompensationPreview = useMemo(
+        () => calculateCompensationPreview(shiftForm),
+        [shiftForm]
     );
 
     const assignmentShiftOptions = useMemo(() => {
@@ -198,6 +206,96 @@ const ShiftManagement = () => {
             loadAssignments();
         }
     }, [activeTab, assignmentFilters]);
+
+    useEffect(() => {
+        if (!isAssignmentModalOpen) {
+            setAssignmentOverlapWarning('');
+            setAssignmentOverlapConflict(false);
+            setCheckingAssignmentOverlap(false);
+            return;
+        }
+
+        const userId = Number(assignmentForm.userId);
+        const workShiftId = Number(assignmentForm.workShiftId);
+        const shiftDate = assignmentForm.shiftDate;
+
+        if (!Number.isFinite(userId) || !Number.isFinite(workShiftId) || !shiftDate) {
+            setAssignmentOverlapWarning('');
+            setAssignmentOverlapConflict(false);
+            setCheckingAssignmentOverlap(false);
+            return;
+        }
+
+        const selectedShift = resolveSelectedShift(shifts, editingAssignment, workShiftId);
+        if (!selectedShift?.startTime || !selectedShift?.endTime) {
+            setAssignmentOverlapWarning('Không thể kiểm tra trùng ca vì ca đang thiếu giờ bắt đầu/kết thúc.');
+            setAssignmentOverlapConflict(true);
+            setCheckingAssignmentOverlap(false);
+            return;
+        }
+
+        let cancelled = false;
+        const checkOverlap = async () => {
+            setCheckingAssignmentOverlap(true);
+
+            try {
+                const rows = await shiftService.getAssignments({
+                    userId,
+                    startDate: shiftDateAddDays(shiftDate, -1),
+                    endDate: shiftDateAddDays(shiftDate, 1),
+                });
+
+                if (cancelled) {
+                    return;
+                }
+
+                const conflict = (Array.isArray(rows) ? rows : []).find((item) => {
+                    if (Number(item?.user?.id) !== userId) {
+                        return false;
+                    }
+
+                    if (String(item?.id) === String(editingAssignment?.id || '')) {
+                        return false;
+                    }
+
+                    return isAssignmentOverlap(selectedShift, shiftDate, item?.shift, item?.shiftDate);
+                });
+
+                if (!conflict) {
+                    setAssignmentOverlapWarning('');
+                    setAssignmentOverlapConflict(false);
+                    return;
+                }
+
+                setAssignmentOverlapConflict(true);
+                setAssignmentOverlapWarning(
+                    `Ca bị trùng giờ với ca ${conflict?.shift?.shiftName || 'đã có'} ngày ${formatDate(conflict?.shiftDate)}.`
+                );
+            } catch (err) {
+                if (!cancelled) {
+                    setAssignmentOverlapConflict(false);
+                    setAssignmentOverlapWarning('Không thể kiểm tra overlap theo thời gian thực. Bạn vẫn có thể bấm Lưu để backend kiểm tra lần cuối.');
+                }
+            } finally {
+                if (!cancelled) {
+                    setCheckingAssignmentOverlap(false);
+                }
+            }
+        };
+
+        checkOverlap();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        isAssignmentModalOpen,
+        assignmentForm.userId,
+        assignmentForm.workShiftId,
+        assignmentForm.shiftDate,
+        editingAssignment,
+        shifts,
+    ]);
 
     useEffect(() => {
         const context = location.state?.ticketContext;
@@ -326,6 +424,8 @@ const ShiftManagement = () => {
     const openAssignmentModal = (assignment = null) => {
         setEditingAssignment(assignment);
         setAssignmentFormErrors({});
+        setAssignmentOverlapWarning('');
+        setAssignmentOverlapConflict(false);
         if (assignment) {
             setAssignmentForm({
                 workShiftId: assignment.shift?.id ? String(assignment.shift.id) : '',
@@ -401,11 +501,19 @@ const ShiftManagement = () => {
             const userId = Number(assignmentForm.userId);
             const workShiftId = Number(assignmentForm.workShiftId);
             const shiftDate = assignmentForm.shiftDate;
+            const selectedShift = resolveSelectedShift(shifts, editingAssignment, workShiftId);
+
+            if (!selectedShift?.startTime || !selectedShift?.endTime) {
+                const shiftTimeError = { workShiftId: 'Không thể kiểm tra trùng ca vì ca đang thiếu giờ bắt đầu/kết thúc.' };
+                setAssignmentFormErrors(shiftTimeError);
+                setError(shiftTimeError.workShiftId);
+                return;
+            }
 
             const rowsOnDate = await shiftService.getAssignments({
                 userId,
-                startDate: shiftDate,
-                endDate: shiftDate,
+                startDate: shiftDateAddDays(shiftDate, -1),
+                endDate: shiftDateAddDays(shiftDate, 1),
             });
 
             const duplicateAssignment = (Array.isArray(rowsOnDate) ? rowsOnDate : []).find(
@@ -420,6 +528,32 @@ const ShiftManagement = () => {
                 const duplicateErrors = { workShiftId: 'Phân công này đã tồn tại cho nhân viên trong ngày đã chọn.' };
                 setAssignmentFormErrors(duplicateErrors);
                 setError(duplicateErrors.workShiftId);
+                return;
+            }
+
+            const overlapAssignment = (Array.isArray(rowsOnDate) ? rowsOnDate : []).find((item) => {
+                if (Number(item?.user?.id) !== userId) {
+                    return false;
+                }
+
+                if (String(item?.id) === String(editingAssignment?.id || '')) {
+                    return false;
+                }
+
+                return isAssignmentOverlap(
+                    selectedShift,
+                    shiftDate,
+                    item?.shift,
+                    item?.shiftDate,
+                );
+            });
+
+            if (overlapAssignment) {
+                const overlapErrors = {
+                    workShiftId: `Ca bị trùng giờ với ca ${overlapAssignment?.shift?.shiftName || 'đã có'} ngày ${formatDate(overlapAssignment?.shiftDate)}.`
+                };
+                setAssignmentFormErrors(overlapErrors);
+                setError(overlapErrors.workShiftId);
                 return;
             }
 
@@ -641,6 +775,12 @@ const ShiftManagement = () => {
                                     <div>Staff: {shift.minimumStaffRequired ?? '-'} - {shift.maximumStaffAllowed ?? '-'}</div>
                                     <div>Break: {formatTime(shift.breakStartTime)} - {formatTime(shift.breakEndTime)}</div>
                                     <div>Approval: {shift.requiresApproval ? 'Yes' : 'No'}</div>
+                                    <div>Work: {shift.workingMinutes ?? '--'} phút</div>
+                                    <div>Grace: {shift.gracePeriodMinutes ?? 0} phút</div>
+                                    <div>OT: x{toDecimalDisplay(shift.overtimeMultiplier, 1)}</div>
+                                    <div className="col-span-2">Bonus: Đêm {toDecimalDisplay(shift.nightShiftBonus, 0)}% | Cuối tuần {toDecimalDisplay(shift.weekendBonus, 0)}% | Lễ {toDecimalDisplay(shift.holidayBonus, 0)}%</div>
+                                    <div>Vào sớm: {shift.allowEarlyClockIn ? `Có (${shift.earlyClockInMinutes ?? 0} phút)` : 'Không'}</div>
+                                    <div>Ra muộn: {shift.allowLateClockOut ? `Có (${shift.lateClockOutMinutes ?? 0} phút)` : 'Không'}</div>
                                     <div className="col-span-2">Hiệu lực: {formatDate(shift.effectiveFrom)} - {formatDate(shift.effectiveTo)}</div>
                                 </div>
                                 <div className="mt-4 flex items-center gap-2">
@@ -952,8 +1092,9 @@ const ShiftManagement = () => {
                                         value={shiftForm.gracePeriodMinutes}
                                         onChange={(event) => setShiftForm({ ...shiftForm, gracePeriodMinutes: event.target.value })}
                                         placeholder="Nhập phút"
-                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.gracePeriodMinutes ? 'border-rose-400' : 'border-slate-200'}`}
                                     />
+                                    {shiftFormErrors.gracePeriodMinutes && <p className="text-xs text-rose-600">{shiftFormErrors.gracePeriodMinutes}</p>}
                                 </div>
                             </div>
 
@@ -969,6 +1110,9 @@ const ShiftManagement = () => {
 
                             {showAdvancedShiftOptions && (
                                 <>
+                                    <div className="rounded-lg border border-indigo-100 bg-indigo-50/70 px-3 py-2 text-xs text-indigo-800">
+                                        Các hệ số bên dưới được dùng trực tiếp khi tính lương ca trong bảng lương/chấm công. Vui lòng nhập đúng chính sách thực tế.
+                                    </div>
                                     <div className="grid gap-4 md:grid-cols-3">
                                         <div className="space-y-1">
                                             <label className="text-xs font-medium text-slate-600">Hệ số tăng ca</label>
@@ -978,8 +1122,9 @@ const ShiftManagement = () => {
                                                 value={shiftForm.overtimeMultiplier}
                                                 onChange={(event) => setShiftForm({ ...shiftForm, overtimeMultiplier: event.target.value })}
                                                 placeholder="Ví dụ: 1.5"
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                                className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.overtimeMultiplier ? 'border-rose-400' : 'border-slate-200'}`}
                                             />
+                                            {shiftFormErrors.overtimeMultiplier && <p className="text-xs text-rose-600">{shiftFormErrors.overtimeMultiplier}</p>}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-xs font-medium text-slate-600">Phụ cấp ca đêm (%)</label>
@@ -989,8 +1134,9 @@ const ShiftManagement = () => {
                                                 value={shiftForm.nightShiftBonus}
                                                 onChange={(event) => setShiftForm({ ...shiftForm, nightShiftBonus: event.target.value })}
                                                 placeholder="Nhập phần trăm"
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                                className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.nightShiftBonus ? 'border-rose-400' : 'border-slate-200'}`}
                                             />
+                                            {shiftFormErrors.nightShiftBonus && <p className="text-xs text-rose-600">{shiftFormErrors.nightShiftBonus}</p>}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-xs font-medium text-slate-600">Phụ cấp cuối tuần (%)</label>
@@ -1000,8 +1146,9 @@ const ShiftManagement = () => {
                                                 value={shiftForm.weekendBonus}
                                                 onChange={(event) => setShiftForm({ ...shiftForm, weekendBonus: event.target.value })}
                                                 placeholder="Nhập phần trăm"
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                                className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.weekendBonus ? 'border-rose-400' : 'border-slate-200'}`}
                                             />
+                                            {shiftFormErrors.weekendBonus && <p className="text-xs text-rose-600">{shiftFormErrors.weekendBonus}</p>}
                                         </div>
                                     </div>
 
@@ -1014,8 +1161,9 @@ const ShiftManagement = () => {
                                                 value={shiftForm.holidayBonus}
                                                 onChange={(event) => setShiftForm({ ...shiftForm, holidayBonus: event.target.value })}
                                                 placeholder="Nhập phần trăm"
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                                className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.holidayBonus ? 'border-rose-400' : 'border-slate-200'}`}
                                             />
+                                            {shiftFormErrors.holidayBonus && <p className="text-xs text-rose-600">{shiftFormErrors.holidayBonus}</p>}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-xs font-medium text-slate-600">Vào sớm tối đa (phút)</label>
@@ -1024,8 +1172,9 @@ const ShiftManagement = () => {
                                                 value={shiftForm.earlyClockInMinutes}
                                                 onChange={(event) => setShiftForm({ ...shiftForm, earlyClockInMinutes: event.target.value })}
                                                 placeholder="Nhập phút"
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                                className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.earlyClockInMinutes ? 'border-rose-400' : 'border-slate-200'}`}
                                             />
+                                            {shiftFormErrors.earlyClockInMinutes && <p className="text-xs text-rose-600">{shiftFormErrors.earlyClockInMinutes}</p>}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-xs font-medium text-slate-600">Ra muộn tối đa (phút)</label>
@@ -1034,9 +1183,14 @@ const ShiftManagement = () => {
                                                 value={shiftForm.lateClockOutMinutes}
                                                 onChange={(event) => setShiftForm({ ...shiftForm, lateClockOutMinutes: event.target.value })}
                                                 placeholder="Nhập phút"
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                                className={`w-full rounded-lg border px-3 py-2 text-sm ${shiftFormErrors.lateClockOutMinutes ? 'border-rose-400' : 'border-slate-200'}`}
                                             />
+                                            {shiftFormErrors.lateClockOutMinutes && <p className="text-xs text-rose-600">{shiftFormErrors.lateClockOutMinutes}</p>}
                                         </div>
+                                    </div>
+
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                                        {shiftCompensationPreview}
                                     </div>
 
                                     <div className="grid gap-4 md:grid-cols-3">
@@ -1127,6 +1281,12 @@ const ShiftManagement = () => {
                                     ]}
                                 />
                                 {assignmentFormErrors.workShiftId && <p className="text-xs text-rose-600">{assignmentFormErrors.workShiftId}</p>}
+                                {!assignmentFormErrors.workShiftId && assignmentOverlapWarning && (
+                                    <p className="text-xs text-amber-700">{assignmentOverlapWarning}</p>
+                                )}
+                                {checkingAssignmentOverlap && (
+                                    <p className="text-xs text-slate-500">Đang kiểm tra trùng ca theo thời gian thực...</p>
+                                )}
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs font-medium text-slate-600">Nhân viên</label>
@@ -1173,7 +1333,8 @@ const ShiftManagement = () => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-lg border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+                                    disabled={assignmentOverlapConflict}
+                                    className={`rounded-lg border border-indigo-600 px-4 py-2 text-sm text-white ${assignmentOverlapConflict ? 'cursor-not-allowed bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'}`}
                                 >
                                     Lưu phân công
                                 </button>
@@ -1196,6 +1357,19 @@ const formatDate = (value) => {
     return new Date(value).toLocaleDateString('vi-VN');
 };
 
+const toDecimalDisplay = (value, fallback = 0) => {
+    if (value === null || value === undefined || value === '') {
+        return fallback;
+    }
+
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) {
+        return fallback;
+    }
+
+    return numeric.toString();
+};
+
 const toTimeInput = (value) => {
     if (!value) return '';
     return value.toString().slice(0, 5);
@@ -1211,6 +1385,8 @@ const toDateInput = (value) => {
 
 const buildShiftPayload = (form) => {
     const isTemporary = String(form.shiftType || '').toUpperCase() === 'TEMPORARY';
+    const allowEarlyClockIn = !!form.allowEarlyClockIn;
+    const allowLateClockOut = !!form.allowLateClockOut;
     return {
         shiftCode: form.shiftCode.trim(),
         shiftName: form.shiftName.trim(),
@@ -1225,10 +1401,10 @@ const buildShiftPayload = (form) => {
         holidayBonus: form.holidayBonus !== '' ? Number(form.holidayBonus) : null,
         minimumStaffRequired: form.minimumStaffRequired !== '' ? Number(form.minimumStaffRequired) : null,
         maximumStaffAllowed: form.maximumStaffAllowed !== '' ? Number(form.maximumStaffAllowed) : null,
-        allowEarlyClockIn: form.allowEarlyClockIn,
-        allowLateClockOut: form.allowLateClockOut,
-        earlyClockInMinutes: form.earlyClockInMinutes !== '' ? Number(form.earlyClockInMinutes) : null,
-        lateClockOutMinutes: form.lateClockOutMinutes !== '' ? Number(form.lateClockOutMinutes) : null,
+        allowEarlyClockIn,
+        allowLateClockOut,
+        earlyClockInMinutes: allowEarlyClockIn && form.earlyClockInMinutes !== '' ? Number(form.earlyClockInMinutes) : null,
+        lateClockOutMinutes: allowLateClockOut && form.lateClockOutMinutes !== '' ? Number(form.lateClockOutMinutes) : null,
         gracePeriodMinutes: form.gracePeriodMinutes !== '' ? Number(form.gracePeriodMinutes) : null,
         status: form.status,
         effectiveFrom: isTemporary ? (form.effectiveFrom || null) : null,
@@ -1299,6 +1475,42 @@ const validateShiftForm = (form) => {
 
     if (minStaff !== null && maxStaff !== null && minStaff > maxStaff) {
         errors.maximumStaffAllowed = 'Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu.';
+    }
+
+    const overtimeMultiplier = form.overtimeMultiplier === '' ? null : Number(form.overtimeMultiplier);
+    const nightShiftBonus = form.nightShiftBonus === '' ? null : Number(form.nightShiftBonus);
+    const weekendBonus = form.weekendBonus === '' ? null : Number(form.weekendBonus);
+    const holidayBonus = form.holidayBonus === '' ? null : Number(form.holidayBonus);
+    const gracePeriodMinutes = form.gracePeriodMinutes === '' ? null : Number(form.gracePeriodMinutes);
+    const earlyClockInMinutes = form.earlyClockInMinutes === '' ? null : Number(form.earlyClockInMinutes);
+    const lateClockOutMinutes = form.lateClockOutMinutes === '' ? null : Number(form.lateClockOutMinutes);
+
+    if (overtimeMultiplier !== null && (Number.isNaN(overtimeMultiplier) || overtimeMultiplier < 1 || overtimeMultiplier > 5)) {
+        errors.overtimeMultiplier = 'Hệ số tăng ca phải trong khoảng từ 1 đến 5.';
+    }
+
+    if (nightShiftBonus !== null && (Number.isNaN(nightShiftBonus) || nightShiftBonus < 0 || nightShiftBonus > 300)) {
+        errors.nightShiftBonus = 'Phụ cấp ca đêm phải trong khoảng 0% đến 300%.';
+    }
+
+    if (weekendBonus !== null && (Number.isNaN(weekendBonus) || weekendBonus < 0 || weekendBonus > 300)) {
+        errors.weekendBonus = 'Phụ cấp cuối tuần phải trong khoảng 0% đến 300%.';
+    }
+
+    if (holidayBonus !== null && (Number.isNaN(holidayBonus) || holidayBonus < 0 || holidayBonus > 300)) {
+        errors.holidayBonus = 'Phụ cấp ngày lễ phải trong khoảng 0% đến 300%.';
+    }
+
+    if (gracePeriodMinutes !== null && (Number.isNaN(gracePeriodMinutes) || gracePeriodMinutes < 0)) {
+        errors.gracePeriodMinutes = 'Thời gian ân hạn phải lớn hơn hoặc bằng 0.';
+    }
+
+    if (form.allowEarlyClockIn && (earlyClockInMinutes === null || Number.isNaN(earlyClockInMinutes) || earlyClockInMinutes < 0)) {
+        errors.earlyClockInMinutes = 'Vào sớm tối đa phải lớn hơn hoặc bằng 0 khi bật tính năng vào sớm.';
+    }
+
+    if (form.allowLateClockOut && (lateClockOutMinutes === null || Number.isNaN(lateClockOutMinutes) || lateClockOutMinutes < 0)) {
+        errors.lateClockOutMinutes = 'Ra muộn tối đa phải lớn hơn hoặc bằng 0 khi bật tính năng ra muộn.';
     }
 
     return errors;
@@ -1429,6 +1641,89 @@ const calculateShiftDurationPreview = (startTime, endTime, breakStart, breakEnd)
         minutes: workingMinutes,
         label: `${hours} giờ (${workingMinutes} phút) - Tổng ca ${plannedMinutes} phút${breakMinutes > 0 ? `, nghỉ ${breakMinutes} phút` : ''}`,
     };
+};
+
+const calculateCompensationPreview = (form) => {
+    const overtime = form.overtimeMultiplier === '' ? 1 : Number(form.overtimeMultiplier);
+    const night = form.nightShiftBonus === '' ? 0 : Number(form.nightShiftBonus);
+    const weekend = form.weekendBonus === '' ? 0 : Number(form.weekendBonus);
+    const holiday = form.holidayBonus === '' ? 0 : Number(form.holidayBonus);
+
+    const safeOvertime = Number.isFinite(overtime) ? overtime : 1;
+    const safeNight = Number.isFinite(night) ? night : 0;
+    const safeWeekend = Number.isFinite(weekend) ? weekend : 0;
+    const safeHoliday = Number.isFinite(holiday) ? holiday : 0;
+    const totalBonus = safeNight + safeWeekend + safeHoliday;
+
+    return `Áp dụng tính lương: tăng ca x${safeOvertime.toFixed(2)}, tổng phụ cấp cộng thêm ${totalBonus.toFixed(1)}%.`;
+};
+
+const resolveSelectedShift = (shifts, editingAssignment, workShiftId) => {
+    const selected = (shifts || []).find((shift) => Number(shift?.id) === Number(workShiftId));
+    if (selected) {
+        return selected;
+    }
+
+    if (Number(editingAssignment?.shift?.id) === Number(workShiftId)) {
+        return editingAssignment.shift;
+    }
+
+    return null;
+};
+
+const shiftDateAddDays = (isoDate, days) => {
+    if (!isoDate) {
+        return isoDate;
+    }
+
+    const [year, month, day] = String(isoDate).split('-').map(Number);
+    if ([year, month, day].some((value) => Number.isNaN(value))) {
+        return isoDate;
+    }
+
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + days);
+    const nextYear = date.getUTCFullYear();
+    const nextMonth = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const nextDay = String(date.getUTCDate()).padStart(2, '0');
+    return `${nextYear}-${nextMonth}-${nextDay}`;
+};
+
+const isAssignmentOverlap = (candidateShift, candidateDate, existingShift, existingDate) => {
+    const candidateInterval = buildShiftInterval(candidateShift, candidateDate);
+    const existingInterval = buildShiftInterval(existingShift, existingDate);
+
+    if (!candidateInterval || !existingInterval) {
+        return false;
+    }
+
+    return candidateInterval.start < existingInterval.end && existingInterval.start < candidateInterval.end;
+};
+
+const buildShiftInterval = (shift, shiftDate) => {
+    const startMinutes = hmToMinutes(formatTime(shift?.startTime));
+    const endMinutes = hmToMinutes(formatTime(shift?.endTime));
+
+    if (startMinutes === null || endMinutes === null || !shiftDate) {
+        return null;
+    }
+
+    const [year, month, day] = String(shiftDate).split('-').map(Number);
+    if ([year, month, day].some((value) => Number.isNaN(value))) {
+        return null;
+    }
+
+    const date = new Date(Date.UTC(year, month - 1, day));
+    const epochDay = Math.floor(date.getTime() / (24 * 60 * 60 * 1000));
+    const dayMinutes = 24 * 60;
+    const start = (epochDay * dayMinutes) + startMinutes;
+    let end = (epochDay * dayMinutes) + endMinutes;
+
+    if (end <= start) {
+        end += dayMinutes;
+    }
+
+    return { start, end };
 };
 
 const statusPillClass = (status) => {

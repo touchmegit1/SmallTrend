@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,6 +60,15 @@ public class ShiftValidator {
         if (minStaff != null && maxStaff != null && minStaff > maxStaff) {
             errors.add("Minimum staff cannot exceed maximum staff");
         }
+
+        validateDecimalRange(errors, request.getOvertimeMultiplier(), "Overtime multiplier", new BigDecimal("1.00"), new BigDecimal("5.00"));
+        validateDecimalRange(errors, request.getNightShiftBonus(), "Night shift bonus", BigDecimal.ZERO, new BigDecimal("300.00"));
+        validateDecimalRange(errors, request.getWeekendBonus(), "Weekend bonus", BigDecimal.ZERO, new BigDecimal("300.00"));
+        validateDecimalRange(errors, request.getHolidayBonus(), "Holiday bonus", BigDecimal.ZERO, new BigDecimal("300.00"));
+
+        validateMinutes(errors, request.getGracePeriodMinutes(), "Grace period minutes");
+        validateMinutes(errors, request.getEarlyClockInMinutes(), "Early clock in minutes");
+        validateMinutes(errors, request.getLateClockOutMinutes(), "Late clock out minutes");
 
         LocalDate effectiveFrom = request.getEffectiveFrom();
         LocalDate effectiveTo = request.getEffectiveTo();
@@ -156,5 +166,25 @@ public class ShiftValidator {
         ranges.add(new long[]{from, to});
         ranges.add(new long[]{from + dayMinutes, to + dayMinutes});
         return ranges;
+    }
+
+    private void validateDecimalRange(List<String> errors, BigDecimal value, String field, BigDecimal min, BigDecimal max) {
+        if (value == null) {
+            return;
+        }
+
+        if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
+            errors.add(field + " must be between " + min + " and " + max);
+        }
+    }
+
+    private void validateMinutes(List<String> errors, Integer value, String field) {
+        if (value == null) {
+            return;
+        }
+
+        if (value < 0) {
+            errors.add(field + " must be 0 or greater");
+        }
     }
 }
