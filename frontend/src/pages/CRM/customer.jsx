@@ -292,6 +292,7 @@ export default function CustomerManagement() {
   const normalizePhone = (value) => (value || '').replace(/\D/g, '').slice(0, 11);
   const isValidPhone = (value) => /^0\d{9,10}$/.test(value || '');
 
+  // search by name or phone
   const filteredCustomers = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -300,7 +301,7 @@ export default function CustomerManagement() {
 
   const totalCustomers = customers.length;
 
-  // ─── Tính hạng từ spentAmount ──────────────────────
+  // get customer's tier based on spent amount
   const getTier = (spentAmount) => {
     if (!tiers || tiers.length === 0) return null;
     return [...tiers]
@@ -308,12 +309,13 @@ export default function CustomerManagement() {
       .find(tier => spentAmount >= Number(tier.minSpending)) || null;
   };
 
-  // ─── Báo cáo phân bổ tier ──────────────────────────
+  // tier progress bar
   const tierReport = tiers.map(tier => ({
     ...tier,
     count: customers.filter(c => getTier(c.spentAmount || 0)?.id === tier.id).length,
   }));
 
+  // delete customer
   const handleDelete = (id) => setConfirmDelete(id);
 
   const handleConfirmDelete = async () => {
@@ -331,6 +333,7 @@ export default function CustomerManagement() {
     }
   };
 
+  // edit customer
   const handleEdit = (customer) => {
     setSelectedCustomer(customer);
     setEditForm({ name: customer.name, phone: customer.phone });
@@ -356,6 +359,7 @@ export default function CustomerManagement() {
     }
   };
 
+  // add new customer
   const handleAddNew = () => {
     setAddForm({ name: "", phone: "" });
     setShowAddModal(true);
