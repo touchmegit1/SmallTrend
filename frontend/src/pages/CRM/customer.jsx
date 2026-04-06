@@ -336,13 +336,19 @@ export default function CustomerManagement() {
   // edit customer
   const handleEdit = (customer) => {
     setSelectedCustomer(customer);
-    setEditForm({ name: customer.name, phone: customer.phone });
+    setEditForm({ name: customer.name, phone: normalizePhone(customer.phone) });
     setShowEditModal(true);
   };
+
+  const isEditPhoneInvalid = editForm.phone.length > 0 && !isValidPhone(editForm.phone);
 
   const saveEdit = async () => {
     if (!editForm.name.trim() || !editForm.phone.trim()) {
       showToast('Vui lòng điền đầy đủ thông tin', 'warning');
+      return;
+    }
+    if (!isValidPhone(editForm.phone)) {
+      showToast('Số điện thoại không hợp lệ. Vui lòng nhập 10-11 số và bắt đầu bằng 0.', 'warning');
       return;
     }
     try {
@@ -639,12 +645,22 @@ export default function CustomerManagement() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Số điện thoại</label>
-                    <input type="tel" className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      className={`w-full border rounded-lg p-2.5 text-sm focus:outline-none focus:ring-1 ${isEditPhoneInvalid ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: normalizePhone(e.target.value) })}
+                    />
+                    {isEditPhoneInvalid && (
+                      <p className="text-xs text-red-500 mt-1.5">Số điện thoại phải có 10-11 số và bắt đầu bằng 0.</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-3 p-6 border-t border-slate-100">
                   <button className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2.5 rounded-lg transition-colors text-sm" onClick={() => { setShowEditModal(false); setSelectedCustomer(null); }} disabled={isSubmitting}>Hủy</button>
-                  <button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm disabled:bg-indigo-400" onClick={saveEdit} disabled={isSubmitting}>{isSubmitting ? "Đang lưu..." : "Lưu"}</button>
+                  <button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm disabled:bg-indigo-400" onClick={saveEdit} disabled={isSubmitting || isEditPhoneInvalid}>{isSubmitting ? "Đang lưu..." : "Lưu"}</button>
                 </div>
               </div>
             </div>
