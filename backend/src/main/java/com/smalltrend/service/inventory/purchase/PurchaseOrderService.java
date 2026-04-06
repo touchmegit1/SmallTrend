@@ -974,7 +974,9 @@ public class PurchaseOrderService {
                     .quantity(finalQty)
                     .build();
             inventoryStockRepository.save(stock);
-            inventoryStockService.syncConvertedStocksFromBase(baseVariant, targetLocation, batch);
+            if (inventoryStockService != null) {
+                inventoryStockService.syncConvertedStocksFromBase(baseVariant, targetLocation, batch);
+            }
 
             StockMovement movement = StockMovement.builder()
                     .variant(baseVariant)

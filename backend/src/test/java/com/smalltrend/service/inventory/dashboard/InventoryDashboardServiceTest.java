@@ -92,7 +92,7 @@ class InventoryDashboardServiceTest {
 
     @Test
     void getAllProductsForDashboard_shouldReturnProductsWithStock() {
-        when(productRepository.findAll()).thenReturn(List.of(product));
+        when(productVariantRepository.findAll()).thenReturn(List.of(variant));
         when(inventoryStockRepository.findAll()).thenReturn(List.of(stock));
 
         List<DashboardProductResponse> responses = inventoryDashboardService.getAllProductsForDashboard();
@@ -132,7 +132,7 @@ class InventoryDashboardServiceTest {
 
     @Test
     void getDashboardSummary_shouldReturnSummary() {
-        when(productRepository.findAll()).thenReturn(List.of(product));
+        when(productVariantRepository.findAll()).thenReturn(List.of(variant));
         when(inventoryStockRepository.findAll()).thenReturn(List.of(stock));
         when(productBatchRepository.findExpiredBatches(any())).thenReturn(List.of());
         when(productBatchRepository.findExpiringSoonBatches(any(), any())).thenReturn(List.of(batch));

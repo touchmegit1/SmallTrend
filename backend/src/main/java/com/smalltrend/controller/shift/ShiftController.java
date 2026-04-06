@@ -2,10 +2,8 @@ package com.smalltrend.controller.shift;
 
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.shift.AttendanceResponse;
-import com.smalltrend.dto.shift.AttendanceClockRequest;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
 import com.smalltrend.dto.shift.PayrollSummaryResponse;
-import com.smalltrend.dto.shift.ShiftPolicyPreviewResponse;
 import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
@@ -23,7 +21,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.math.BigDecimal;
@@ -197,43 +194,6 @@ public class ShiftController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/attendance/policy-preview")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
-    public ResponseEntity<?> previewAttendancePolicy(
-            @RequestParam("shiftId") Integer shiftId,
-            @RequestParam("shiftDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
-            @RequestParam(value = "timeIn", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime timeIn,
-            @RequestParam(value = "timeOut", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime timeOut) {
-        ShiftPolicyPreviewResponse response = workforceService.previewShiftPolicy(shiftId, shiftDate, timeIn, timeOut);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/clock-in")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
-    public ResponseEntity<?> clockIn(@RequestBody AttendanceClockRequest request) {
-        AttendanceUpsertRequest upsertRequest = AttendanceUpsertRequest.builder()
-                .userId(request.getUserId())
-                .date(request.getDate())
-                .timeIn(request.getClockTime())
-                .status("PRESENT")
-                .build();
-        AttendanceResponse response = workforceService.clockIn(upsertRequest);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/clock-out")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
-    public ResponseEntity<?> clockOut(@RequestBody AttendanceClockRequest request) {
-        AttendanceUpsertRequest upsertRequest = AttendanceUpsertRequest.builder()
-                .userId(request.getUserId())
-                .date(request.getDate())
-                .timeOut(request.getClockTime())
-                .status("PRESENT")
-                .build();
-        AttendanceResponse response = workforceService.clockOut(upsertRequest);
-        return ResponseEntity.ok(response);
-    }
-
     @GetMapping("/payroll/summary")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> payrollSummary(
@@ -276,14 +236,10 @@ public class ShiftController {
                 userId, "ALL");
 
         int total = attendanceRows.size();
-        int present = (int) attendanceRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
-                
-                .count();
+        int present = (int) attendanceRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
         int late = (int) attendanceRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
-        int absent = (int) attendanceRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).co
-                unt();
-        int onLeave = (int) attendanceRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus()))
-                .count();
+        int absent = (int) attendanceRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+        int onLeave = (int) attendanceRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus())).count();
 
         if (total == 0) {
             YearMonth startMonth = fromMonth != null && !fromMonth.isBlank()
@@ -300,26 +256,10 @@ public class ShiftController {
 
             if (!monthlyRows.isEmpty()) {
                 total = monthlyRows.size();
-                present = (
-                        int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
-                        .count();
-                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIg
-                        noreCase(item.getStatus())).count();
-                        int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
-                        .count();
-                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIg
-                        noreCase(item.getStatus())).count();
-                        int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
-                        .count();
-                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIg
-                        noreCase(item.getStatus())).count();
-                        int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus()))
-                        .count();
-                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIg
-                        noreCase(item.getStatus())).count();
+                present = (int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
+                late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
                 absent = (int) monthlyRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
-                onLeave = (int) monthlyRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus()))
-                        .count();
+                onLeave = (int) monthlyRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus())).count();
             }
         }
 

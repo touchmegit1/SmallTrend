@@ -4,9 +4,9 @@ import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.WorkShiftRequest;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,23 +61,6 @@ public class ShiftValidator {
             errors.add("Minimum staff cannot exceed maximum staff");
         }
 
-        validateDecimalRange(errors, request.getOvertimeMultiplier(), "Overtime multiplier", new BigDecimal("1.00"),
-               
-                new BigDecimal("5.00"));
-        validateDecimalRange(errors, request.getNightShiftBonus
-               (), "Night shift bonus", BigDecima
-               l.ZERO,
-                new BigDecimal("300.00"));
-        validateDecimalRange(errors, request.getWeeken
-               dBonus(), "Weekend bonus", BigDecimal.ZERO,
-                new BigDecimal("300.00"));
-        validateDecimalRange(errors, request.getHolidayBonus(), "Holiday bonus", BigDecimal.ZERO,
-                new BigDecimal("300.00"));
-
-        validateMinutes(errors, request.getGracePeriodMinutes(), "Grace period minutes");
-        validateMinutes(errors, request.getEarlyClockInMinutes(), "Early clock in minutes");
-        validateMinutes(errors, request.getLateClockOutMinutes(), "Late clock out minutes");
-
         LocalDate effectiveFrom = request.getEffectiveFrom();
         LocalDate effectiveTo = request.getEffectiveTo();
         String shiftType = request.getShiftType() != null ? request.getShiftType().trim().toUpperCase() : "REGULAR";
@@ -94,6 +77,19 @@ public class ShiftValidator {
         if (effectiveFrom != null && effectiveTo != null && effectiveTo.isBefore(effectiveFrom)) {
             errors.add("Effective to date must be after or equal to effective from date");
         }
+
+        validateDecimalRange(errors, request.getOvertimeMultiplier(), "Overtime multiplier", new BigDecimal("1.00"),
+            new BigDecimal("5.00"));
+        validateDecimalRange(errors, request.getNightShiftBonus(), "Night shift bonus", BigDecimal.ZERO,
+            new BigDecimal("300.00"));
+        validateDecimalRange(errors, request.getWeekendBonus(), "Weekend bonus", BigDecimal.ZERO,
+            new BigDecimal("300.00"));
+        validateDecimalRange(errors, request.getHolidayBonus(), "Holiday bonus", BigDecimal.ZERO,
+            new BigDecimal("300.00"));
+
+        validateMinutes(errors, request.getGracePeriodMinutes(), "Grace period minutes");
+        validateMinutes(errors, request.getEarlyClockInMinutes(), "Early clock in minutes");
+        validateMinutes(errors, request.getLateClockOutMinutes(), "Late clock out minutes");
 
         return errors;
     }
@@ -162,37 +158,21 @@ public class ShiftValidator {
     private List<long[]> expandRange(LocalTime start, LocalTime end) {
         long dayMinutes = 24 * 60;
         long from = start.toSecondOfDay() / 60;
-        long to = end.toSecondOfD a y() / 60;
+        long to = end.toSecondOfDay() / 60;
 
-        Li st<long[]> ranges = ne w  ArrayList<>();
-         if (to <= from) {
-            ranges.add(new long[] { from, to + dayMinutes });
-            ranges.add(new lo n g[] { fr om - dayMinutes, to });
+        List<long[]> ranges = new ArrayList<>();
+        if (to <= from) {
+            ranges.add(new long[]{from, to + dayMinutes});
+            ranges.add(new long[]{from - dayMinutes, to});
             return ranges;
-          }
+        }
 
-        ranges.add(new lon g[] { from, to });
-        ranges.add(new long[] { from + dayMinutes, to + dayMinutes });
+        ranges.add(new long[]{from, to});
+        ranges.add(new long[]{from + dayMinutes, to + dayMinutes});
         return ranges;
     }
 
-    p
-           rivate void validateDecimalRange(List<String> errors, BigDecimal value, String field, BigDecimal min,
-        return ranges;
-    }
-
-    p
-           rivate void validateDecimalRange(List<String> errors, BigDecimal value, String field, BigDecimal min,
-        return ranges;
-    }
-
-    p
-           rivate void validateDecimalRange(List<String> errors, BigDecimal value, String field, BigDecimal min,
-        return ranges;
-    }
-
-    p
-           rivate void validateDecimalRange(List<String> errors, BigDecimal value, String field, BigDecimal min,
+    private void validateDecimalRange(List<String> errors, BigDecimal value, String field, BigDecimal min,
             BigDecimal max) {
         if (value == null) {
             return;

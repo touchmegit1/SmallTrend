@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
@@ -77,8 +76,8 @@ public class WorkShiftAssignmentService {
                 request.getUserId(),
                 request.getShiftDate())
                 && !(assignment.getWorkShift().getId().equals(request.getWorkShiftId())
-                                && assignment.getUser().getId().equals(request.getUserId())
-                                && assignment.getShiftDate().equals(request.getShiftDate()))) {
+                && assignment.getUser().getId().equals(request.getUserId())
+                && assignment.getShiftDate().equals(request.getShiftDate()))) {
             throw new RuntimeException("Assignment already exists for this shift and date");
         }
 
@@ -104,9 +103,7 @@ public class WorkShiftAssignmentService {
             Integer shiftId) {
         List<WorkShiftAssignment> assignments;
         if (userId != null) {
-            assignments = assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, startDate,
-                   
-                    endDate);
+            assignments = assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, startDate, endDate);
         } else {
             assignments = assignmentRepository.findByShiftDateBetweenAndDeletedFalse(startDate, endDate);
         }
@@ -125,40 +122,8 @@ public class WorkShiftAssignmentService {
     public void deleteAssignment(Integer id) {
         WorkShiftAssignment assignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Assignment not found"));
-
-        if (!isRecentlyAssigned(assignment)) {
-            String assignmentStatus = Optional.ofNullable(assignment.getStatus()).orElse("").trim().toUpperCase();
-            boolean isUnchangedAssignment = assignmentStatus.isBlank() || "ASSIGNED".equals(assignmentStatus);
-            if (!isUnchangedAssignment) {
-                throw new RuntimeException("Không thể xóa ca đã chuyển trạng thái");
-            }
-        }
-
-        Optional<Attendance> attendanceOpt = attendanceRepository.findByUserIdAndDate(
-                assignment.getUser().getId(),
-                assignment.getShiftDate());
-
-        if (attendanceOpt.isPresent()) {
-            Attendance attendance = attendanceOpt.get();
-            String status = Optional.ofNullable(attendance.getStatus()).orElse("").trim().toUpperCase();
-            boolean hasCheckinData = attendance.getTimeIn() != null || attendance.getTimeOut() != null;
-            boolean hasStatusProgress = !status.isBlank() && !"PENDING".equals(status);
-
-            if (hasCheckinData || hasStatusProgress) {
-                throw new RuntimeException("Không thể xóa ca đã có dữ liệu chấm công");
-            }
-        }
-
         assignment.setDeleted(true);
         assignmentRepository.save(assignment);
-    }
-
-    private boolean isRecentlyAssigned(WorkShiftAssignment assignment) {
-        LocalDateTime createdAt = assignment.getCreatedAt();
-        if (createdAt == null) {
-            return false;
-        }
-        return !createdAt.plusMinutes(10).isBefore(LocalDateTime.now());
     }
 
     public String executeSwap(ShiftSwapExecuteRequest request) {
@@ -166,9 +131,7 @@ public class WorkShiftAssignmentService {
             throw new RuntimeException("Thiếu thông tin ca của người yêu cầu");
         }
 
-        WorkShiftAssignment requesterAssignment = assignmentRepositor
-                y
-                .findByIdAndDeletedFalse(request.getRequesterAssignmentId())
+        WorkShiftAssignment requesterAssignment = assignmentRepository.findByIdAndDeletedFalse(request.getRequesterAssignmentId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người yêu cầu"));
 
         Integer accepterUserId = request.getAccepterUserId();
@@ -364,15 +327,10 @@ public class WorkShiftAssignmentService {
             return;
         }
 
-        List<WorkShiftAssignment> nearbyAssignments = assignmentRepository
-                .findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, shiftDate.minusDays(1), shiftDate.plusDays(1));
+        List<WorkShiftAssignment> sameDayAssignments = assignmentRepository
+                .findByUserIdAndShiftDateAndDeletedFalse(userId, shiftDate);
 
-        ShiftInterval candidateInterval = toInterval(candidateShift, shiftDate);
-        if (candidateInterval == null) {
-            return;
-        }
-
-        for (WorkShiftAssignment existing : nearbyAssignments) {
+        for (WorkShiftAssignment existing : sameDayAssignments) {
             if (existing == null || existing.getId() == null) {
                 continue;
             }
@@ -386,51 +344,44 @@ public class WorkShiftAssignmentService {
                 continue;
             }
 
-            ShiftInterval existingInterval = toInterval(existingShift, existing.getShiftDate());
-            if (existingInterval == null) {
-                continue;
-            }
-
-            if (rangesOverlap(candidateInterval.startMinute(), candidateInterv
-                   al.endMinute(),
-                    existingInterval.startMinute(), existingInterval.endMinute())) {
+            if (hasShiftOverlap(candidateShift, existingShift)) {
                 throw new RuntimeException(
-                        "Không thể phân ca bị overlap với ca "
-                                + Optional.ofNullable(existingShift.getShiftName()).orElse("đã có")
-                                + " ngày " + existing.getShiftDate());
+                        "Không thể phân ca bị overlap: ca mới bắt đầu trước khi ca còn lại kết thúc");
             }
         }
     }
 
-    private ShiftInterval toInterval(WorkShift shift, LocalDate shiftDate) {
-        if (shift == null || shiftDate == null) {
-            return null;
-        }
+    private boolean hasShiftOverlap(WorkShift candidateShift, WorkShift existingShift) {
+        LocalTime candidateStart = candidateShift.getStartTime();
+        LocalTime candidateEnd = candidateShift.getEndTime();
+        LocalTime existingStart = existingShift.getStartTime();
+        LocalTime existingEnd = existingShift.getEndTime();
 
-        LocalTime start = shift.getStartTime();
-        LocalTime end = shift.getEndTime();
-
-        if (start == null || end == null) {
-            return null;
+        if (candidateStart == null || candidateEnd == null || existingStart == null || existingEnd == null) {
+            return false;
         }
 
         long dayMinutes = 24 * 60;
-        long dayOffset = shiftDate.toEpochDay() * dayMinutes;
-        long startMinute = dayOffset + (start.toSecondOfDay() / 60);
-        long endMinute = dayOffset + (end.toSecondOfDay() / 60);
+        long cStart = candidateStart.toSecondOfDay() / 60;
+        long cEnd = candidateEnd.toSecondOfDay() / 60;
+        long eStart = existingStart.toSecondOfDay() / 60;
+        long eEnd = existingEnd.toSecondOfDay() / 60;
 
-        if (endMinute <= startMinute) {
-            endMinute += dayMinutes;
+        if (cEnd <= cStart) {
+            cEnd += dayMinutes;
         }
 
-        return new ShiftInterval(startMinute, endMinute);
+        if (eEnd <= eStart) {
+            eEnd += dayMinutes;
+        }
+
+        return rangesOverlap(cStart, cEnd, eStart, eEnd)
+                || rangesOverlap(cStart, cEnd, eStart + dayMinutes, eEnd + dayMinutes)
+                || rangesOverlap(cStart + dayMinutes, cEnd + dayMinutes, eStart, eEnd);
     }
 
     private boolean rangesOverlap(long startA, long endA, long startB, long endB) {
         return startA < endB && startB < endA;
-    }
-
-    private record ShiftInterval(long startMinute, long endMinute) {
     }
 
     private Set<Integer> setOfIds(Integer... ids) {
@@ -456,40 +407,21 @@ public class WorkShiftAssignmentService {
                 .id(assignment.getId())
                 .shiftDate(assignment.getShiftDate())
                 .status(assignment.getStatus())
-                .notes(assignment.getNotes(
-                       ))
-                .created        At(assignment.getCreatedAt())
-                .updated        At(assignment.getUpdatedAt())
-                .shift(s        hift == null ? null
-                                : ShiftAssignmentResponse.ShiftSummary.builder()
-                                        .id(shift.getId())
-                                        .shiftCode(shift.getShiftCode())
-                                .shiftNam
-                       e(shift.getShiftName())
-                                        .startTime(shift.getStartTime())
-                                        .endTime(shift.getEndTime())
-                                        .build())
-                .user(us        er == null ? null
-                       e(shift.getShiftName())
-                                        .startTime(shift.getStartTime())
-                                        .endTime(shift.getEndTime())
-                                        .build())
-                .user(us        er == null ? null
-                       e(shift.getShiftName())
-                                        .startTime(shift.getStartTime())
-                                        .endTime(shift.getEndTime())
-                                        .build())
-                .user(us        er == null ? null
-                       e(shift.getShiftName())
-                                        .startTime(shift.getStartTime())
-                                        .endTime(shift.getEndTime())
-                                        .build())
-                .user(us        er == null ? null
-                        : ShiftAssignmentResponse.UserSummary.builder()
-                                .id(user.getId())
-                                .fullName(user.getFullName())
-                                .email(user.getEmail())
-                                .build())
+                .notes(assignment.getNotes())
+                .createdAt(assignment.getCreatedAt())
+                .updatedAt(assignment.getUpdatedAt())
+                .shift(shift == null ? null : ShiftAssignmentResponse.ShiftSummary.builder()
+                        .id(shift.getId())
+                        .shiftCode(shift.getShiftCode())
+                        .shiftName(shift.getShiftName())
+                        .startTime(shift.getStartTime())
+                        .endTime(shift.getEndTime())
+                        .build())
+                .user(user == null ? null : ShiftAssignmentResponse.UserSummary.builder()
+                        .id(user.getId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .build())
                 .build();
     }
 

@@ -88,9 +88,7 @@ public class UnitConversionService {
 
         Product product = baseVariant.getProduct();
 
-        BigDecimal resolvedSellPrice = request.getSellPrice() != null
-                ? request.getSellPrice()
-                : BigDecimal.ZERO;
+        BigDecimal resolvedSellPrice = request.getSellPrice();
 
         // ─── 1. Tạo quy đổi đơn vị ────────────────────────────────────────────
         UnitConversion conversion = UnitConversion.builder()
@@ -188,9 +186,6 @@ public class UnitConversionService {
         BigDecimal resolvedSellPrice = request.getSellPrice() != null
                 ? request.getSellPrice()
                 : conversion.getSellPrice();
-        if (resolvedSellPrice == null) {
-            throw new RuntimeException("Giá bán quy đổi không được để trống.");
-        }
 
         conversion.setToUnit(toUnit);
         conversion.setConversionFactor(request.getConversionFactor());

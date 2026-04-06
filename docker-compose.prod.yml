@@ -36,7 +36,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-smalltrend}
       DB_PASSWORD: ${DB_PASSWORD:-1234}
       SPRING_JPA_DDL_AUTO: ${SPRING_JPA_DDL_AUTO:-update}
-      SPRING_SQL_INIT_MODE: ${SPRING_SQL_INIT_MODE:-never}
+      SPRING_SQL_INIT_MODE: ${SPRING_SQL_INIT_MODE:-always}
     ports:
       - "8081:8081"
     volumes:
