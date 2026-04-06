@@ -60,8 +60,7 @@ public class PurchaseOrderService {
                 .stream()
                 .sorted(Comparator.comparing(
                         PurchaseOrder::getCreatedAt,
-                        Comparator.nullsLast(Comparator.reverseOrder())
-                ))
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(this::toListResponse)
                 .collect(Collectors.toList());
     }
@@ -111,7 +110,8 @@ public class PurchaseOrderService {
                 String orderNumber = order != null && order.getOrderNumber() != null ? order.getOrderNumber() : "N/A";
                 NotifyManagerEmailRequest request = NotifyManagerEmailRequest.builder()
                         .subject("[PO chờ duyệt] " + orderNumber)
-                        .message("Phiếu nhập " + orderNumber + " đã được gửi yêu cầu nhập kho và đang chờ quản lý duyệt.")
+                        .message("Phiếu nhập " + orderNumber
+                                + " đã được gửi yêu cầu nhập kho và đang chờ quản lý duyệt.")
                         .build();
 
                 int recipientCount = inventoryManagerNotificationService.notifyManagers(order, request);
@@ -361,9 +361,11 @@ public class PurchaseOrderService {
                     BigDecimal stockOrderedEquivalentQty = BigDecimal.valueOf(stockQtyForReceive)
                             .divide(BigDecimal.valueOf(conversionFactor), 4, RoundingMode.HALF_UP);
                     stockItemRequests.add(PurchaseOrderItemRequest.builder()
-                            .variantId(orderItem.getVariant() != null ? orderItem.getVariant().getId().intValue() : null)
+                            .variantId(
+                                    orderItem.getVariant() != null ? orderItem.getVariant().getId().intValue() : null)
                             .productId(orderItem.getVariant() != null && orderItem.getVariant().getProduct() != null
-                                    ? orderItem.getVariant().getProduct().getId().intValue() : null)
+                                    ? orderItem.getVariant().getProduct().getId().intValue()
+                                    : null)
                             .quantity(stockQtyForReceive)
                             .unitCost(receiptItem.getUnitCost())
                             .totalCost(receiptItem.getUnitCost().multiply(stockOrderedEquivalentQty))
@@ -492,19 +494,22 @@ public class PurchaseOrderService {
             throw new RuntimeException("Chỉ có thể chốt thiếu khi phiếu đang chờ quản lý xử lý thiếu hàng.");
         }
 
-        List<PurchaseOrderItemRequest> stockItemRequests = (order.getItems() == null ? List.<PurchaseOrderItemRequest>of() : order.getItems().stream()
-                .filter(Objects::nonNull)
-                .map(item -> PurchaseOrderItemRequest.builder()
-                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
-                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                        ? item.getVariant().getProduct().getId().intValue() : null)
-                .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0)
-                .unitCost(item.getUnitCost())
-                .totalCost(item.getTotalCost())
-                .expiryDate(item.getExpiryDate())
-                .build())
-                .filter(req -> req.getQuantity() != null && req.getQuantity() > 0)
-                .toList());
+        List<PurchaseOrderItemRequest> stockItemRequests = (order.getItems() == null
+                ? List.<PurchaseOrderItemRequest>of()
+                : order.getItems().stream()
+                        .filter(Objects::nonNull)
+                        .map(item -> PurchaseOrderItemRequest.builder()
+                                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                                        ? item.getVariant().getProduct().getId().intValue()
+                                        : null)
+                                .quantity(item.getReceivedQuantity() != null ? item.getReceivedQuantity() : 0)
+                                .unitCost(item.getUnitCost())
+                                .totalCost(item.getTotalCost())
+                                .expiryDate(item.getExpiryDate())
+                                .build())
+                        .filter(req -> req.getQuantity() != null && req.getQuantity() > 0)
+                        .toList());
 
         if (stockItemRequests.isEmpty()) {
             throw new RuntimeException("Không có số lượng thực nhận để chốt thiếu.");
@@ -652,7 +657,8 @@ public class PurchaseOrderService {
         purchaseOrderItemRepository.deleteAll(order.getItems());
         order.getItems().clear();
 
-        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems() : new ArrayList<>();
+        List<PurchaseOrderItemRequest> itemRequests = request.getItems() != null ? request.getItems()
+                : new ArrayList<>();
         recalculate(order, itemRequests);
 
         PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
@@ -724,10 +730,10 @@ public class PurchaseOrderService {
     public List<SupplierResponse> getAllSuppliers() {
         return supplierRepository.findAll().stream()
                 .map(s -> SupplierResponse.builder()
-                .id(s.getId())
-                .name(s.getName())
-                .contactInfo(s.getContactPerson())
-                .build())
+                        .id(s.getId())
+                        .name(s.getName())
+                        .contactInfo(s.getContactPerson())
+                        .build())
                 .collect(Collectors.toList());
     }
 
@@ -735,14 +741,14 @@ public class PurchaseOrderService {
     public List<ContractResponse> getContractsBySupplier(Integer supplierId) {
         return supplierContractRepository.findBySupplierId(supplierId).stream()
                 .map(c -> ContractResponse.builder()
-                .id(c.getId())
-                .contractNumber(c.getContractNumber())
-                .title(c.getTitle())
-                .status(c.getStatus() != null ? c.getStatus().name() : "DRAFT")
-                .startDate(c.getStartDate())
-                .endDate(c.getEndDate())
-                .totalValue(c.getTotalValue())
-                .build())
+                        .id(c.getId())
+                        .contractNumber(c.getContractNumber())
+                        .title(c.getTitle())
+                        .status(c.getStatus() != null ? c.getStatus().name() : "DRAFT")
+                        .startDate(c.getStartDate())
+                        .endDate(c.getEndDate())
+                        .totalValue(c.getTotalValue())
+                        .build())
                 .collect(Collectors.toList());
     }
 
@@ -881,7 +887,7 @@ public class PurchaseOrderService {
             if (itemReq.getVariantId() != null) {
                 ProductVariant variant = productVariantRepository.findById(itemReq.getVariantId())
                         .orElseThrow(() -> new RuntimeException(
-                        "Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
+                                "Phiên bản sản phẩm không tồn tại: " + itemReq.getVariantId()));
                 item.setVariant(variant);
             } else if (itemReq.getProductId() != null) {
                 Product product = productRepository.findById(Integer.valueOf(itemReq.getProductId()))
@@ -899,7 +905,8 @@ public class PurchaseOrderService {
     }
 
     // ─── Update Stock (on RECEIVE) ───────────────────────────
-    private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests, boolean applyUnitConversion) {
+    private void updateStock(PurchaseOrder order, List<PurchaseOrderItemRequest> itemRequests,
+            boolean applyUnitConversion) {
         Location targetLocation = null;
         if (order.getLocationId() != null) {
             targetLocation = locationRepository.findById(order.getLocationId()).orElse(null);
@@ -955,7 +962,8 @@ public class PurchaseOrderService {
             }
 
             BigDecimal costPrice = itemReq.getUnitCost() != null ? itemReq.getUnitCost() : BigDecimal.ZERO;
-            LocalDate expiryDate = itemReq.getExpiryDate() != null ? itemReq.getExpiryDate() : LocalDate.now().plusYears(1);
+            LocalDate expiryDate = itemReq.getExpiryDate() != null ? itemReq.getExpiryDate()
+                    : LocalDate.now().plusYears(1);
 
             String batchNumber = generateBatchNumber(baseVariant);
             ProductBatch batch = ProductBatch.builder()
@@ -1028,8 +1036,7 @@ public class PurchaseOrderService {
                     sourceVariant,
                     item.getUnitCost(),
                     syncedVariantIds,
-                    order
-            );
+                    order);
             if (sourceSyncedItem != null) {
                 syncedItems.add(sourceSyncedItem);
             }
@@ -1045,8 +1052,7 @@ public class PurchaseOrderService {
                         baseVariant,
                         baseUnitCost,
                         syncedVariantIds,
-                        order
-                );
+                        order);
                 if (baseSyncedItem != null) {
                     syncedItems.add(baseSyncedItem);
                 }
@@ -1125,7 +1131,6 @@ public class PurchaseOrderService {
         return null;
     }
 
-
     private String trimToNull(String value) {
         if (value == null) {
             return null;
@@ -1187,8 +1192,7 @@ public class PurchaseOrderService {
             BigDecimal subtotal,
             BigDecimal discountAmount,
             BigDecimal taxAmount,
-            BigDecimal shippingFee
-    ) {
+            BigDecimal shippingFee) {
         BigDecimal safeSubtotal = subtotal != null ? subtotal : BigDecimal.ZERO;
         BigDecimal safeDiscountAmount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
         BigDecimal safeTaxAmount = taxAmount != null ? taxAmount : BigDecimal.ZERO;
@@ -1246,13 +1250,16 @@ public class PurchaseOrderService {
         return !sameItemSnapshot(existingOrder.getItems(), request.getItems());
     }
 
-    private boolean sameItemSnapshot(List<PurchaseOrderItem> existingItems, List<PurchaseOrderItemRequest> requestItems) {
-        List<String> existingSnapshot = (existingItems == null ? new ArrayList<PurchaseOrderItem>() : existingItems).stream()
+    private boolean sameItemSnapshot(List<PurchaseOrderItem> existingItems,
+            List<PurchaseOrderItemRequest> requestItems) {
+        List<String> existingSnapshot = (existingItems == null ? new ArrayList<PurchaseOrderItem>() : existingItems)
+                .stream()
                 .map(this::toExistingItemSnapshot)
                 .sorted()
                 .collect(Collectors.toList());
 
-        List<String> requestSnapshot = (requestItems == null ? new ArrayList<PurchaseOrderItemRequest>() : requestItems).stream()
+        List<String> requestSnapshot = (requestItems == null ? new ArrayList<PurchaseOrderItemRequest>() : requestItems)
+                .stream()
                 .map(this::toRequestItemSnapshot)
                 .sorted()
                 .collect(Collectors.toList());
@@ -1359,33 +1366,44 @@ public class PurchaseOrderService {
         if (order.getItems() != null) {
             List<PurchaseOrderItemResponse> itemResponses = order.getItems().stream()
                     .map(item -> PurchaseOrderItemResponse.builder()
-                    .id(item.getId() != null ? item.getId().intValue() : null)
-                    .variantId(item.getVariant() != null && item.getVariant().getId() != null
-                            ? item.getVariant().getId().intValue() : null)
-                    .productId(item.getVariant() != null && item.getVariant().getProduct() != null
-                            && item.getVariant().getProduct().getId() != null
-                            ? item.getVariant().getProduct().getId().intValue() : null)
-                    .sku(item.getVariant() != null ? item.getVariant().getSku() : "")
-                    .name(item.getVariant() != null && item.getVariant().getProduct() != null
-                            ? item.getVariant().getProduct().getName() : "")
-                    .imageUrl(item.getVariant() != null
-                            ? (item.getVariant().getImageUrl() != null
-                            ? item.getVariant().getImageUrl()
-                            : (item.getVariant().getProduct() != null ? item.getVariant().getProduct().getImageUrl() : null))
-                            : null)
-                    .attributes(item.getVariant() != null ? item.getVariant().getAttributes() : null)
-                    .quantity(item.getQuantity())
-                    .unit(item.getVariant() != null && item.getVariant().getUnit() != null
-                            ? item.getVariant().getUnit().getName() : null)
-                    .unitCost(item.getUnitCost())
-                    .totalCost(item.getTotalCost() != null ? item.getTotalCost() : (item.getUnitCost() != null ? item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity() != null ? item.getQuantity() : 0)) : BigDecimal.ZERO))
-                    .receivedQuantity(item.getReceivedQuantity())
-                    .checkingUnit(resolveCheckingUnit(item.getVariant()))
-                    .conversionFactor(resolveConversionFactor(item.getVariant()))
-                    .checkingQuantity(resolveCheckingQuantity(item))
-                    .notes(item.getNotes())
-                    .expiryDate(item.getExpiryDate())
-                    .build())
+                            .id(item.getId() != null ? item.getId().intValue() : null)
+                            .variantId(item.getVariant() != null && item.getVariant().getId() != null
+                                    ? item.getVariant().getId().intValue()
+                                    : null)
+                            .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                                    && item.getVariant().getProduct().getId() != null
+                                            ? item.getVariant().getProduct().getId().intValue()
+                                            : null)
+                            .sku(item.getVariant() != null ? item.getVariant().getSku() : "")
+                            .name(item.getVariant() != null && item.getVariant().getProduct() != null
+                                    ? item.getVariant().getProduct().getName()
+                                    : "")
+                            .imageUrl(item.getVariant() != null
+                                    ? (item.getVariant().getImageUrl() != null
+                                            ? item.getVariant().getImageUrl()
+                                            : (item.getVariant().getProduct() != null
+                                                    ? item.getVariant().getProduct().getImageUrl()
+                                                    : null))
+                                    : null)
+                            .attributes(item.getVariant() != null ? item.getVariant().getAttributes() : null)
+                            .quantity(item.getQuantity())
+                            .unit(item.getVariant() != null && item.getVariant().getUnit() != null
+                                    ? item.getVariant().getUnit().getName()
+                                    : null)
+                            .unitCost(item.getUnitCost())
+                            .totalCost(item.getTotalCost() != null ? item.getTotalCost()
+                                    : (item.getUnitCost() != null
+                                            ? item.getUnitCost()
+                                                    .multiply(BigDecimal.valueOf(
+                                                            item.getQuantity() != null ? item.getQuantity() : 0))
+                                            : BigDecimal.ZERO))
+                            .receivedQuantity(item.getReceivedQuantity())
+                            .checkingUnit(resolveCheckingUnit(item.getVariant()))
+                            .conversionFactor(resolveConversionFactor(item.getVariant()))
+                            .checkingQuantity(resolveCheckingQuantity(item))
+                            .notes(item.getNotes())
+                            .expiryDate(item.getExpiryDate())
+                            .build())
                     .collect(Collectors.toList());
             response.setItems(itemResponses);
         } else {

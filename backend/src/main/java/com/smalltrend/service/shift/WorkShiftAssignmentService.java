@@ -76,8 +76,8 @@ public class WorkShiftAssignmentService {
                 request.getUserId(),
                 request.getShiftDate())
                 && !(assignment.getWorkShift().getId().equals(request.getWorkShiftId())
-                && assignment.getUser().getId().equals(request.getUserId())
-                && assignment.getShiftDate().equals(request.getShiftDate()))) {
+                        && assignment.getUser().getId().equals(request.getUserId())
+                        && assignment.getShiftDate().equals(request.getShiftDate()))) {
             throw new RuntimeException("Assignment already exists for this shift and date");
         }
 
@@ -103,7 +103,8 @@ public class WorkShiftAssignmentService {
             Integer shiftId) {
         List<WorkShiftAssignment> assignments;
         if (userId != null) {
-            assignments = assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, startDate, endDate);
+            assignments = assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(userId, startDate,
+                    endDate);
         } else {
             assignments = assignmentRepository.findByShiftDateBetweenAndDeletedFalse(startDate, endDate);
         }
@@ -131,7 +132,8 @@ public class WorkShiftAssignmentService {
             throw new RuntimeException("Thiếu thông tin ca của người yêu cầu");
         }
 
-        WorkShiftAssignment requesterAssignment = assignmentRepository.findByIdAndDeletedFalse(request.getRequesterAssignmentId())
+        WorkShiftAssignment requesterAssignment = assignmentRepository
+                .findByIdAndDeletedFalse(request.getRequesterAssignmentId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm của người yêu cầu"));
 
         Integer accepterUserId = request.getAccepterUserId();
@@ -410,18 +412,20 @@ public class WorkShiftAssignmentService {
                 .notes(assignment.getNotes())
                 .createdAt(assignment.getCreatedAt())
                 .updatedAt(assignment.getUpdatedAt())
-                .shift(shift == null ? null : ShiftAssignmentResponse.ShiftSummary.builder()
-                        .id(shift.getId())
-                        .shiftCode(shift.getShiftCode())
-                        .shiftName(shift.getShiftName())
-                        .startTime(shift.getStartTime())
-                        .endTime(shift.getEndTime())
-                        .build())
-                .user(user == null ? null : ShiftAssignmentResponse.UserSummary.builder()
-                        .id(user.getId())
-                        .fullName(user.getFullName())
-                        .email(user.getEmail())
-                        .build())
+                .shift(shift == null ? null
+                        : ShiftAssignmentResponse.ShiftSummary.builder()
+                                .id(shift.getId())
+                                .shiftCode(shift.getShiftCode())
+                                .shiftName(shift.getShiftName())
+                                .startTime(shift.getStartTime())
+                                .endTime(shift.getEndTime())
+                                .build())
+                .user(user == null ? null
+                        : ShiftAssignmentResponse.UserSummary.builder()
+                                .id(user.getId())
+                                .fullName(user.getFullName())
+                                .email(user.getEmail())
+                                .build())
                 .build();
     }
 

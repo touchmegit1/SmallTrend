@@ -66,7 +66,7 @@ class InventoryDashboardServiceTest {
                 .sellPrice(new BigDecimal("20.0"))
                 .productBatches(List.of(batch))
                 .build();
-        
+
         batch.setVariant(variant);
 
         product = Product.builder()
@@ -76,7 +76,7 @@ class InventoryDashboardServiceTest {
                 .brand(brand)
                 .variants(List.of(variant))
                 .build();
-        
+
         variant.setProduct(product);
 
         Location location = Location.builder().id(1).name("Location 1").build();
