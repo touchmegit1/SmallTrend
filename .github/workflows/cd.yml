@@ -415,15 +415,28 @@ jobs:
             echo "Post-deploy integrity: joinable_variants=$JOINABLE_VARIANTS_COUNT, orphan_product_refs=$ORPHAN_PRODUCT_REFS, orphan_unit_refs=$ORPHAN_UNIT_REFS, stocked_variants=$STOCKED_VARIANTS_COUNT"
 
             if [ "${PRODUCTS_COUNT:-0}" = "0" ] || [ "${VARIANTS_COUNT:-0}" = "0" ] || [ "${STOCK_COUNT:-0}" = "0" ] || [ "${SALE_ORDERS_COUNT:-0}" = "0" ] || [ "${SALE_ORDER_ITEMS_COUNT:-0}" = "0" ] || [ "${TICKETS_COUNT:-0}" = "0" ] || [ "${LOYALTY_GIFTS_COUNT:-0}" = "0" ] || is_integrity_bad "$STOCK_COUNT"; then
-              echo "Detected empty or inconsistent critical product data. Running reset-db-and-seed.sh..."
-              if [ -f "./deploy/scripts/reset-db-and-seed.sh" ]; then
+              echo "Detected empty or inconsistent critical product data. Running import-backup-sql.sh..."
+              if [ -f "./deploy/scripts/import-backup-sql.sh" ]; then
+                sudo chmod +x ./deploy/scripts/import-backup-sql.sh
+                sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" BACKUP_DIR="$DEPLOY_PATH/backup_data_value" bash ./deploy/scripts/import-backup-sql.sh || true
+                SEED_WAS_RUN=1
+                compose_cmd up -d --remove-orphans
+                # Fallback: also try reset-db-and-seed.sh if backup import didn't fill data
+                STOCK_CHECK="$(get_table_count inventory_stock || echo 0)"
+                if [ "${STOCK_CHECK:-0}" = "0" ] && [ -f "./deploy/scripts/reset-db-and-seed.sh" ]; then
+                  echo "Backup import did not fill inventory_stock. Falling back to reset-db-and-seed.sh..."
+                  sudo chmod +x ./deploy/scripts/reset-db-and-seed.sh
+                  sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" SEED_STRATEGY="fix-only" bash ./deploy/scripts/reset-db-and-seed.sh || true
+                  compose_cmd up -d --remove-orphans
+                fi
+              elif [ -f "./deploy/scripts/reset-db-and-seed.sh" ]; then
+                echo "Backup import script not found. Falling back to reset-db-and-seed.sh..."
                 sudo chmod +x ./deploy/scripts/reset-db-and-seed.sh
                 sudo DEPLOY_PATH="$DEPLOY_PATH" COMPOSE_FILE="$DEPLOY_PATH/docker-compose.prod.yml" ENV_FILE="$ENV_FILE" SEED_STRATEGY="fix-only" bash ./deploy/scripts/reset-db-and-seed.sh
                 SEED_WAS_RUN=1
-                # Ensure services are up after seed
                 compose_cmd up -d --remove-orphans
               else
-                echo "Seed script not found: ./deploy/scripts/reset-db-and-seed.sh"
+                echo "No seed script found!"
               fi
             fi
 
