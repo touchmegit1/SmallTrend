@@ -26,5 +26,8 @@ public class AttendanceResponse {
     private String shiftName;
     private LocalTime shiftStartTime;
     private LocalTime shiftEndTime;
+    private String policyWarningCode;
+    private String policyWarningMessage;
+    private String policySummary;
     private String notes;
 }

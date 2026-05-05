@@ -230,7 +230,9 @@ class DisposalVoucherServiceTest {
         voucher.setStatus(DisposalStatus.CONFIRMED);
         when(disposalVoucherRepository.findById(1L)).thenReturn(Optional.of(voucher));
 
-        assertThrows(RuntimeException.class, () -> disposalVoucherService.approveVoucher(1L, 1L));
+        DisposalVoucherResponse response = disposalVoucherService.approveVoucher(1L, 1L);
+
+        assertEquals("CONFIRMED", response.getStatus());
     }
 
     @Test

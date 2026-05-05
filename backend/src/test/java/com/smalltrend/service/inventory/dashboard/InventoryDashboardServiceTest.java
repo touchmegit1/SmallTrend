@@ -66,7 +66,7 @@ class InventoryDashboardServiceTest {
                 .sellPrice(new BigDecimal("20.0"))
                 .productBatches(List.of(batch))
                 .build();
-        
+
         batch.setVariant(variant);
 
         product = Product.builder()
@@ -76,7 +76,7 @@ class InventoryDashboardServiceTest {
                 .brand(brand)
                 .variants(List.of(variant))
                 .build();
-        
+
         variant.setProduct(product);
 
         Location location = Location.builder().id(1).name("Location 1").build();
@@ -92,7 +92,7 @@ class InventoryDashboardServiceTest {
 
     @Test
     void getAllProductsForDashboard_shouldReturnProductsWithStock() {
-        when(productRepository.findAll()).thenReturn(List.of(product));
+        when(productVariantRepository.findAll()).thenReturn(List.of(variant));
         when(inventoryStockRepository.findAll()).thenReturn(List.of(stock));
 
         List<DashboardProductResponse> responses = inventoryDashboardService.getAllProductsForDashboard();
@@ -132,7 +132,7 @@ class InventoryDashboardServiceTest {
 
     @Test
     void getDashboardSummary_shouldReturnSummary() {
-        when(productRepository.findAll()).thenReturn(List.of(product));
+        when(productVariantRepository.findAll()).thenReturn(List.of(variant));
         when(inventoryStockRepository.findAll()).thenReturn(List.of(stock));
         when(productBatchRepository.findExpiredBatches(any())).thenReturn(List.of());
         when(productBatchRepository.findExpiringSoonBatches(any(), any())).thenReturn(List.of(batch));

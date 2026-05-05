@@ -30,6 +30,18 @@ public class WorkShiftService {
             throw new RuntimeException("Shift code already exists");
         }
 
+        String shiftName = request.getShiftName().trim();
+        if (workShiftRepository.existsByShiftNameIgnoreCase(shiftName)) {
+            throw new RuntimeException("Tên ca làm đã tồn tại. Vui lòng chọn tên khác.");
+        }
+
+        if (request.getStartTime() != null && request.getEndTime() != null
+                && workShiftRepository.existsByStartTimeAndEndTime(request.getStartTime(), request.getEndTime())) {
+            throw new RuntimeException(
+                    "Đã tồn tại ca làm với cùng giờ bắt đầu (" + request.getStartTime()
+                            + ") và giờ kết thúc (" + request.getEndTime() + ").");
+        }
+
         WorkShift shift = buildShiftEntity(new WorkShift(), request);
         shift.setShiftCode(shiftCode);
         WorkShift saved = workShiftRepository.save(shift);
@@ -43,6 +55,19 @@ public class WorkShiftService {
         String shiftCode = request.getShiftCode().trim();
         if (workShiftRepository.existsByShiftCodeIgnoreCaseAndIdNot(shiftCode, id)) {
             throw new RuntimeException("Shift code already exists");
+        }
+
+        String shiftName = request.getShiftName().trim();
+        if (workShiftRepository.existsByShiftNameIgnoreCaseAndIdNot(shiftName, id)) {
+            throw new RuntimeException("Tên ca làm đã tồn tại. Vui lòng chọn tên khác.");
+        }
+
+        if (request.getStartTime() != null && request.getEndTime() != null
+                && workShiftRepository.existsByStartTimeAndEndTimeAndIdNot(
+                        request.getStartTime(), request.getEndTime(), id)) {
+            throw new RuntimeException(
+                    "Đã tồn tại ca làm với cùng giờ bắt đầu (" + request.getStartTime()
+                            + ") và giờ kết thúc (" + request.getEndTime() + ").");
         }
 
         WorkShift updated = buildShiftEntity(shift, request);

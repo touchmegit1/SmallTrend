@@ -3,6 +3,7 @@ package com.smalltrend.controller;
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.user.ChangePasswordRequest;
 import com.smalltrend.dto.user.UserProfileDTO;
+import com.smalltrend.dto.user.UserRoleUpdateRequest;
 import com.smalltrend.dto.user.UserDTO;
 import com.smalltrend.dto.user.UserStatusRequest;
 import com.smalltrend.dto.user.UserUpdateRequest;
@@ -51,6 +52,14 @@ public class UserController {
                     request.getUsername(),
                     request.getPassword());
             errors.addAll(credentialErrors);
+
+            // Validate salary fields nếu có
+            if (request.getSalaryType() != null || request.getBaseSalary() != null || request.getHourlyRate() != null) {
+                Double baseSalary = request.getBaseSalary() != null ? request.getBaseSalary().doubleValue() : null;
+                Double hourlyRate = request.getHourlyRate() != null ? request.getHourlyRate().doubleValue() : null;
+                List<String> salaryErrors = validator.validateSalary(request.getSalaryType(), baseSalary, hourlyRate);
+                errors.addAll(salaryErrors);
+            }
 
             if (validator.hasErrors(errors)) {
                 String errorMsg = validator.errorsToString(errors);
@@ -176,6 +185,14 @@ public class UserController {
                     request.getStatus());
             errors.addAll(userErrors);
 
+            // Validate salary fields nếu có
+            if (request.getSalaryType() != null || request.getBaseSalary() != null || request.getHourlyRate() != null) {
+                Double baseSalary = request.getBaseSalary() != null ? request.getBaseSalary().doubleValue() : null;
+                Double hourlyRate = request.getHourlyRate() != null ? request.getHourlyRate().doubleValue() : null;
+                List<String> salaryErrors = validator.validateSalary(request.getSalaryType(), baseSalary, hourlyRate);
+                errors.addAll(salaryErrors);
+            }
+
             if (validator.hasErrors(errors)) {
                 String errorMsg = validator.errorsToString(errors);
                 return ResponseEntity.badRequest()
@@ -218,7 +235,8 @@ public class UserController {
      */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateUserStatus(@PathVariable("id") Integer id, @Valid @RequestBody UserStatusRequest request) {
+    public ResponseEntity<?> updateUserStatus(@PathVariable("id") Integer id,
+            @Valid @RequestBody UserStatusRequest request) {
         // Validate ID
         List<String> errors = validator.validateId(id, "ID người dùng");
         if (validator.hasErrors(errors)) {
@@ -234,6 +252,21 @@ public class UserController {
         }
 
         User user = userService.updateUserStatus(id, request.getStatus());
+        return ResponseEntity.ok(UserDTO.fromEntity(user));
+    }
+
+    @PatchMapping("/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserRole(@PathVariable("id") Integer id,
+            @Valid @RequestBody UserRoleUpdateRequest request) {
+        List<String> errors = validator.validateRoleAssignment(id, request.getRoleId());
+        if (validator.hasErrors(errors)) {
+            String errorMsg = validator.errorsToString(errors);
+            return ResponseEntity.badRequest()
+                    .body(MessageResponse.builder().message(errorMsg).build());
+        }
+
+        User user = userService.updateUserRole(id, request.getRoleId());
         return ResponseEntity.ok(UserDTO.fromEntity(user));
     }
 

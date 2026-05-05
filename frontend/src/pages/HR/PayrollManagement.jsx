@@ -466,7 +466,7 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
     async function handleMarkPayrollPaid() {
         if (!filters.fromMonth) return;
         const confirmed = window.confirm(
-            `Xác nhận thanh toán lương tháng ${filters.fromMonth} cho ${filteredRows.length} nhân viên?\nHệ thống sẽ gửi email xác nhận đến admin.`
+            `Xác nhận thanh toán lương tháng ${filters.fromMonth} cho ${filteredRows.length} nhân viên?\nHệ thống sẽ tải file Excel bảng lương và gửi email xác nhận đến admin.`
         );
         if (!confirmed) return;
 
@@ -474,6 +474,28 @@ const PayrollManagement = ({ embedded = false, sharedRange = null, reloadToken =
             setPayingPayroll(true);
             setPayrollMessage('');
             setError('');
+
+            // Tải file Excel bảng lương trước
+            const exportParams = { fromMonth: filters.fromMonth, toMonth: filters.fromMonth };
+            if (filters.userId) exportParams.userId = filters.userId;
+            const blobRes = await shiftService.exportPayroll(exportParams);
+            const blob = blobRes.data;
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const contentDisposition = blobRes.headers?.['content-disposition'];
+            let filename = `Bang_Luong_${filters.fromMonth}.xlsx`;
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?(.+?)"?$/);
+                if (match) filename = match[1];
+            }
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            // Sau đó mark paid
             const params = { month: filters.fromMonth };
             if (filters.userId) params.userId = filters.userId;
             const result = await shiftService.markPayrollPaid(params);

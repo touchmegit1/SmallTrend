@@ -68,6 +68,10 @@ export const shiftService = {
         const res = await api.get('/shifts/attendance', { params });
         return res.data;
     },
+    async getAttendancePolicyPreview(params = {}) {
+        const res = await api.get('/shifts/attendance/policy-preview', { params });
+        return res.data;
+    },
     async upsertAttendance(payload) {
         const res = await api.post('/shifts/attendance', payload);
         return res.data;
@@ -80,6 +84,13 @@ export const shiftService = {
         const res = await api.post('/shifts/payroll/mark-paid', null, { params });
         return res.data;
     },
+    async exportPayroll(params = {}) {
+        const res = await api.get('/shifts/payroll/export', {
+            params,
+            responseType: 'blob',
+        });
+        return res;
+    },
     async getWorkforceDashboard(params = {}) {
         const res = await api.get('/shifts/workforce/dashboard', { params });
         return res.data;
@@ -88,7 +99,8 @@ export const shiftService = {
         // Clock in automatically when user logs in
         const res = await api.post('/shifts/clock-in', {
             userId: payload.userId,
-            clockInTime: payload.clockInTime,
+            date: payload.date,
+            clockTime: payload.clockInTime,
             location: payload.location || 'Office'
         });
         return res.data;
@@ -96,7 +108,8 @@ export const shiftService = {
     async clockOut(payload) {
         const res = await api.post('/shifts/clock-out', {
             userId: payload.userId,
-            clockOutTime: payload.clockOutTime,
+            date: payload.date,
+            clockTime: payload.clockOutTime,
             location: payload.location || 'Office'
         });
         return res.data;

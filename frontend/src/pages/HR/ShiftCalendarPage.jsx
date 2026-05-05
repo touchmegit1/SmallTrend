@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, CheckCircle2, LogOut, Plus, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, CheckCircle2, LogOut, Plus, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { shiftService } from '../../services/shiftService';
 import { shiftTicketService } from '../../services/shiftTicketService';
@@ -266,6 +266,27 @@ const ShiftCalendarPage = () => {
             await loadAssignments();
         } catch (err) {
             setError(extractErrorMessage(err, 'Khong the cham ra tu lich.'));
+        }
+    };
+
+    const handleDeleteAssignment = async (assignment) => {
+        if (!canQuickAssign || !assignment?.id) {
+            return;
+        }
+
+        const summary = `${assignment?.user?.fullName || 'Nhan vien'} - ${assignment?.shift?.shiftName || 'Ca lam'} - ${assignment?.shiftDate || ''}`;
+        const accepted = window.confirm(`Xoa phan cong ca nay?\n${summary}`);
+        if (!accepted) {
+            return;
+        }
+
+        try {
+            await shiftService.deleteAssignment(assignment.id);
+            setError('');
+            setMessage('Da xoa phan cong ca lam.');
+            await loadAssignments();
+        } catch (err) {
+            setError(extractErrorMessage(err, 'Khong the xoa phan cong ca lam.'));
         }
     };
 
@@ -540,6 +561,8 @@ const ShiftCalendarPage = () => {
                             currentUserId={currentUserId}
                             onQuickCheckIn={handleQuickCheckIn}
                             onQuickCheckOut={handleQuickCheckOut}
+                            canDeleteAssignments={canQuickAssign}
+                            onDeleteAssignment={handleDeleteAssignment}
                             canUseDayPlus
                             onDayPlus={handleDayPlusClick}
                         />
@@ -557,6 +580,8 @@ const ShiftCalendarPage = () => {
                             currentUserId={currentUserId}
                             onQuickCheckIn={handleQuickCheckIn}
                             onQuickCheckOut={handleQuickCheckOut}
+                            canDeleteAssignments={canQuickAssign}
+                            onDeleteAssignment={handleDeleteAssignment}
                             canUseDayPlus
                             onDayPlus={handleDayPlusClick}
                         />
@@ -774,7 +799,7 @@ const ShiftCalendarPage = () => {
     );
 };
 
-const CalendarColumn = ({ date, assignments, attendanceMap, currentUserId, onQuickCheckIn, onQuickCheckOut, canUseDayPlus, onDayPlus }) => (
+const CalendarColumn = ({ date, assignments, attendanceMap, currentUserId, onQuickCheckIn, onQuickCheckOut, canDeleteAssignments, onDeleteAssignment, canUseDayPlus, onDayPlus }) => (
     <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="mb-3 flex items-start justify-between gap-2">
             <div>
@@ -824,6 +849,15 @@ const CalendarColumn = ({ date, assignments, attendanceMap, currentUserId, onQui
                                 <LogOut size={12} /> Cham ra
                             </button>
                         )}
+                        {canDeleteAssignments && (
+                            <button
+                                type="button"
+                                onClick={() => onDeleteAssignment(item)}
+                                className="mt-2 ml-2 inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
+                            >
+                                <Trash2 size={12} /> Xoa
+                            </button>
+                        )}
                     </div>
                 );
             })}
@@ -832,7 +866,7 @@ const CalendarColumn = ({ date, assignments, attendanceMap, currentUserId, onQui
     </div>
 );
 
-const CalendarTile = ({ date, inMonth, assignments, attendanceMap, currentUserId, onQuickCheckIn, onQuickCheckOut, canUseDayPlus, onDayPlus }) => (
+const CalendarTile = ({ date, inMonth, assignments, attendanceMap, currentUserId, onQuickCheckIn, onQuickCheckOut, canDeleteAssignments, onDeleteAssignment, canUseDayPlus, onDayPlus }) => (
     <div className={`min-h-[140px] rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${inMonth ? '' : 'opacity-50'}`}>
         <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-slate-900">{date.getDate()}</span>
@@ -877,6 +911,15 @@ const CalendarTile = ({ date, inMonth, assignments, attendanceMap, currentUserId
                                 className="mt-1 ml-1 inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 hover:bg-indigo-100"
                             >
                                 <LogOut size={10} /> Ra
+                            </button>
+                        )}
+                        {canDeleteAssignments && (
+                            <button
+                                type="button"
+                                onClick={() => onDeleteAssignment(item)}
+                                className="mt-1 ml-1 inline-flex items-center gap-1 rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700 hover:bg-rose-100"
+                            >
+                                <Trash2 size={10} /> Xoa
                             </button>
                         )}
                     </div>

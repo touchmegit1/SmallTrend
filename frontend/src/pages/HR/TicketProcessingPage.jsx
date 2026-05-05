@@ -29,6 +29,8 @@ const defaultSwapAcceptForm = {
     confirmTakeOver: false,
 };
 
+const ACTIVE_TICKET_STATUSES = new Set(['OPEN', 'IN_PROGRESS']);
+
 const TicketProcessingPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -572,10 +574,16 @@ const TicketProcessingPage = () => {
                                 const status = String(ticket?.status || 'OPEN').toUpperCase();
                                 const requestType = resolveRequestType(ticket);
                                 const isSwapRequest = requestType === 'SWAP';
+                                const isActiveStatus = ACTIVE_TICKET_STATUSES.has(status);
+                                const assignedToUserId = Number(ticket?.assignedToUserId || 0);
+                                const isAssignedToCurrentUser = assignedToUserId > 0 && assignedToUserId === currentUserId;
+                                const isCreatedByCurrentUser = Number(ticket?.createdByUserId || 0) === currentUserId;
+                                const isLegacyUnassignedSwap = assignedToUserId <= 0 && !isCreatedByCurrentUser;
                                 const canAcceptSwap = isSwapRequest
-                                    && status === 'OPEN'
-                                    && Number(ticket?.createdByUserId || ticket?.requesterUserId || 0) !== currentUserId;
-                                const canOpenManagerProcess = isManagerOrAdmin && !isSwapRequest && status === 'OPEN';
+                                    && isActiveStatus
+                                    && (isAssignedToCurrentUser || isLegacyUnassignedSwap)
+                                    && !isCreatedByCurrentUser;
+                                const canOpenManagerProcess = isManagerOrAdmin && !isSwapRequest && isActiveStatus;
 
                                 return (
                                     <tr key={ticket.id}>

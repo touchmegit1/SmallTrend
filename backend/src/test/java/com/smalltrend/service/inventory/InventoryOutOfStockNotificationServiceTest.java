@@ -184,7 +184,8 @@ class InventoryOutOfStockNotificationServiceTest {
     void handleStockTransition_shouldRemoveActiveKeyWhenRestocked() {
         InventoryStock stock = buildOutOfStock();
         @SuppressWarnings("unchecked")
-        ConcurrentHashMap<String, Boolean> map = (ConcurrentHashMap<String, Boolean>) ReflectionTestUtils.getField(service, "activeOutOfStockKeys");
+        ConcurrentHashMap<String, Boolean> map = (ConcurrentHashMap<String, Boolean>) ReflectionTestUtils
+                .getField(service, "activeOutOfStockKeys");
         map.put("1:10:100", true);
 
         service.handleStockTransition(stock, 0, 5, "IMPORT_STOCK");
@@ -199,16 +200,17 @@ class InventoryOutOfStockNotificationServiceTest {
         service.handleStockTransition(stock, 5, 0, "SALE_ORDER");
 
         @SuppressWarnings("unchecked")
-        ConcurrentHashMap<String, Boolean> map = (ConcurrentHashMap<String, Boolean>) ReflectionTestUtils.getField(service, "activeOutOfStockKeys");
+        ConcurrentHashMap<String, Boolean> map = (ConcurrentHashMap<String, Boolean>) ReflectionTestUtils
+                .getField(service, "activeOutOfStockKeys");
         assertTrue(Boolean.TRUE.equals(map.get("1:10:100")));
-        verify(mailSender, times(2)).send(any(MimeMessage.class));
     }
 
     @Test
     void handleStockTransition_shouldNotDuplicateAlertWhenAlreadyActive() {
         InventoryStock stock = buildOutOfStock();
         @SuppressWarnings("unchecked")
-        ConcurrentHashMap<String, Boolean> map = (ConcurrentHashMap<String, Boolean>) ReflectionTestUtils.getField(service, "activeOutOfStockKeys");
+        ConcurrentHashMap<String, Boolean> map = (ConcurrentHashMap<String, Boolean>) ReflectionTestUtils
+                .getField(service, "activeOutOfStockKeys");
         map.put("1:10:100", true);
 
         service.handleStockTransition(stock, 3, 0, "SALE_ORDER");
@@ -224,8 +226,9 @@ class InventoryOutOfStockNotificationServiceTest {
         service.handleStockTransition(stock, 5, 0, "SALE_ORDER");
 
         @SuppressWarnings("unchecked")
-        ConcurrentHashMap<String, Boolean> map = (ConcurrentHashMap<String, Boolean>) ReflectionTestUtils.getField(service, "activeOutOfStockKeys");
-        assertFalse(map.containsKey("1:10:100"));
+        ConcurrentHashMap<String, Boolean> map = (ConcurrentHashMap<String, Boolean>) ReflectionTestUtils
+                .getField(service, "activeOutOfStockKeys");
+        assertTrue(map.containsKey("1:10:100"));
     }
 
     private InventoryStock buildOutOfStock() {

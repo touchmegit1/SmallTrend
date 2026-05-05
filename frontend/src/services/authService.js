@@ -3,15 +3,35 @@ import api from '../config/axiosConfig';
 const clearAuthData = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+};
+
+const persistAuthData = (payload) => {
+    if (!payload) return;
+
+    const currentUser = getCurrentUser() || {};
+    const nextUser = {
+        ...currentUser,
+        ...payload,
+    };
+
+    if (payload.token) {
+        localStorage.setItem('token', payload.token);
+    }
+
+    const refreshToken = payload.refreshToken || nextUser.refreshToken;
+    if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+        nextUser.refreshToken = refreshToken;
+    }
+
+    localStorage.setItem('user', JSON.stringify(nextUser));
 };
 
 const login = async (username, password) => {
     try {
         const response = await api.post('/auth/login', { username, password });
-        if (response.data.token) {
-            localStorage.setItem('user', JSON.stringify(response.data));
-            localStorage.setItem('token', response.data.token);
-        }
+        persistAuthData(response.data);
         return response.data;
     } catch (error) {
         // Extract error message from backend response
@@ -26,10 +46,7 @@ const login = async (username, password) => {
 const register = async (userData) => {
     try {
         const response = await api.post('/auth/register', userData);
-        if (response.data.token) {
-            localStorage.setItem('user', JSON.stringify(response.data));
-            localStorage.setItem('token', response.data.token);
-        }
+        persistAuthData(response.data);
         return response.data;
     } catch (error) {
         throw error.response?.data || error;
@@ -60,6 +77,21 @@ const getCurrentUser = () => {
 
 const getToken = () => {
     return localStorage.getItem('token');
+};
+
+const getRefreshToken = () => {
+    const directRefreshToken = localStorage.getItem('refreshToken');
+    if (directRefreshToken) {
+        return directRefreshToken;
+    }
+
+    const user = getCurrentUser();
+    return user?.refreshToken || null;
+};
+
+const saveAuthSession = (authPayload = {}) => {
+    persistAuthData(authPayload);
+    return getCurrentUser();
 };
 
 const validateToken = async () => {
@@ -114,8 +146,10 @@ const authService = {
     register,
     logout,
     clearAuthData,
+    saveAuthSession,
     getCurrentUser,
     getToken,
+    getRefreshToken,
     validateToken,
     getMe,
     updateStoredUser,

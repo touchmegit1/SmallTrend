@@ -238,7 +238,7 @@ function CreatePurchaseOrder() {
           />
         ) : (
           <div className="flex-1 overflow-auto px-6 py-5">
-            <div className="max-w-[1300px] mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="max-w-[1300px] mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-visible">
               <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
                 {isEditable && (
                   <div className="mb-3 text-xs text-slate-500">

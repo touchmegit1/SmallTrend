@@ -28,6 +28,9 @@ public class GoodsReceiptRequest {
     private Integer supplierId;
     private Integer locationId;
 
+    @DecimalMin(value = "0", message = "Giảm giá không được âm")
+    private BigDecimal discountAmount;
+
     @NotNull(message = "Thuế VAT (%) là bắt buộc")
     @DecimalMin(value = "0", message = "Thuế VAT (%) không được âm")
     private BigDecimal taxPercent;
