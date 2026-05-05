@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [main]
+    branches: [main, shift]
     tags:
       - "v*"
   workflow_dispatch:
@@ -292,11 +292,80 @@ jobs:
               exit 1
             fi
 
+            # ─── Pre-deploy: backup database ───
+            echo "Backing up database before deploy..."
+            BACKUP_FILE="/tmp/smalltrend_backup_$(date +%Y%m%d_%H%M%S).sql"
+            sudo docker compose -f docker-compose.prod.yml exec -T mysql \
+              mysqldump -u"$DB_USERNAME" -p"$DB_PASSWORD" "$MYSQL_DATABASE" \
+              --single-transaction --routines --triggers --events \
+              > "$BACKUP_FILE" 2>/dev/null && \
+              echo "Database backed up to $BACKUP_FILE" || \
+              echo "WARNING: Database backup failed, proceeding anyway."
+
             deploy_tag "$TARGET_TAG"
 
             if [ -n "$MIGRATION_COMMAND" ]; then
+              echo "Running migration command..."
               eval "$MIGRATION_COMMAND"
             fi
+
+            # ─── Post-deploy: wait for containers to be healthy ───
+            echo "Waiting 20s for containers to stabilize..."
+            sleep 20
+
+            # ─── Health check ───
+            if [ -n "$HEALTHCHECK_URL" ]; then
+              echo "Running health check against $HEALTHCHECK_URL..."
+              MAX_RETRIES=12
+              RETRY_INTERVAL=5
+              HEALTH_OK=false
+
+              for i in $(seq 1 $MAX_RETRIES); do
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTHCHECK_URL" 2>/dev/null || echo "000")
+                if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "401" ]; then
+                  echo "Health check passed (HTTP $HTTP_CODE) after $((i * RETRY_INTERVAL))s"
+                  HEALTH_OK=true
+                  break
+                fi
+                echo "Attempt $i/$MAX_RETRIES: HTTP $HTTP_CODE, retrying in ${RETRY_INTERVAL}s..."
+                sleep $RETRY_INTERVAL
+              done
+
+              if [ "$HEALTH_OK" != "true" ]; then
+                echo "CRITICAL: Health check FAILED. Rolling back to previous tag..."
+                # Try rollback with previous SHA tag, fall back to 'latest'
+                ROLLBACK_TAG="$PREVIOUS_IMAGE_TAG"
+                if [ -z "$ROLLBACK_TAG" ] || [ "$ROLLBACK_TAG" = "0000000000000000000000000000000000000000" ]; then
+                  ROLLBACK_TAG="latest"
+                fi
+
+                if verify_tag_exists "$ROLLBACK_TAG"; then
+                  echo "Rolling back to tag: $ROLLBACK_TAG"
+                  deploy_tag "$ROLLBACK_TAG"
+                  echo "Rollback complete. Checking health again..."
+                  sleep 15
+                  ROLLBACK_HTTP=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTHCHECK_URL" 2>/dev/null || echo "000")
+                  if [ "$ROLLBACK_HTTP" = "200" ] || [ "$ROLLBACK_HTTP" = "302" ] || [ "$ROLLBACK_HTTP" = "401" ]; then
+                    echo "Rollback health check passed (HTTP $ROLLBACK_HTTP)"
+                  else
+                    echo "CRITICAL: Rollback health check also FAILED (HTTP $ROLLBACK_HTTP). Manual intervention required!"
+                  fi
+                else
+                  echo "CRITICAL: Rollback tag $ROLLBACK_TAG not found. Trying 'latest'..."
+                  if verify_tag_exists "latest"; then
+                    deploy_tag "latest"
+                    echo "Fallback to 'latest' complete."
+                  else
+                    echo "CRITICAL: No valid rollback image found. Manual intervention required!"
+                  fi
+                fi
+                exit 1
+              fi
+            else
+              echo "No HEALTHCHECK_URL configured. Skipping health check."
+            fi
+
+            echo "Deployment completed successfully with tag: $TARGET_TAG"
 
             # Auto-bootstrap seed when DB is empty (prevents blank app after deploy/reset).
             get_table_count() {

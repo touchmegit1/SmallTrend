@@ -1,0 +1,41 @@
+# Build artifacts
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Uploads (not needed in image)
+uploads/*
+!uploads/.gitkeep
+
+# Tests
+src/test/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# CI/CD
+.github/

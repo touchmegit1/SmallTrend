@@ -4,6 +4,7 @@ import com.smalltrend.entity.WorkShift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -12,6 +13,14 @@ public interface WorkShiftRepository extends JpaRepository<WorkShift, Integer> {
     boolean existsByShiftCodeIgnoreCase(String shiftCode);
 
     boolean existsByShiftCodeIgnoreCaseAndIdNot(String shiftCode, Integer id);
+
+    boolean existsByShiftNameIgnoreCase(String shiftName);
+
+    boolean existsByShiftNameIgnoreCaseAndIdNot(String shiftName, Integer id);
+
+    boolean existsByStartTimeAndEndTime(LocalTime startTime, LocalTime endTime);
+
+    boolean existsByStartTimeAndEndTimeAndIdNot(LocalTime startTime, LocalTime endTime, Integer id);
 
     List<WorkShift> findByShiftNameContainingIgnoreCaseOrShiftCodeContainingIgnoreCase(
             String shiftName,

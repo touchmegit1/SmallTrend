@@ -125,7 +125,7 @@ const WorkforceDashboardSummary = ({ filters: controlledFilters, onFiltersChange
             return;
         }
 
-        const confirmed = window.confirm(`Xác nhận đã thanh toán lương tháng ${filters.fromMonth}? Tháng này sẽ được reset khỏi tổng lương.`);
+        const confirmed = window.confirm(`Xác nhận đã thanh toán lương tháng ${filters.fromMonth}? File Excel bảng lương sẽ được tải xuống. Tháng này sẽ được reset khỏi tổng lương.`);
         if (!confirmed) {
             return;
         }
@@ -133,6 +133,27 @@ const WorkforceDashboardSummary = ({ filters: controlledFilters, onFiltersChange
         try {
             setProcessingPaid(true);
             setError('');
+
+            // Tải file Excel bảng lương trước
+            const exportParams = { fromMonth: filters.fromMonth, toMonth: filters.fromMonth };
+            const blobRes = await shiftService.exportPayroll(exportParams);
+            const blob = blobRes.data;
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const contentDisposition = blobRes.headers?.['content-disposition'];
+            let filename = `Bang_Luong_${filters.fromMonth}.xlsx`;
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?(.+?)"?$/);
+                if (match) filename = match[1];
+            }
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            // Sau đó mark paid
             await shiftService.markPayrollPaid({ month: filters.fromMonth });
             await loadDashboard();
             onPayrollPaid?.();

@@ -84,6 +84,13 @@ export const shiftService = {
         const res = await api.post('/shifts/payroll/mark-paid', null, { params });
         return res.data;
     },
+    async exportPayroll(params = {}) {
+        const res = await api.get('/shifts/payroll/export', {
+            params,
+            responseType: 'blob',
+        });
+        return res;
+    },
     async getWorkforceDashboard(params = {}) {
         const res = await api.get('/shifts/workforce/dashboard', { params });
         return res.data;

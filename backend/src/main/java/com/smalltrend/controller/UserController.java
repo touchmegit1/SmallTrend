@@ -53,6 +53,14 @@ public class UserController {
                     request.getPassword());
             errors.addAll(credentialErrors);
 
+            // Validate salary fields nếu có
+            if (request.getSalaryType() != null || request.getBaseSalary() != null || request.getHourlyRate() != null) {
+                Double baseSalary = request.getBaseSalary() != null ? request.getBaseSalary().doubleValue() : null;
+                Double hourlyRate = request.getHourlyRate() != null ? request.getHourlyRate().doubleValue() : null;
+                List<String> salaryErrors = validator.validateSalary(request.getSalaryType(), baseSalary, hourlyRate);
+                errors.addAll(salaryErrors);
+            }
+
             if (validator.hasErrors(errors)) {
                 String errorMsg = validator.errorsToString(errors);
                 return ResponseEntity.badRequest()
@@ -177,6 +185,14 @@ public class UserController {
                     request.getStatus());
             errors.addAll(userErrors);
 
+            // Validate salary fields nếu có
+            if (request.getSalaryType() != null || request.getBaseSalary() != null || request.getHourlyRate() != null) {
+                Double baseSalary = request.getBaseSalary() != null ? request.getBaseSalary().doubleValue() : null;
+                Double hourlyRate = request.getHourlyRate() != null ? request.getHourlyRate().doubleValue() : null;
+                List<String> salaryErrors = validator.validateSalary(request.getSalaryType(), baseSalary, hourlyRate);
+                errors.addAll(salaryErrors);
+            }
+
             if (validator.hasErrors(errors)) {
                 String errorMsg = validator.errorsToString(errors);
                 return ResponseEntity.badRequest()
@@ -219,7 +235,8 @@ public class UserController {
      */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateUserStatus(@PathVariable("id") Integer id, @Valid @RequestBody UserStatusRequest request) {
+    public ResponseEntity<?> updateUserStatus(@PathVariable("id") Integer id,
+            @Valid @RequestBody UserStatusRequest request) {
         // Validate ID
         List<String> errors = validator.validateId(id, "ID người dùng");
         if (validator.hasErrors(errors)) {
@@ -240,7 +257,8 @@ public class UserController {
 
     @PatchMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateUserRole(@PathVariable("id") Integer id, @Valid @RequestBody UserRoleUpdateRequest request) {
+    public ResponseEntity<?> updateUserRole(@PathVariable("id") Integer id,
+            @Valid @RequestBody UserRoleUpdateRequest request) {
         List<String> errors = validator.validateRoleAssignment(id, request.getRoleId());
         if (validator.hasErrors(errors)) {
             String errorMsg = validator.errorsToString(errors);

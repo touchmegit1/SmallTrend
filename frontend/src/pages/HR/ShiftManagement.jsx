@@ -1697,7 +1697,7 @@ const isAssignmentOverlap = (candidateShift, candidateDate, existingShift, exist
         return false;
     }
 
-    return candidateInterval.start < existingInterval.end && existingInterval.start < candidateInterval.end;
+    return candidateInterval.start <= existingInterval.end && existingInterval.start <= candidateInterval.end;
 };
 
 const buildShiftInterval = (shift, shiftDate) => {

@@ -383,7 +383,7 @@ public class WorkShiftAssignmentService {
     }
 
     private boolean rangesOverlap(long startA, long endA, long startB, long endB) {
-        return startA < endB && startB < endA;
+        return startA <= endB && startB <= endA;
     }
 
     private Set<Integer> setOfIds(Integer... ids) {
