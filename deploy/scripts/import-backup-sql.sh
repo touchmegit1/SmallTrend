@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
-# Import all backup SQL files into MySQL in correct dependency order.
-# Uses FOREIGN_KEY_CHECKS=0 for safe bulk import.
+# Import all backup SQL files into MySQL with backend stopped.
+# Core approach: stop backend -> import SQL -> start backend with DDL=none -> revert to update
 set -euo pipefail
 
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/smalltrend}"
 COMPOSE_FILE="${COMPOSE_FILE:-$DEPLOY_PATH/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$DEPLOY_PATH/deploy/env/backend.env}"
 BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_PATH/backup_data_value}"
-SEED_LOG_DIR="${SEED_LOG_DIR:-$DEPLOY_PATH/deploy/seed-logs}"
 
 log() { printf "[%s] %s\n" "$1" "$2"; }
 
-# ─── Read DB credentials ───
 get_env_value() {
   local key="$1"
   sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1 | tr -d '\r'
@@ -21,142 +19,56 @@ MYSQL_ROOT_PASSWORD="$(get_env_value MYSQL_ROOT_PASSWORD)"
 : "${MYSQL_DATABASE:=smalltrend}"
 : "${MYSQL_ROOT_PASSWORD:=root1234}"
 
-mkdir -p "$SEED_LOG_DIR"
-ERR_LOG="$SEED_LOG_DIR/backup_import_errors_$(date +%Y%m%d_%H%M%S).log"
+log "1/7" "Stopping backend to prevent JPA schema conflicts..."
+docker compose -f "$COMPOSE_FILE" stop backend 2>/dev/null || true
+sleep 3
 
-log "1/4" "Checking backup directory: $BACKUP_DIR"
-if [ ! -d "$BACKUP_DIR" ]; then
-  log "ERROR" "Backup directory not found: $BACKUP_DIR"
-  exit 1
+log "2/7" "Dropping all existing tables..."
+docker compose -f "$COMPOSE_FILE" exec -T mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
+  -e "SET FOREIGN_KEY_CHECKS = 0;" 2>/dev/null || true
+
+TABLES=$(docker compose -f "$COMPOSE_FILE" exec -T mysql mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" \
+  -e "SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema='$MYSQL_DATABASE';" 2>/dev/null | tr -d '\r')
+
+if [ -n "$TABLES" ] && [ "$TABLES" != "NULL" ]; then
+  for t in $(echo "$TABLES" | tr ',' ' '); do
+    docker compose -f "$COMPOSE_FILE" exec -T mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
+      -e "DROP TABLE IF EXISTS \`$t\`;" 2>/dev/null || true
+  done
+  log "2/7" "Dropped $(echo "$TABLES" | tr ',' ' ' | wc -w) tables"
+else
+  log "2/7" "No tables to drop"
 fi
 
-# ─── Import order: tables without FKs first, then dependent tables ───
-# Ordered to avoid foreign key violations during import
-ORDERED_TABLES=(
-  # Tier 0: No FK dependencies
-  smalltrend_roles
-  smalltrend_permissions
-  smalltrend_role_permissions
-  smalltrend_users
-  smalltrend_user_credentials
-  smalltrend_password_reset_otp
-  smalltrend_units
-  smalltrend_categories
-  smalltrend_tax_rates
-  smalltrend_locations
-  smalltrend_suppliers
-  smalltrend_customers
-  smalltrend_customer_tiers
-  smalltrend_coupons
-  smalltrend_ai_settings
-  smalltrend_reports
-  smalltrend_notifications
-
-  # Tier 1: Depends on units, categories, tax_rates, suppliers
-  smalltrend_brands
-  smalltrend_products
-  smalltrend_product_variants
-  smalltrend_variant_attributes
-  smalltrend_variant_prices
-  smalltrend_supplier_contracts
-
-  # Tier 2: Depends on product_variants, locations
-  smalltrend_product_batches
-  smalltrend_inventory_stock
-  smalltrend_stock_movements
-  smalltrend_product_combos
-  smalltrend_product_combo_items
-  smalltrend_unit_conversions
-
-  # Tier 3: Depends on products/variants + customers/users
-  smalltrend_sale_orders
-  smalltrend_sale_order_items
-  smalltrend_sale_order_histories
-  smalltrend_coupon_usage
-  smalltrend_purchase_orders
-  smalltrend_purchase_order_items
-  smalltrend_purchase_history
-  smalltrend_tickets
-  smalltrend_advertisements
-  smalltrend_campaigns
-  smalltrend_loyalty_gifts
-  smalltrend_loyalty_transactions
-  smalltrend_gift_redemption_history
-
-  # Tier 4: Cash & Inventory management
-  smalltrend_cash_registers
-  smalltrend_cash_transactions
-  smalltrend_inventory_counts
-  smalltrend_inventory_count_items
-  smalltrend_disposal_vouchers
-  smalltrend_disposal_voucher_items
-
-  # Tier 5: HR / Work shifts
-  smalltrend_work_shifts
-  smalltrend_work_shift_assignments
-  smalltrend_attendance
-  smalltrend_salary_configs
-  smalltrend_payroll_calculations
-  smalltrend_shift_handovers
-  smalltrend_shift_swap_requests
-
-  # Tier 6: Logs & alerts
-  smalltrend_audit_logs
-  smalltrend_price_expiry_alert_logs
-)
-
-log "2/4" "Starting MySQL import with FOREIGN_KEY_CHECKS=0"
-
+log "3/7" "Importing all SQL files from $BACKUP_DIR..."
 IMPORTED=0
-SKIPPED=0
-
-for table in "${ORDERED_TABLES[@]}"; do
-  SQL_FILE="$BACKUP_DIR/${table}.sql"
-  if [ ! -f "$SQL_FILE" ]; then
-    log "SKIP" "File not found: ${table}.sql"
-    SKIPPED=$((SKIPPED + 1))
-    continue
-  fi
-
-  log "IMPORT" "${table}.sql ($(wc -c < "$SQL_FILE") bytes)"
-
-  # Import with FK checks disabled, force-ignore duplicate key errors
-  {
-    echo "SET FOREIGN_KEY_CHECKS = 0;"
-    cat "$SQL_FILE"
-    echo "COMMIT;"
-  } | docker compose -f "$COMPOSE_FILE" exec -T mysql \
-      mysql --default-character-set=utf8mb4 --force -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" 2>>"$ERR_LOG" || true
-
+for f in "$BACKUP_DIR"/*.sql; do
+  [ -f "$f" ] || continue
+  log "IMPORT" "$(basename "$f")"
+  (echo "SET FOREIGN_KEY_CHECKS=0;"; cat "$f"; echo "SET FOREIGN_KEY_CHECKS=1;") | \
+    docker compose -f "$COMPOSE_FILE" exec -T mysql \
+    mysql --default-character-set=utf8mb4 --force -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" 2>/dev/null
   IMPORTED=$((IMPORTED + 1))
 done
+log "3/7" "Imported $IMPORTED files"
 
-# Re-enable FK checks
-docker compose -f "$COMPOSE_FILE" exec -T mysql \
-  mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
-  -e "SET FOREIGN_KEY_CHECKS = 1;" 2>/dev/null || true
+log "4/7" "Verifying data in MySQL (before backend starts)..."
+PRODUCTS=$(docker compose -f "$COMPOSE_FILE" exec -T mysql mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM products;" 2>/dev/null | tr -d '\r' || echo 0)
+VARIANTS=$(docker compose -f "$COMPOSE_FILE" exec -T mysql mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM product_variants;" 2>/dev/null | tr -d '\r' || echo 0)
+STOCK=$(docker compose -f "$COMPOSE_FILE" exec -T mysql mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM inventory_stock;" 2>/dev/null | tr -d '\r' || echo 0)
+ORDERS=$(docker compose -f "$COMPOSE_FILE" exec -T mysql mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM sale_orders;" 2>/dev/null | tr -d '\r' || echo 0)
+echo "  products=$PRODUCTS variants=$VARIANTS stock=$STOCK orders=$ORDERS"
 
-log "3/4" "Verifying imported data"
+log "5/7" "Setting SPRING_JPA_DDL_AUTO=none to preserve imported data..."
+sudo sed -i 's/^SPRING_JPA_DDL_AUTO=.*/SPRING_JPA_DDL_AUTO=none/' "$ENV_FILE"
+sudo sed -i 's/^SPRING_SQL_INIT_MODE=.*/SPRING_SQL_INIT_MODE=never/' "$ENV_FILE"
 
-# Quick row counts
-declare -A CRITICAL_TABLES=(
-  [users]=users
-  [roles]=roles
-  [products]=products
-  [product_variants]=product_variants
-  [inventory_stock]=inventory_stock
-  [sale_orders]=sale_orders
-  [sale_order_items]=sale_order_items
-)
+log "6/7" "Starting backend (will NOT modify schema)..."
+docker compose -f "$COMPOSE_FILE" up -d backend
+sleep 15
 
-for label in "${!CRITICAL_TABLES[@]}"; do
-  table="${CRITICAL_TABLES[$label]}"
-  count=$(docker compose -f "$COMPOSE_FILE" exec -T mysql \
-    mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" \
-    -e "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d '\r' || echo "0")
-  echo "  $table = $count rows"
-done
+log "7/7" "Reverting DDL_AUTO back to update for future deploys..."
+sudo sed -i 's/^SPRING_JPA_DDL_AUTO=.*/SPRING_JPA_DDL_AUTO=update/' "$ENV_FILE"
+sudo sed -i 's/^SPRING_SQL_INIT_MODE=.*/SPRING_SQL_INIT_MODE=always/' "$ENV_FILE"
 
-log "4/4" "Backup import completed"
-echo ""
-echo "Imported: $IMPORTED | Skipped: $SKIPPED | Errors in: $ERR_LOG"
+log "DONE" "Seed complete! products=$PRODUCTS variants=$VARIANTS stock=$STOCK orders=$ORDERS"
