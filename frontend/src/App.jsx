@@ -46,6 +46,9 @@ import Suppliers from "./pages/Products/ProductManager/Suppliers";
 import PriceSetting from "./pages/Products/ProductManager/PriceSetting";
 import PurchaseOrderList from "./pages/Inventory/purchase/PurchaseOrderList";
 import CreatePurchaseOrder from "./pages/Inventory/purchase/CreatePurchaseOrder";
+import InventoryStockList from "./pages/Inventory/stock/InventoryStockList";
+import StockProcessing from "./pages/Inventory/stock/StockProcessing";
+import TicketCenter from "./pages/Admin/TicketCenter";
 import TransactionHistory from "./pages/Pos/TransactionHistory";
 import NotFoundPage from "./pages/Common/NotFoundPage";
 import PersonalInfoPage from "./pages/Account/PersonalInfoPage";
@@ -171,6 +174,8 @@ function App() {
         <Route path="inventory/purchase-orders" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><PurchaseOrderList /></ProtectedRoute>} />
         <Route path="inventory/purchase-orders/create" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><CreatePurchaseOrder /></ProtectedRoute>} />
         <Route path="inventory/purchase-orders/:id" element={<ProtectedRoute allowedRoles={INVENTORY_FULL_ROLES}><CreatePurchaseOrder /></ProtectedRoute>} />
+        <Route path="inventory/stock" element={<ProtectedRoute allowedRoles={INVENTORY_OVERVIEW_ROLES}><InventoryStockList /></ProtectedRoute>} />
+        <Route path="inventory/stock/process" element={<ProtectedRoute allowedRoles={INVENTORY_OVERVIEW_ROLES}><StockProcessing /></ProtectedRoute>} />
 
         <Route path="products" element={<ProtectedRoute allowedRoles={PRODUCT_VIEW_ROLES}><ProductList /></ProtectedRoute>} />
         <Route path="products/addproduct" element={<ProtectedRoute allowedRoles={PRODUCT_MANAGE_ROLES}><AddNewProduct /></ProtectedRoute>} />
@@ -216,7 +221,7 @@ function App() {
         <Route path="account/settings" element={<ProtectedRoute allowedRoles={ACCOUNT_ROLES}><AccountSettingsPage /></ProtectedRoute>} />
 
         <Route path="admin/report-center" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ReportCenterPage /></ProtectedRoute>} />
-        <Route path="admin/ticket-center" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ReportCenterPage /></ProtectedRoute>} />
+        <Route path="admin/ticket-center" element={<ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...MANAGER_ROLES]}><TicketCenter /></ProtectedRoute>} />
         <Route path="admin/audit-logs" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AuditLogPage /></ProtectedRoute>} />
         <Route path="admin/ai-settings" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AiSettingsPage /></ProtectedRoute>} />
 

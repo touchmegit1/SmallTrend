@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "../../../components/ui/Toast";
 import {
+  getDashboardProducts,
   getProducts,
   getSuppliers,
   getActiveLocations,
@@ -23,6 +24,7 @@ import {
   calcOrderFinancials,
   validateDraft,
 } from "../../../utils/purchaseOrder";
+import { classifyStock as classifyInventoryStock, STOCK_STATUS as INVENTORY_STOCK_STATUS } from "../../../utils/inventory";
 
 const mapExistingOrderItem = (item, products) => {
   const unitPrice = Number(item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0);
@@ -106,6 +108,7 @@ const toReceiptItem = (item, orderStatus) => {
       Number.isFinite(receivedQuantity) && receivedQuantity > 0
         ? receivedQuantity
         : checkingQuantity,
+    damagedQuantity: Number(item.damaged_quantity ?? item.damagedQuantity ?? 0),
     unitCost: Number.isFinite(checkingUnitCost) ? checkingUnitCost : 0,
     expiryDate: item.expiryDate || item.expiry_date || "",
     notes: item.notes || "",
@@ -145,6 +148,7 @@ const buildReceiptPayloadItems = (receiptItems, items) => {
           item.quantity ??
           0,
       }),
+      damagedQuantity: Number(ri.damagedQuantity ?? 0),
       unitCost: mapReceiptItemToBaseCost({
         unitCost: ri.unitCost ?? item.unitCost ?? item.unit_cost ?? item.unit_price ?? 0,
       }),
@@ -204,14 +208,14 @@ const mapOrderStateFromResponse = (existingOrder, products) => {
   };
 };
 
-const addOrIncreaseProduct = (prevItems, product) => {
+const addOrIncreaseProduct = (prevItems, product, suggestedQuantity = null) => {
   const existing = prevItems.find((i) => i.variant_id === product.id);
   if (existing) {
     return prevItems.map((i) =>
-      i.variant_id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
+      i.variant_id === product.id ? { ...i, quantity: i.quantity + (suggestedQuantity || 1) } : i,
     );
   }
-  return [...prevItems, createOrderItem(product)];
+  return [...prevItems, createOrderItem(product, suggestedQuantity || 1)];
 };
 
 const removeItemByKey = (prevItems, key) => prevItems.filter((i) => i._key !== key);
@@ -288,7 +292,7 @@ const buildResubmissionSnapshot = (order, items) => {
   };
 };
 
-export function usePurchaseOrder(initialId = null) {
+export function usePurchaseOrder(initialId = null, prefillProductId = null) {
   const toast = useToast();
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -317,7 +321,7 @@ export function usePurchaseOrder(initialId = null) {
         let nextCode = "";
         let existingOrder = null;
 
-        const promises = [getProducts(), getSuppliers(), getActiveLocations()];
+        const promises = [getDashboardProducts(), getSuppliers(), getActiveLocations()];
 
         if (initialId) {
           promises.push(
@@ -332,6 +336,19 @@ export function usePurchaseOrder(initialId = null) {
         const results = await Promise.all(promises);
 
         setProducts(results[0]);
+        // If dashboard endpoint returns empty (auth/scoped), try full products list as fallback
+        if (!results[0] || results[0].length === 0) {
+          try {
+            const fallback = await getProducts();
+            if (fallback && fallback.length > 0) {
+              console.debug("usePurchaseOrder: dashboard empty, using getProducts fallback", fallback.length);
+              setProducts(fallback);
+            }
+          } catch (e) {
+            // ignore fallback errors
+            console.debug("usePurchaseOrder: getProducts fallback failed", e?.message ?? e);
+          }
+        }
         setSuppliers(results[1]);
         setLocations(results[2]);
 
@@ -363,6 +380,16 @@ export function usePurchaseOrder(initialId = null) {
           rejectedResubmissionSnapshotRef.current = null;
           nextCode = results[3];
           setOrder((prev) => ({ ...prev, po_number: nextCode }));
+
+          // Auto-add product from URL ?productId=
+          if (prefillProductId) {
+            const prefilledProduct = results[0].find(
+              (p) => String(p.id) === String(prefillProductId)
+            );
+            if (prefilledProduct) {
+              setItems([createOrderItem(prefilledProduct)]);
+            }
+          }
         }
       } catch (err) {
         console.error("Init error:", err);
@@ -441,20 +468,35 @@ export function usePurchaseOrder(initialId = null) {
   }, [suppliers, supplierQuery]);
 
   const lowStockSuggestions = useMemo(() => {
-    const selectedVariantIds = new Set(items.map((item) => item.variant_id));
+    const selectedVariantIds = new Set(items.map((item) => item.variant_id || item.product_id));
+    const THRESHOLD = 50; // Chỉ gợi ý những sản phẩm có stock < 50
 
-    return products
-      .map((product) => {
+    const lowStock = products
+      .filter((product) => {
         const stockQty = Number(product.stock_quantity ?? 0);
-        return { ...product, stockQty };
+        return stockQty < THRESHOLD && !selectedVariantIds.has(product.id);
       })
-      .filter(
-        (product) =>
-          product.stockQty <= 1 &&
-          !selectedVariantIds.has(product.id),
-      )
-      .sort((a, b) => a.stockQty - b.stockQty);
+      .sort((a, b) => (Number(a.stock_quantity) || 0) - (Number(b.stock_quantity) || 0));
+
+    // Nếu có sản phẩm tồn kho thấp thì ưu tiên hiển thị, nếu không thì hiển thị tất cả sản phẩm chưa có trong phiếu
+    if (lowStock.length > 0) {
+      return lowStock;
+    }
+
+    const allAvailable = products
+      .filter((product) => !selectedVariantIds.has(product.id))
+      .sort((a, b) => (Number(a.stock_quantity) || 0) - (Number(b.stock_quantity) || 0));
+
+    return allAvailable.slice(0, 20); // giới hạn 20 sản phẩm để tránh quá tải
   }, [products, items]);
+
+  useEffect(() => {
+    try {
+      console.debug("usePurchaseOrder: products", products?.length, "lowStockSuggestions", lowStockSuggestions?.length);
+    } catch (e) {
+      // ignore
+    }
+  }, [products, lowStockSuggestions]);
 
   const updateOrder = useCallback((field, value) => {
     setOrder((prev) => ({ ...prev, [field]: value }));
@@ -528,8 +570,8 @@ export function usePurchaseOrder(initialId = null) {
     }
   }, [order.supplier_id, suppliers, supplierQuery]);
 
-  const addProduct = useCallback((product) => {
-    setItems((prev) => addOrIncreaseProduct(prev, product));
+  const addProduct = useCallback((product, suggestedQuantity = null) => {
+    setItems((prev) => addOrIncreaseProduct(prev, product, suggestedQuantity));
   }, []);
 
   const removeItem = useCallback((_key) => {
@@ -648,16 +690,63 @@ export function usePurchaseOrder(initialId = null) {
     [initialId, order, items, financials],
   );
 
-  // Quản lý duyệt (PENDING → CONFIRMED) — không cập nhật stock
+  // Quản lý duyệt (PENDING → CONFIRMED) hoặc Duyệt & Nhập kho trực tiếp (DRAFT → RECEIVED)
   const confirmOrder = useCallback(
-    async (navigate) => {
-      if (!initialId) return false;
-
+    async (navigate, skipSave = false) => {
       setSaving(true);
       try {
-        await approvePurchaseOrder(initialId);
+        let orderId = initialId;
 
-        toast.success("Đã duyệt phiếu nhập! Chuyển sang bước kiểm kê.");
+        // Nếu chưa lưu thì tự động lưu nháp trước khi duyệt
+        if (!orderId && !skipSave) {
+          const validation = validateDraft(order, items);
+          if (!validation.valid) {
+            toast.warning(validation.errors.join(", "), { title: "Dữ liệu không hợp lệ", duration: 5000 });
+            setSaving(false);
+            return false;
+          }
+
+          const orderData = {
+            ...order,
+            status: PO_STATUS.DRAFT,
+            discount: toNumber(order.discount),
+            tax_percent: order.tax_percent,
+            shipping_fee: toNumber(order.shipping_fee),
+            paid_amount: toNumber(order.paid_amount),
+            subtotal: financials.subtotal ?? 0,
+            tax_amount: financials.taxAmount ?? 0,
+            total_amount: financials.totalAmount ?? 0,
+            totalAmount: financials.totalAmount ?? 0,
+            items: items.map((item) => ({
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              sku: item.sku || "",
+              name: item.name || "",
+              quantity: Number(item.quantity),
+              unit_cost: item.unit_price || 0,
+              total_cost: (Number(item.quantity) * Number(item.unit_price || 0)),
+              conversion_factor: item.conversion_factor || 1,
+            })),
+          };
+
+          const result = await createPurchaseOrder(orderData);
+          orderId = result?.id || result?.orderId;
+          if (!orderId) {
+            toast.error("Không thể lưu phiếu trước khi duyệt");
+            setSaving(false);
+            return false;
+          }
+        }
+
+        if (!orderId) {
+          toast.warning("Vui lòng lưu phiếu tạm trước khi duyệt.");
+          setSaving(false);
+          return false;
+        }
+
+        await approvePurchaseOrder(orderId);
+
+        toast.success("Đã duyệt và nhập kho thành công! Tồn kho đã được cập nhật.");
         if (navigate) navigate("/inventory/purchase-orders");
         return true;
       } catch (err) {
@@ -668,7 +757,7 @@ export function usePurchaseOrder(initialId = null) {
         setSaving(false);
       }
     },
-    [initialId],
+    [initialId, order, items, financials],
   );
 
   // NV kho bắt đầu kiểm kê (CONFIRMED → CHECKING)

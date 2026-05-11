@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Box, Clock3 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Box, Clock3, AlertTriangle } from "lucide-react";
 import { usePurchaseOrder } from "../../../hooks/inventory/purchase/usePurchaseOrder";
 import { PO_STATUS, PO_STATUS_CONFIG } from "../../../utils/purchaseOrder";
 
@@ -16,6 +16,8 @@ import { useAuth } from "../../../context/AuthContext";
 
 function CreatePurchaseOrder() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const prefillProductId = searchParams.get("productId");
   const navigate = useNavigate();
   const { user } = useAuth();
   const userRole = String(user?.role?.name || user?.role || "").toUpperCase();
@@ -54,7 +56,15 @@ function CreatePurchaseOrder() {
     requestSupplierSupplement,
     rejectOrder,
     deleteOrder,
-  } = usePurchaseOrder(id || null);
+  } = usePurchaseOrder(id || null, prefillProductId);
+
+  useEffect(() => {
+    try {
+      console.debug("CreatePurchaseOrder: products", products?.length, "lowStockSuggestions", lowStockSuggestions?.length);
+    } catch (e) {
+      // ignore
+    }
+  }, [products, lowStockSuggestions]);
 
   const confirmConfigs = {
     confirmOrder: {
@@ -191,7 +201,9 @@ function CreatePurchaseOrder() {
     isInventoryStaff && isRejectedAfterShortage && !isManagerOrAdmin;
 
   const isEditable =
-    (order.status === PO_STATUS.DRAFT || order.status === PO_STATUS.REJECTED) &&
+    (order.status === PO_STATUS.DRAFT || 
+     order.status === PO_STATUS.PENDING ||
+     order.status === PO_STATUS.REJECTED) &&
     !isRejectedViewOnlyForInventoryStaff;
   const isChecking = order.status === PO_STATUS.CHECKING;
   const isShortagePendingApproval =
@@ -238,7 +250,7 @@ function CreatePurchaseOrder() {
           />
         ) : (
           <div className="flex-1 overflow-auto px-6 py-5">
-            <div className="max-w-[1300px] mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-visible">
+            <div className="max-w-[1300px] mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
                 {isEditable && (
                   <div className="mb-3 text-xs text-slate-500">
@@ -296,21 +308,97 @@ function CreatePurchaseOrder() {
                 </div>
               </div>
 
-              {isEditable && (
-                <ProductSearchBar
-                  products={products}
-                  suggestedProducts={lowStockSuggestions}
-                  onAddProduct={addProduct}
-                />
-              )}
+              <div className="px-5 py-2 text-xs text-slate-500">Debug: products {products?.length ?? 0} · suggestions {lowStockSuggestions?.length ?? 0}</div>
+              <div className="flex flex-col lg:flex-row min-h-[500px]">
+                {/* LEFT: Suggestions - only when editable */}
+                {isEditable && (
+                <div className="lg:w-[340px] lg:min-w-[280px] border-b lg:border-b-0 lg:border-r border-slate-200 bg-amber-50/30 shrink-0">
+                  <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
+                    <p className="text-xs font-bold text-amber-800">
+                      {lowStockSuggestions.some(p => Number(p.stock_quantity ?? 0) < 50)
+                        ? `Đề xuất cần nhập (${lowStockSuggestions.length})`
+                        : `Danh sách sản phẩm (${lowStockSuggestions.length})`}
+                    </p>
+                    <p className="text-[10px] text-amber-600 mt-0.5">Bấm để thêm nhanh vào phiếu</p>
+                  </div>
+                  <div className="max-h-[500px] overflow-y-auto">
+                    {lowStockSuggestions.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-400">Không có sản phẩm nào</div>
+                    ) : (
+                      lowStockSuggestions.map((p) => (
+                        <button key={p.id} type="button" onClick={() => addProduct(p, 50)}
+                          className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-amber-100/60 transition-colors border-b border-amber-100/50 last:border-b-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-slate-800 truncate">{p.name}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{p.sku}</p>
+                          </div>
+                          <div className="text-right shrink-0 ml-3">
+                            <p className="text-xs font-bold text-amber-700">{Number(p.stock_quantity ?? 0).toLocaleString("vi-VN")}</p>
+                            <p className="text-[10px] text-amber-500">{p.unit || ""}</p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+                )}
+                {/* RIGHT: Search + Items */}
+                <div className="flex-1 flex flex-col min-w-0">
+                  {isEditable && (
+                  <ProductSearchBar products={products} suggestedProducts={lowStockSuggestions} onAddProduct={addProduct} />
+                  )}
+                  <PurchaseItemTable items={items} isEditable={isEditable} onUpdate={updateItem} onRemove={removeItem} totalQty={totalQty} />
+                </div>
+              </div>
 
-              <PurchaseItemTable
-                items={items}
-                isEditable={isEditable}
-                onUpdate={updateItem}
-                onRemove={removeItem}
-                totalQty={totalQty}
-              />
+              {/* Supplier & Location quick-select (for editable drafts) */}
+              {isEditable && (
+                <div className="border-t border-slate-200 bg-white px-5 py-3">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2 min-w-[200px]">
+                      <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Nhà cung cấp</label>
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={supplierQuery}
+                          onChange={(e) => setSupplierQuery(e.target.value)}
+                          placeholder="Tìm hoặc nhập NCC..."
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          list="supplier-list"
+                        />
+                        <datalist id="supplier-list">
+                          {suppliers.map((s) => (
+                            <option key={s.id} value={s.name}>{s.name} (ID:{s.id})</option>
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[180px]">
+                      <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Kho nhập</label>
+                      <select
+                        value={order.location_id || order.locationId || ''}
+                        onChange={(e) => updateOrder('location_id', e.target.value ? Number(e.target.value) : null)}
+                        className="border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="">-- Chọn kho --</option>
+                        {locations.map((l) => (
+                          <option key={l.id} value={l.id}>{l.locationName || l.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Ghi chú</label>
+                      <input
+                        type="text"
+                        value={order.notes || ''}
+                        onChange={(e) => updateOrder('notes', e.target.value)}
+                        placeholder="Ghi chú phiếu nhập..."
+                        className="border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[200px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <ActionButtons
                 status={order.status}

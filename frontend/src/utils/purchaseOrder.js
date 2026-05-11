@@ -162,7 +162,7 @@ export function createDefaultOrder(code) {
 
 // ─── Default Item Shape ──────────────────────────────────
 
-export function createOrderItem(product) {
+export function createOrderItem(product, quantity = 1) {
   const unitPrice = Number(product.purchase_price ?? 0);
 
   return {
@@ -174,7 +174,7 @@ export function createOrderItem(product) {
     image_url: product.image_url || product.imageUrl || null,
     attributes: product.attributes || null,
     unit: product.unit,
-    quantity: 1,
+    quantity: quantity,
     unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
     expiry_date: "",
   };
