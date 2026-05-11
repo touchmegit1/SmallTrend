@@ -8,6 +8,7 @@ import {
   Eye,
   ShieldCheck,
   Clock3,
+  Zap,
 } from "lucide-react";
 import { PO_STATUS } from "../../../utils/purchaseOrder";
 import { useAuth } from "../../../context/AuthContext";
@@ -38,9 +39,11 @@ export default function ActionButtons({
   const isInventoryStaff = ["INVENTORY_STAFF", "ROLE_INVENTORY_STAFF"].includes(
     userRole,
   );
-  const canCheckAndReceive = !forceViewOnly && (isAdmin || isInventoryStaff);
-  const canStartChecking = !forceViewOnly && isInventoryStaff;
-  const canCreatePurchaseRequest = !forceViewOnly && (isAdmin || isInventoryStaff);
+  const canCheckAndReceive = !forceViewOnly && (isAdmin || isInventoryStaff || isManager);
+  const canStartChecking = !forceViewOnly && (isAdmin || isInventoryStaff || isManager);
+  const canCreatePurchaseRequest = !forceViewOnly && (isAdmin || isInventoryStaff || isManager);
+  const canApproveReject = !forceViewOnly && isManagerOrAdmin;
+  const canDirectApprove = !forceViewOnly && isManagerOrAdmin;
 
   const isDraft = status === PO_STATUS.DRAFT || status === PO_STATUS.REJECTED;
   const isPending = status === PO_STATUS.PENDING;
@@ -85,6 +88,21 @@ export default function ActionButtons({
             )}
             Gửi yêu cầu duyệt
           </button>
+          {canDirectApprove && (
+            <button
+              onClick={onConfirm}
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+              title="Duyệt và nhập kho ngay (bỏ qua chờ duyệt)"
+            >
+              {saving ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Zap size={16} />
+              )}
+              Duyệt &amp; Nhập kho
+            </button>
+          )}
           {isEditMode && (
             <button
               onClick={onDelete}

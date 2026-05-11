@@ -314,12 +314,16 @@ function CreatePurchaseOrder() {
                 {isEditable && (
                 <div className="lg:w-[340px] lg:min-w-[280px] border-b lg:border-b-0 lg:border-r border-slate-200 bg-amber-50/30 shrink-0">
                   <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
-                    <p className="text-xs font-bold text-amber-800">Đề xuất cần nhập ({lowStockSuggestions.length})</p>
+                    <p className="text-xs font-bold text-amber-800">
+                      {lowStockSuggestions.some(p => Number(p.stock_quantity ?? 0) < 50)
+                        ? `Đề xuất cần nhập (${lowStockSuggestions.length})`
+                        : `Danh sách sản phẩm (${lowStockSuggestions.length})`}
+                    </p>
                     <p className="text-[10px] text-amber-600 mt-0.5">Bấm để thêm nhanh vào phiếu</p>
                   </div>
                   <div className="max-h-[500px] overflow-y-auto">
                     {lowStockSuggestions.length === 0 ? (
-                      <div className="p-6 text-center text-xs text-slate-400">Không có sản phẩm nào cần nhập gấp</div>
+                      <div className="p-6 text-center text-xs text-slate-400">Không có sản phẩm nào</div>
                     ) : (
                       lowStockSuggestions.map((p) => (
                         <button key={p.id} type="button" onClick={() => addProduct(p, 50)}
@@ -346,6 +350,55 @@ function CreatePurchaseOrder() {
                   <PurchaseItemTable items={items} isEditable={isEditable} onUpdate={updateItem} onRemove={removeItem} totalQty={totalQty} />
                 </div>
               </div>
+
+              {/* Supplier & Location quick-select (for editable drafts) */}
+              {isEditable && (
+                <div className="border-t border-slate-200 bg-white px-5 py-3">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2 min-w-[200px]">
+                      <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Nhà cung cấp</label>
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={supplierQuery}
+                          onChange={(e) => setSupplierQuery(e.target.value)}
+                          placeholder="Tìm hoặc nhập NCC..."
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          list="supplier-list"
+                        />
+                        <datalist id="supplier-list">
+                          {suppliers.map((s) => (
+                            <option key={s.id} value={s.name}>{s.name} (ID:{s.id})</option>
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[180px]">
+                      <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Kho nhập</label>
+                      <select
+                        value={order.location_id || order.locationId || ''}
+                        onChange={(e) => updateOrder('location_id', e.target.value ? Number(e.target.value) : null)}
+                        className="border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="">-- Chọn kho --</option>
+                        {locations.map((l) => (
+                          <option key={l.id} value={l.id}>{l.locationName || l.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Ghi chú</label>
+                      <input
+                        type="text"
+                        value={order.notes || ''}
+                        onChange={(e) => updateOrder('notes', e.target.value)}
+                        placeholder="Ghi chú phiếu nhập..."
+                        className="border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[200px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <ActionButtons
                 status={order.status}

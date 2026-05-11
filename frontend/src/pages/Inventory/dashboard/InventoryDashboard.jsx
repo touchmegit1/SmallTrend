@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { RefreshCw, Plus, Search, PackagePlus, ClipboardCheck, AlertTriangle, Truck } from "lucide-react";
+import { RefreshCw, Plus, Search, PackagePlus, ClipboardCheck, AlertTriangle, Truck, Layers, MinusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInventoryDashboard } from "../../../hooks/inventory/dashboard/useInventoryData";
 import { usePurchaseOrderList } from "../../../hooks/inventory/purchase/usePurchaseOrderList";
@@ -108,6 +108,30 @@ function InventoryDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate("/inventory/stock")}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+            title="Xem tồn kho chi tiết"
+          >
+            <Layers size={16} />
+            Tồn kho
+          </button>
+          <button
+            onClick={() => navigate("/inventory/stock/process")}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+            title="Trừ kho POS & điều chỉnh"
+          >
+            <MinusCircle size={16} />
+            Xử lý kho
+          </button>
+          <button
+            onClick={() => navigate("/inventory/purchase-orders")}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+            title="Danh sách phiếu nhập"
+          >
+            <PackagePlus size={16} />
+            Phiếu nhập
+          </button>
           <button
             onClick={() => globalThis.location.reload()}
             className="inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
