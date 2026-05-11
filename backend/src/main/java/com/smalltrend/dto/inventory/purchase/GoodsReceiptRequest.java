@@ -78,6 +78,9 @@ public class GoodsReceiptRequest {
         @NotNull(message = "Hạn sử dụng là bắt buộc")
         private java.time.LocalDate expiryDate;
 
+        @Min(value = 0, message = "Số lượng hỏng không hợp lệ")
+        private Integer damagedQuantity;  // Số lượng hỏng/lỗi không nhập được
+
         @AssertTrue(message = "Hạn sử dụng phải còn ít nhất 6 tháng")
         public boolean isExpiryDateAtLeastSixMonths() {
             return expiryDate == null || !expiryDate.isBefore(LocalDate.now().plusMonths(6));

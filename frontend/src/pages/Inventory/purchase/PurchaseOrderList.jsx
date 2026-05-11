@@ -76,15 +76,13 @@ function PurchaseOrderList() {
             </div>
           </div>
 
-          {!isManager && (
-            <button
-              onClick={() => navigate("/inventory/purchase-orders/create")}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2 transition shadow-sm"
-            >
-              <Plus size={16} />
-              Yêu cầu nhập hàng
-            </button>
-          )}
+          <button
+            onClick={() => navigate("/inventory/purchase-orders/create")}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2 transition shadow-sm"
+          >
+            <Plus size={16} />
+            Yêu cầu nhập hàng
+          </button>
         </div>
       </div>
 

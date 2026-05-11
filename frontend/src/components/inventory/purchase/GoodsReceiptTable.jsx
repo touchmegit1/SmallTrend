@@ -74,11 +74,18 @@ export default function GoodsReceiptTable({
   return (
     <div className="flex-1 overflow-auto bg-white">
       <div className="sticky top-0 z-10 bg-purple-50 border-b border-purple-200 px-6 py-2.5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-purple-800">
-          <span className="w-2 h-2 rounded-full bg-purple-500" />
-          {isReadOnly
-            ? "Kết quả kiểm kê hàng hóa"
-            : "Kiểm kê hàng hóa — Nhập số lượng thực nhận"}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold text-purple-800">
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            {isReadOnly
+              ? "Kết quả kiểm kê hàng hóa"
+              : "Kiểm kê hàng hóa — Nhập số lượng thực nhận"}
+          </div>
+          {!isReadOnly && (
+            <div className="text-[11px] text-purple-600 font-medium">
+              💡 Đặt SL thực nhận = 0 để hoàn trả toàn bộ
+            </div>
+          )}
         </div>
       </div>
 
@@ -102,6 +109,9 @@ export default function GoodsReceiptTable({
             </th>
             <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-36">
               SL thực nhận
+            </th>
+            <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-32">
+              SL hỏng
             </th>
             <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-32">
               Chênh lệch
@@ -248,6 +258,23 @@ export default function GoodsReceiptTable({
                     }}
                     disabled={isReadOnly}
                     className={`w-24 text-center px-2.5 py-1.5 text-sm font-semibold border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 ${receivedQtyClass}`}
+                  />
+                </td>
+                <td className="px-5 py-4 text-center">
+                  <input
+                    type="number"
+                    min="0"
+                    value={ri.damagedQuantity ?? 0}
+                    onChange={(e) => {
+                      const rawValue = e.target.value;
+                      onUpdateReceiptItem(
+                        getItemIdentity(item),
+                        "damagedQuantity",
+                        rawValue === "" ? 0 : Number.parseInt(rawValue, 10) || 0,
+                      );
+                    }}
+                    disabled={isReadOnly}
+                    className="w-24 text-center px-2.5 py-1.5 text-sm font-semibold border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 bg-orange-50"
                   />
                 </td>
                 <td className="px-5 py-4 text-center">

@@ -218,9 +218,50 @@ public class PurchaseOrderService {
             throw new RuntimeException("Chỉ có thể duyệt phiếu đang chờ duyệt.");
         }
 
-        order.setStatus(PurchaseOrderStatus.CONFIRMED);
+        // Approve and automatically create stock batches (auto-receive)
         order.setRejectionReason(null);
+
+        // Build stock item requests from order items using ordered quantity
+        List<PurchaseOrderItemRequest> stockItemRequests = order.getItems() == null
+                ? List.<PurchaseOrderItemRequest>of()
+                : order.getItems().stream()
+                        .filter(Objects::nonNull)
+                        .map(item -> PurchaseOrderItemRequest.builder()
+                                .variantId(item.getVariant() != null ? item.getVariant().getId().intValue() : null)
+                                .productId(item.getVariant() != null && item.getVariant().getProduct() != null
+                                        ? item.getVariant().getProduct().getId().intValue()
+                                        : null)
+                                .quantity(item.getQuantity() != null ? item.getQuantity() : 0)
+                                .unitCost(item.getUnitCost())
+                                .totalCost(item.getTotalCost())
+                                .expiryDate(item.getExpiryDate())
+                                .notes(item.getNotes())
+                                .build())
+                        .filter(req -> req.getQuantity() != null && req.getQuantity() > 0)
+                        .toList();
+
+        // First mark as CONFIRMED
+        order.setStatus(PurchaseOrderStatus.CONFIRMED);
         purchaseOrderRepository.save(order);
+
+        // If there are items, immediately update stock (create batches) and mark
+        // RECEIVED
+        if (!stockItemRequests.isEmpty()) {
+            updateStock(order, stockItemRequests, true);
+            List<SyncedPurchasePriceItemResponse> synced = syncPurchasePrices(order);
+            int syncedCount = synced.size();
+            LocalDateTime syncedAt = syncedCount > 0 ? LocalDateTime.now() : null;
+
+            order.setStatus(PurchaseOrderStatus.RECEIVED);
+            purchaseOrderRepository.save(order);
+
+            PurchaseOrderResponse resp = toDetailResponse(order);
+            resp.setSyncedPurchasePriceCount(syncedCount);
+            resp.setSyncedPurchasePriceAt(syncedAt);
+            resp.setSyncedPurchasePriceItems(synced);
+            log.info("Purchase Order {} APPROVED and auto-RECEIVED. Stock batches created.", order.getOrderNumber());
+            return resp;
+        }
 
         log.info("Purchase Order {} APPROVED by Manager. Chờ NV kho kiểm kê.", order.getOrderNumber());
         return toDetailResponse(order);
