@@ -13,9 +13,14 @@ public class DisposalVoucherRequestValidator {
         if (request.getLocationId() == null) {
             throw new RuntimeException("Location is required");
         }
-        if (request.getReasonType() != null && !request.getReasonType().trim().isEmpty()
-                && !"EXPIRED".equalsIgnoreCase(request.getReasonType().trim())) {
-            throw new RuntimeException("Only EXPIRED reason type is allowed");
+        // Accept all valid reason types from DisposalReason enum
+        if (request.getReasonType() != null && !request.getReasonType().trim().isEmpty()) {
+            try {
+                com.smalltrend.entity.enums.DisposalReason.valueOf(request.getReasonType().trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid reason type: " + request.getReasonType()
+                    + ". Valid values: EXPIRED, DAMAGED, LOST, OBSOLETE, OTHER");
+            }
         }
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("At least one disposal item is required");

@@ -113,7 +113,12 @@ public class DisposalVoucherService {
         }
 
         voucher.setLocation(location);
-        voucher.setReasonType(DisposalReason.EXPIRED);
+        // Accept reasonType from request; default to EXPIRED if not provided
+        if (request.getReasonType() != null && !request.getReasonType().trim().isEmpty()) {
+            voucher.setReasonType(DisposalReason.valueOf(request.getReasonType().trim().toUpperCase()));
+        } else {
+            voucher.setReasonType(DisposalReason.EXPIRED);
+        }
         voucher.setNotes(request.getNotes());
 
         Set<Long> seenBatchIds = new HashSet<>();
