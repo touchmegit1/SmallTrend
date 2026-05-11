@@ -3,7 +3,7 @@ import { Plus, Search, Trash2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDisposalList } from "../../../hooks/inventory/disposal/useDisposalList";
 import { formatCurrency } from "../../../utils/inventory";
-import { formatDisposalCode } from "../../../utils/disposalVoucher";
+import { formatDisposalCode, REASON_CONFIG } from "../../../utils/disposalVoucher";
 import CustomSelect from "../../../components/common/CustomSelect";
 
 const STATUS_CONFIG = {
@@ -35,10 +35,6 @@ const STATUS_CONFIG = {
     dot: "bg-red-500",
     border: "border-red-200",
   },
-};
-
-const REASON_CONFIG = {
-  EXPIRED: { label: "Hết hạn" },
 };
 
 const SortIcon = ({ field, sortField, sortDir }) => (
@@ -251,7 +247,7 @@ export default function DisposalList() {
                 <tbody className="divide-y divide-slate-100">
                   {vouchers.map((v) => {
                     const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.DRAFT;
-                    const reason = REASON_CONFIG[v.reasonType] || REASON_CONFIG.EXPIRED;
+                    const reason = REASON_CONFIG[v.reason_type] || REASON_CONFIG.EXPIRED;
                     const derivedValue = (v.items || []).reduce(
                       (sum, item) =>
                         sum +

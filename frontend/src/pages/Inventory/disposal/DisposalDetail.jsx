@@ -441,11 +441,14 @@ export default function DisposalDetail() {
                   >
                     Lý do xử lý
                   </label>
-                  <input
-                    id="disposal-reason-type"
-                    value={REASON_CONFIG[REASON_TYPE.EXPIRED].label}
-                    readOnly
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-700"
+                  <CustomSelect
+                    value={voucher.reason_type || REASON_TYPE.EXPIRED}
+                    onChange={(val) => updateVoucher("reason_type", val)}
+                    options={Object.entries(REASON_CONFIG).map(([key, cfg]) => ({
+                      value: key,
+                      label: cfg.label,
+                    }))}
+                    className="w-full"
                   />
                 </>
               ) : (

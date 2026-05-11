@@ -44,10 +44,43 @@ export const DV_STATUS_CONFIG = {
 // ─── Reason Types ────────────────────────────────────────────
 export const REASON_TYPE = {
   EXPIRED: "EXPIRED",
+  DAMAGED: "DAMAGED",
+  LOST: "LOST",
+  OBSOLETE: "OBSOLETE",
+  OTHER: "OTHER",
 };
 
 export const REASON_CONFIG = {
-  [REASON_TYPE.EXPIRED]: { label: "Hết hạn sử dụng" },
+  [REASON_TYPE.EXPIRED]: {
+    label: "Hết hạn sử dụng",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    dot: "bg-red-500",
+  },
+  [REASON_TYPE.DAMAGED]: {
+    label: "Hư hỏng, vỡ",
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+    dot: "bg-orange-500",
+  },
+  [REASON_TYPE.LOST]: {
+    label: "Thất lạc, mất mát",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    dot: "bg-amber-500",
+  },
+  [REASON_TYPE.OBSOLETE]: {
+    label: "Lỗi thời, không bán được",
+    bg: "bg-slate-100",
+    text: "text-slate-600",
+    dot: "bg-slate-500",
+  },
+  [REASON_TYPE.OTHER]: {
+    label: "Lý do khác",
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    dot: "bg-blue-500",
+  },
 };
 
 // ─── Allowed Transitions ─────────────────────────────────────
