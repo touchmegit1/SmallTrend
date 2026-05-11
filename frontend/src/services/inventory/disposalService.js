@@ -78,6 +78,21 @@ export const getExpiredBatches = async (locationId) => {
   }));
 };
 
+export const getBatchesAtLocation = async (locationId) => {
+  const url = locationId ? `${SPRING_API}/batches?locationId=${locationId}` : `${SPRING_API}/batches`;
+  const response = await fetch(url, { headers: getAuthHeaders() });
+  if (!response.ok) throw new Error("Failed to fetch batches at location");
+  const data = await response.json();
+  return data.map(b => ({
+    ...b,
+    product_id: b.productId,
+    product_name: b.productName,
+    batch_code: b.batchCode,
+    expiry_date: b.expiryDate,
+    received_date: b.receivedDate
+  }));
+};
+
 function mapVoucherPayload(voucherData) {
   return {
     id: voucherData.id ?? null,

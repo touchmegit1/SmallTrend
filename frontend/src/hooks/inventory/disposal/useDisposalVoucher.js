@@ -9,7 +9,7 @@ import { getActiveLocations } from "../../../services/inventory/inventoryService
 import {
   getDisposalVoucherById,
   getNextDisposalCode,
-  getExpiredBatches,
+  getBatchesAtLocation,
   saveDisposalDraft,
   approveDisposalVoucher,
 } from "../../../services/inventory/disposalService";
@@ -18,7 +18,7 @@ export function useDisposalVoucher(voucherId = null) {
   const toast = useToast();
   const [voucher, setVoucher] = useState({ ...DEFAULT_VOUCHER });
   const [items, setItems] = useState([]);
-  const [expiredBatches, setExpiredBatches] = useState([]);
+  const [availableBatches, setAvailableBatches] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,8 +45,8 @@ export function useDisposalVoucher(voucherId = null) {
           let defaultLocationId = null;
           for (const loc of locsData) {
             try {
-              const expiredAtLocation = await getExpiredBatches(loc.id);
-              if ((expiredAtLocation || []).length > 0) {
+              const batchesAtLocation = await getBatchesAtLocation(loc.id);
+              if ((batchesAtLocation || []).length > 0) {
                 defaultLocationId = loc.id;
                 break;
               }
@@ -76,22 +76,22 @@ export function useDisposalVoucher(voucherId = null) {
     };
   }, [voucherId]);
 
-  // ─── Load expired batches by selected location ──────────
+  // ─── Load all batches with stock by selected location ──
   useEffect(() => {
     let cancelled = false;
 
-    const loadExpiredBatches = async () => {
+    const loadBatches = async () => {
       const locationId = voucher.location_id ?? voucher.locationId;
       if (!locationId) {
-        setExpiredBatches([]);
+        setAvailableBatches([]);
         return;
       }
 
       try {
-        const data = await getExpiredBatches(locationId);
+        const data = await getBatchesAtLocation(locationId);
         if (cancelled) return;
 
-        setExpiredBatches(
+        setAvailableBatches(
           data.map((b) => ({
             ...b,
             id: b.id ?? b.batchId ?? b.batch_id,
@@ -110,31 +110,31 @@ export function useDisposalVoucher(voucherId = null) {
       }
     };
 
-    loadExpiredBatches();
+    loadBatches();
 
     return () => {
       cancelled = true;
     };
   }, [voucher.location_id, voucher.locationId]);
 
-  const expiredBatchById = useMemo(() => {
+  const availableBatchById = useMemo(() => {
     const map = new Map();
-    expiredBatches.forEach((b) => {
+    availableBatches.forEach((b) => {
       map.set(b.id, b);
     });
     return map;
-  }, [expiredBatches]);
+  }, [availableBatches]);
 
   const validationBatches = useMemo(
     () =>
       items.map((item) => {
-        const batch = expiredBatchById.get(item.batch_id);
+        const batch = availableBatchById.get(item.batch_id);
         return {
           id: item.batch_id,
           quantity: batch?.quantity ?? item.quantity,
         };
       }),
-    [items, expiredBatchById]
+    [items, availableBatchById]
   );
 
   const isEditable =
@@ -269,7 +269,7 @@ export function useDisposalVoucher(voucherId = null) {
     voucher,
     items,
     locations,
-    expiredBatches,
+    availableBatches,
     loading,
     saving,
     error,

@@ -19,7 +19,7 @@ public class DisposalVoucherRequestValidator {
                 com.smalltrend.entity.enums.DisposalReason.valueOf(request.getReasonType().trim().toUpperCase());
             } catch (IllegalArgumentException e) {
                 throw new RuntimeException("Invalid reason type: " + request.getReasonType()
-                    + ". Valid values: EXPIRED, DAMAGED, LOST, OBSOLETE, OTHER");
+                        + ". Valid values: EXPIRED, DAMAGED, LOST, OBSOLETE, OTHER");
             }
         }
         if (request.getItems() == null || request.getItems().isEmpty()) {

@@ -29,7 +29,7 @@ export default function DisposalDetail() {
     voucher,
     items,
     locations,
-    expiredBatches,
+    availableBatches,
     loading,
     saving,
     error,
@@ -80,10 +80,10 @@ export default function DisposalDetail() {
   const openConfirmDeduction = () => setConfirmState("confirmDeduction");
 
 
-  // Filter expired batches not already added and by search
-  const availableBatches = useMemo(() => {
+  // Filter batches not already added and by search
+  const filteredBatches = useMemo(() => {
     const addedBatchIds = new Set(items.map((i) => i.batch_id));
-    let result = expiredBatches.filter((b) => !addedBatchIds.has(b.id));
+    let result = availableBatches.filter((b) => !addedBatchIds.has(b.id));
     if (batchSearch) {
       const term = batchSearch.toLowerCase();
       result = result.filter(
@@ -93,7 +93,7 @@ export default function DisposalDetail() {
       );
     }
     return result;
-  }, [expiredBatches, items, batchSearch]);
+  }, [availableBatches, items, batchSearch]);
 
   const handleSaveDraft = async () => {
     try {
@@ -162,14 +162,14 @@ export default function DisposalDetail() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 bg-red-50">
                 <h2 className="text-sm font-semibold text-red-800">
-                  Lô hàng hết hạn có thể xử lý ({expiredBatches.length} lô)
+                  Lô hàng có thể xử lý ({availableBatches.length} lô)
                 </h2>
               </div>
 
-              {expiredBatches.length === 0 ? (
+              {availableBatches.length === 0 ? (
                 <div className="p-8 text-center">
                   <p className="text-slate-500 text-sm">
-                    Không có lô hàng hết hạn
+                    Không có lô hàng nào trong kho
                   </p>
                 </div>
               ) : (
@@ -195,7 +195,7 @@ export default function DisposalDetail() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {availableBatches.map((b) => {
+                        {filteredBatches.map((b) => {
                           const batchStatus = classifyBatch(b.expiry_date);
                           const bCfg = BATCH_STATUS_CONFIG[batchStatus];
                           return (
@@ -230,8 +230,8 @@ export default function DisposalDetail() {
                             </tr>
                           );
                         })}
-                        {availableBatches.length === 0 &&
-                          expiredBatches.length > 0 && (
+                        {filteredBatches.length === 0 &&
+                          availableBatches.length > 0 && (
                             <tr>
                               <td
                                 colSpan="5"
@@ -262,7 +262,7 @@ export default function DisposalDetail() {
                 <p className="text-slate-500 text-sm">Chưa có sản phẩm nào</p>
                 {isEditable && (
                   <p className="text-slate-400 text-xs mt-1">
-                    Thêm sản phẩm hết hạn từ danh sách phía trên
+                    Thêm sản phẩm từ danh sách phía trên
                   </p>
                 )}
               </div>
@@ -409,14 +409,14 @@ export default function DisposalDetail() {
                   {!!voucher.location_id && (
                     <p
                       className={`mt-2 text-xs ${
-                        expiredBatches.length > 0
+                        availableBatches.length > 0
                           ? "text-red-600"
                           : "text-slate-500"
                       }`}
                     >
-                      {expiredBatches.length > 0
-                        ? `Kho này có ${expiredBatches.length} lô hết hạn cần xử lý.`
-                        : "Kho này hiện không có lô hết hạn."}
+                        availableBatches.length > 0
+                          ? `Kho này có ${availableBatches.length} lô hàng có thể xử lý.`
+                          : "Kho này hiện không có lô hàng nào."
                     </p>
                   )}
                 </>

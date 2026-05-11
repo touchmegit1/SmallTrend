@@ -27,6 +27,14 @@ public interface ProductBatchRepository extends JpaRepository<ProductBatch, Inte
                      "JOIN FETCH pb.variant v " +
                      "JOIN FETCH v.product " +
                      "JOIN FETCH pb.inventoryStocks s " +
+                     "WHERE s.quantity > 0 " +
+                     "AND (:locationId IS NULL OR s.location.id = :locationId)")
+       List<ProductBatch> findAllBatchesWithStockByLocation(@Param("locationId") Integer locationId);
+
+       @Query("SELECT DISTINCT pb FROM ProductBatch pb " +
+                     "JOIN FETCH pb.variant v " +
+                     "JOIN FETCH v.product " +
+                     "JOIN FETCH pb.inventoryStocks s " +
                      "WHERE pb.expiryDate < :today " +
                      "AND s.quantity > 0 " +
                      "AND (:locationId IS NULL OR s.location.id = :locationId)")

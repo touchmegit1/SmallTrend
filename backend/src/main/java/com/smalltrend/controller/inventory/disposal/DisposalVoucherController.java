@@ -39,6 +39,12 @@ public class DisposalVoucherController {
         return ResponseEntity.ok(disposalVoucherService.getExpiredBatches(locationId));
     }
 
+    @GetMapping("/batches")
+    public ResponseEntity<List<ExpiredBatchResponse>> getBatchesAtLocation(
+            @RequestParam(value = "locationId", required = false) Long locationId) {
+        return ResponseEntity.ok(disposalVoucherService.getBatchesAtLocation(locationId));
+    }
+
     @PostMapping("/draft")
     public ResponseEntity<DisposalVoucherResponse> saveDraft(
             @Valid @RequestBody DisposalVoucherRequest request,

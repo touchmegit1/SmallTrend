@@ -83,6 +83,39 @@ public class DisposalVoucherService {
                 .collect(Collectors.toList());
     }
 
+    // Get all batches with stock at a location (for disposal — any reason type)
+    public List<ExpiredBatchResponse> getBatchesAtLocation(Long locationId) {
+        LocalDate today = LocalDate.now();
+        Integer locationIdInt = locationId != null ? locationId.intValue() : null;
+
+        return productBatchRepository.findAllBatchesWithStockByLocation(locationIdInt).stream()
+                .map(batch -> {
+                    int qty = batch.getInventoryStocks().stream()
+                            .mapToInt(InventoryStock::getQuantity)
+                            .sum();
+
+                    BigDecimal unitCost = batch.getCostPrice() != null ? batch.getCostPrice() : BigDecimal.ZERO;
+                    BigDecimal totalValue = unitCost.multiply(BigDecimal.valueOf(qty));
+                    long daysExpired = batch.getExpiryDate() != null
+                            ? ChronoUnit.DAYS.between(batch.getExpiryDate(), today)
+                            : 0;
+
+                    return ExpiredBatchResponse.builder()
+                            .batchId(batch.getId().longValue())
+                            .productId(batch.getVariant().getProduct().getId().longValue())
+                            .productName(batch.getVariant().getProduct().getName())
+                            .sku(batch.getVariant().getSku())
+                            .batchCode(batch.getBatchNumber())
+                            .availableQuantity(qty)
+                            .unitCost(unitCost)
+                            .totalValue(totalValue)
+                            .expiryDate(batch.getExpiryDate())
+                            .daysExpired((int) daysExpired)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
     // Save draft
     @Transactional
     public DisposalVoucherResponse saveDraft(DisposalVoucherRequest request, Long userId) {
@@ -248,13 +281,15 @@ public class DisposalVoucherService {
                 .orElseThrow(() -> new RuntimeException("Stock not found for batch at location"));
 
         if (stock.getQuantity() < quantity) {
-            throw new RuntimeException("Insufficient stock. Available: " + stock.getQuantity() + ", Required: " + quantity);
+            throw new RuntimeException(
+                    "Insufficient stock. Available: " + stock.getQuantity() + ", Required: " + quantity);
         }
 
         int oldQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
         stock.setQuantity(oldQty - quantity);
         InventoryStock savedStock = inventoryStockRepository.save(stock);
-        outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(), "DISPOSAL_VOUCHER");
+        outOfStockNotificationService.handleStockTransition(savedStock, oldQty, savedStock.getQuantity(),
+                "DISPOSAL_VOUCHER");
     }
 
     // Convert to response
