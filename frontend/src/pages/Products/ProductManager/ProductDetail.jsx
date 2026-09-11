@@ -318,6 +318,27 @@ function ProductDetail() {
     });
   };
 
+  const baseVariants = variants.filter((variant) => variant.is_base_unit);
+  const convertedVariants = variants.filter((variant) => !variant.is_base_unit);
+
+  const hasSameAttributes = (leftAttrs = {}, rightAttrs = {}) => {
+    const leftKeys = Object.keys(leftAttrs || {});
+    const rightKeys = Object.keys(rightAttrs || {});
+
+    if (leftKeys.length !== rightKeys.length) {
+      return false;
+    }
+
+    return leftKeys.every((key) => (leftAttrs?.[key] ?? "") === (rightAttrs?.[key] ?? ""));
+  };
+
+  const getConvertedVariantForConversion = (baseVariant, conversion) => {
+    return convertedVariants.find((convertedVariant) => (
+      convertedVariant.unit_id === conversion.toUnitId
+      && hasSameAttributes(convertedVariant.attributes, baseVariant.attributes)
+    ));
+  };
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
 
@@ -407,7 +428,7 @@ function ProductDetail() {
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-500">Quy cách định danh (Loại sản phẩm)</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{product.variant_count || variants.length}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{baseVariants.length}</p>
             </div>
           </div>
         </Card>
@@ -540,7 +561,7 @@ function ProductDetail() {
 
         {/* Body Table */}
         <div className="p-0 overflow-x-auto">
-          {variants.length === 0 ? (
+          {baseVariants.length === 0 ? (
             <div className="text-center py-16 px-6">
               <div className="w-16 h-16 bg-gray-50 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Box className="w-8 h-8 text-gray-400" />
@@ -568,7 +589,7 @@ function ProductDetail() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {variants.map((variant, index) => (
+                {baseVariants.map((variant, index) => (
                   <React.Fragment key={variant.id}>
                     <TableRow className="hover:bg-blue-50/40 transition-colors border-b border-gray-100 group">
                       <TableCell className="font-semibold text-gray-400 text-center text-xs">{index + 1}</TableCell>
@@ -726,6 +747,17 @@ function ProductDetail() {
                             <UnitConversionSection
                               variant={variant}
                               units={units}
+                              conversionVariants={(variant.unit_conversions || []).map((conversion) => ({
+                                conversion,
+                                variant: getConvertedVariantForConversion(variant, conversion),
+                              }))}
+                              canManageProduct={canManageProduct}
+                              parentProductActive={product?.is_active}
+                              onPrintBarcode={handlePrintBarcode}
+                              onToggleStatus={handleToggleStatus}
+                              onEditVariant={handleEditVariant}
+                              onDeleteVariant={handleDeleteVariant}
+                              isWithin2Minutes={isWithin2Minutes}
                               onSuccess={() => fetchVariants()}
                             />
                           </div>

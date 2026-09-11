@@ -204,38 +204,6 @@ const mapOrderStateFromResponse = (existingOrder, products) => {
   };
 };
 
-const mergeImportedItems = (prevItems, importedList) => {
-  const newItems = [...prevItems];
-  importedList.forEach((importedInfo) => {
-    const existingIndex = newItems.findIndex(
-      (i) => i.variant_id === importedInfo.product.id,
-    );
-    const importQty = Number(importedInfo.quantity) || 1;
-    const importUnitPrice = Number(importedInfo.unit_price);
-    const hasImportUnitPrice =
-      Number.isFinite(importUnitPrice) && importUnitPrice >= 0;
-
-    if (existingIndex >= 0) {
-      const item = newItems[existingIndex];
-      newItems[existingIndex] = {
-        ...item,
-        quantity: item.quantity + importQty,
-        ...(hasImportUnitPrice ? { unit_price: importUnitPrice } : {}),
-      };
-      return;
-    }
-
-    const newItem = createOrderItem(importedInfo.product);
-    newItem.quantity = importQty;
-    if (hasImportUnitPrice) {
-      newItem.unit_price = importUnitPrice;
-    }
-    newItems.push(newItem);
-  });
-
-  return newItems;
-};
-
 const addOrIncreaseProduct = (prevItems, product) => {
   const existing = prevItems.find((i) => i.variant_id === product.id);
   if (existing) {
@@ -447,8 +415,8 @@ export function usePurchaseOrder(initialId = null) {
     const afterDiscount = Math.max(0, subtotal - discount);
     const taxPercent = toNumber(order.tax_percent);
     const shippingFee = toNumber(order.shipping_fee);
-    const taxAmount = Math.round((afterDiscount * taxPercent) / 100);
-    const total = Math.round(afterDiscount + taxAmount + shippingFee);
+    const taxAmount = Math.round((((afterDiscount * taxPercent) / 100) + Number.EPSILON) * 100) / 100;
+    const total = Math.round((afterDiscount + taxAmount + shippingFee + Number.EPSILON) * 100) / 100;
 
     return {
       subtotal,
@@ -562,10 +530,6 @@ export function usePurchaseOrder(initialId = null) {
 
   const addProduct = useCallback((product) => {
     setItems((prev) => addOrIncreaseProduct(prev, product));
-  }, []);
-
-  const importProducts = useCallback((importedList) => {
-    setItems((prev) => mergeImportedItems(prev, importedList));
   }, []);
 
   const removeItem = useCallback((_key) => {
@@ -798,6 +762,7 @@ export function usePurchaseOrder(initialId = null) {
           shortageReason: hasShortage ? String(order.notes ?? "").trim() : null,
           supplierId: order.supplier_id,
           locationId: order.location_id,
+          discountAmount: toNumber(order.discount),
           taxPercent: toNumber(order.tax_percent),
           shippingFee: toNumber(order.shipping_fee),
           paidAmount: toNumber(order.paid_amount),
@@ -876,6 +841,7 @@ export function usePurchaseOrder(initialId = null) {
       items,
       products,
       order.notes,
+      order.discount,
       order.supplier_id,
       order.location_id,
       order.tax_percent,
@@ -1110,7 +1076,6 @@ export function usePurchaseOrder(initialId = null) {
     clearSupplier,
     updateOrder,
     addProduct,
-    importProducts,
     removeItem,
     updateItem,
     receiptItems,

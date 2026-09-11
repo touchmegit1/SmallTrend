@@ -211,6 +211,26 @@ export const AuthProvider = ({ children }) => {
             status: 'PRESENT',
         };
 
+        if (mode === 'LOGIN') {
+            await shiftService.clockIn({
+                userId,
+                date,
+                clockInTime: state.timeIn,
+                location: 'SystemAuto',
+            });
+            return;
+        }
+
+        if (mode === 'LOGOUT') {
+            await shiftService.clockOut({
+                userId,
+                date,
+                clockOutTime: hm,
+                location: 'SystemAuto',
+            });
+            return;
+        }
+
         await shiftService.upsertAttendance(payload);
     };
 

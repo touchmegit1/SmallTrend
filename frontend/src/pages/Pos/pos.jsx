@@ -364,19 +364,19 @@ export default function POS() {
   const notifications = [
     ...(suspendedOrderCount > 0
       ? [{
-          id: 'suspended-orders',
-          title: 'Đơn treo chưa thanh toán',
-          description: `Hiện có ${suspendedOrderCount} đơn đang chờ thanh toán.`,
-          path: '/pos/history'
-        }]
+        id: 'suspended-orders',
+        title: 'Đơn treo chưa thanh toán',
+        description: `Hiện có ${suspendedOrderCount} đơn đang chờ thanh toán.`,
+        path: '/pos/history'
+      }]
       : []),
     ...(unresolvedTicketCount > 0
       ? [{
-          id: 'unresolved-tickets',
-          title: 'Ticket chưa xử lý',
-          description: `Hiện có ${unresolvedTicketCount} ticket đang mở/chưa xử lý.`,
-          path: '/pos/complain'
-        }]
+        id: 'unresolved-tickets',
+        title: 'Ticket chưa xử lý',
+        description: `Hiện có ${unresolvedTicketCount} ticket đang mở/chưa xử lý.`,
+        path: '/pos/complain'
+      }]
       : [])
   ];
 
@@ -1626,21 +1626,21 @@ export default function POS() {
 
       {/* Cửa sổ QR Pending Widget */}
       <div style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          zIndex: 1005,
+        position: "fixed",
+        bottom: "20px",
+        right: "20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px",
+        zIndex: 1005,
       }}>
         {pendingQROrders.map((po) => (
-           <QRPendingWidget
-             key={po.id}
-             pendingOrder={po}
-             onComplete={handleCompleteQRPayment}
-             onCancel={handleCancelQRPayment}
-           />
+          <QRPendingWidget
+            key={po.id}
+            pendingOrder={po}
+            onComplete={handleCompleteQRPayment}
+            onCancel={handleCancelQRPayment}
+          />
         ))}
       </div>
     </div>

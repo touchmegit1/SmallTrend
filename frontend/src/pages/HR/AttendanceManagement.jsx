@@ -105,7 +105,8 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
         const present = records.filter((r) => r.status === 'PRESENT').length;
         const late = records.filter((r) => r.status === 'LATE').length;
         const absent = records.filter((r) => r.status === 'ABSENT').length;
-        return { total, present, late, absent };
+        const onLeave = records.filter((r) => r.status === 'ON_LEAVE').length;
+        return { total, present, late, absent, onLeave };
     }, [records]);
 
     const updateAttendance = async (record, patch) => {
@@ -168,11 +169,12 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
             )}
 
             {showSummary && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <StatCard title="Tổng ca" value={summary.total} icon={CalendarDays} />
                     <StatCard title="Có mặt" value={summary.present} icon={Users} />
                     <StatCard title="Đi muộn" value={summary.late} icon={Clock3} />
-                    <StatCard title="Vắng" value={summary.absent} icon={TriangleAlert} />
+                    <StatCard title="Vắng (không phép)" value={summary.absent} icon={TriangleAlert} />
+                    <StatCard title="Nghỉ phép" value={summary.onLeave} icon={CalendarDays} color="blue" />
                 </div>
             )}
 
@@ -236,7 +238,8 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
                                     { value: 'PENDING', label: 'Chưa chấm' },
                                     { value: 'PRESENT', label: 'Có mặt' },
                                     { value: 'LATE', label: 'Đi muộn' },
-                                    { value: 'ABSENT', label: 'Vắng' },
+                                    { value: 'ABSENT', label: 'Vắng (không phép)' },
+                                    { value: 'ON_LEAVE', label: 'Nghỉ phép (có phép)' },
                                 ]}
                             />
                         </div>
@@ -312,11 +315,11 @@ const AttendanceManagement = ({ viewMode = 'full', initialFilters = null }) => {
     );
 };
 
-const StatCard = ({ title, value, icon: Icon }) => (
+const StatCard = ({ title, value, icon: Icon, color = 'indigo' }) => (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-wide text-slate-400">{title}</p>
-            {Icon ? <Icon size={16} className="text-indigo-500" /> : null}
+            {Icon ? <Icon size={16} className={`text-${color}-500`} /> : null}
         </div>
         <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
     </div>
@@ -344,7 +347,9 @@ const formatAttendanceStatus = (status) => {
     const normalized = String(status || '').toUpperCase();
     if (normalized === 'PRESENT') return 'Có mặt';
     if (normalized === 'LATE') return 'Đi muộn';
-    if (normalized === 'ABSENT') return 'Vắng';
+    if (normalized === 'ABSENT') return 'Vắng (không phép)';
+    if (normalized === 'ON_LEAVE') return 'Nghỉ phép';
+    if (normalized === 'MISSING_CLOCK_OUT') return 'Thiếu giờ ra';
     return 'Chưa chấm';
 };
 
@@ -353,6 +358,8 @@ const attendanceStatusClass = (status) => {
     if (normalized === 'PRESENT') return 'bg-emerald-100 text-emerald-700';
     if (normalized === 'LATE') return 'bg-amber-100 text-amber-700';
     if (normalized === 'ABSENT') return 'bg-rose-100 text-rose-700';
+    if (normalized === 'ON_LEAVE') return 'bg-blue-100 text-blue-700';
+    if (normalized === 'MISSING_CLOCK_OUT') return 'bg-orange-100 text-orange-700';
     return 'bg-slate-100 text-slate-700';
 };
 

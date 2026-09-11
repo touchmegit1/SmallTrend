@@ -37,6 +37,7 @@ public class SecurityConfig {
     private String corsAllowedOrigins;
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final AuditTrailFilter auditTrailFilter;
     private final UserDetailsService userDetailsService;
 
     @Bean
@@ -62,7 +63,8 @@ public class SecurityConfig {
                 })
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(auditTrailFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

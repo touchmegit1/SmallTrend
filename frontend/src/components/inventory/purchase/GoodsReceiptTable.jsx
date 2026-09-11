@@ -119,10 +119,17 @@ export default function GoodsReceiptTable({
             const checkingUnit = item.checking_unit || item.unit || "";
             const orderedUnit = item.unit || checkingUnit || "";
             const orderedQty = Number(item.quantity ?? orderedCheckingQty ?? 0);
-            const receivedQuantity = Number(
+            const hasReceivedQuantityValue = Object.prototype.hasOwnProperty.call(
+              ri,
+              "receivedQuantity",
+            );
+            const receivedQuantityInput = hasReceivedQuantityValue
+              ? (ri.receivedQuantity ?? "")
+              : orderedCheckingQty;
+            const receivedQuantityForDiff = Number(
               ri.receivedQuantity ?? orderedCheckingQty,
             );
-            const receivedDiff = receivedQuantity - orderedCheckingQty;
+            const receivedDiff = receivedQuantityForDiff - orderedCheckingQty;
             const receivedQtyClass =
               receivedDiff === 0
                 ? "border-slate-300"
@@ -230,14 +237,15 @@ export default function GoodsReceiptTable({
                   <input
                     type="number"
                     min="0"
-                    value={receivedQuantity}
-                    onChange={(e) =>
+                    value={receivedQuantityInput}
+                    onChange={(e) => {
+                      const rawValue = e.target.value;
                       onUpdateReceiptItem(
                         getItemIdentity(item),
                         "receivedQuantity",
-                        Number.parseInt(e.target.value, 10) || 0,
-                      )
-                    }
+                        rawValue === "" ? "" : Number.parseInt(rawValue, 10) || 0,
+                      );
+                    }}
                     disabled={isReadOnly}
                     className={`w-24 text-center px-2.5 py-1.5 text-sm font-semibold border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 ${receivedQtyClass}`}
                   />

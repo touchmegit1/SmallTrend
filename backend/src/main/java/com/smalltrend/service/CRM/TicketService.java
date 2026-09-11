@@ -495,6 +495,23 @@ public class TicketService {
                     "Restock from resolved refund ticket " + ticket.getTicketCode());
         }
 
+        // Auto-mark assignment as ON_LEAVE when a leave ticket is resolved (nghi phep)
+        if (firstTimeResolved && ticket.getTicketType() == TicketType.SHIFT_CHANGE
+                && ticket.getRelatedEntityId() != null) {
+            String title = ticket.getTitle() != null ? ticket.getTitle().toLowerCase() : "";
+            String relatedType = ticket.getRelatedEntityType() != null ? ticket.getRelatedEntityType().toUpperCase() : "";
+            boolean isLeaveRequest = title.contains("nghi ca") || title.contains("xin nghi")
+                    || "SHIFT_CANCEL".equals(relatedType)
+                    || ("SHIFT_ASSIGNMENT".equals(relatedType) && !title.contains("doi ca") && !title.contains("cap nhat"));
+            if (isLeaveRequest) {
+                workShiftAssignmentRepository.findByIdAndDeletedFalse(ticket.getRelatedEntityId().intValue())
+                        .ifPresent(assignment -> {
+                            assignment.setStatus("ON_LEAVE");
+                            workShiftAssignmentRepository.save(assignment);
+                        });
+            }
+        }
+        
         Ticket updated = ticketRepository.save(ticket);
         return mapToResponse(updated);
     }

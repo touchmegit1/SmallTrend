@@ -1,4 +1,4 @@
-package com.smalltrend.service;
+package com.smalltrend.service.shift;
 
 import com.smalltrend.dto.shift.WorkShiftRequest;
 import com.smalltrend.dto.shift.WorkShiftResponse;

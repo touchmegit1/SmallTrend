@@ -13,6 +13,7 @@ import com.smalltrend.repository.AttendanceRepository;
 import com.smalltrend.repository.PayrollCalculationRepository;
 import com.smalltrend.repository.UserRepository;
 import com.smalltrend.repository.WorkShiftAssignmentRepository;
+import com.smalltrend.service.shift.ShiftWorkforceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,6 +52,9 @@ class ShiftWorkforceServiceTest {
     @Mock
     private PayrollCalculationRepository payrollCalculationRepository;
 
+    @Mock
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
+
     private ShiftWorkforceService shiftWorkforceService;
 
     @BeforeEach
@@ -59,7 +63,8 @@ class ShiftWorkforceServiceTest {
                 attendanceRepository,
                 assignmentRepository,
                 userRepository,
-                payrollCalculationRepository);
+                payrollCalculationRepository,
+                mailSender);
     }
 
     @Test
@@ -218,7 +223,7 @@ class ShiftWorkforceServiceTest {
         when(payrollCalculationRepository.findByUserIdAndPayPeriodStartAndPayPeriodEnd(user.getId(), periodStart, periodEnd))
                 .thenReturn(Optional.empty());
 
-        String result = shiftWorkforceService.markPayrollAsPaid("2026-03", null);
+        String result = shiftWorkforceService.markPayrollAsPaid("2026-03", null, null);
 
         assertTrue(result.contains("1 nhân viên"));
 
@@ -238,7 +243,7 @@ class ShiftWorkforceServiceTest {
 
         when(assignmentRepository.findByShiftDateBetweenAndDeletedFalse(periodStart, periodEnd)).thenReturn(List.of());
 
-        String result = shiftWorkforceService.markPayrollAsPaid("2026-03", null);
+        String result = shiftWorkforceService.markPayrollAsPaid("2026-03", null, null);
 
         assertTrue(result.contains("Không có dữ liệu phân ca"));
         verify(payrollCalculationRepository, never()).save(any());
@@ -403,6 +408,84 @@ class ShiftWorkforceServiceTest {
                 () -> shiftWorkforceService.upsertAttendance(request));
 
         assertEquals("Không thể rời ca khi chưa chấm công vào ca", ex.getMessage());
+    }
+
+    @Test
+    void clockOut_shouldThrow_whenShiftNotEnded() {
+        LocalDate shiftDate = LocalDate.now().plusDays(1);
+        User user = buildUser(32, "Future Shift User");
+        WorkShift shift = WorkShift.builder()
+                .id(320)
+                .shiftName("Ca tương lai")
+                .startTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(17, 0))
+                .build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(321)
+                .user(user)
+                .workShift(shift)
+                .shiftDate(shiftDate)
+                .build();
+
+        AttendanceUpsertRequest request = AttendanceUpsertRequest.builder()
+                .userId(32)
+                .date(shiftDate)
+                .timeOut(LocalTime.of(17, 0))
+                .build();
+
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(32, shiftDate, shiftDate))
+                .thenReturn(List.of(assignment));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> shiftWorkforceService.clockOut(request));
+
+        assertEquals("Chưa hết ca, chưa thể chấm công ra", ex.getMessage());
+    }
+
+    @Test
+    void clockOut_shouldComplete_whenShiftEnded() {
+        LocalDate shiftDate = LocalDate.now().minusDays(1);
+        User user = buildUser(33, "Ended Shift User");
+        WorkShift shift = WorkShift.builder()
+                .id(330)
+                .shiftName("Ca đã kết thúc")
+                .startTime(LocalTime.of(8, 0))
+                .endTime(LocalTime.of(17, 0))
+                .build();
+        WorkShiftAssignment assignment = WorkShiftAssignment.builder()
+                .id(331)
+                .user(user)
+                .workShift(shift)
+                .shiftDate(shiftDate)
+                .status("ASSIGNED")
+                .build();
+        Attendance existing = Attendance.builder()
+                .id(332)
+                .user(user)
+                .date(shiftDate)
+                .timeIn(LocalTime.of(8, 5))
+                .timeOut(null)
+                .status("PENDING")
+                .build();
+
+        AttendanceUpsertRequest request = AttendanceUpsertRequest.builder()
+                .userId(33)
+                .date(shiftDate)
+                .timeOut(LocalTime.of(17, 10))
+                .build();
+
+        when(assignmentRepository.findByUserIdAndShiftDateBetweenAndDeletedFalse(33, shiftDate, shiftDate))
+                .thenReturn(List.of(assignment));
+        when(userRepository.findById(33)).thenReturn(Optional.of(user));
+        when(attendanceRepository.findByUserIdAndDate(33, shiftDate)).thenReturn(Optional.of(existing));
+        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(assignmentRepository.save(any(WorkShiftAssignment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AttendanceResponse response = shiftWorkforceService.clockOut(request);
+
+        assertEquals("PRESENT", response.getStatus());
+        assertEquals(LocalTime.of(17, 10), response.getTimeOut());
+        verify(assignmentRepository).save(any(WorkShiftAssignment.class));
     }
 
     private User buildUser(Integer id, String fullName) {

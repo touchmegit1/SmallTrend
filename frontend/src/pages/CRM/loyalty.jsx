@@ -117,23 +117,38 @@ const GiftRewardManagement = () => {
     setIsModalOpen(true);
   };
 
+  const normalizeVariantResult = (result) => {
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.data)) return result.data;
+    if (result && typeof result === 'object' && result.id) return [result];
+    return [];
+  };
+
   const handleSearchVariant = async () => {
-    if (!skuInput.trim()) return;
+    const keyword = skuInput.trim();
+    if (!keyword) return;
+
+    setLoadingVariants(true);
+    setSelectedVariant(null);
+
     try {
-      setLoadingVariants(true);
-      // Tìm kiếm bằng SKU hoặc tên sản phẩm
-      const result = await ticketService.searchVariants(skuInput.trim());
-      setSkuVariants(result || []);
-      setSelectedVariant(null);
-    } catch (err) {
-      // Fallback: tìm kiếm chỉ bằng SKU khi API tìm kiếm không khả dụng
-      try {
-        const result = await ticketService.getVariantBySku(skuInput.trim());
-        setSkuVariants(result || []);
-        setSelectedVariant(null);
-      } catch (fallbackErr) {
-        showToast('Lỗi khi tìm sản phẩm', 'error');
+      // Ưu tiên endpoint search theo SKU/tên
+      const searchResult = await ticketService.searchVariants(keyword);
+      let variants = normalizeVariantResult(searchResult);
+
+      // Fallback endpoint cũ nếu endpoint search không trả dữ liệu
+      if (variants.length === 0) {
+        const fallbackResult = await ticketService.getVariantBySku(keyword);
+        variants = normalizeVariantResult(fallbackResult);
       }
+
+      setSkuVariants(variants);
+      if (variants.length === 0) {
+        showToast('Không tìm thấy sản phẩm phù hợp', 'warning');
+      }
+    } catch (err) {
+      setSkuVariants([]);
+      showToast(err?.response?.data?.message || 'Lỗi khi tìm sản phẩm', 'error');
     } finally {
       setLoadingVariants(false);
     }

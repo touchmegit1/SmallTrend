@@ -100,8 +100,8 @@ export function calcOrderFinancials(items, orderDiscount = 0, taxPercent = 0, sh
   }, 0);
 
   const afterDiscount = Math.max(0, subtotal - (orderDiscount || 0));
-  const taxAmount = Math.round(afterDiscount * (taxPercent || 0) / 100);
-  const total = afterDiscount + taxAmount + (shippingFee || 0);
+  const taxAmount = Math.round((((afterDiscount * (taxPercent || 0)) / 100) + Number.EPSILON) * 100) / 100;
+  const total = Math.round((afterDiscount + taxAmount + (shippingFee || 0) + Number.EPSILON) * 100) / 100;
   const remaining = Math.max(0, total - (paidAmount || 0));
 
   return {

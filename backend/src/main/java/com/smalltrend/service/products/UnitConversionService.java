@@ -90,10 +90,7 @@ public class UnitConversionService {
 
         BigDecimal resolvedSellPrice = request.getSellPrice() != null
                 ? request.getSellPrice()
-                : baseVariant.getSellPrice();
-        if (resolvedSellPrice == null) {
-            throw new RuntimeException("Giá bán quy đổi không được để trống.");
-        }
+                : BigDecimal.ZERO;
 
         // ─── 1. Tạo quy đổi đơn vị ────────────────────────────────────────────
         UnitConversion conversion = UnitConversion.builder()

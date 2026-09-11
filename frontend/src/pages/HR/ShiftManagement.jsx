@@ -171,6 +171,16 @@ const ShiftManagement = () => {
         return options;
     }, [users, editingAssignment]);
 
+    const activeAssignments = useMemo(
+        () => assignments.filter((assignment) => String(assignment?.status || '').toUpperCase() !== 'ON_LEAVE'),
+        [assignments]
+    );
+
+    const leaveAssignments = useMemo(
+        () => assignments.filter((assignment) => String(assignment?.status || '').toUpperCase() === 'ON_LEAVE'),
+        [assignments]
+    );
+
     useEffect(() => {
         const init = async () => {
             await Promise.all([loadShifts(), loadUsers()]);
@@ -534,6 +544,7 @@ const ShiftManagement = () => {
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                     <p className="font-semibold">Đang xử lý ticket nghỉ ca {processingTicket.ticketCode || ''}</p>
                     <p className="mt-1">Bạn có thể chỉnh ca/phân công cho nhân viên, sau đó bấm Hoàn tất để đánh dấu Done.</p>
+                    <p className="mt-1">Ticket nghỉ phép được duyệt sẽ tách nhân viên khỏi danh sách phân công chính để admin phân người thay vào ca.</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                         <button
                             type="button"
@@ -627,7 +638,7 @@ const ShiftManagement = () => {
                                 </div>
                                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-500">
                                     <div>Type: {shift.shiftType || 'REGULAR'}</div>
-                                    <div>Staff: {shift.minimumStaffRequired ?? '-'} / {shift.maximumStaffAllowed ?? '-'}</div>
+                                    <div>Staff: {shift.minimumStaffRequired ?? '-'} - {shift.maximumStaffAllowed ?? '-'}</div>
                                     <div>Break: {formatTime(shift.breakStartTime)} - {formatTime(shift.breakEndTime)}</div>
                                     <div>Approval: {shift.requiresApproval ? 'Yes' : 'No'}</div>
                                     <div className="col-span-2">Hiệu lực: {formatDate(shift.effectiveFrom)} - {formatDate(shift.effectiveTo)}</div>
@@ -693,7 +704,7 @@ const ShiftManagement = () => {
                             <div className="col-span-2">Trạng thái</div>
                             <div className="col-span-2">Thao tác</div>
                         </div>
-                        {assignments.map((assignment) => (
+                        {activeAssignments.map((assignment) => (
                             <div key={assignment.id} className="grid grid-cols-12 gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100">
                                 <div className="col-span-2">{formatDate(assignment.shiftDate)}</div>
                                 <div className="col-span-3">
@@ -727,17 +738,55 @@ const ShiftManagement = () => {
                                 </div>
                             </div>
                         ))}
-                        {assignments.length === 0 && (
+                        {activeAssignments.length === 0 && (
                             <div className="px-4 py-6 text-sm text-slate-500">Không có phân công trong khoảng thời gian này.</div>
+                        )}
+                    </div>
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/70 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-blue-200 px-4 py-3">
+                            <div>
+                                <p className="text-sm font-semibold text-slate-900">Ca nghỉ phép đã duyệt</p>
+                                <p className="text-xs text-slate-500">Nhân sự ở đây đã được tách khỏi bảng phân công chính để admin bổ sung người thay ca.</p>
+                            </div>
+                            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                                {leaveAssignments.length} ca
+                            </span>
+                        </div>
+                        {leaveAssignments.length > 0 ? (
+                            leaveAssignments.map((assignment) => (
+                                <div key={`leave-${assignment.id}`} className="grid grid-cols-12 gap-2 border-b border-blue-100 px-4 py-3 text-sm text-slate-700 last:border-b-0">
+                                    <div className="col-span-2">{formatDate(assignment.shiftDate)}</div>
+                                    <div className="col-span-3">
+                                        <div className="font-medium text-slate-900">{assignment.user?.fullName || 'Unknown'}</div>
+                                        <div className="text-xs text-slate-400">{assignment.user?.email || ''}</div>
+                                    </div>
+                                    <div className="col-span-3">
+                                        <div className="font-medium text-slate-900">{assignment.shift?.shiftName}</div>
+                                        <div className="text-xs text-slate-400">
+                                            {formatTime(assignment.shift?.startTime)} - {formatTime(assignment.shift?.endTime)}
+                                        </div>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusPillClass(assignment.status)}`}>
+                                            {assignment.status}
+                                        </span>
+                                    </div>
+                                    <div className="col-span-2 text-xs text-slate-500">
+                                        Chờ phân người thay
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-4 py-5 text-sm text-slate-500">Chưa có ca nghỉ phép đã duyệt trong bộ lọc hiện tại.</div>
                         )}
                     </div>
                 </section>
             )}
 
             {isShiftModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-                    <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-4 overflow-y-auto" onClick={(e) => { if (e.target === e.currentTarget) setIsShiftModalOpen(false); }}>
+                    <div className="my-4 flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 shrink-0">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">
                                     {editingShift ? 'Cập nhật ca' : 'Tạo ca mới'}
@@ -748,7 +797,8 @@ const ShiftManagement = () => {
                                 <X size={18} />
                             </button>
                         </div>
-                        <form onSubmit={handleShiftSubmit} className="p-6 space-y-4">
+                        <form onSubmit={handleShiftSubmit} className="flex flex-1 flex-col overflow-hidden">
+                            <div className="flex-1 space-y-4 overflow-y-auto p-6">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-slate-600">Mã ca</label>
@@ -1028,7 +1078,9 @@ const ShiftManagement = () => {
                                 </>
                             )}
 
-                            <div className="flex justify-end gap-2">
+                            </div>
+
+                            <div className="flex shrink-0 justify-end gap-2 border-t border-slate-200 bg-white px-6 py-4">
                                 <button
                                     type="button"
                                     onClick={() => setIsShiftModalOpen(false)}
@@ -1049,8 +1101,8 @@ const ShiftManagement = () => {
             )}
 
             {isAssignmentModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-                    <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={(e) => { if (e.target === e.currentTarget) setIsAssignmentModalOpen(false); }}>
+                    <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">
@@ -1395,6 +1447,8 @@ const statusPillClass = (status) => {
         case 'CANCELLED':
         case 'ABSENT':
             return 'bg-rose-100 text-rose-700';
+        case 'ON_LEAVE':
+            return 'bg-blue-100 text-blue-700';
         default:
             return 'bg-slate-100 text-slate-700';
     }

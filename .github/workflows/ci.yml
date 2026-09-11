@@ -51,37 +51,25 @@ jobs:
           retention-days: 7
 
   backend:
-    name: Backend (Build Only)
+    name: Backend (Build & Test)
     runs-on: ubuntu-latest
 
     defaults:
       run:
         working-directory: backend
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: test1234
-          MYSQL_DATABASE: smalltrend_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     env:
-      DB_URL: jdbc:mysql://localhost:3306/smalltrend_test?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
-      DB_USERNAME: root
-      DB_PASSWORD: test1234
+      DB_URL: jdbc:h2:mem:smalltrend-test;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+      DB_USERNAME: sa
+      DB_PASSWORD: ""
       JWT_SECRET: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
       CLOUDINARY_CLOUD_NAME: ci_dummy
       CLOUDINARY_API_KEY: "000000000000000"
       CLOUDINARY_API_SECRET: ci_dummy_secret
       SPRING_SQL_INIT_MODE: never
       SPRING_JPA_DDL_AUTO: create-drop
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
 
     steps:
       - name: Checkout code
@@ -97,5 +85,5 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
-      - name: Build jar (skip tests)
-        run: ./mvnw -B clean package -Dmaven.test.skip=true
+      - name: Build and run tests
+        run: ./mvnw -B clean verify -Dspring.datasource.url="jdbc:h2:mem:smalltrend-test;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE" -Dspring.datasource.driver-class-name=org.h2.Driver -Dspring.datasource.username=sa -Dspring.datasource.password= -Dspring.jpa.database-platform=org.hibernate.dialect.H2Dialect -Dspring.jpa.hibernate.ddl-auto=create-drop -Dspring.sql.init.mode=never

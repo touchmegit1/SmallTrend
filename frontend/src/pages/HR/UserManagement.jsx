@@ -12,28 +12,30 @@ import {
 import CustomSelect from "../../components/common/CustomSelect";
 import { userService } from "../../services/userService";
 
-const STAFF_ROLE_ID = 5;
-const STAFF_ROLE_IDS = new Set([3, 4, 5]);
+const DEFAULT_ROLE_ID = 5;
 const ALLOWED_ROLE_OPTIONS = [
   { value: 1, label: "Admin" },
   { value: 2, label: "Manager" },
-  { value: STAFF_ROLE_ID, label: "Staff" },
+  { value: 3, label: "Cashier" },
+  { value: 4, label: "Inventory Staff" },
+  { value: 5, label: "Sales Staff" },
 ];
 
 const normalizeRoleIdForUI = (roleId) => {
   const numericRoleId = Number(roleId);
   if (!Number.isInteger(numericRoleId)) {
-    return 2;
-  }
-  if (STAFF_ROLE_IDS.has(numericRoleId)) {
-    return STAFF_ROLE_ID;
+    return null;
   }
   return numericRoleId;
 };
 
 const getRoleLabel = (roleId) => {
   const normalizedRoleId = normalizeRoleIdForUI(roleId);
-  return ALLOWED_ROLE_OPTIONS.find((option) => option.value === normalizedRoleId)?.label || "Manager";
+  return ALLOWED_ROLE_OPTIONS.find((option) => option.value === normalizedRoleId)?.label || "Unknown";
+};
+
+const resolveUserRoleId = (user) => {
+  return normalizeRoleIdForUI(user?.role?.id ?? user?.roleId ?? user?.role?.roleId);
 };
 
 const UserManagement = () => {
@@ -53,7 +55,7 @@ const UserManagement = () => {
     email: "",
     phone: "",
     address: "",
-    roleId: STAFF_ROLE_ID,
+    roleId: DEFAULT_ROLE_ID,
     status: "active",
     avatarUrl: null,
   });
@@ -208,7 +210,7 @@ const UserManagement = () => {
       email: user.email,
       phone: user.phone || "",
       address: user.address || "",
-      roleId: normalizeRoleIdForUI(user.role?.id || 2),
+      roleId: resolveUserRoleId(user) ?? DEFAULT_ROLE_ID,
       status: (user.status || "active").toLowerCase(),
       avatarUrl: user.avatarUrl || null,
     });
@@ -230,7 +232,7 @@ const UserManagement = () => {
       email: "",
       phone: "",
       address: "",
-      roleId: STAFF_ROLE_ID,
+      roleId: DEFAULT_ROLE_ID,
       status: "active",
       avatarUrl: null,
     });
@@ -399,7 +401,7 @@ const UserManagement = () => {
 
   const handleRoleChange = async (userId, newRoleId) => {
     try {
-      await userService.update(userId, { roleId: parseInt(newRoleId) });
+      await userService.updateRole(userId, parseInt(newRoleId, 10));
       fetchUsers();
     } catch (err) {
       setError(
@@ -534,7 +536,7 @@ const UserManagement = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <CustomSelect
-                      value={normalizeRoleIdForUI(user.role?.id || 2)}
+                      value={resolveUserRoleId(user) ?? DEFAULT_ROLE_ID}
                       onChange={(newRoleId) =>
                         handleRoleChange(user.id, newRoleId)
                       }
@@ -877,7 +879,7 @@ const UserManagement = () => {
                         <CustomSelect
                           value={formData.roleId}
                           onChange={(val) =>
-                            setFormData({ ...formData, roleId: parseInt(val) })
+                            setFormData({ ...formData, roleId: parseInt(val, 10) })
                           }
                           variant="role"
                           options={ALLOWED_ROLE_OPTIONS}

@@ -1,7 +1,8 @@
-package com.smalltrend.controller;
+package com.smalltrend.controller.shift;
 
 import com.smalltrend.dto.common.MessageResponse;
 import com.smalltrend.dto.shift.AttendanceResponse;
+import com.smalltrend.dto.shift.AttendanceClockRequest;
 import com.smalltrend.dto.shift.AttendanceUpsertRequest;
 import com.smalltrend.dto.shift.PayrollSummaryResponse;
 import com.smalltrend.dto.shift.ShiftSwapExecuteRequest;
@@ -9,9 +10,9 @@ import com.smalltrend.dto.shift.ShiftAssignmentRequest;
 import com.smalltrend.dto.shift.ShiftAssignmentResponse;
 import com.smalltrend.dto.shift.WorkShiftRequest;
 import com.smalltrend.dto.shift.WorkShiftResponse;
-import com.smalltrend.service.ShiftWorkforceService;
-import com.smalltrend.service.WorkShiftAssignmentService;
-import com.smalltrend.service.WorkShiftService;
+import com.smalltrend.service.shift.ShiftWorkforceService;
+import com.smalltrend.service.shift.WorkShiftAssignmentService;
+import com.smalltrend.service.shift.WorkShiftService;
 import com.smalltrend.validation.ShiftValidator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,9 @@ import java.time.YearMonth;
 import java.util.List;
 import java.math.BigDecimal;
 import java.util.Map;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @RestController
 @RequestMapping("/api/shifts")
@@ -191,6 +195,32 @@ public class ShiftController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/clock-in")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> clockIn(@RequestBody AttendanceClockRequest request) {
+        AttendanceUpsertRequest upsertRequest = AttendanceUpsertRequest.builder()
+                .userId(request.getUserId())
+                .date(request.getDate())
+                .timeIn(request.getClockTime())
+                .status("PRESENT")
+                .build();
+        AttendanceResponse response = workforceService.clockIn(upsertRequest);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/clock-out")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
+    public ResponseEntity<?> clockOut(@RequestBody AttendanceClockRequest request) {
+        AttendanceUpsertRequest upsertRequest = AttendanceUpsertRequest.builder()
+                .userId(request.getUserId())
+                .date(request.getDate())
+                .timeOut(request.getClockTime())
+                .status("PRESENT")
+                .build();
+        AttendanceResponse response = workforceService.clockOut(upsertRequest);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/payroll/summary")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'SALES_STAFF')")
     public ResponseEntity<?> payrollSummary(
@@ -209,7 +239,13 @@ public class ShiftController {
     public ResponseEntity<?> markPayrollAsPaid(
             @RequestParam("month") String month,
             @RequestParam(value = "userId", required = false) Integer userId) {
-        String message = workforceService.markPayrollAsPaid(month, userId);
+        // Lấy email người đang đăng nhập để gửi mail xác nhận
+        String callerEmail = null;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.smalltrend.entity.User caller) {
+            callerEmail = caller.getEmail();
+        }
+        String message = workforceService.markPayrollAsPaid(month, userId, callerEmail);
         return ResponseEntity.ok(new MessageResponse(message));
     }
 
@@ -230,6 +266,7 @@ public class ShiftController {
         int present = (int) attendanceRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
         int late = (int) attendanceRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
         int absent = (int) attendanceRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+        int onLeave = (int) attendanceRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus())).count();
 
         if (total == 0) {
             YearMonth startMonth = fromMonth != null && !fromMonth.isBlank()
@@ -249,6 +286,7 @@ public class ShiftController {
                 present = (int) monthlyRows.stream().filter(item -> "PRESENT".equalsIgnoreCase(item.getStatus())).count();
                 late = (int) monthlyRows.stream().filter(item -> "LATE".equalsIgnoreCase(item.getStatus())).count();
                 absent = (int) monthlyRows.stream().filter(item -> "ABSENT".equalsIgnoreCase(item.getStatus())).count();
+                onLeave = (int) monthlyRows.stream().filter(item -> "ON_LEAVE".equalsIgnoreCase(item.getStatus())).count();
             }
         }
 
@@ -266,7 +304,8 @@ public class ShiftController {
                         "total", total,
                         "present", present,
                         "late", late,
-                        "absent", absent),
+                        "absent", absent,
+                        "onLeave", onLeave),
                 "payroll", java.util.Map.of(
                         "staffCount", payroll.getStaffCount(),
                         "totalHours", payroll.getTotalHours(),

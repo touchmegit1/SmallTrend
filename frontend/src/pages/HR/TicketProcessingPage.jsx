@@ -6,6 +6,7 @@ import { shiftService } from '../../services/shiftService';
 import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 import CustomSelect from '../../components/common/CustomSelect';
+import { RequiredLegend, RequiredMark } from '../../components/common/RequiredFieldLegend';
 
 const defaultProcessForm = {
     assignmentId: '',
@@ -27,6 +28,8 @@ const defaultSwapAcceptForm = {
     targetAssignmentId: '',
     confirmTakeOver: false,
 };
+
+const ACTIVE_TICKET_STATUSES = new Set(['OPEN', 'IN_PROGRESS']);
 
 const TicketProcessingPage = () => {
     const navigate = useNavigate();
@@ -571,10 +574,16 @@ const TicketProcessingPage = () => {
                                 const status = String(ticket?.status || 'OPEN').toUpperCase();
                                 const requestType = resolveRequestType(ticket);
                                 const isSwapRequest = requestType === 'SWAP';
+                                const isActiveStatus = ACTIVE_TICKET_STATUSES.has(status);
+                                const assignedToUserId = Number(ticket?.assignedToUserId || 0);
+                                const isAssignedToCurrentUser = assignedToUserId > 0 && assignedToUserId === currentUserId;
+                                const isCreatedByCurrentUser = Number(ticket?.createdByUserId || 0) === currentUserId;
+                                const isLegacyUnassignedSwap = assignedToUserId <= 0 && !isCreatedByCurrentUser;
                                 const canAcceptSwap = isSwapRequest
-                                    && status === 'OPEN'
-                                    && Number(ticket?.createdByUserId || ticket?.requesterUserId || 0) !== currentUserId;
-                                const canOpenManagerProcess = isManagerOrAdmin && !isSwapRequest && status === 'OPEN';
+                                    && isActiveStatus
+                                    && (isAssignedToCurrentUser || isLegacyUnassignedSwap)
+                                    && !isCreatedByCurrentUser;
+                                const canOpenManagerProcess = isManagerOrAdmin && !isSwapRequest && isActiveStatus;
 
                                 return (
                                     <tr key={ticket.id}>
@@ -621,12 +630,13 @@ const TicketProcessingPage = () => {
             )}
 
             {showCreateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowCreateModal(false); }}>
                     <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">Tạo ticket mới</h2>
                                 <p className="text-xs text-slate-500">Tạo yêu cầu mới tại trung tâm ticket và xử lý tập trung.</p>
+                                <RequiredLegend className="mt-1" />
                             </div>
                             <button
                                 type="button"
@@ -645,7 +655,7 @@ const TicketProcessingPage = () => {
                             )}
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Loại ticket <span className="text-rose-500">*</span></label>
+                                <label className="text-xs font-medium text-slate-600">Loại ticket <RequiredMark type="frontendOnly" /></label>
                                 <CustomSelect
                                     value={createForm.ticketMode}
                                     onChange={(value) => setCreateForm((prev) => ({
@@ -663,7 +673,7 @@ const TicketProcessingPage = () => {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Ca cần xử lý <span className="text-rose-500">*</span></label>
+                                <label className="text-xs font-medium text-slate-600">Ca cần xử lý <RequiredMark type="frontendAndBackend" /></label>
                                 <CustomSelect
                                     value={createForm.assignmentId}
                                     onChange={(value) => setCreateForm((prev) => ({ ...prev, assignmentId: value }))}
@@ -676,7 +686,7 @@ const TicketProcessingPage = () => {
 
                             {createForm.ticketMode === 'SWAP' && (
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Nhân viên đổi ca <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Nhân viên đổi ca <RequiredMark type="frontendAndBackend" /></label>
                                     <CustomSelect
                                         value={createForm.targetUserId}
                                         onChange={(value) => setCreateForm((prev) => ({ ...prev, targetUserId: value }))}
@@ -690,7 +700,7 @@ const TicketProcessingPage = () => {
 
                             {createForm.ticketMode !== 'SWAP' && (
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Người tiếp nhận <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Người tiếp nhận <RequiredMark type="frontendOnly" /></label>
                                     <CustomSelect
                                         value={createForm.assignedToUserId}
                                         onChange={(value) => setCreateForm((prev) => ({ ...prev, assignedToUserId: value }))}
@@ -703,7 +713,7 @@ const TicketProcessingPage = () => {
                             )}
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-slate-600">Lý do <span className="text-rose-500">*</span></label>
+                                <label className="text-xs font-medium text-slate-600">Lý do <RequiredMark type="frontendOnly" /></label>
                                 <textarea
                                     value={createForm.reason}
                                     onChange={(event) => setCreateForm((prev) => ({ ...prev, reason: event.target.value }))}
@@ -734,7 +744,7 @@ const TicketProcessingPage = () => {
             )}
 
             {showSwapAcceptModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4" onClick={(e) => { if (e.target === e.currentTarget) closeSwapAcceptModal(); }}>
                     <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
@@ -768,7 +778,7 @@ const TicketProcessingPage = () => {
 
                                     {swapAcceptAssignments.length > 0 ? (
                                         <div className="space-y-1">
-                                            <label className="text-xs font-medium text-slate-600">Ca của bạn để đổi <span className="text-rose-500">*</span></label>
+                                            <label className="text-xs font-medium text-slate-600">Ca của bạn để đổi <RequiredMark type="frontendOnly" /></label>
                                             <CustomSelect
                                                 value={swapAcceptForm.targetAssignmentId}
                                                 onChange={(value) => setSwapAcceptForm((prev) => ({ ...prev, targetAssignmentId: value }))}
@@ -820,12 +830,13 @@ const TicketProcessingPage = () => {
             )}
 
             {showProcessModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowProcessModal(false); }}>
                     <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">Xử lý ticket nhanh</h2>
                                 <p className="text-xs text-slate-500">Thông tin phân công chỉ đọc từ hệ thống, bạn có thể hoàn tất hoặc từ chối ticket.</p>
+                                <RequiredLegend className="mt-1" />
                             </div>
                             <button
                                 type="button"
@@ -845,7 +856,7 @@ const TicketProcessingPage = () => {
 
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Assignment ID <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Assignment ID <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="text"
                                         value={processForm.assignmentId}
@@ -856,7 +867,7 @@ const TicketProcessingPage = () => {
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-medium text-slate-600">Ngày ca <span className="text-rose-500">*</span></label>
+                                    <label className="text-xs font-medium text-slate-600">Ngày ca <RequiredMark type="frontendAndBackend" /></label>
                                     <input
                                         type="date"
                                         value={processForm.shiftDate}

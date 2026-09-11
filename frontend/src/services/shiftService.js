@@ -88,7 +88,8 @@ export const shiftService = {
         // Clock in automatically when user logs in
         const res = await api.post('/shifts/clock-in', {
             userId: payload.userId,
-            clockInTime: payload.clockInTime,
+            date: payload.date,
+            clockTime: payload.clockInTime,
             location: payload.location || 'Office'
         });
         return res.data;
@@ -96,7 +97,8 @@ export const shiftService = {
     async clockOut(payload) {
         const res = await api.post('/shifts/clock-out', {
             userId: payload.userId,
-            clockOutTime: payload.clockOutTime,
+            date: payload.date,
+            clockTime: payload.clockOutTime,
             location: payload.location || 'Office'
         });
         return res.data;

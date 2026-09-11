@@ -33,6 +33,7 @@ public class PayrollSummaryResponse {
         private Integer workedShifts;
         private Integer lateShifts;
         private Integer absentShifts;
+        private Integer leaveDays;
         private BigDecimal workedHours;
         private BigDecimal overtimeHours;
         private BigDecimal hourlyRate;

@@ -451,6 +451,19 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
+    public User updateUserRole(Integer id, Integer roleId) {
+        User user = getUserById(id);
+        if (roleId == null || roleId <= 0) {
+            throw new IllegalArgumentException("Vai trò không hợp lệ");
+        }
+
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(UserException::roleNotFound);
+
+        user.setRole(role);
+        return userRepository.save(user);
+    }
+
     @Transactional
     public void changeCurrentUserPassword(String username, String currentPassword, String newPassword,
             String confirmPassword) {
